@@ -1,0 +1,10 @@
+WORKFLOW target_with_approval;
+ENTRY confirm;
+
+APPROVAL confirm
+  PROMPT "Approve target_with_approval fixture."
+  READ state.input
+  WRITE state.approval
+  RESULT state.approval_result
+  PERSIST ".lgwf/fixture_approval.json"
+  POLL 1;

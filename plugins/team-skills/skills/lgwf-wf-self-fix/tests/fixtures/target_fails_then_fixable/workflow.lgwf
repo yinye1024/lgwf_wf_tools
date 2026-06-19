@@ -1,0 +1,6 @@
+WORKFLOW target_fails_then_fixable;
+ENTRY fail_once;
+
+PY fail_once
+  SCRIPT "scripts/fail_once.py"
+  RESULT state.fail_once_result;

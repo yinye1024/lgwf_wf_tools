@@ -1,0 +1,158 @@
+WORKFLOW repair_target_loop;
+ENTRY run_target_workflow;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_self_fix.instructions.{node}";
+  result_path "lgwf_wf_self_fix.results.{node}";
+}
+
+PY run_target_workflow
+  SCRIPT "03_run_target/scripts/run_target_workflow.py"
+  TIMEOUT 120
+  RESULT state.lgwf_wf_self_fix.run_target_result
+  UPDATES_STATE;
+
+PY observe_target_run
+  SCRIPT "04_observe_target/scripts/observe_target_run.py"
+  TIMEOUT 900
+  RESULT state.lgwf_wf_self_fix.observe_target_result
+  UPDATES_STATE;
+
+APPROVAL proxy_target_approval
+  PROMPT_REF "04_observe_target/proxy_target_approval.md"
+  READ state.lgwf_wf_self_fix.target_approval_context
+  WRITE state.lgwf_wf_self_fix.target_approval_decision
+  RESULT state.lgwf_wf_self_fix.target_approval_decision_result
+  PERSIST ".lgwf/target_approval_decision.json"
+  POLL 1;
+
+PY submit_target_approval
+  SCRIPT "04_observe_target/scripts/submit_target_approval.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.submit_target_approval_result
+  UPDATES_STATE;
+
+CODEX diagnose_target_failure
+  PROMPT "05_fix_target/agents/diagnose_target_failure.md"
+  CONTEXT workspace file ".lgwf/self_fix_request.json"
+  CONTEXT workspace file ".lgwf/self_fix_target.json"
+  CONTEXT workspace file ".lgwf/target_workflow_input.json"
+  CONTEXT workspace file ".lgwf/target_failure_review.json"
+  TARGET_DIRS state.lgwf_wf_self_fix.target_dirs
+  RESULT state.lgwf_wf_self_fix.diagnose_target_result;
+
+CODEX propose_repair_plan
+  PROMPT "05_fix_target/agents/propose_repair_plan.md"
+  CONTEXT workspace file ".lgwf/self_fix_request.json"
+  CONTEXT workspace file ".lgwf/self_fix_target.json"
+  CONTEXT workspace file ".lgwf/target_failure_review.json"
+  CONTEXT workspace file ".lgwf/target_failure_diagnosis.json"
+  TARGET_DIRS state.lgwf_wf_self_fix.target_dirs
+  RESULT state.lgwf_wf_self_fix.propose_repair_plan_result;
+
+CODEX review_repair_plan
+  PROMPT "05_fix_target/agents/review_repair_plan.md"
+  CONTEXT workspace file ".lgwf/self_fix_request.json"
+  CONTEXT workspace file ".lgwf/self_fix_target.json"
+  CONTEXT workspace file ".lgwf/target_failure_review.json"
+  CONTEXT workspace file ".lgwf/target_failure_diagnosis.json"
+  CONTEXT workspace file ".lgwf/target_repair_plan.json"
+  TARGET_DIRS state.lgwf_wf_self_fix.target_dirs
+  RESULT state.lgwf_wf_self_fix.review_repair_plan_result;
+
+PY route_after_plan
+  SCRIPT "05_fix_target/scripts/route_after_plan.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.route_after_plan_result
+  UPDATES_STATE;
+
+PY capture_repair_snapshot
+  SCRIPT "05_fix_target/scripts/capture_repair_snapshot.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.capture_repair_snapshot_result
+  UPDATES_STATE;
+
+CODEX apply_repair_plan
+  PROMPT "05_fix_target/agents/apply_repair_plan.md"
+  CONTEXT workspace file ".lgwf/self_fix_request.json"
+  CONTEXT workspace file ".lgwf/self_fix_target.json"
+  CONTEXT workspace file ".lgwf/target_workflow_input.json"
+  CONTEXT workspace file ".lgwf/target_failure_review.json"
+  CONTEXT workspace file ".lgwf/target_failure_diagnosis.json"
+  CONTEXT workspace file ".lgwf/target_repair_plan.json"
+  TARGET_DIRS state.lgwf_wf_self_fix.target_dirs
+  RESULT state.lgwf_wf_self_fix.apply_repair_plan_result;
+
+PY audit_repair_changes
+  SCRIPT "05_fix_target/scripts/audit_repair_changes.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.audit_repair_changes_result
+  UPDATES_STATE;
+
+PY validate_repair
+  SCRIPT "05_fix_target/scripts/validate_repair.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_self_fix.validate_repair_result
+  UPDATES_STATE;
+
+PY route_after_repair
+  SCRIPT "05_fix_target/scripts/route_after_repair.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.route_after_repair_result
+  UPDATES_STATE;
+
+PY record_fix_attempt
+  SCRIPT "05_fix_target/scripts/record_fix_attempt.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.record_fix_result
+  UPDATES_STATE;
+
+PY route_after_observe
+  SCRIPT "06_route/scripts/route_after_observe.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.route_result
+  UPDATES_STATE;
+
+PY finish_self_fix
+  SCRIPT "07_finish/scripts/finish_self_fix.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_self_fix.finish_result
+  UPDATES_STATE;
+
+FLOW run_target_workflow
+  THEN observe_target_run
+  THEN route_after_observe;
+
+FLOW proxy_target_approval
+  THEN submit_target_approval
+  THEN observe_target_run;
+
+FLOW diagnose_target_failure
+  THEN propose_repair_plan
+  THEN review_repair_plan
+  THEN route_after_plan;
+
+FLOW capture_repair_snapshot
+  THEN apply_repair_plan
+  THEN audit_repair_changes
+  THEN validate_repair
+  THEN route_after_repair;
+
+FLOW record_fix_attempt
+  THEN run_target_workflow;
+
+ROUTE route_after_repair
+  WHEN "rerun" THEN record_fix_attempt
+  WHEN "finish" THEN finish_self_fix;
+
+ROUTE route_after_plan
+  WHEN "apply" THEN capture_repair_snapshot
+  WHEN "finish" THEN finish_self_fix;
+
+ROUTE route_after_observe
+  WHEN "approval" THEN proxy_target_approval
+  WHEN "observe" THEN observe_target_run
+  WHEN "fix" THEN diagnose_target_failure
+  WHEN "finish" THEN finish_self_fix;

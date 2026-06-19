@@ -1,0 +1,6 @@
+WORKFLOW target_success;
+ENTRY done;
+
+PY done
+  SCRIPT "scripts/done.py"
+  RESULT state.done_result;
