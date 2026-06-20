@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "C:\\Users\\Administrator\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\bin\\codex.js",
+    "exec",
+    "--disable",
+    "responses_websockets",
+    "--disable",
+    "responses_websockets_v2",
+    "--skip-git-repo-check",
+    "--sandbox",
+    "danger-full-access",
+    "--model",
+    "gpt-5.4",
+    "# LGWF Codex Handoff\n\nYou are running inside the client workspace.\n\nWorkspace root:\nD:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\n\nMain prompt file:\nD:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\workflow\\02_prompt_acceptance\\02_audit_prompts\\agents\\audit_target_prompts.md\n\nGoverning spec file:\n- none\n\nReference context:\n- file: D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\self_fix_target.json\n- file: D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\prompt_acceptance\\inventory.json\n- file: D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\prompt_acceptance\\lgwf_prompt_rules.md\n\nAnalysis target directories:\n- dir: D:\\allen\\github\\lgwf\\examples\\workflows\\a_share_decliners_3d_react\n\nAnalysis target files:\n- none\n\nInstructions:\n1. If a governing spec file is provided, read it first.\n2. Read the main prompt file.\n3. The governing spec is authoritative. If it conflicts with the main prompt, follow the governing spec.\n4. Read every listed reference file or directory that is relevant to the task.\n5. Treat paths in the main prompt as relative to the workspace root unless the prompt says otherwise.\n6. Follow the main prompt after applying the governing spec.\n7. Do not invent facts that are not supported by the spec, prompt, or reference files.\n8. Only analyze files under Analysis targets. Do not treat Reference context as analysis targets.\n\n"
+  ],
+  "cwd": "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws",
+  "instruction_id": "audit_target_prompts:codex_prompt"
+}

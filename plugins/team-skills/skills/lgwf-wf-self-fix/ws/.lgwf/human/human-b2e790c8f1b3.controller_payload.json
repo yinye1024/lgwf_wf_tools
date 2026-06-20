@@ -1,0 +1,11 @@
+{
+  "comment": "use previous stock workflow parameters",
+  "created_at": "2026-06-20T02:10:13.239096+00:00",
+  "created_by": "main_agent_ask",
+  "decision": "approve",
+  "request_id": "human-b2e790c8f1b3",
+  "value": {
+    "max_attempts": 5,
+    "target_workflow_lgwf": "D:/allen/github/lgwf/examples/workflows/a_share_decliners_3d_react/workflow.lgwf"
+  }
+}

@@ -1,0 +1,39 @@
+WORKFLOW lgwf_plan;
+ENTRY generate_plan;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_plan.instructions.{node}";
+  result_path "lgwf_plan.results.{node}";
+}
+
+STEP generate_plan
+  WORKFLOW "01_generate_plan/workflow.lgwf";
+
+STEP generate_acceptance
+  WORKFLOW "02_generate_acceptance/workflow.lgwf";
+
+APPROVAL confirm_plan_and_acceptance
+  PROMPT_REF "03_confirm_plan_and_acceptance/00_user_decision_template/plan_acceptance_decision_template.md"
+  READ state.lgwf_plan.confirmation_context
+  WRITE state.lgwf_plan.contract_approval
+  RESULT state.lgwf_plan.contract_approval_result
+  PERSIST ".lgwf/react_task_contract_approval.json"
+  POLL 1;
+
+PY apply_confirmed_contracts
+  SCRIPT "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/apply_confirmed_contracts.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.apply_contracts_result
+  UPDATES_STATE;
+
+STEP execute_react_loop
+  WORKFLOW "04_execute_react_loop/workflow.lgwf";
+
+FLOW generate_plan
+  THEN generate_acceptance
+  THEN confirm_plan_and_acceptance
+  THEN apply_confirmed_contracts
+  THEN execute_react_loop;
+

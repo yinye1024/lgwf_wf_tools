@@ -1,0 +1,20 @@
+{
+  "pid": 22712,
+  "workflow_json": "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\workflow\\workflow.json",
+  "work_dir": "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws",
+  "log_file": "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\processes\\9dcb02cd34b8488b84a580116dca73c0.log",
+  "pid_file": "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\processes\\9dcb02cd34b8488b84a580116dca73c0.pid.json",
+  "command": [
+    "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "-m",
+    "lgwf_client.cli",
+    "--workflow-json",
+    "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\workflow\\workflow.json",
+    "--work-dir",
+    "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws",
+    "--input-json",
+    "{}"
+  ],
+  "session_id": "pid-22712",
+  "session_file": "D:\\allen\\github\\lgwf_plugins\\plugins\\team-skills\\skills\\lgwf-wf-self-fix\\ws\\.lgwf\\main_agent\\sessions\\pid-22712.json"
+}

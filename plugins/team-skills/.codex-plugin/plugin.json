@@ -1,0 +1,22 @@
+{
+  "name": "team-skills",
+  "version": "0.1.0",
+  "description": "Shared Codex skills for team development workflows and conventions.",
+  "author": {
+    "name": "LGWF Team"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Team Skills",
+    "shortDescription": "Shared team workflows and Codex skills.",
+    "longDescription": "Team Skills packages the reusable Codex skills that the team uses for development workflows, delivery conventions, and repository-specific operating procedures.",
+    "developerName": "LGWF Team",
+    "category": "Productivity",
+    "capabilities": ["Skills"],
+    "defaultPrompt": [
+      "Follow our team workflow for this change.",
+      "Use the team conventions before editing code.",
+      "Add a new team skill to this plugin."
+    ]
+  }
+}

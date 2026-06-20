@@ -1,0 +1,4 @@
+interface:
+  display_name: "Team Workflow"
+  short_description: "Apply team workflow conventions in Codex."
+  default_prompt: "Follow our team workflow for this change."

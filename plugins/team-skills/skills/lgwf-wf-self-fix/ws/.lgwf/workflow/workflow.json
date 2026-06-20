@@ -1,0 +1,1060 @@
+{
+  "edges": [
+    [
+      "prepare_self_fix_request_context",
+      "confirm_self_fix_request"
+    ],
+    [
+      "confirm_self_fix_request",
+      "prepare_target"
+    ],
+    [
+      "prepare_target",
+      "prompt_acceptance"
+    ],
+    [
+      "prompt_acceptance",
+      "analyze_target_input_contract"
+    ],
+    [
+      "analyze_target_input_contract",
+      "prepare_input_collection_context"
+    ],
+    [
+      "prepare_input_collection_context",
+      "collect_target_workflow_input"
+    ],
+    [
+      "collect_target_workflow_input",
+      "validate_target_workflow_input"
+    ],
+    [
+      "validate_target_workflow_input",
+      "repair_target_loop"
+    ],
+    [
+      "repair_target_loop",
+      "summarize_self_fix"
+    ]
+  ],
+  "entry_point": "prepare_self_fix_request_context",
+  "nodes": [
+    {
+      "capability": "exec.run_python",
+      "config": {
+        "instruction_path": "lgwf_wf_self_fix.instructions.prepare_self_fix_request_context",
+        "ref_root": {
+          "path": ".",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.prepare_self_fix_request_context_result",
+        "script_ref": {
+          "path": "00_confirm_request/scripts/prepare_self_fix_request_context.py"
+        },
+        "state_updates_from_stdout": true,
+        "timeout_seconds": 60
+      },
+      "id": "prepare_self_fix_request_context"
+    },
+    {
+      "capability": "flow.human_approval",
+      "config": {
+        "approved_value_path": "lgwf_wf_self_fix.self_fix_request",
+        "context_path": "lgwf_wf_self_fix.self_fix_request_context",
+        "persist_value_path": ".lgwf/self_fix_request_input.json",
+        "poll_interval_seconds": 1,
+        "prompt_ref": {
+          "path": "00_confirm_request/confirm_self_fix_request.md",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.self_fix_request_result",
+        "timeout_seconds": null
+      },
+      "id": "confirm_self_fix_request"
+    },
+    {
+      "capability": "exec.run_python",
+      "config": {
+        "instruction_path": "lgwf_wf_self_fix.instructions.prepare_target",
+        "ref_root": {
+          "path": ".",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.prepare_target_result",
+        "script_ref": {
+          "path": "01_prepare_target/scripts/prepare_target.py"
+        },
+        "state_updates_from_stdout": true,
+        "timeout_seconds": 60
+      },
+      "id": "prepare_target"
+    },
+    {
+      "capability": "subgraph.workflow",
+      "config": {
+        "workflow": {
+          "edges": [
+            [
+              "build_prompt_inventory",
+              "audit_target_prompts"
+            ],
+            [
+              "audit_target_prompts",
+              "prepare_prompt_fix_selection_context"
+            ],
+            [
+              "prepare_prompt_fix_selection_context",
+              "select_prompt_fixes"
+            ],
+            [
+              "select_prompt_fixes",
+              "validate_prompt_fix_selection"
+            ],
+            [
+              "validate_prompt_fix_selection",
+              "route_after_prompt_selection"
+            ],
+            [
+              "repair_target_prompts",
+              "summarize_prompt_acceptance"
+            ],
+            [
+              "summarize_prompt_acceptance",
+              "confirm_prompt_acceptance"
+            ],
+            [
+              "summarize_prompt_acceptance",
+              "confirm_prompt_acceptance"
+            ]
+          ],
+          "entry_point": "build_prompt_inventory",
+          "nodes": [
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.build_prompt_inventory",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.prompt_inventory_result",
+                "script_ref": {
+                  "path": "02_prompt_acceptance/01_inventory/scripts/build_prompt_inventory.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "build_prompt_inventory"
+            },
+            {
+              "capability": "exec.codex_prompt",
+              "config": {
+                "context_refs": [
+                  {
+                    "path": ".lgwf/self_fix_target.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/prompt_acceptance/inventory.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/prompt_acceptance/lgwf_prompt_rules.md",
+                    "root": "workspace",
+                    "type": "file"
+                  }
+                ],
+                "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.audit_target_prompts",
+                "prompt_ref": {
+                  "path": "02_prompt_acceptance/02_audit_prompts/agents/audit_target_prompts.md"
+                },
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.prompt_audit_result",
+                "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                "timeout_seconds": 900
+              },
+              "id": "audit_target_prompts"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.prepare_prompt_fix_selection_context",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.prepare_prompt_selection_result",
+                "script_ref": {
+                  "path": "02_prompt_acceptance/03_select_prompt_fixes/scripts/prepare_prompt_fix_selection_context.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "prepare_prompt_fix_selection_context"
+            },
+            {
+              "capability": "flow.human_approval",
+              "config": {
+                "approved_value_path": "lgwf_wf_self_fix.prompt_fix_selection",
+                "context_path": "lgwf_wf_self_fix.prompt_fix_selection_context",
+                "persist_value_path": ".lgwf/prompt_acceptance/fix_selection.json",
+                "poll_interval_seconds": 1,
+                "prompt_ref": {
+                  "path": "02_prompt_acceptance/03_select_prompt_fixes/select_prompt_fixes.md",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.prompt_fix_selection_result",
+                "timeout_seconds": null
+              },
+              "id": "select_prompt_fixes"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.validate_prompt_fix_selection",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.validate_prompt_selection_result",
+                "script_ref": {
+                  "path": "02_prompt_acceptance/03_select_prompt_fixes/scripts/validate_prompt_fix_selection.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "validate_prompt_fix_selection"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.route_after_prompt_selection",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.route_prompt_selection_result",
+                "script_ref": {
+                  "path": "02_prompt_acceptance/03_select_prompt_fixes/scripts/route_after_prompt_selection.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "route_after_prompt_selection"
+            },
+            {
+              "capability": "subgraph.react",
+              "config": {
+                "act": {
+                  "capability": "exec.codex_prompt",
+                  "config": {
+                    "context_refs": [
+                      {
+                        "path": ".lgwf/self_fix_target.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/inventory.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/fix_selection.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/repair_plan.json",
+                        "root": "workspace",
+                        "type": "file"
+                      }
+                    ],
+                    "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.repair_target_prompts__act",
+                    "prompt_ref": {
+                      "path": "02_prompt_acceptance/04_repair_prompts/agents/apply_prompt_fix.md"
+                    },
+                    "ref_root": {
+                      "path": ".",
+                      "root": "workflow"
+                    },
+                    "result_path": "lgwf_wf_self_fix.prompt_repair_act_result",
+                    "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                    "timeout_seconds": 900
+                  }
+                },
+                "decide": {
+                  "capability": "exec.run_python",
+                  "config": {
+                    "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.repair_target_prompts__decide",
+                    "ref_root": {
+                      "path": ".",
+                      "root": "workflow"
+                    },
+                    "result_path": "lgwf_wf_self_fix.prompt_repair_decide_result",
+                    "script_ref": {
+                      "path": "02_prompt_acceptance/04_repair_prompts/scripts/decide_prompt_fix.py"
+                    },
+                    "state_updates_from_stdout": true,
+                    "timeout_seconds": 900
+                  }
+                },
+                "max_steps": 3,
+                "observe": {
+                  "capability": "exec.codex_prompt",
+                  "config": {
+                    "context_refs": [
+                      {
+                        "path": ".lgwf/self_fix_target.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/inventory.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/audit.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/fix_selection.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/repair_plan.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/fix_notes.md",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/repair_review.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/lgwf_prompt_rules.md",
+                        "root": "workspace",
+                        "type": "file"
+                      }
+                    ],
+                    "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.repair_target_prompts__observe",
+                    "prompt_ref": {
+                      "path": "02_prompt_acceptance/04_repair_prompts/agents/observe_prompt_fix.md"
+                    },
+                    "ref_root": {
+                      "path": ".",
+                      "root": "workflow"
+                    },
+                    "result_path": "lgwf_wf_self_fix.prompt_repair_observe_result",
+                    "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                    "timeout_seconds": 900
+                  }
+                },
+                "reason": {
+                  "capability": "exec.codex_prompt",
+                  "config": {
+                    "context_refs": [
+                      {
+                        "path": ".lgwf/self_fix_target.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/inventory.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/audit.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/fix_selection.json",
+                        "root": "workspace",
+                        "type": "file"
+                      },
+                      {
+                        "path": ".lgwf/prompt_acceptance/react_history.json",
+                        "root": "workspace",
+                        "type": "file"
+                      }
+                    ],
+                    "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.repair_target_prompts__reason",
+                    "prompt_ref": {
+                      "path": "02_prompt_acceptance/04_repair_prompts/agents/reason_prompt_fix.md"
+                    },
+                    "ref_root": {
+                      "path": ".",
+                      "root": "workflow"
+                    },
+                    "result_path": "lgwf_wf_self_fix.prompt_repair_reason_result",
+                    "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                    "timeout_seconds": 900
+                  }
+                },
+                "spec_ref": {
+                  "path": "02_prompt_acceptance/04_repair_prompts/agents/spec.md"
+                }
+              },
+              "id": "repair_target_prompts"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.prompt_acceptance.instructions.summarize_prompt_acceptance",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.prompt_acceptance_summary_result",
+                "script_ref": {
+                  "path": "02_prompt_acceptance/05_summary/scripts/summarize_prompt_acceptance.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "summarize_prompt_acceptance"
+            },
+            {
+              "capability": "flow.human_approval",
+              "config": {
+                "approved_value_path": "lgwf_wf_self_fix.prompt_acceptance_confirmation",
+                "context_path": "lgwf_wf_self_fix.prompt_acceptance_summary",
+                "persist_value_path": ".lgwf/prompt_acceptance/confirmation.json",
+                "poll_interval_seconds": 1,
+                "prompt_ref": {
+                  "path": "02_prompt_acceptance/05_summary/confirm_prompt_acceptance.md",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.prompt_acceptance_confirmation_result",
+                "timeout_seconds": null
+              },
+              "id": "confirm_prompt_acceptance"
+            }
+          ],
+          "routes": [
+            {
+              "branches": {
+                "fix": "repair_target_prompts",
+                "summarize": "summarize_prompt_acceptance"
+              },
+              "from": "route_after_prompt_selection"
+            }
+          ]
+        }
+      },
+      "id": "prompt_acceptance"
+    },
+    {
+      "capability": "exec.codex_prompt",
+      "config": {
+        "context_refs": [
+          {
+            "path": ".lgwf/self_fix_request.json",
+            "root": "workspace",
+            "type": "file"
+          },
+          {
+            "path": ".lgwf/self_fix_target.json",
+            "root": "workspace",
+            "type": "file"
+          }
+        ],
+        "instruction_path": "lgwf_wf_self_fix.instructions.analyze_target_input_contract",
+        "prompt_ref": {
+          "path": "02_collect_target_input/agents/analyze_target_input_contract.md"
+        },
+        "ref_root": {
+          "path": ".",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.input_contract_result",
+        "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+        "timeout_seconds": 900
+      },
+      "id": "analyze_target_input_contract"
+    },
+    {
+      "capability": "exec.run_python",
+      "config": {
+        "instruction_path": "lgwf_wf_self_fix.instructions.prepare_input_collection_context",
+        "ref_root": {
+          "path": ".",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.prepare_input_collection_context_result",
+        "script_ref": {
+          "path": "02_collect_target_input/scripts/prepare_input_collection_context.py"
+        },
+        "state_updates_from_stdout": true,
+        "timeout_seconds": 60
+      },
+      "id": "prepare_input_collection_context"
+    },
+    {
+      "capability": "flow.human_approval",
+      "config": {
+        "approved_value_path": "lgwf_wf_self_fix.target_workflow_input",
+        "context_path": "lgwf_wf_self_fix.input_collection_context",
+        "persist_value_path": ".lgwf/target_workflow_input.json",
+        "poll_interval_seconds": 1,
+        "prompt_ref": {
+          "path": "02_collect_target_input/collect_target_workflow_input.md",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.target_workflow_input_result",
+        "timeout_seconds": null
+      },
+      "id": "collect_target_workflow_input"
+    },
+    {
+      "capability": "exec.run_python",
+      "config": {
+        "instruction_path": "lgwf_wf_self_fix.instructions.validate_target_workflow_input",
+        "ref_root": {
+          "path": ".",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.validate_target_input_result",
+        "script_ref": {
+          "path": "02_collect_target_input/scripts/validate_target_workflow_input.py"
+        },
+        "state_updates_from_stdout": true,
+        "timeout_seconds": 60
+      },
+      "id": "validate_target_workflow_input"
+    },
+    {
+      "capability": "subgraph.workflow",
+      "config": {
+        "workflow": {
+          "edges": [
+            [
+              "run_target_workflow",
+              "observe_target_run"
+            ],
+            [
+              "observe_target_run",
+              "route_after_observe"
+            ],
+            [
+              "proxy_target_approval",
+              "submit_target_approval"
+            ],
+            [
+              "submit_target_approval",
+              "observe_target_run"
+            ],
+            [
+              "diagnose_target_failure",
+              "propose_repair_plan"
+            ],
+            [
+              "propose_repair_plan",
+              "review_repair_plan"
+            ],
+            [
+              "review_repair_plan",
+              "route_after_plan"
+            ],
+            [
+              "capture_repair_snapshot",
+              "apply_repair_plan"
+            ],
+            [
+              "apply_repair_plan",
+              "audit_repair_changes"
+            ],
+            [
+              "audit_repair_changes",
+              "validate_repair"
+            ],
+            [
+              "validate_repair",
+              "route_after_repair"
+            ],
+            [
+              "record_fix_attempt",
+              "run_target_workflow"
+            ]
+          ],
+          "entry_point": "run_target_workflow",
+          "nodes": [
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.run_target_workflow",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.run_target_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/03_run_target/scripts/run_target_workflow.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 120
+              },
+              "id": "run_target_workflow"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.observe_target_run",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.observe_target_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/04_observe_target/scripts/observe_target_run.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 900
+              },
+              "id": "observe_target_run"
+            },
+            {
+              "capability": "flow.human_approval",
+              "config": {
+                "approved_value_path": "lgwf_wf_self_fix.target_approval_decision",
+                "context_path": "lgwf_wf_self_fix.target_approval_context",
+                "persist_value_path": ".lgwf/target_approval_decision.json",
+                "poll_interval_seconds": 1,
+                "prompt_ref": {
+                  "path": "03_repair_target_loop/04_observe_target/proxy_target_approval.md",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.target_approval_decision_result",
+                "timeout_seconds": null
+              },
+              "id": "proxy_target_approval"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.submit_target_approval",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.submit_target_approval_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/04_observe_target/scripts/submit_target_approval.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "submit_target_approval"
+            },
+            {
+              "capability": "exec.codex_prompt",
+              "config": {
+                "context_refs": [
+                  {
+                    "path": ".lgwf/self_fix_request.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/self_fix_target.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_workflow_input.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_review.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_contract_audit.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_run_health.json",
+                    "root": "workspace",
+                    "type": "file"
+                  }
+                ],
+                "instruction_path": "lgwf_wf_self_fix.instructions.diagnose_target_failure",
+                "prompt_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/agents/diagnose_target_failure.md"
+                },
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.diagnose_target_result",
+                "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                "timeout_seconds": 900
+              },
+              "id": "diagnose_target_failure"
+            },
+            {
+              "capability": "exec.codex_prompt",
+              "config": {
+                "context_refs": [
+                  {
+                    "path": ".lgwf/self_fix_request.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/self_fix_target.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_review.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_contract_audit.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_run_health.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_diagnosis.json",
+                    "root": "workspace",
+                    "type": "file"
+                  }
+                ],
+                "instruction_path": "lgwf_wf_self_fix.instructions.propose_repair_plan",
+                "prompt_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/agents/propose_repair_plan.md"
+                },
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.propose_repair_plan_result",
+                "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                "timeout_seconds": 900
+              },
+              "id": "propose_repair_plan"
+            },
+            {
+              "capability": "exec.codex_prompt",
+              "config": {
+                "context_refs": [
+                  {
+                    "path": ".lgwf/self_fix_request.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/self_fix_target.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_review.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_contract_audit.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_run_health.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_diagnosis.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_repair_plan.json",
+                    "root": "workspace",
+                    "type": "file"
+                  }
+                ],
+                "instruction_path": "lgwf_wf_self_fix.instructions.review_repair_plan",
+                "prompt_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/agents/review_repair_plan.md"
+                },
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.review_repair_plan_result",
+                "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                "timeout_seconds": 900
+              },
+              "id": "review_repair_plan"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.route_after_plan",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.route_after_plan_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/scripts/route_after_plan.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "route_after_plan"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.capture_repair_snapshot",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.capture_repair_snapshot_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/scripts/capture_repair_snapshot.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "capture_repair_snapshot"
+            },
+            {
+              "capability": "exec.codex_prompt",
+              "config": {
+                "context_refs": [
+                  {
+                    "path": ".lgwf/self_fix_request.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/self_fix_target.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_workflow_input.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_review.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_contract_audit.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_run_health.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_failure_diagnosis.json",
+                    "root": "workspace",
+                    "type": "file"
+                  },
+                  {
+                    "path": ".lgwf/target_repair_plan.json",
+                    "root": "workspace",
+                    "type": "file"
+                  }
+                ],
+                "instruction_path": "lgwf_wf_self_fix.instructions.apply_repair_plan",
+                "prompt_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/agents/apply_repair_plan.md"
+                },
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.apply_repair_plan_result",
+                "target_dirs_path": "lgwf_wf_self_fix.target_dirs",
+                "timeout_seconds": 900
+              },
+              "id": "apply_repair_plan"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.audit_repair_changes",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.audit_repair_changes_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/scripts/audit_repair_changes.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "audit_repair_changes"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.validate_repair",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.validate_repair_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/scripts/validate_repair.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 180
+              },
+              "id": "validate_repair"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.route_after_repair",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.route_after_repair_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/scripts/route_after_repair.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "route_after_repair"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.record_fix_attempt",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.record_fix_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/05_fix_target/scripts/record_fix_attempt.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "record_fix_attempt"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.route_after_observe",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.route_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/06_route/scripts/route_after_observe.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "route_after_observe"
+            },
+            {
+              "capability": "exec.run_python",
+              "config": {
+                "instruction_path": "lgwf_wf_self_fix.instructions.finish_self_fix",
+                "ref_root": {
+                  "path": ".",
+                  "root": "workflow"
+                },
+                "result_path": "lgwf_wf_self_fix.finish_result",
+                "script_ref": {
+                  "path": "03_repair_target_loop/07_finish/scripts/finish_self_fix.py"
+                },
+                "state_updates_from_stdout": true,
+                "timeout_seconds": 60
+              },
+              "id": "finish_self_fix"
+            }
+          ],
+          "routes": [
+            {
+              "branches": {
+                "finish": "finish_self_fix",
+                "rerun": "record_fix_attempt"
+              },
+              "from": "route_after_repair"
+            },
+            {
+              "branches": {
+                "apply": "capture_repair_snapshot",
+                "finish": "finish_self_fix"
+              },
+              "from": "route_after_plan"
+            },
+            {
+              "branches": {
+                "approval": "proxy_target_approval",
+                "finish": "finish_self_fix",
+                "fix": "diagnose_target_failure",
+                "observe": "observe_target_run"
+              },
+              "from": "route_after_observe"
+            }
+          ]
+        }
+      },
+      "id": "repair_target_loop"
+    },
+    {
+      "capability": "exec.run_python",
+      "config": {
+        "instruction_path": "lgwf_wf_self_fix.instructions.summarize_self_fix",
+        "ref_root": {
+          "path": ".",
+          "root": "workflow"
+        },
+        "result_path": "lgwf_wf_self_fix.summary_result",
+        "script_ref": {
+          "path": "04_summarize_self_fix/scripts/summarize_self_fix.py"
+        },
+        "state_updates_from_stdout": true,
+        "timeout_seconds": 60
+      },
+      "id": "summarize_self_fix"
+    }
+  ],
+  "routes": []
+}

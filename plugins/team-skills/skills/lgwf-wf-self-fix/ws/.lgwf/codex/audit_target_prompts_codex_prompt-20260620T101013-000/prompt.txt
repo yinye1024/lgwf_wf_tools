@@ -1,0 +1,34 @@
+# LGWF Codex Handoff
+
+You are running inside the client workspace.
+
+Workspace root:
+D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws
+
+Main prompt file:
+D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\workflow\02_prompt_acceptance\02_audit_prompts\agents\audit_target_prompts.md
+
+Governing spec file:
+- none
+
+Reference context:
+- file: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\self_fix_target.json
+- file: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\prompt_acceptance\inventory.json
+- file: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\prompt_acceptance\lgwf_prompt_rules.md
+
+Analysis target directories:
+- dir: D:\allen\github\lgwf\examples\workflows\a_share_decliners_3d_react
+
+Analysis target files:
+- none
+
+Instructions:
+1. If a governing spec file is provided, read it first.
+2. Read the main prompt file.
+3. The governing spec is authoritative. If it conflicts with the main prompt, follow the governing spec.
+4. Read every listed reference file or directory that is relevant to the task.
+5. Treat paths in the main prompt as relative to the workspace root unless the prompt says otherwise.
+6. Follow the main prompt after applying the governing spec.
+7. Do not invent facts that are not supported by the spec, prompt, or reference files.
+8. Only analyze files under Analysis targets. Do not treat Reference context as analysis targets.
+

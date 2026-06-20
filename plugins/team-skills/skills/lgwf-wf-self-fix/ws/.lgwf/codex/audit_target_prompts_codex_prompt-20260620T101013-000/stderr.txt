@@ -1,0 +1,95 @@
+Reading additional input from stdin...
+2026-06-20T02:10:15.490382Z  WARN codex_core_plugins::manifest: ignoring interface.defaultPrompt[0]: prompt must be at most 128 characters path=C:\Users\Administrator\.codex\.tmp\plugins\plugins\ngs-analysis\.codex-plugin/plugin.json
+2026-06-20T02:10:17.008235Z  WARN codex_core::shell_snapshot: Failed to create shell snapshot for powershell: Shell snapshot not supported yet for PowerShell
+OpenAI Codex v0.131.0
+--------
+workdir: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws
+model: gpt-5.4
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: medium
+reasoning summaries: none
+session id: 019ee2cb-068b-7ca1-a8b1-1316b12b0a0c
+--------
+user
+# LGWF Codex Handoff
+
+You are running inside the client workspace.
+
+Workspace root:
+D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws
+
+Main prompt file:
+D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\workflow\02_prompt_acceptance\02_audit_prompts\agents\audit_target_prompts.md
+
+Governing spec file:
+- none
+
+Reference context:
+- file: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\self_fix_target.json
+- file: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\prompt_acceptance\inventory.json
+- file: D:\allen\github\lgwf_plugins\plugins\team-skills\skills\lgwf-wf-self-fix\ws\.lgwf\prompt_acceptance\lgwf_prompt_rules.md
+
+Analysis target directories:
+- dir: D:\allen\github\lgwf\examples\workflows\a_share_decliners_3d_react
+
+Analysis target files:
+- none
+
+Instructions:
+1. If a governing spec file is provided, read it first.
+2. Read the main prompt file.
+3. The governing spec is authoritative. If it conflicts with the main prompt, follow the governing spec.
+4. Read every listed reference file or directory that is relevant to the task.
+5. Treat paths in the main prompt as relative to the workspace root unless the prompt says otherwise.
+6. Follow the main prompt after applying the governing spec.
+7. Do not invent facts that are not supported by the spec, prompt, or reference files.
+8. Only analyze files under Analysis targets. Do not treat Reference context as analysis targets.
+
+
+2026-06-20T02:10:22.857822Z  WARN codex_core_plugins::manifest: ignoring interface.defaultPrompt[0]: prompt must be at most 128 characters path=C:\Users\Administrator\.codex\.tmp\plugins\plugins\ngs-analysis\.codex-plugin/plugin.json
+2026-06-20T02:10:22.919560Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:22.919613Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:22.921267Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:22.921292Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:22.922646Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:22.922668Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:22.924100Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:22.924122Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:22.925481Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:22.925504Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:22.926888Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:22.926911Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:32.264200Z  WARN codex_core_plugins::manifest: ignoring interface.defaultPrompt[0]: prompt must be at most 128 characters path=C:\Users\Administrator\.codex\.tmp\plugins\plugins\ngs-analysis\.codex-plugin/plugin.json
+2026-06-20T02:10:32.347034Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:32.347070Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:32.349456Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:32.349499Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:32.352198Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:32.352244Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:32.355137Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:32.355183Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:32.359208Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:32.359248Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:32.361732Z  WARN codex_core_skills::loader: ignoring interface.icon_small: icon path must not contain '..'
+2026-06-20T02:10:32.361775Z  WARN codex_core_skills::loader: ignoring interface.icon_large: icon path must not contain '..'
+2026-06-20T02:10:47.183002Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: 由于目标计算机积极拒绝，无法连接。 (os error 10061), url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-20T02:10:47.186280Z  WARN codex_core::session::turn: stream disconnected - retrying sampling request (1/5 in 189ms)...
+2026-06-20T02:11:01.959277Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: 由于目标计算机积极拒绝，无法连接。 (os error 10061), url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-20T02:11:01.959661Z  WARN codex_core::session::turn: stream disconnected - retrying sampling request (2/5 in 437ms)...
+ERROR: Reconnecting... 2/5
+2026-06-20T02:11:16.999070Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: 由于目标计算机积极拒绝，无法连接。 (os error 10061), url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-20T02:11:16.999376Z  WARN codex_core::session::turn: stream disconnected - retrying sampling request (3/5 in 723ms)...
+ERROR: Reconnecting... 3/5
+2026-06-20T02:11:32.319460Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: 由于目标计算机积极拒绝，无法连接。 (os error 10061), url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-20T02:11:32.319720Z  WARN codex_core::session::turn: stream disconnected - retrying sampling request (4/5 in 1.718s)...
+ERROR: Reconnecting... 4/5
+2026-06-20T02:11:48.644089Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: 由于目标计算机积极拒绝，无法连接。 (os error 10061), url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-20T02:11:48.644329Z  WARN codex_core::session::turn: stream disconnected - retrying sampling request (5/5 in 3.506s)...
+ERROR: Reconnecting... 5/5
+2026-06-20T02:12:06.782445Z ERROR codex_api::endpoint::responses_websocket: failed to connect to websocket: IO error: 由于目标计算机积极拒绝，无法连接。 (os error 10061), url: wss://chatgpt.com/backend-api/codex/responses
+2026-06-20T02:12:06.784131Z  WARN codex_core::client: falling back to HTTP
+ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 12:35 PM.
+ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 12:35 PM.
+2026-06-20T02:12:09.790340Z  WARN codex_mcp::rmcp_client: failed to initialize MCP client during shutdown: MCP startup failed: 系统找不到指定的路径。 (os error 3)

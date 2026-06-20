@@ -1,0 +1,49 @@
+WORKFLOW generate_acceptance;
+ENTRY validate_acceptance_codex_inputs;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_plan.acceptance.instructions.{node}";
+  result_path "lgwf_plan.acceptance.results.{node}";
+}
+
+PY validate_acceptance_codex_inputs
+  SCRIPT "00_validate_acceptance_targets/scripts/validate_acceptance_codex_inputs.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.acceptance_input_validation_result
+  UPDATES_STATE;
+
+REACT generate_acceptance_proposal MAX 3
+  SPEC "00_generate_acceptance_proposal/agents/spec.md"
+  REASON CODEX
+    PROMPT "00_generate_acceptance_proposal/agents/reason.md"
+    CONTEXT workspace file ".lgwf/react_task_request.json"
+    CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
+    CONTEXT workspace file ".lgwf/react_task_plan_observe.json"
+    RESULT state.lgwf_plan.acceptance_reason_result
+  ACT CODEX
+    PROMPT "00_generate_acceptance_proposal/agents/act.md"
+    CONTEXT workspace file ".lgwf/react_task_request.json"
+    CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
+    RESULT state.lgwf_plan.acceptance_act_result
+  OBSERVE CODEX
+    PROMPT "00_generate_acceptance_proposal/agents/observe.md"
+    CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
+    CONTEXT workspace file ".lgwf/react_acceptance_proposal.json"
+    RESULT state.lgwf_plan.acceptance_observe_result
+  DECIDE PY
+    SCRIPT "00_generate_acceptance_proposal/scripts/decide.py"
+    RESULT state.lgwf_plan.acceptance_decide_result
+    UPDATES_STATE;
+
+PY route_acceptance_generation
+  SCRIPT "01_route_acceptance_generation/scripts/route_acceptance_generation.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.acceptance_route_result
+  UPDATES_STATE;
+
+FLOW validate_acceptance_codex_inputs
+  THEN generate_acceptance_proposal
+  THEN route_acceptance_generation;
+

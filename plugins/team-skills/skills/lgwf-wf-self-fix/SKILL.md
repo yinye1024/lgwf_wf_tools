@@ -12,10 +12,10 @@ Use this skill as the Codex-facing entrypoint for `lgwf_wf_self_fix`. The skill 
 Always run through the LGWF facade:
 
 ```powershell
-python C:\Users\Administrator\.codex\skills\lgwf-client-assist\scripts\lgwf.py run --workflow-lgwf plugins\team-skills\skills\lgwf-wf-self-fix\wf\workflow.lgwf --work-dir plugins\team-skills\skills\lgwf-wf-self-fix\ws --input-json "{\"target_workflow_lgwf\":\"<workflow A>\\workflow.lgwf\",\"max_attempts\":5}" --background
+python C:\Users\Administrator\.codex\skills\lgwf-client-assist\scripts\lgwf.py run --workflow-lgwf plugins\team-skills\skills\lgwf-wf-self-fix\wf\workflow.lgwf --work-dir plugins\team-skills\skills\lgwf-wf-self-fix\ws --input-json "{}" --background
 ```
 
-`target_workflow_lgwf` is required. `max_attempts` is optional and defaults to `5`.
+The workflow asks for `target_workflow_lgwf` and `max_attempts` in its first approval step. Do not pass those fields through startup `input-json`; the confirmed value is persisted to `.lgwf/self_fix_request_input.json`.
 
 The fixed work dir is `plugins/team-skills/skills/lgwf-wf-self-fix/ws`. If it already contains prior LGWF data, follow the normal `lgwf-client-assist` continue/rerun flow instead of starting a second run blindly.
 
@@ -23,8 +23,8 @@ The fixed work dir is `plugins/team-skills/skills/lgwf-wf-self-fix/ws`. If it al
 
 The workflow collects inputs in two layers:
 
-1. The start command input describes the self-fix task: which `workflow.lgwf` to repair and the max retry count.
-2. The workflow analyzes the target workflow, asks the user for the target workflow's business startup JSON, and persists it to `.lgwf/target_workflow_input.json`.
+1. The workflow first asks the user to confirm the self-fix task: which `workflow.lgwf` to repair and the max retry count. It persists this to `.lgwf/self_fix_request_input.json`.
+2. The workflow then analyzes the target workflow, asks the user for the target workflow's business startup JSON, and persists it to `.lgwf/target_workflow_input.json`.
 
 After `.lgwf/target_workflow_input.json` is saved, every target workflow attempt must reuse that JSON object as the target workflow's `--input-json`.
 
