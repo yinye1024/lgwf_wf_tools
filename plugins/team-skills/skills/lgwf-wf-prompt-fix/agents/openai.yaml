@@ -1,0 +1,4 @@
+interface:
+  display_name: "LGWF Workflow Prompt Fix"
+  short_description: "验收并修复 LGWF workflow prompt。"
+  default_prompt: "使用 lgwf-wf-prompt-fix 验收目标 LGWF workflow 引用的 prompt 文件，并修复用户选中的 prompt 问题。"

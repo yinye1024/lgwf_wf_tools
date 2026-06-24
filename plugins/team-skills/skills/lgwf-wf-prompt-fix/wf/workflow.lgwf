@@ -1,0 +1,130 @@
+WORKFLOW lgwf_wf_prompt_fix;
+ENTRY init_prompt_fix_target;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
+  result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
+}
+
+APPROVAL init_prompt_fix_target
+  PROMPT "请确认 prompt-fix 目标 workflow 信息。返回 JSON object，至少包含 target_workflow_lgwf；建议包含 target_package_root 和 target_dirs。"
+  READ state.prompt_fix_target
+  WRITE state.lgwf_wf_prompt_fix.prompt_fix_target
+  RESULT state.lgwf_wf_prompt_fix.init_target_result
+  PERSIST ".lgwf/prompt_fix_target.json"
+  POLL 1;
+
+PY check_lgwf_client_assist
+  SCRIPT "00_check_environment/scripts/check_lgwf_client_assist.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_prompt_fix.environment_check_result
+  UPDATES_STATE;
+
+PY build_prompt_inventory
+  SCRIPT "01_inventory/scripts/build_prompt_inventory.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_inventory_result
+  UPDATES_STATE;
+
+CODEX audit_target_prompts
+  PROMPT "02_audit_prompts/agents/audit_target_prompts.md"
+  CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+  TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+  RESULT state.lgwf_wf_prompt_fix.prompt_audit_result;
+
+PY prepare_prompt_fix_selection_context
+  SCRIPT "03_select_prompt_fixes/scripts/prepare_prompt_fix_selection_context.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prepare_prompt_selection_result
+  UPDATES_STATE;
+
+APPROVAL select_prompt_fixes
+  PROMPT_REF "03_select_prompt_fixes/select_prompt_fixes.md"
+  READ state.lgwf_wf_prompt_fix.prompt_fix_selection_context
+  WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection
+  RESULT state.lgwf_wf_prompt_fix.prompt_fix_selection_result
+  PERSIST ".lgwf/prompt_acceptance/fix_selection.json"
+  POLL 1;
+
+PY validate_prompt_fix_selection
+  SCRIPT "03_select_prompt_fixes/scripts/validate_prompt_fix_selection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.validate_prompt_selection_result
+  UPDATES_STATE;
+
+PY route_after_prompt_selection
+  SCRIPT "03_select_prompt_fixes/scripts/route_after_prompt_selection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.route_prompt_selection_result
+  UPDATES_STATE;
+
+REACT repair_target_prompts MAX 3
+  SPEC "04_repair_prompts/agents/spec.md"
+  REASON CODEX
+    PROMPT "04_repair_prompts/agents/reason_prompt_fix.md"
+    CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/audit.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/fix_selection.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/react_history.json"
+    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_reason_result
+  ACT CODEX
+    PROMPT "04_repair_prompts/agents/apply_prompt_fix.md"
+    CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/fix_selection.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan.json"
+    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_act_result
+  OBSERVE CODEX
+    PROMPT "04_repair_prompts/agents/observe_prompt_fix.md"
+    CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/audit.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/fix_selection.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/repair_review.json"
+    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_observe_result
+  DECIDE PY
+    SCRIPT "04_repair_prompts/scripts/decide_prompt_fix.py"
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_decide_result
+    UPDATES_STATE;
+
+PY summarize_prompt_acceptance
+  SCRIPT "05_summary/scripts/summarize_prompt_acceptance.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_result
+  UPDATES_STATE;
+
+APPROVAL confirm_prompt_acceptance
+  PROMPT_REF "05_summary/confirm_prompt_acceptance.md"
+  READ state.lgwf_wf_prompt_fix.prompt_acceptance_summary
+  WRITE state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation_result
+  PERSIST ".lgwf/prompt_acceptance/confirmation.json"
+  POLL 1;
+
+FLOW init_prompt_fix_target
+  THEN check_lgwf_client_assist
+  THEN build_prompt_inventory
+  THEN audit_target_prompts
+  THEN prepare_prompt_fix_selection_context
+  THEN select_prompt_fixes
+  THEN validate_prompt_fix_selection
+  THEN route_after_prompt_selection;
+
+FLOW repair_target_prompts
+  THEN summarize_prompt_acceptance
+  THEN confirm_prompt_acceptance;
+
+FLOW summarize_prompt_acceptance
+  THEN confirm_prompt_acceptance;
+
+ROUTE route_after_prompt_selection
+  WHEN "fix" THEN repair_target_prompts
+  WHEN "summarize" THEN summarize_prompt_acceptance;

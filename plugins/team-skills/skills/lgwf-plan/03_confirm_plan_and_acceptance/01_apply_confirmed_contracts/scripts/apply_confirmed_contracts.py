@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib.util
 import json
@@ -18,7 +18,7 @@ def load_manager():
 def read_json(path: Path) -> dict:
     if not path.exists():
         raise SystemExit(f"missing required artifact: {path}")
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict):
         raise SystemExit(f"artifact must be a JSON object: {path}")
     return data

@@ -1,0 +1,49 @@
+WORKFLOW verify_repair_candidate_with_review;
+ENTRY verify_repair_candidate;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_fix.verify_repair.instructions.{node}";
+  result_path "lgwf_wf_fix.verify_repair.results.{node}";
+}
+
+PY verify_repair_candidate
+  SCRIPT "scripts/verify_repair_candidate.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_fix.target_repair_current_verification
+  UPDATES_STATE;
+
+PY route_after_verification
+  SCRIPT "scripts/route_after_verification.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_fix.verify_repair_route_result
+  UPDATES_STATE;
+
+CODEX review_repair_candidate
+  PROMPT "agents/review_repair_candidate.md"
+  CONTEXT workspace file ".lgwf/target_repair/current/observation.json"
+  CONTEXT workspace file ".lgwf/target_repair/current/diagnosis.json"
+  CONTEXT workspace file ".lgwf/target_repair/current/plan.json"
+  CONTEXT workspace file ".lgwf/target_repair/current/apply.json"
+  CONTEXT workspace file ".lgwf/target_repair/current/change_audit.json"
+  CONTEXT workspace file ".lgwf/target_repair/current/verification.json"
+  TARGET_DIRS state.targets.dirs
+  TARGET_FILES state.targets.files
+  RESULT state.lgwf_wf_fix.review_repair_candidate_result;
+
+PY finalize_repair_candidate_review
+  SCRIPT "scripts/finalize_repair_candidate_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_fix.target_repair_current_verification
+  UPDATES_STATE;
+
+FLOW verify_repair_candidate
+  THEN route_after_verification;
+
+FLOW review_repair_candidate
+  THEN finalize_repair_candidate_review;
+
+ROUTE route_after_verification
+  WHEN "review" THEN review_repair_candidate
+  WHEN "finish" THEN finalize_repair_candidate_review;

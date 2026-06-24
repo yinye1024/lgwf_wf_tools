@@ -27,17 +27,24 @@ REACT generate_plan_proposal MAX 3
   REASON CODEX
     PROMPT "02_generate_plan_proposal/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_request.json"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     INSTRUCTION state.lgwf_plan.plan_reason_instruction
     RESULT state.lgwf_plan.plan_reason_result
   ACT CODEX
     PROMPT "02_generate_plan_proposal/agents/act.md"
     CONTEXT workspace file ".lgwf/react_task_request.json"
+    CONTEXT workspace file ".lgwf/react_task_plan_reason.md"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     INSTRUCTION state.lgwf_plan.plan_act_instruction
     RESULT state.lgwf_plan.plan_act_result
   OBSERVE CODEX
     PROMPT "02_generate_plan_proposal/agents/observe.md"
     CONTEXT workspace file ".lgwf/react_task_request.json"
     CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     INSTRUCTION state.lgwf_plan.plan_observe_instruction
     RESULT state.lgwf_plan.plan_observe_result
   DECIDE PY

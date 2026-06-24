@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ from pathlib import Path
 def read_json(path: Path) -> dict:
     if not path.exists():
         raise SystemExit(f"missing task request: {path}")
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict):
         raise SystemExit("task request must be a JSON object")
     return data

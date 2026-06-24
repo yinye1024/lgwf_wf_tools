@@ -26,15 +26,22 @@ REACT implement_react_task MAX 3
     PROMPT "01_implement_task/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_context.json"
     CONTEXT workspace file ".lgwf/react_acceptance_plan.json"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     RESULT state.lgwf_plan.implement_reason_result
   ACT CODEX
     PROMPT "01_implement_task/agents/act.md"
     CONTEXT workspace file ".lgwf/react_task_context.json"
+    CONTEXT workspace file ".lgwf/react_task_implementation_reason.md"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     RESULT state.lgwf_plan.implement_act_result
   OBSERVE CODEX
     PROMPT "01_implement_task/agents/observe.md"
     CONTEXT workspace file ".lgwf/react_task_context.json"
     CONTEXT workspace file ".lgwf/react_task_input.json"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     RESULT state.lgwf_plan.implement_observe_result
   DECIDE PY
     SCRIPT "01_implement_task/scripts/decide.py"

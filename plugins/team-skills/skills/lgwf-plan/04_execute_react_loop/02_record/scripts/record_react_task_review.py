@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib.util
 import json
@@ -17,7 +17,7 @@ def load_manager():
 def load(path: Path) -> dict:
     if not path.exists():
         return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     return data if isinstance(data, dict) else {}
 
 
@@ -31,7 +31,13 @@ def validate_result(result: dict) -> None:
         for key in ("evidence", "accepted"):
             if key not in result or result.get(key) in (None, [], False):
                 raise SystemExit(f"pass result requires non-empty {key}")
-        for key in ("criteria_results", "required_check_results", "plan_validation_results"):
+        for key in (
+            "criteria_results",
+            "required_check_results",
+            "negative_check_results",
+            "risk_check_results",
+            "plan_validation_results",
+        ):
             if not result.get(key):
                 raise SystemExit(f"pass result requires non-empty {key}")
         scope = result.get("scope_compliance")
