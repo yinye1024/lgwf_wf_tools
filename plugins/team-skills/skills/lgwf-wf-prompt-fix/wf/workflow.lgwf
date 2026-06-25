@@ -101,6 +101,18 @@ PY summarize_prompt_acceptance
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_result
   UPDATES_STATE;
 
+PY route_after_prompt_acceptance_summary
+  SCRIPT "05_summary/scripts/route_after_prompt_acceptance_summary.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_route_result
+  UPDATES_STATE;
+
+PY finish_prompt_acceptance
+  SCRIPT "05_summary/scripts/finish_prompt_acceptance.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_finish_result
+  UPDATES_STATE;
+
 APPROVAL confirm_prompt_acceptance
   PROMPT_REF "05_summary/confirm_prompt_acceptance.md"
   READ state.lgwf_wf_prompt_fix.prompt_acceptance_summary
@@ -120,11 +132,15 @@ FLOW init_prompt_fix_target
 
 FLOW repair_target_prompts
   THEN summarize_prompt_acceptance
-  THEN confirm_prompt_acceptance;
+  THEN route_after_prompt_acceptance_summary;
 
 FLOW summarize_prompt_acceptance
-  THEN confirm_prompt_acceptance;
+  THEN route_after_prompt_acceptance_summary;
 
 ROUTE route_after_prompt_selection
   WHEN "fix" THEN repair_target_prompts
   WHEN "summarize" THEN summarize_prompt_acceptance;
+
+ROUTE route_after_prompt_acceptance_summary
+  WHEN "auto_finish" THEN finish_prompt_acceptance
+  WHEN "confirm" THEN confirm_prompt_acceptance;

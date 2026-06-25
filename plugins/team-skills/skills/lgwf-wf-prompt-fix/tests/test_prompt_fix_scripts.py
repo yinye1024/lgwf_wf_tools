@@ -45,12 +45,17 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertIn("APPROVAL select_prompt_fixes", source)
         self.assertIn("REACT repair_target_prompts MAX 3", source)
         self.assertIn("APPROVAL confirm_prompt_acceptance", source)
+        self.assertIn("PY route_after_prompt_acceptance_summary", source)
+        self.assertIn("PY finish_prompt_acceptance", source)
         self.assertIn("FLOW init_prompt_fix_target", source)
         self.assertIn("THEN check_lgwf_client_assist", source)
         self.assertIn("THEN build_prompt_inventory", source)
         self.assertIn("CONTEXT workspace file \".lgwf/prompt_fix_target.json\"", source)
         self.assertIn('WHEN "fix" THEN repair_target_prompts', source)
         self.assertIn('WHEN "summarize" THEN summarize_prompt_acceptance', source)
+        self.assertIn('WHEN "auto_finish" THEN finish_prompt_acceptance', source)
+        self.assertIn('WHEN "confirm" THEN confirm_prompt_acceptance', source)
+        self.assertNotIn("THEN route_after_prompt_acceptance_summary\n  THEN confirm_prompt_acceptance", source)
 
     def test_environment_check_detects_missing_and_present_skill(self) -> None:
         check_mod = load_module(
@@ -279,6 +284,54 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertEqual(summary["status"], "fixed")
         self.assertEqual(summary["prompt_count"], 1)
         self.assertEqual(summary["selected_issue_ids"], ["p1"])
+
+    def test_prompt_acceptance_summary_route_auto_finishes_clean_repair_only(self) -> None:
+        route_mod = load_module(
+            "05_summary/scripts/route_after_prompt_acceptance_summary.py",
+            "prompt_summary_route",
+        )
+        self.assertEqual(
+            route_mod.choose_route(
+                {
+                    "status": "fixed",
+                    "repair_passed": True,
+                    "remaining_issue_ids": [],
+                }
+            ),
+            "auto_finish",
+        )
+        self.assertEqual(
+            route_mod.choose_route(
+                {
+                    "status": "fixed",
+                    "repair_passed": True,
+                    "remaining_issue_ids": ["p2"],
+                }
+            ),
+            "confirm",
+        )
+        self.assertEqual(
+            route_mod.choose_route(
+                {
+                    "status": "fixed",
+                    "repair_passed": True,
+                    "remaining_issue_ids": [],
+                    "unexpected_changes": ["wf/workflow.lgwf"],
+                }
+            ),
+            "confirm",
+        )
+
+    def test_prompt_acceptance_auto_finish_writes_confirmation_contract(self) -> None:
+        finish_mod = load_module(
+            "05_summary/scripts/finish_prompt_acceptance.py",
+            "prompt_summary_finish",
+        )
+        confirmation = finish_mod.build_confirmation({"status": "fixed", "remaining_issue_ids": []})
+        self.assertTrue(confirmation["confirmed"])
+        self.assertTrue(confirmation["auto_confirmed"])
+        self.assertEqual(confirmation["status"], "fixed")
+        self.assertEqual(confirmation["remaining_issue_ids"], [])
 
 
 if __name__ == "__main__":
