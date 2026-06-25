@@ -1,0 +1,50 @@
+WORKFLOW lgwf_e2e_test_generator;
+ENTRY prepare_target_request_context;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_e2e.instructions.{node}";
+  result_path "lgwf_e2e.results.{node}";
+}
+
+PY prepare_target_request_context
+  SCRIPT "01_inspect_target/00_collect_target_request/scripts/prepare_target_request_context.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.prepare_target_request_context_result
+  UPDATES_STATE;
+
+APPROVAL collect_target_request
+  PROMPT_REF "01_inspect_target/00_collect_target_request/confirm_target_request.md"
+  READ state.lgwf_e2e.target_request_context
+  WRITE state.lgwf_e2e.target_request
+  RESULT state.lgwf_e2e.target_request_result
+  PERSIST ".lgwf/e2e_target_request.json"
+  POLL 1;
+
+STEP inspect_target
+  WORKFLOW "01_inspect_target/workflow.lgwf";
+
+STEP derive_coverage_matrix
+  WORKFLOW "02_derive_coverage_matrix/workflow.lgwf";
+
+STEP script_flow_e2e
+  WORKFLOW "03_script_flow_e2e/workflow.lgwf";
+
+STEP runtime_fake_e2e
+  WORKFLOW "04_runtime_fake_e2e/workflow.lgwf";
+
+STEP real_positive_e2e
+  WORKFLOW "05_real_positive_e2e/workflow.lgwf";
+
+STEP finish
+  WORKFLOW "06_finish/workflow.lgwf";
+
+FLOW prepare_target_request_context
+  THEN collect_target_request
+  THEN inspect_target
+  THEN derive_coverage_matrix
+  THEN script_flow_e2e
+  THEN runtime_fake_e2e
+  THEN real_positive_e2e
+  THEN finish;

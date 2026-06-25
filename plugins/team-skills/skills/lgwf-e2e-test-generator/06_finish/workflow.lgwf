@@ -1,0 +1,15 @@
+WORKFLOW finish_e2e_test_generator;
+ENTRY generate_final_report;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_e2e.finish.instructions.{node}";
+  result_path "lgwf_e2e.finish.results.{node}";
+}
+
+PY generate_final_report
+  SCRIPT "01_generate_final_report/scripts/generate_final_report.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.final_report_result
+  UPDATES_STATE;

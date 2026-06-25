@@ -1,0 +1,45 @@
+WORKFLOW runtime_fake_e2e;
+ENTRY runtime_fake_e2e_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_e2e.runtime_fake.instructions.{node}";
+  result_path "lgwf_e2e.runtime_fake.results.{node}";
+}
+
+REACT runtime_fake_e2e_react MAX 3
+  SPEC "01_design/agents/spec.md"
+  REASON CODEX
+    PROMPT "01_design/agents/reason.md"
+    CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+    CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
+    CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    TARGET_DIRS state.lgwf_e2e.target_dirs
+    TARGET_FILES state.lgwf_e2e.target_files
+    OUTPUT_JSON ".lgwf/e2e_runtime_fake_design.json"
+    RESULT state.lgwf_e2e.runtime_fake_reason_result
+  ACT CODEX
+    PROMPT "02_generate/agents/act.md"
+    CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+    CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
+    CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_runtime_fake_design.json"
+    TARGET_DIRS state.lgwf_e2e.target_dirs
+    TARGET_FILES state.lgwf_e2e.target_files
+    OUTPUT_JSON ".lgwf/e2e_runtime_fake_generation.json"
+    RESULT state.lgwf_e2e.runtime_fake_act_result
+  OBSERVE CODEX
+    PROMPT "03_validate/agents/observe.md"
+    CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+    CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_runtime_fake_design.json"
+    CONTEXT workspace file ".lgwf/e2e_runtime_fake_generation.json"
+    TARGET_DIRS state.lgwf_e2e.target_dirs
+    TARGET_FILES state.lgwf_e2e.target_files
+    OUTPUT_JSON ".lgwf/e2e_runtime_fake_observe.json"
+    RESULT state.lgwf_e2e.runtime_fake_observe_result
+  DECIDE PY
+    SCRIPT "04_repair/scripts/decide_runtime_fake.py"
+    RESULT state.lgwf_e2e.runtime_fake_decide_result
+    UPDATES_STATE;

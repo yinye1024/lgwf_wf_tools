@@ -1,0 +1,42 @@
+WORKFLOW inspect_target;
+ENTRY validate_target_request;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_e2e.inspect.instructions.{node}";
+  result_path "lgwf_e2e.inspect.results.{node}";
+}
+
+PY validate_target_request
+  SCRIPT "01_validate_target_request/scripts/validate_target_request.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.validate_target_request_result
+  UPDATES_STATE;
+
+PY scan_workflow_package
+  SCRIPT "02_scan_workflow_package/scripts/scan_workflow_package.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.scan_workflow_package_result
+  UPDATES_STATE;
+
+PY parse_workflow_graph
+  SCRIPT "03_parse_workflow_graph/scripts/parse_workflow_graph.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.parse_workflow_graph_result
+  UPDATES_STATE;
+
+CODEX summarize_business_flow
+  PROMPT "04_summarize_business_flow/agents/summarize_business_flow.md"
+  CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+  CONTEXT workspace file ".lgwf/e2e_workflow_sources.json"
+  CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
+  TARGET_DIRS state.lgwf_e2e.target_dirs
+  TARGET_FILES state.lgwf_e2e.target_files
+  OUTPUT_JSON ".lgwf/e2e_business_flow_summary.json"
+  RESULT state.lgwf_e2e.business_flow_summary_result;
+
+FLOW validate_target_request
+  THEN scan_workflow_package
+  THEN parse_workflow_graph
+  THEN summarize_business_flow;

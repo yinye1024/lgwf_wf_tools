@@ -1,0 +1,15 @@
+WORKFLOW derive_coverage_matrix;
+ENTRY build_coverage_matrix;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_e2e.coverage.instructions.{node}";
+  result_path "lgwf_e2e.coverage.results.{node}";
+}
+
+PY build_coverage_matrix
+  SCRIPT "01_build_coverage_matrix/scripts/build_coverage_matrix.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.coverage_matrix_result
+  UPDATES_STATE;
