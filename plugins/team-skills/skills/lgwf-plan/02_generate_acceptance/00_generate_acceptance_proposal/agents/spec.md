@@ -96,6 +96,8 @@
 - `.lgwf/react_acceptance_proposal.json`
 - `.lgwf/react_acceptance_observe.json`
 
+其中 `.lgwf/react_acceptance_proposal.json` 和 `.lgwf/react_acceptance_observe.json` 必须通过 CODEX 节点的 `OUTPUT_JSON` 托管输出；agent 只返回 JSON object，不自行读写、覆盖或转码这些 JSON 文件。
+
 ## Output Format
 
 `react_acceptance_proposal.json` 顶层必须包含：

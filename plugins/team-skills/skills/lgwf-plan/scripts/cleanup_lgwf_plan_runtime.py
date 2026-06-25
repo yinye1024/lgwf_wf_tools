@@ -24,6 +24,9 @@ RUNTIME_PATHS = (
     ".lgwf/react_task_result.json",
     ".lgwf/react_task_history.json",
     ".lgwf/react_task_route.json",
+    ".lgwf/react_task_max_attempt_decision.json",
+    ".lgwf/max_attempt_decision.json",
+    ".lgwf/react_task_max_attempt_approval.json",
     "reports/react-task",
 )
 

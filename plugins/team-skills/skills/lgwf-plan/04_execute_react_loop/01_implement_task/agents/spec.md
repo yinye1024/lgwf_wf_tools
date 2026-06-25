@@ -91,6 +91,8 @@
 - `.lgwf/react_task_input.json`
 - `.lgwf/react_task_result.json`
 
+其中 `.lgwf/react_task_input.json` 和 `.lgwf/react_task_result.json` 必须通过 CODEX 节点的 `OUTPUT_JSON` 托管输出；agent 只返回 JSON object，不自行读写、覆盖或转码这些 JSON 文件。
+
 ## Output Format
 
 `react_task_input.json` 必须包含：
@@ -122,6 +124,8 @@
       "type": "file|json|command|audit|test|manual",
       "target": "证据目标",
       "description": "证据说明",
+      "content_summary": "observe-readable summary or structured snapshot; do not provide only a path",
+      "content_excerpt": "short excerpt when needed to prove file structure, route conditions, or key fields",
       "mapped_check_ids": [],
       "mapped_plan_step_indexes": []
     }

@@ -65,6 +65,9 @@
 
 ## Constraints
 
+- 本节点声明了 `OUTPUT_JSON ".lgwf/react_task_plan_observe.json"`；最终回复只返回 JSON object，由 runtime 校验并写入该文件。
+- 不要自行创建、读取、覆盖或转码 `.lgwf/react_task_plan_observe.json`。
+
 - 只写 `.lgwf/react_task_plan_observe.json`。
 - 不得修改计划草案或业务目标文件。
 - 不得生成验收草案。

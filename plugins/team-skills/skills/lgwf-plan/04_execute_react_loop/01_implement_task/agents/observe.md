@@ -13,6 +13,8 @@
 
 只审查当前 task 的实施结果是否满足 `.lgwf/react_task_context.json` 中的 acceptance。不得新增需求，不得扩大验收范围。
 
+审查必须优先使用 `.lgwf/react_task_input.json` 中的 evidence、check_results、negative_check_results、risk_check_results、`content_summary`、`content_excerpt` 或结构化快照。若被审查文件不在 analysis targets 中，但证据包已经提供足够摘要、摘录或结构化快照，可以基于这些证据给出通过或失败结论；不得仅因为不能直接读取本轮生成文件而 blocked。只有证据包缺少可审查内容，导致关键验收项无法复核时，才输出 `verdict="blocked"` 并要求 act 补充证据快照。
+
 ## Audit Criteria
 
 1. `task_id` 必须与当前 task 一致。
@@ -71,6 +73,9 @@
 ```
 
 ## Constraints
+
+- 本节点声明了 `OUTPUT_JSON ".lgwf/react_task_result.json"`；最终回复只返回 JSON object，由 runtime 校验并写入该文件。
+- 不要自行创建、读取、覆盖或转码 `.lgwf/react_task_result.json`。
 
 - 只写 `.lgwf/react_task_result.json`。
 - 不得修改业务目标文件或证据包。

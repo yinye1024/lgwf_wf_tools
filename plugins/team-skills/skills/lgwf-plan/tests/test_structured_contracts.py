@@ -212,6 +212,120 @@ class StructuredContractsTest(unittest.TestCase):
             self.assertIn("TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs", workflow)
             self.assertIn("TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files", workflow)
 
+    def test_codex_json_artifacts_use_output_json(self) -> None:
+        contracts = (
+            (
+                "01_generate_plan/workflow.lgwf",
+                "01_generate_plan/02_generate_plan_proposal/agents/act.md",
+                ".lgwf/react_task_plan_proposal.json",
+            ),
+            (
+                "01_generate_plan/workflow.lgwf",
+                "01_generate_plan/02_generate_plan_proposal/agents/observe.md",
+                ".lgwf/react_task_plan_observe.json",
+            ),
+            (
+                "02_generate_acceptance/workflow.lgwf",
+                "02_generate_acceptance/00_generate_acceptance_proposal/agents/act.md",
+                ".lgwf/react_acceptance_proposal.json",
+            ),
+            (
+                "02_generate_acceptance/workflow.lgwf",
+                "02_generate_acceptance/00_generate_acceptance_proposal/agents/observe.md",
+                ".lgwf/react_acceptance_observe.json",
+            ),
+            (
+                "04_execute_react_loop/workflow.lgwf",
+                "04_execute_react_loop/01_implement_task/agents/act.md",
+                ".lgwf/react_task_input.json",
+            ),
+            (
+                "04_execute_react_loop/workflow.lgwf",
+                "04_execute_react_loop/01_implement_task/agents/observe.md",
+                ".lgwf/react_task_result.json",
+            ),
+        )
+        for workflow_relative, prompt_relative, artifact in contracts:
+            workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
+            prompt = (ROOT / prompt_relative).read_text(encoding="utf-8")
+            self.assertIn(f'OUTPUT_JSON "{artifact}"', workflow)
+            self.assertIn("OUTPUT_JSON", prompt)
+            self.assertIn(artifact, prompt)
+
+    def test_execute_loop_routes_back_to_next_task(self) -> None:
+        workflow = (ROOT / "04_execute_react_loop/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("ROUTE route_react_task_review", workflow)
+        self.assertIn('WHEN "move_next_task" THEN prepare_react_task_review', workflow)
+        self.assertIn('WHEN "continue_repair" THEN prepare_react_task_review', workflow)
+        self.assertIn('WHEN "requires_user_approval" THEN resolve_max_attempt_decision', workflow)
+        self.assertIn("FLOW resolve_max_attempt_decision", workflow)
+        self.assertIn('WHEN "all_done" THEN finish_react_task_review', workflow)
+        self.assertNotIn("THEN route_react_task_review\n  THEN finish_react_task_review", workflow)
+
+    def test_resolve_max_attempt_decision_routes_user_choices(self) -> None:
+        resolver = load_module("04_execute_react_loop/04_resolve/scripts/resolve_max_attempt_decision.py", "resolve_max_attempt")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            lgwf_dir.mkdir()
+            plan = {
+                "current_task_id": "task-1",
+                "tasks": [
+                    {"task_id": "task-1", "status": "blocked_for_user", "attempts": 3},
+                    {"task_id": "task-2", "status": "planned", "attempts": 0},
+                ],
+            }
+            (lgwf_dir / "react_task_plan.json").write_text(json.dumps(plan), encoding="utf-8")
+            (lgwf_dir / "react_task_route.json").write_text(
+                json.dumps({"route": "requires_user_approval", "task_id": "task-1"}),
+                encoding="utf-8",
+            )
+
+            for action, expected_route, expected_status in (
+                ("continue", "continue_repair", "needs_repair"),
+                ("skip", "move_next_task", "skipped"),
+                ("accept", "move_next_task", "passed"),
+                ("stop", "all_done", "stopped_by_user"),
+            ):
+                plan["tasks"][0]["status"] = "blocked_for_user"
+                plan["tasks"][0]["attempts"] = 3
+                plan["tasks"][1]["status"] = "planned"
+                plan["current_task_id"] = "task-1"
+                (lgwf_dir / "react_task_plan.json").write_text(json.dumps(plan), encoding="utf-8")
+                (lgwf_dir / "react_task_route.json").write_text(
+                    json.dumps({"route": "requires_user_approval", "task_id": "task-1"}),
+                    encoding="utf-8",
+                )
+                (lgwf_dir / "react_task_max_attempt_decision.json").write_text(
+                    json.dumps({"action": action, "comment": "test decision"}),
+                    encoding="utf-8",
+                )
+
+                output = io.StringIO()
+                with pushd(root), redirect_stdout(output):
+                    resolver.main()
+                data = json.loads(output.getvalue())
+                self.assertEqual(data["lgwf_plan.react_task_route"]["route"], expected_route)
+                stored = json.loads((lgwf_dir / "react_task_plan.json").read_text(encoding="utf-8"))
+                self.assertEqual(stored["tasks"][0]["status"], expected_status)
+
+    def test_route_script_emits_runtime_route_key(self) -> None:
+        route = load_module("04_execute_react_loop/03_route/scripts/route_react_task_review.py", "route_react_task")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            lgwf_dir.mkdir()
+            (lgwf_dir / "react_task_route.json").write_text(
+                json.dumps({"route": "move_next_task", "task_id": "task-1"}),
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            with pushd(root), redirect_stdout(output):
+                route.main()
+            data = json.loads(output.getvalue())
+            self.assertEqual(data["__route__route_react_task_review"], "move_next_task")
+            self.assertEqual(data["lgwf_plan.next_route"], "move_next_task")
+
     def test_plan_generation_spec_defines_quality_contract(self) -> None:
         spec = (ROOT / "01_generate_plan/02_generate_plan_proposal/agents/spec.md").read_text(encoding="utf-8")
         for text in (
@@ -258,6 +372,19 @@ class StructuredContractsTest(unittest.TestCase):
             "不伪装通过",
         ):
             self.assertIn(text, spec)
+
+
+    def test_execute_react_evidence_snapshot_contract(self) -> None:
+        spec = (ROOT / "04_execute_react_loop/01_implement_task/agents/spec.md").read_text(encoding="utf-8")
+        act = (ROOT / "04_execute_react_loop/01_implement_task/agents/act.md").read_text(encoding="utf-8")
+        observe = (ROOT / "04_execute_react_loop/01_implement_task/agents/observe.md").read_text(encoding="utf-8")
+
+        for text in ("content_summary", "content_excerpt"):
+            self.assertIn(text, spec)
+            self.assertIn(text, act)
+            self.assertIn(text, observe)
+        self.assertIn("不能只写路径", act)
+        self.assertIn("不得仅因为不能直接读取本轮生成文件而 blocked", observe)
 
 
 if __name__ == "__main__":

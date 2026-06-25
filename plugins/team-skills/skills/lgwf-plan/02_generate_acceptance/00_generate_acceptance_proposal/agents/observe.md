@@ -58,6 +58,9 @@
 
 ## Constraints
 
+- 本节点声明了 `OUTPUT_JSON ".lgwf/react_acceptance_observe.json"`；最终回复只返回 JSON object，由 runtime 校验并写入该文件。
+- 不要自行创建、读取、覆盖或转码 `.lgwf/react_acceptance_observe.json`。
+
 - 只写 `.lgwf/react_acceptance_observe.json`。
 - 不得修改验收草案、计划草案或目标文件。
 - 审查失败时把问题写入 `issues` 和 `required_changes`。

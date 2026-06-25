@@ -31,6 +31,7 @@ REACT generate_acceptance_proposal MAX 3
     CONTEXT workspace file ".lgwf/react_acceptance_reason.md"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    OUTPUT_JSON ".lgwf/react_acceptance_proposal.json"
     RESULT state.lgwf_plan.acceptance_act_result
   OBSERVE CODEX
     PROMPT "00_generate_acceptance_proposal/agents/observe.md"
@@ -38,6 +39,7 @@ REACT generate_acceptance_proposal MAX 3
     CONTEXT workspace file ".lgwf/react_acceptance_proposal.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    OUTPUT_JSON ".lgwf/react_acceptance_observe.json"
     RESULT state.lgwf_plan.acceptance_observe_result
   DECIDE PY
     SCRIPT "00_generate_acceptance_proposal/scripts/decide.py"

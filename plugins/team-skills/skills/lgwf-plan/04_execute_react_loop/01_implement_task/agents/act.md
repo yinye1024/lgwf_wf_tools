@@ -30,6 +30,8 @@
 
 - `.lgwf/react_task_input.json`
 
+证据包必须可被 `observe` 直接审查。凡是 evidence 指向本轮新建或修改的文件、JSON、workflow 片段、prompt 或脚本时，不能只写路径；必须同时写入 `content_summary`，必要时写入 `content_excerpt` 或结构化快照，覆盖关键章节、字段、路由条件、检查结果和范围边界。
+
 ## Output Format
 
 输出 JSON object：
@@ -61,6 +63,8 @@
       "type": "file|json|command|audit|test|manual",
       "target": "证据目标",
       "description": "证据说明",
+      "content_summary": "可审查的关键内容摘要或结构化快照",
+      "content_excerpt": "必要的短摘录；用于证明文件结构、路由条件、JSON 字段或关键章节",
       "mapped_check_ids": [],
       "mapped_plan_step_indexes": []
     }
@@ -78,6 +82,9 @@
 ```
 
 ## Constraints
+
+- 本节点声明了 `OUTPUT_JSON ".lgwf/react_task_input.json"`；最终回复只返回 JSON object，由 runtime 校验并写入该文件。
+- 不要自行创建、读取、覆盖或转码 `.lgwf/react_task_input.json`。
 
 - 不得处理非当前 task。
 - 不得新增需求或扩大范围。
