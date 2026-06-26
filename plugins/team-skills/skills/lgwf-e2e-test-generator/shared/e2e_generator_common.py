@@ -44,10 +44,6 @@ def slugify(value: str) -> str:
     return cleaned or "target_workflow"
 
 
-def env_name_for_prefix(prefix: str) -> str:
-    return "LGWF_" + re.sub(r"[^0-9A-Za-z]+", "_", prefix).strip("_").upper() + "_REAL_CODEX_E2E"
-
-
 def workflow_name_from_text(text: str) -> str | None:
     match = re.search(r"^\s*WORKFLOW\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", text, re.MULTILINE)
     return match.group(1) if match else None

@@ -7,6 +7,7 @@ from typing import Any
 
 
 TERMINAL_STATUSES = {"passed", "skipped"}
+MANUAL_APPROVAL_BLOCK = "manual_approval_required"
 
 
 def _lgwf(root: Path) -> Path:
@@ -124,6 +125,53 @@ def append_history(root: str | Path, entry: dict) -> list:
     return history
 
 
+def _iter_values(value: Any) -> list[Any]:
+    values = [value]
+    if isinstance(value, dict):
+        for item in value.values():
+            values.extend(_iter_values(item))
+    elif isinstance(value, list):
+        for item in value:
+            values.extend(_iter_values(item))
+    return values
+
+
+def _lower_text_values(value: Any) -> list[str]:
+    return [str(item).lower() for item in _iter_values(value) if isinstance(item, str)]
+
+
+def requires_manual_approval(result: dict) -> bool:
+    if result.get("blocking_reason") == MANUAL_APPROVAL_BLOCK:
+        return True
+
+    for item in result.get("required_follow_up") or []:
+        if isinstance(item, dict):
+            follow_type = str(item.get("type") or item.get("kind") or "").lower()
+            if follow_type in {"approval", "manual_approval", MANUAL_APPROVAL_BLOCK}:
+                return True
+            if item.get("approval_artifact") or item.get("confirmed_artifact"):
+                return True
+
+    text_values = _lower_text_values(result)
+    manual_markers = (
+        "manual_approval_required",
+        "check_step_design_confirmation",
+        "step_design_confirmation_record_absent",
+        "step_designs_json_absent",
+        "approval_artifact",
+        "confirmed_artifact",
+        "confirmation_record_absent",
+    )
+    if any(marker in text for marker in manual_markers for text in text_values):
+        return True
+
+    approval_words = ("approval", "approve", "人工确认", "确认记录")
+    artifact_words = ("step_designs.json", "confirmation_record", "confirmed_artifact")
+    return any(word in text for word in approval_words for text in text_values) and any(
+        word in text for word in artifact_words for text in text_values
+    )
+
+
 def record_review(root: str | Path, task_id: str, result: dict, max_attempts: int = 3) -> dict:
     root = Path(root)
     plan_path = _lgwf(root) / "react_task_plan.json"
@@ -140,6 +188,9 @@ def record_review(root: str | Path, task_id: str, result: dict, max_attempts: in
         if result.get("pass") is True or result.get("verdict") == "pass":
             status = "passed"
             route = "move_next_task"
+        elif requires_manual_approval(result):
+            status = "blocked_for_user"
+            route = "requires_user_approval"
         elif attempts >= max_attempts:
             status = "blocked_for_user"
             route = "requires_user_approval"

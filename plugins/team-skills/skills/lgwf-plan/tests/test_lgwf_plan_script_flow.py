@@ -138,6 +138,38 @@ def fail_result(attempt: int) -> dict:
     }
 
 
+def manual_approval_result() -> dict:
+    return {
+        "task_id": "task-1",
+        "verdict": "fail",
+        "pass": False,
+        "accepted": False,
+        "blocking_reason": "manual_approval_required",
+        "evidence": [
+            {"evidence_id": "step_design_confirmation_record_absent", "target": ".lgwf/step_design_confirmation_record.json"},
+            {"evidence_id": "step_designs_json_absent", "target": ".lgwf/step_designs.json"},
+        ],
+        "criteria_results": [{"criterion": "需要人工确认步骤设计", "passed": False}],
+        "required_check_results": [{"check_id": "check_step_design_confirmation", "passed": False}],
+        "negative_check_results": [{"check_id": "negative_no_unapproved_design_as_input", "passed": True}],
+        "risk_check_results": [{"risk": "未确认设计被当作实现输入", "passed": False}],
+        "plan_validation_results": [{"plan_step_index": 3, "passed": False}],
+        "scope_compliance": {"within_scope": True, "issues": []},
+        "required_follow_up": [
+            {
+                "type": "approval",
+                "title": "确认步骤设计",
+                "reason": "步骤设计需要用户确认后才能固化",
+                "locations": ["docs/steps/*.md"],
+                "approval_artifact": ".lgwf/step_design_confirmation_record.json",
+                "confirmed_artifact": ".lgwf/step_designs.json",
+                "suggested_change": "进入人工确认节点，而不是继续 Codex 修复",
+                "validation": "存在确认记录和确认后的 step_designs.json",
+            }
+        ],
+    }
+
+
 class LgwfPlanEndToEndTest(unittest.TestCase):
     def test_lgwf_plan_end_to_end_covers_all_branches_with_five_tasks(self) -> None:
         plan = task_plan(task_count=5)
@@ -246,12 +278,13 @@ class LgwfPlanEndToEndTest(unittest.TestCase):
 
             # 用户确认：reject 分支与 approve 后正式契约落盘。
             write_json(lgwf_dir / "react_task_contract_approval.json", {"decision": "reject"})
-            call_script(
-                "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/apply_confirmed_contracts.py",
+            data, _ = call_script(
+                "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/finish_contract_review.py",
                 root,
-                "apply_rejected",
-                expect_exit=True,
+                "finish_rejected_contract",
             )
+            self.assertTrue(data["lgwf_plan.contract_review_finished"])
+            self.assertEqual(data["lgwf_plan.contract_review_finish"]["status"], "contract_revision_requested")
             self.assertFalse((lgwf_dir / "react_task_plan.json").exists())
 
             write_json(lgwf_dir / "react_task_contract_approval.json", {"decision": "approve"})
@@ -324,6 +357,116 @@ class LgwfPlanEndToEndTest(unittest.TestCase):
             self.assertTrue(data["lgwf_plan.finished"])
             self.assertEqual(data["lgwf_plan.report"]["history_count"], 9)
             self.assertTrue((root / "reports" / "react-task" / "react_task_report.json").exists())
+
+    def test_manual_approval_block_routes_to_user_without_repair_loop(self) -> None:
+        plan = task_plan(task_count=1)
+        acceptance = acceptance_plan(plan)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            write_json(lgwf_dir / "react_task_plan.json", plan)
+            write_json(lgwf_dir / "react_acceptance_plan.json", acceptance)
+
+            data, _ = call_script("04_execute_react_loop/00_prepare/scripts/prepare_react_task_review.py", root, "prepare_manual_block")
+            self.assertEqual(data["lgwf_plan.current_task_context"]["task"]["task_id"], "task-1")
+
+            write_json(lgwf_dir / "react_task_result.json", manual_approval_result())
+            data, _ = call_script("04_execute_react_loop/02_record/scripts/record_react_task_review.py", root, "record_manual_block")
+            route = data["lgwf_plan.react_task_route"]
+            self.assertEqual(route["route"], "requires_user_approval")
+            self.assertEqual(route["status"], "blocked_for_user")
+            self.assertEqual(route["attempts"], 1)
+
+            stored_plan = read_json(lgwf_dir / "react_task_plan.json")
+            self.assertEqual(stored_plan["tasks"][0]["attempts"], 1)
+            self.assertEqual(stored_plan["tasks"][0]["status"], "blocked_for_user")
+
+            data, _ = call_script("04_execute_react_loop/03_route/scripts/route_react_task_review.py", root, "route_manual_block")
+            self.assertEqual(data["lgwf_plan.next_route"], "requires_user_approval")
+
+    def test_manual_approval_block_exits_react_before_internal_max_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            write_json(lgwf_dir / "react_task_result.json", manual_approval_result())
+            data, _ = call_script("04_execute_react_loop/01_implement_task/scripts/decide.py", root, "decide_manual_block")
+            self.assertEqual(data["next"], "exit")
+
+            write_json(lgwf_dir / "react_task_result.json", fail_result(1))
+            data, _ = call_script("04_execute_react_loop/01_implement_task/scripts/decide.py", root, "decide_regular_fail")
+            self.assertEqual(data["next"], "continue")
+
+    def test_legacy_step_design_missing_artifacts_route_to_user(self) -> None:
+        plan = task_plan(task_count=1)
+        acceptance = acceptance_plan(plan)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            write_json(lgwf_dir / "react_task_plan.json", plan)
+            write_json(lgwf_dir / "react_acceptance_plan.json", acceptance)
+            call_script("04_execute_react_loop/00_prepare/scripts/prepare_react_task_review.py", root, "prepare_legacy_manual_block")
+
+            legacy_result = fail_result(1)
+            legacy_result["required_check_results"] = [
+                {"check_id": "check_step_design_confirmation", "passed": False}
+            ]
+            legacy_result["evidence"] = [
+                {"evidence_id": "step_design_confirmation_record_absent"},
+                {"evidence_id": "step_designs_json_absent"},
+            ]
+            legacy_result["required_follow_up"] = [
+                {
+                    "title": "提交步骤设计给用户确认",
+                    "reason": "缺少确认记录",
+                    "locations": ["docs/steps/*.md"],
+                    "suggested_change": "进入 APPROVAL",
+                    "validation": "检查 .lgwf/step_designs.json",
+                }
+            ]
+            write_json(lgwf_dir / "react_task_result.json", legacy_result)
+
+            data, _ = call_script("04_execute_react_loop/02_record/scripts/record_react_task_review.py", root, "record_legacy_manual_block")
+            self.assertEqual(data["lgwf_plan.react_task_route"]["route"], "requires_user_approval")
+            self.assertEqual(read_json(lgwf_dir / "react_task_plan.json")["tasks"][0]["attempts"], 1)
+
+    def test_rejected_initial_task_request_finishes_without_planning(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            write_json(lgwf_dir / "react_task_request.json", {"decision": "reject", "comment": "stop before planning"})
+
+            data, _ = call_script(
+                "01_generate_plan/00_collect_react_task_request/scripts/finish_react_task_request.py",
+                root,
+                "finish_rejected_task_request",
+            )
+
+            self.assertTrue(data["lgwf_plan.task_request_finished"])
+            self.assertEqual(data["lgwf_plan.task_request_finish"]["status"], "task_request_rejected")
+            self.assertFalse((lgwf_dir / "react_task_plan_proposal.json").exists())
+
+    def test_rejected_react_block_decision_stops_by_business_route(self) -> None:
+        plan = task_plan(task_count=1)
+        acceptance = acceptance_plan(plan)
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            write_json(lgwf_dir / "react_task_plan.json", plan)
+            write_json(lgwf_dir / "react_acceptance_plan.json", acceptance)
+            write_json(lgwf_dir / "react_task_route.json", {"route": "requires_user_approval", "task_id": "task-1"})
+            write_json(lgwf_dir / "react_task_max_attempt_decision.json", {"decision": "reject", "comment": "stop task"})
+
+            data, _ = call_script(
+                "04_execute_react_loop/04_resolve/scripts/resolve_max_attempt_decision.py",
+                root,
+                "resolve_rejected_block_decision",
+            )
+
+            self.assertEqual(data["lgwf_plan.react_task_route"]["route"], "all_done")
+            self.assertEqual(data["lgwf_plan.react_task_route"]["status"], "stopped_by_user")
 
 
 if __name__ == "__main__":

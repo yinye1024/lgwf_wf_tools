@@ -77,6 +77,28 @@
 9. **失败可继续**：未通过时 required_follow_up 具体到位置、原因、建议修改和验证方式。
 10. **不伪装通过**：缺证据、缺检查、范围越界或阻塞时不得输出 pass。
 
+## Manual Approval Blocks
+
+当验收失败的原因是缺少用户确认、确认记录或确认后 artifact 时，不得建议继续由 Codex 修复。`observe` 必须输出稳定的人工门禁字段，供路由脚本切到人工确认。
+
+示例：
+
+```json
+{
+  "blocking_reason": "manual_approval_required",
+  "required_follow_up": [
+    {
+      "type": "approval",
+      "title": "确认步骤设计",
+      "approval_artifact": ".lgwf/step_design_confirmation_record.json",
+      "confirmed_artifact": ".lgwf/step_designs.json"
+    }
+  ]
+}
+```
+
+适用场景包括但不限于：缺少 approval 记录、缺少用户 approve、缺少确认后 JSON、或者 required check 明确依赖人工确认。
+
 ## Success Criteria
 
 - 每轮只处理一个当前 task。

@@ -5,7 +5,7 @@
 必须满足：
 
 - 使用真实 Codex。
-- 默认通过 `skipUnless(os.environ.get("<ENV>") == "1")` 跳过。
+- 默认不被 `unittest discover` 收录；人工验收时直接执行测试文件。
 - 业务 fixture 小、明确、可自动验收。
 - 自动处理 approval。
 - 最终使用黑盒断言验证业务产物。
@@ -13,6 +13,6 @@
 
 禁止：
 
-- 默认运行真实 Codex。
+- 被 `unittest discover` 或常规回归入口自动运行真实 Codex。
 - 把失败/重试分支覆盖放进本测试。
 - 只断言内部 `.lgwf` 状态而没有业务黑盒断言。

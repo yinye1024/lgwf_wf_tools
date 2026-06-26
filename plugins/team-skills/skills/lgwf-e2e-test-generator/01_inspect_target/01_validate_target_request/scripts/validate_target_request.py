@@ -6,7 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "shared"))
 
-from e2e_generator_common import LGWF_DIR, env_name_for_prefix, output_state, read_json, slugify, workflow_name_from_text, write_json
+from e2e_generator_common import LGWF_DIR, output_state, read_json, slugify, workflow_name_from_text, write_json
 
 
 def resolve_path(raw: str, base: Path) -> Path:
@@ -46,15 +46,12 @@ def main() -> None:
     test_output_dir = str(request.get("test_output_dir") or "tests").strip().replace("\\", "/").strip("/")
     if not test_output_dir or ".." in Path(test_output_dir).parts or Path(test_output_dir).is_absolute():
         raise SystemExit("test_output_dir must be a non-empty relative path without '..'")
-    real_codex_env = str(request.get("real_codex_env") or env_name_for_prefix(prefix)).strip()
-
     normalized = {
         "workflow_root": workflow_root.as_posix(),
         "workflow_lgwf": workflow_lgwf.as_posix(),
         "workflow_name": workflow_name,
         "test_output_dir": test_output_dir,
         "test_name_prefix": prefix,
-        "real_codex_env": real_codex_env,
         "generated_tests": {
             "script_flow": f"test_{prefix}_script_flow_e2e.py",
             "runtime_fake": f"test_{prefix}_runtime_fake_e2e.py",

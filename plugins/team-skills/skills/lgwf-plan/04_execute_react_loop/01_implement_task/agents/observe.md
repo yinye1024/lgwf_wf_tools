@@ -28,6 +28,26 @@
 9. `pass=false` 时必须给出可执行的 `required_follow_up`。
 10. 缺证据、未执行 required check、负向检查失败、范围越界或阻塞时不得输出 pass。
 
+## Manual Approval Blocks
+
+如果当前 task 的未通过原因是缺少人工确认、确认记录或确认后 artifact，不要把它描述成可由下一轮 `act` 修复的问题。必须输出：
+
+```json
+{
+  "blocking_reason": "manual_approval_required",
+  "required_follow_up": [
+    {
+      "type": "approval",
+      "title": "确认步骤设计",
+      "approval_artifact": ".lgwf/step_design_confirmation_record.json",
+      "confirmed_artifact": ".lgwf/step_designs.json"
+    }
+  ]
+}
+```
+
+这类结果应让 workflow 进入人工确认，而不是继续 Codex repair。
+
 ## Output
 
 将结构化审查结果写入：

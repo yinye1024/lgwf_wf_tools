@@ -18,7 +18,7 @@
 
 - 返回结果是单个 JSON object，没有解释性文本或 Markdown 包裹。
 - `workflow_lgwf` 指向本次要分析的目标 `workflow.lgwf`。
-- 如提供 `workflow_root`、`test_output_dir`、`test_name_prefix` 或 `real_codex_env`，其值与输入上下文保持一致。
+- 如提供 `workflow_root`、`test_output_dir` 或 `test_name_prefix`，其值与输入上下文保持一致。
 - 返回结构可被审批节点稳定消费并持久化到 `.lgwf/e2e_target_request.json`。
 
 ## Output
@@ -38,8 +38,6 @@
 - `workflow_root`：目标 workflow package 根目录。省略时使用 `workflow_lgwf` 所在目录。
 - `test_output_dir`：测试输出目录，默认 `tests`。
 - `test_name_prefix`：测试文件名前缀。省略时从 `WORKFLOW <name>;` 推导。
-- `real_codex_env`：真实 Codex E2E 开关环境变量。省略时按前缀推导。
-
 ### 示例
 
 ```json
@@ -47,8 +45,7 @@
   "workflow_lgwf": "D:/repo/plugins/team-skills/skills/lgwf-plan/workflow.lgwf",
   "workflow_root": "D:/repo/plugins/team-skills/skills/lgwf-plan",
   "test_output_dir": "tests",
-  "test_name_prefix": "lgwf_plan",
-  "real_codex_env": "LGWF_LGWF_PLAN_REAL_CODEX_E2E"
+  "test_name_prefix": "lgwf_plan"
 }
 ```
 

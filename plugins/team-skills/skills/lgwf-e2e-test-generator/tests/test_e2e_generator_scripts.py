@@ -143,7 +143,7 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             self.assertEqual(normalized["test_output_dir"], "tests")
             self.assertEqual(normalized["test_name_prefix"], "sample_target")
             self.assertEqual(normalized["generated_tests"]["script_flow"], "test_sample_target_script_flow_e2e.py")
-            self.assertEqual(normalized["real_codex_env"], "LGWF_SAMPLE_TARGET_REAL_CODEX_E2E")
+            self.assertNotIn("real_codex_env", normalized)
 
     def test_parse_workflow_graph_covers_core_node_types_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -187,6 +187,53 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             self.assertEqual({route["value"] for route in matrix["script_flow"]["routes"]}, {"retry", "done"})
             self.assertIn(".lgwf/confirm.json", matrix["script_flow"]["approval_persist"])
             self.assertIn(".lgwf/generated.json", matrix["runtime_fake"]["output_json"])
+            self.assertEqual({route["value"] for route in matrix["runtime_fake"]["routes"]}, {"retry", "done"})
+            self.assertEqual(matrix["runtime_fake"]["persist_artifacts"], [".lgwf/confirm.json"])
+            self.assertTrue(matrix["runtime_fake"]["flows"])
+            self.assertFalse(matrix["real_positive"]["discover_collected"])
+            self.assertEqual(
+                matrix["real_positive"]["manual_run_command"],
+                "python tests/test_sample_target_real_positive_e2e.py",
+            )
+            self.assertIn(
+                {"route_id": "choose_next", "value": "retry", "target": "repair_loop", "workflow": "workflow.lgwf"},
+                matrix["runtime_fake"]["branch_targets"],
+            )
+            self.assertIn(
+                {"route_id": "choose_next", "value": "done", "target": "finish", "workflow": "workflow.lgwf"},
+                matrix["runtime_fake"]["branch_targets"],
+            )
+            repair_ids = {item["id"] for item in matrix["runtime_fake"]["repair_or_retry_nodes"]}
+            self.assertIn("repair_loop", repair_ids)
+
+    def test_runtime_fake_prompts_require_scenario_coverage_schema(self) -> None:
+        spec = (ROOT / "04_runtime_fake_e2e" / "01_design" / "agents" / "spec.md").read_text(encoding="utf-8")
+        design = (ROOT / "04_runtime_fake_e2e" / "01_design" / "agents" / "reason.md").read_text(encoding="utf-8")
+        generate = (ROOT / "04_runtime_fake_e2e" / "02_generate" / "agents" / "act.md").read_text(encoding="utf-8")
+        observe = (ROOT / "04_runtime_fake_e2e" / "03_validate" / "agents" / "observe.md").read_text(encoding="utf-8")
+
+        for token in (
+            "scenarios[]",
+            "happy_path",
+            "manual_approval_required",
+            "expected_runtime_path",
+            "approval_decisions",
+            "covered_branches",
+            "coverage_gaps[]",
+            "history_count",
+            "不会回到错误的前序 Codex repair loop",
+        ):
+            self.assertIn(token, spec)
+        for token in ("scenarios[]", "scenario_id", "triggered_branches"):
+            self.assertIn(token, design)
+        self.assertIn("happy_path", design)
+        self.assertIn("scenario_generation[]", generate)
+        self.assertIn("test_<scenario_id>", generate)
+        self.assertIn("call_index", generate)
+        self.assertIn("scenario_checks", observe)
+        self.assertIn("coverage_gaps", observe)
+        self.assertIn("business_route_coverage", observe)
+        self.assertIn("manual_approval_required", observe)
 
     def test_finish_report_records_fixed_three_generated_tests(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -194,7 +241,6 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             request = {
                 "workflow_lgwf": "D:/target/workflow.lgwf",
                 "test_output_dir": "tests",
-                "real_codex_env": "LGWF_SAMPLE_REAL_CODEX_E2E",
                 "generated_tests": {
                     "script_flow": "test_sample_script_flow_e2e.py",
                     "runtime_fake": "test_sample_runtime_fake_e2e.py",
@@ -211,7 +257,8 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
 
             report = read_json(work / "reports" / "e2e-test-generator" / "report.json")
             self.assertEqual(set(report["generated_tests"]), {"script_flow", "runtime_fake", "real_positive"})
-            self.assertTrue((work / "reports" / "e2e-test-generator" / "report.md").exists())
+            report_md = (work / "reports" / "e2e-test-generator" / "report.md").read_text(encoding="utf-8")
+            self.assertIn("人工直接执行", report_md)
 
 
 if __name__ == "__main__":

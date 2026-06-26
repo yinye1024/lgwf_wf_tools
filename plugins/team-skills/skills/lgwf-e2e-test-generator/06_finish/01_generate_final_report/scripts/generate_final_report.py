@@ -45,7 +45,7 @@ def main() -> None:
         "",
         f"- 目标 workflow: `{request.get('workflow_lgwf', '')}`",
         f"- 测试输出目录: `{request.get('test_output_dir', 'tests')}`",
-        f"- 真实 Codex E2E 开关: `{request.get('real_codex_env', '')}`",
+        "- 真实 Codex E2E: 人工直接执行对应测试文件，默认不纳入 `unittest discover` 回归集合。",
         "",
         "## 生成文件",
     ]

@@ -9,6 +9,8 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
+from test_lgwf_wf_create_scaffold_contract import WorkflowCreateScaffoldContractTest  # noqa: F401
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,6 +37,32 @@ class pushd:
 
 
 class StructuredContractsTest(unittest.TestCase):
+    def test_human_facing_test_and_prompt_text_has_no_mojibake(self) -> None:
+        checked_files = (
+            "tests/test_lgwf_plan_workflow_runtime_e2e.py",
+            "01_generate_plan/02_generate_plan_proposal/agents/reason.md",
+            "02_generate_acceptance/00_generate_acceptance_proposal/agents/reason.md",
+            "02_generate_acceptance/00_generate_acceptance_proposal/agents/act.md",
+            "02_generate_acceptance/00_generate_acceptance_proposal/agents/spec.md",
+        )
+        mojibake_fragments = (
+            "鍚",
+            "浠",
+            "鐨",
+            "璁",
+            "楠",
+            "骞",
+            "瑕",
+            "涓",
+            "鎴",
+            "�",
+            "€",
+        )
+        for relative in checked_files:
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            for fragment in mojibake_fragments:
+                self.assertNotIn(fragment, text, f"{relative} contains mojibake fragment {fragment!r}")
+
     def test_init_plan_preserves_structured_fields(self) -> None:
         manager = load_module("04_execute_react_loop/00_prepare/scripts/manage_react_task.py", "manager")
         with tempfile.TemporaryDirectory() as temp:
@@ -166,6 +194,15 @@ class StructuredContractsTest(unittest.TestCase):
     def test_confirmation_template_mentions_structured_fields(self) -> None:
         template = (ROOT / "03_confirm_plan_and_acceptance/00_user_decision_template/plan_acceptance_decision_template.md").read_text(encoding="utf-8")
         for text in (
+            "当前建议",
+            "建议 approve",
+            "建议 reject",
+            "建议 revise",
+            "质量风险",
+            "不得把完整 `confirmation_context`",
+            "不直接读取或要求读取其他 proposal 文件",
+            "ROUTE_ON_DECISION",
+            "mojibake",
             "summary.problem_statement",
             "summary.proposed_approach",
             "summary.key_decisions",
@@ -177,6 +214,37 @@ class StructuredContractsTest(unittest.TestCase):
             "plan_validation_map",
         ):
             self.assertIn(text, template)
+
+    def test_contract_confirmation_uses_decision_route(self) -> None:
+        workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("APPROVAL confirm_plan_and_acceptance", workflow)
+        self.assertIn("ROUTE_ON_DECISION", workflow)
+        self.assertIn("ROUTE confirm_plan_and_acceptance", workflow)
+        self.assertIn('WHEN "approve" THEN apply_confirmed_contracts', workflow)
+        self.assertIn('WHEN "revise" THEN finish_contract_review', workflow)
+        self.assertIn('WHEN "reject" THEN finish_contract_review', workflow)
+        self.assertNotIn("route_contract_decision", workflow)
+
+    def test_all_lgwf_plan_approval_nodes_use_business_decision_routes(self) -> None:
+        root_workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        generate_workflow = (ROOT / "01_generate_plan/workflow.lgwf").read_text(encoding="utf-8")
+        execute_workflow = (ROOT / "04_execute_react_loop/workflow.lgwf").read_text(encoding="utf-8")
+
+        self.assertIn("APPROVAL confirm_plan_and_acceptance", root_workflow)
+        self.assertIn("ROUTE_ON_DECISION", root_workflow)
+        self.assertIn('WHEN "reject" THEN finish_contract_review', root_workflow)
+
+        self.assertIn("APPROVAL collect_react_task_request", generate_workflow)
+        self.assertIn("ROUTE_ON_DECISION", generate_workflow)
+        self.assertIn("ROUTE collect_react_task_request", generate_workflow)
+        self.assertIn('WHEN "approve" THEN validate_plan_analysis_targets', generate_workflow)
+        self.assertIn('WHEN "reject" THEN finish_react_task_request', generate_workflow)
+
+        self.assertIn("APPROVAL decide_react_task_block", execute_workflow)
+        self.assertIn("ROUTE_ON_DECISION", execute_workflow)
+        self.assertIn("ROUTE decide_react_task_block", execute_workflow)
+        self.assertIn('WHEN "approve" THEN resolve_max_attempt_decision', execute_workflow)
+        self.assertIn('WHEN "reject" THEN resolve_max_attempt_decision', execute_workflow)
 
     def test_confirmation_context_includes_summary(self) -> None:
         route = load_module("02_generate_acceptance/01_route_acceptance_generation/scripts/route_acceptance_generation.py", "route_acceptance")
@@ -218,46 +286,74 @@ class StructuredContractsTest(unittest.TestCase):
                 "01_generate_plan/workflow.lgwf",
                 "01_generate_plan/02_generate_plan_proposal/agents/act.md",
                 ".lgwf/react_task_plan_proposal.json",
+                True,
             ),
             (
                 "01_generate_plan/workflow.lgwf",
                 "01_generate_plan/02_generate_plan_proposal/agents/observe.md",
                 ".lgwf/react_task_plan_observe.json",
+                False,
+            ),
+            (
+                "02_generate_acceptance/workflow.lgwf",
+                "02_generate_acceptance/00_generate_acceptance_proposal/agents/reason.md",
+                ".lgwf/react_acceptance_reason.json",
+                True,
             ),
             (
                 "02_generate_acceptance/workflow.lgwf",
                 "02_generate_acceptance/00_generate_acceptance_proposal/agents/act.md",
                 ".lgwf/react_acceptance_proposal.json",
+                True,
             ),
             (
                 "02_generate_acceptance/workflow.lgwf",
                 "02_generate_acceptance/00_generate_acceptance_proposal/agents/observe.md",
                 ".lgwf/react_acceptance_observe.json",
+                False,
             ),
             (
                 "04_execute_react_loop/workflow.lgwf",
                 "04_execute_react_loop/01_implement_task/agents/act.md",
                 ".lgwf/react_task_input.json",
+                False,
             ),
             (
                 "04_execute_react_loop/workflow.lgwf",
                 "04_execute_react_loop/01_implement_task/agents/observe.md",
                 ".lgwf/react_task_result.json",
+                False,
             ),
         )
-        for workflow_relative, prompt_relative, artifact in contracts:
+        for workflow_relative, prompt_relative, artifact, uses_as_file in contracts:
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
             prompt = (ROOT / prompt_relative).read_text(encoding="utf-8")
             self.assertIn(f'OUTPUT_JSON "{artifact}"', workflow)
+            if uses_as_file:
+                self.assertIn(f'OUTPUT_JSON "{artifact}" AS_FILE', workflow)
             self.assertIn("OUTPUT_JSON", prompt)
             self.assertIn(artifact, prompt)
+
+    def test_large_codex_json_artifacts_use_as_file(self) -> None:
+        expectations = (
+            ("01_generate_plan/workflow.lgwf", ".lgwf/react_task_plan_proposal.json"),
+            ("02_generate_acceptance/workflow.lgwf", ".lgwf/react_acceptance_reason.json"),
+            ("02_generate_acceptance/workflow.lgwf", ".lgwf/react_acceptance_proposal.json"),
+        )
+        for workflow_relative, artifact in expectations:
+            workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
+            self.assertIn(f'OUTPUT_JSON "{artifact}" AS_FILE', workflow)
 
     def test_execute_loop_routes_back_to_next_task(self) -> None:
         workflow = (ROOT / "04_execute_react_loop/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("ROUTE route_react_task_review", workflow)
         self.assertIn('WHEN "move_next_task" THEN prepare_react_task_review', workflow)
         self.assertIn('WHEN "continue_repair" THEN prepare_react_task_review', workflow)
-        self.assertIn('WHEN "requires_user_approval" THEN resolve_max_attempt_decision', workflow)
+        self.assertIn('WHEN "requires_user_approval" THEN decide_react_task_block', workflow)
+        self.assertIn("APPROVAL decide_react_task_block", workflow)
+        self.assertIn('PERSIST ".lgwf/react_task_max_attempt_decision.json"', workflow)
+        self.assertIn("ROUTE decide_react_task_block", workflow)
+        self.assertIn('WHEN "reject" THEN resolve_max_attempt_decision', workflow)
         self.assertIn("FLOW resolve_max_attempt_decision", workflow)
         self.assertIn('WHEN "all_done" THEN finish_react_task_review', workflow)
         self.assertNotIn("THEN route_react_task_review\n  THEN finish_react_task_review", workflow)
@@ -272,7 +368,7 @@ class StructuredContractsTest(unittest.TestCase):
                 "current_task_id": "task-1",
                 "tasks": [
                     {"task_id": "task-1", "status": "blocked_for_user", "attempts": 3},
-                    {"task_id": "task-2", "status": "planned", "attempts": 0},
+                    {"task_id": "task-2", "status": "acceptance_specified", "attempts": 0},
                 ],
             }
             (lgwf_dir / "react_task_plan.json").write_text(json.dumps(plan), encoding="utf-8")
@@ -286,10 +382,11 @@ class StructuredContractsTest(unittest.TestCase):
                 ("skip", "move_next_task", "skipped"),
                 ("accept", "move_next_task", "passed"),
                 ("stop", "all_done", "stopped_by_user"),
+                ("reject", "all_done", "stopped_by_user"),
             ):
                 plan["tasks"][0]["status"] = "blocked_for_user"
                 plan["tasks"][0]["attempts"] = 3
-                plan["tasks"][1]["status"] = "planned"
+                plan["tasks"][1]["status"] = "acceptance_specified"
                 plan["current_task_id"] = "task-1"
                 (lgwf_dir / "react_task_plan.json").write_text(json.dumps(plan), encoding="utf-8")
                 (lgwf_dir / "react_task_route.json").write_text(
@@ -308,6 +405,10 @@ class StructuredContractsTest(unittest.TestCase):
                 self.assertEqual(data["lgwf_plan.react_task_route"]["route"], expected_route)
                 stored = json.loads((lgwf_dir / "react_task_plan.json").read_text(encoding="utf-8"))
                 self.assertEqual(stored["tasks"][0]["status"], expected_status)
+                if expected_route == "move_next_task":
+                    self.assertEqual(stored["current_task_id"], "task-2")
+
+            self.assertEqual(resolver.normalize_action({"value": {"action": "approve"}}), "accept")
 
     def test_route_script_emits_runtime_route_key(self) -> None:
         route = load_module("04_execute_react_loop/03_route/scripts/route_react_task_review.py", "route_react_task")
@@ -342,6 +443,20 @@ class StructuredContractsTest(unittest.TestCase):
         ):
             self.assertIn(text, spec)
 
+    def test_plan_generation_spec_models_manual_approval_as_separate_tasks(self) -> None:
+        spec = (ROOT / "01_generate_plan/02_generate_plan_proposal/agents/spec.md").read_text(encoding="utf-8")
+        for text in (
+            "Human Approval Task Modeling",
+            "confirm_step_designs",
+            "design_step_documents",
+            "finalize_step_designs",
+            ".lgwf/step_designs.json",
+            "produced_artifacts",
+            "acceptance_seed",
+            "required_checks_hint",
+        ):
+            self.assertIn(text, spec)
+
     def test_acceptance_generation_spec_defines_quality_contract(self) -> None:
         spec = (ROOT / "02_generate_acceptance/00_generate_acceptance_proposal/agents/spec.md").read_text(encoding="utf-8")
         for text in (
@@ -358,6 +473,40 @@ class StructuredContractsTest(unittest.TestCase):
         ):
             self.assertIn(text, spec)
 
+    def test_acceptance_reason_is_compact_output_contract(self) -> None:
+        spec = (ROOT / "02_generate_acceptance/00_generate_acceptance_proposal/agents/spec.md").read_text(encoding="utf-8")
+        reason = (ROOT / "02_generate_acceptance/00_generate_acceptance_proposal/agents/reason.md").read_text(encoding="utf-8")
+        act = (ROOT / "02_generate_acceptance/00_generate_acceptance_proposal/agents/act.md").read_text(encoding="utf-8")
+        for text in (
+            "compact_v1",
+            "task_acceptance_index",
+            "manual_gate_tasks",
+            "global_check_principles",
+            "完整 `required_checks`",
+            "超过 20KB",
+        ):
+            self.assertIn(text, spec)
+            self.assertIn(text, reason)
+        self.assertIn("紧凑验收推理索引", act)
+        self.assertIn("必须回到计划草案", act)
+
+    def test_acceptance_generation_spec_keeps_confirmation_checks_after_approval(self) -> None:
+        spec = (ROOT / "02_generate_acceptance/00_generate_acceptance_proposal/agents/spec.md").read_text(encoding="utf-8")
+        for text in (
+            "Human Approval Acceptance Modeling",
+            "design_step_documents",
+            "confirm_step_designs",
+            "finalize_step_designs",
+            ".lgwf/step_designs.json",
+            "execute loop",
+        ):
+            self.assertIn(text, spec)
+        design_section_start = spec.index("`design_step_documents`")
+        confirm_section_start = spec.index("`confirm_step_designs`")
+        design_section = spec[design_section_start:confirm_section_start]
+        self.assertIn("设计文档草案", design_section)
+        self.assertNotIn("step_design_confirmation_record", design_section)
+
     def test_execute_react_spec_defines_execution_quality_contract(self) -> None:
         spec = (ROOT / "04_execute_react_loop/01_implement_task/agents/spec.md").read_text(encoding="utf-8")
         for text in (
@@ -372,6 +521,24 @@ class StructuredContractsTest(unittest.TestCase):
             "不伪装通过",
         ):
             self.assertIn(text, spec)
+
+    def test_execute_react_specs_define_manual_approval_block_contract(self) -> None:
+        spec = (ROOT / "04_execute_react_loop/01_implement_task/agents/spec.md").read_text(encoding="utf-8")
+        observe = (ROOT / "04_execute_react_loop/01_implement_task/agents/observe.md").read_text(encoding="utf-8")
+        workflow = (ROOT / "04_execute_react_loop/workflow.lgwf").read_text(encoding="utf-8")
+        for text in (
+            "Manual Approval Blocks",
+            "manual_approval_required",
+            "required_follow_up",
+            "approval_artifact",
+            "confirmed_artifact",
+            ".lgwf/step_design_confirmation_record.json",
+            ".lgwf/step_designs.json",
+        ):
+            self.assertIn(text, spec)
+            self.assertIn(text, observe)
+        self.assertIn("业务门禁", workflow)
+        self.assertIn("requires_user_approval", workflow)
 
 
     def test_execute_react_evidence_snapshot_contract(self) -> None:

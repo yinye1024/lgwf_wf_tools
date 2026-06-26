@@ -72,6 +72,16 @@
 9. **职责不混淆**：区分 REACT、PY/确定性操作和 APPROVAL 的职责。
 10. **可被 prompt 消费**：字段结构足够稳定，后续 acceptance 和 execute 阶段无需猜测。
 
+## Human Approval Task Modeling
+
+计划必须把人工确认建模为独立 task，不得把确认后的 artifact 塞进确认前 task 的验收条件。
+
+- 如果某一阶段需要用户拍板，必须生成独立的 approval task，例如 `confirm_step_designs`。
+- 生成草案的 task 只负责草案产物，例如 `design_step_documents` 只负责 `docs/steps/*.md`。
+- approval 后的固化产物必须放在后续 PY/确定性 task，例如 `finalize_step_designs` 负责 `.lgwf/step_designs.json`。
+- 确认前 task 的 `produced_artifacts`、`acceptance_seed` 和 `required_checks_hint` 不得要求确认记录或确认后 JSON。
+- 对 `lgwf-wf-create` 这类流程，步骤设计阶段应拆成 `design_step_documents`、`confirm_step_designs`、`finalize_step_designs`。
+
 ## Success Criteria
 
 - 计划草案顶层包含非空 `summary` 和非空 `tasks`。
@@ -88,7 +98,7 @@
 - `.lgwf/react_task_plan_proposal.json`
 - `.lgwf/react_task_plan_observe.json`
 
-其中 `.lgwf/react_task_plan_proposal.json` 和 `.lgwf/react_task_plan_observe.json` 必须通过 CODEX 节点的 `OUTPUT_JSON` 托管输出；agent 只返回 JSON object，不自行读写、覆盖或转码这些 JSON 文件。
+其中 `.lgwf/react_task_plan_proposal.json` 和 `.lgwf/react_task_plan_observe.json` 必须通过 CODEX 节点的 `OUTPUT_JSON` 托管输出；大 JSON 节点使用 `OUTPUT_JSON ... AS_FILE`，agent 按 runtime 托管文件输出约定生成 JSON object 内容，不自行读写、覆盖或转码这些 JSON 文件。
 
 ## Output Format
 

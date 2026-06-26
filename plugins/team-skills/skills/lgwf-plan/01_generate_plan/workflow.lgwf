@@ -14,7 +14,14 @@ APPROVAL collect_react_task_request
   WRITE state.lgwf_plan.task_request
   RESULT state.lgwf_plan.task_request_result
   PERSIST ".lgwf/react_task_request.json"
+  ROUTE_ON_DECISION
   POLL 1;
+
+PY finish_react_task_request
+  SCRIPT "00_collect_react_task_request/scripts/finish_react_task_request.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.task_request_finish_result
+  UPDATES_STATE;
 
 PY validate_plan_analysis_targets
   SCRIPT "01_validate_plan_analysis_targets/scripts/validate_plan_analysis_targets.py"
@@ -37,7 +44,7 @@ REACT generate_plan_proposal MAX 3
     CONTEXT workspace file ".lgwf/react_task_plan_reason.md"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
-    OUTPUT_JSON ".lgwf/react_task_plan_proposal.json"
+    OUTPUT_JSON ".lgwf/react_task_plan_proposal.json" AS_FILE
     INSTRUCTION state.lgwf_plan.plan_act_instruction
     RESULT state.lgwf_plan.plan_act_result
   OBSERVE CODEX
@@ -60,8 +67,11 @@ PY route_plan_generation
   RESULT state.lgwf_plan.plan_route_result
   UPDATES_STATE;
 
-FLOW collect_react_task_request
-  THEN validate_plan_analysis_targets
+ROUTE collect_react_task_request
+  WHEN "approve" THEN validate_plan_analysis_targets
+  WHEN "reject" THEN finish_react_task_request;
+
+FLOW validate_plan_analysis_targets
   THEN generate_plan_proposal
   THEN route_plan_generation;
 

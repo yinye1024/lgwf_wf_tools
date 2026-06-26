@@ -8,7 +8,7 @@
 
 - `script_flow_e2e`：脚本级全分支测试，不启动目标 workflow runtime。
 - `runtime_fake_e2e`：启动真实 LGWF runtime，但使用 Python fake Codex 固定输出。
-- `real_positive_e2e`：真实 Codex 正向业务闭环测试，默认通过环境变量跳过。
+- `real_positive_e2e`：真实 Codex 正向业务闭环测试，作为人工验收入口，默认不纳入 `unittest discover` 回归集合。
 
 ## 输入
 
@@ -19,8 +19,7 @@
   "workflow_root": "D:/path/to/target-workflow",
   "workflow_lgwf": "D:/path/to/target-workflow/workflow.lgwf",
   "test_output_dir": "tests",
-  "test_name_prefix": "target_workflow",
-  "real_codex_env": "LGWF_TARGET_WORKFLOW_REAL_CODEX_E2E"
+  "test_name_prefix": "target_workflow"
 }
 ```
 

@@ -132,18 +132,25 @@ def write_text(path: pathlib.Path, text: str) -> None:
 
 
 def plan() -> dict:
+    task_defs = [
+        ("task-1", "collect_runtime_intent"),
+        ("task-2", "design_step_documents"),
+        ("task-3", "confirm_step_designs"),
+        ("task-4", "finalize_step_designs"),
+        ("task-5", "summarize_runtime_result"),
+    ]
     tasks = []
-    for index in range(1, 6):
+    for index, (task_id, title) in enumerate(task_defs, start=1):
         tasks.append(
             {
-                "task_id": f"task-{index}",
-                "title": f"Runtime E2E task {index}",
+                "task_id": task_id,
+                "title": title,
                 "scope_detail": {"files": [f"src/runtime_task_{index}.txt"]},
                 "implementation_steps": [
-                    f"准备 task-{index} 的输入契约",
-                    f"写入 task-{index} 的可验收产物",
+                    f"准备 {task_id} 的输入契约",
+                    f"写入 {task_id} 的可验收产物",
                 ],
-                "acceptance_seed": [f"task-{index} evidence"],
+                "acceptance_seed": [f"{task_id} evidence"],
                 "required_checks_hint": ["python -m unittest"],
             }
         )
@@ -202,6 +209,34 @@ def pass_result(task_id: str) -> dict:
     }
 
 
+def manual_approval_result(task_id: str) -> dict:
+    return {
+        "task_id": task_id,
+        "verdict": "fail",
+        "pass": False,
+        "accepted": False,
+        "blocking_reason": "manual_approval_required",
+        "evidence": [
+            {"evidence_id": "step_design_confirmation_record_absent", "target": ".lgwf/step_design_confirmation_record.json"},
+            {"evidence_id": "step_designs_json_absent", "target": ".lgwf/step_designs.json"},
+        ],
+        "criteria_results": [{"criteria": "步骤设计需要人工确认", "passed": False}],
+        "required_check_results": [{"check_id": "check_step_design_confirmation", "passed": False}],
+        "negative_check_results": [{"check": "不能把未确认设计当作已确认输入", "passed": True}],
+        "risk_check_results": [{"risk": "跳过业务门禁", "passed": False}],
+        "plan_validation_results": [{"plan_step_index": 0, "passed": False}],
+        "scope_compliance": {"within_scope": True, "issues": []},
+        "required_follow_up": [
+            {
+                "type": "approval",
+                "title": "确认步骤设计",
+                "approval_artifact": ".lgwf/step_design_confirmation_record.json",
+                "confirmed_artifact": ".lgwf/step_designs.json",
+            }
+        ],
+    }
+
+
 NODE_OUTPUTS = {
     "01_generate_plan/02_generate_plan_proposal/agents/reason.md": "plan_reason",
     "01_generate_plan/02_generate_plan_proposal/agents/act.md": "plan_act",
@@ -219,8 +254,18 @@ def extract_handoff_prompt(argv: list[str]) -> str:
     for index, arg in enumerate(argv[1:], start=1):
         if arg == "--prompt-file" and index + 1 < len(argv):
             return pathlib.Path(argv[index + 1]).read_text(encoding="utf-8")
+        if arg.startswith("--prompt-file="):
+            return pathlib.Path(arg.split("=", 1)[1]).read_text(encoding="utf-8")
         if arg.startswith("# LGWF Codex Handoff"):
             return arg
+        candidate = pathlib.Path(arg)
+        if candidate.exists() and candidate.is_file():
+            text = candidate.read_text(encoding="utf-8")
+            if "# LGWF Codex Handoff" in text:
+                return text
+    stdin_text = sys.stdin.read()
+    if "# LGWF Codex Handoff" in stdin_text:
+        return stdin_text
     return ""
 
 
@@ -251,7 +296,6 @@ def main() -> int:
         write_text(lgwf / "react_task_plan_reason.md", "runtime e2e plan reason\n")
     elif node_key == "plan_act":
         stdout_payload = plan()
-        write_json(lgwf / "react_task_plan_proposal.json", stdout_payload)
     elif node_key == "plan_observe":
         stdout_payload = {
                 "verdict": "pass",
@@ -259,13 +303,24 @@ def main() -> int:
                 "issues": [],
                 "required_changes": [],
             }
-        write_json(lgwf / "react_task_plan_observe.json", stdout_payload)
     elif node_key == "acceptance_reason":
-        write_text(lgwf / "react_acceptance_reason.md", "runtime e2e acceptance reason\n")
+        stdout_payload = {
+            "task_alignment_summary": [{"task_id": "task-1", "summary": "runtime e2e acceptance reason"}],
+            "acceptance_goal_analysis": [],
+            "evidence_analysis": [],
+            "required_checks_analysis": [],
+            "negative_checks_analysis": [],
+            "risk_checks_analysis": [],
+            "pass_fail_judgement": [],
+            "scope_boundaries": {"in_scope": [], "out_of_scope": []},
+            "open_questions": [],
+        }
     elif node_key == "acceptance_act":
         plan_data = json.loads((lgwf / "react_task_plan_proposal.json").read_text(encoding="utf-8-sig"))
+        reason_data = json.loads((lgwf / "react_acceptance_reason.json").read_text(encoding="utf-8-sig"))
+        if not reason_data.get("task_alignment_summary"):
+            raise SystemExit("managed acceptance reason JSON was not available to acceptance act")
         stdout_payload = acceptance(plan_data)
-        write_json(lgwf / "react_acceptance_proposal.json", stdout_payload)
     elif node_key == "acceptance_observe":
         stdout_payload = {
                 "verdict": "pass",
@@ -275,18 +330,19 @@ def main() -> int:
                 "issues": [],
                 "required_changes": [],
             }
-        write_json(lgwf / "react_acceptance_observe.json", stdout_payload)
     elif node_key == "task_reason":
         write_text(lgwf / "react_task_implementation_reason.md", "runtime e2e implementation reason\n")
     elif node_key == "task_act":
         context = json.loads((lgwf / "react_task_context.json").read_text(encoding="utf-8-sig"))
         task_id = context["task"]["task_id"]
         stdout_payload = {"task_id": task_id, "changed_files": [f"src/{task_id}.txt"]}
-        write_json(lgwf / "react_task_input.json", stdout_payload)
     elif node_key == "task_observe":
         context = json.loads((lgwf / "react_task_context.json").read_text(encoding="utf-8-sig"))
-        stdout_payload = pass_result(context["task"]["task_id"])
-        write_json(lgwf / "react_task_result.json", stdout_payload)
+        task_id = context["task"]["task_id"]
+        if task_id == "task-3":
+            stdout_payload = manual_approval_result(task_id)
+        else:
+            stdout_payload = pass_result(task_id)
 
     print(json.dumps(stdout_payload, ensure_ascii=False))
     return 0
@@ -355,7 +411,8 @@ class FakeCodexContractTest(unittest.TestCase):
                 timeout=30,
             )
             self.assertEqual(first.returncode, 0, first.stderr)
-            self.assertEqual(read_json(lgwf / "react_acceptance_observe.json")["verdict"], "pass")
+            self.assertEqual(json.loads(first.stdout)["verdict"], "pass")
+            self.assertFalse((lgwf / "react_acceptance_observe.json").exists())
             self.assertFalse((lgwf / "fake_codex_calls.json").exists())
 
             second = subprocess.run(
@@ -375,7 +432,8 @@ class FakeCodexContractTest(unittest.TestCase):
                 timeout=30,
             )
             self.assertEqual(second.returncode, 0, second.stderr)
-            self.assertEqual(len(read_json(lgwf / "react_task_plan_proposal.json")["tasks"]), 5)
+            self.assertEqual(len(json.loads(second.stdout)["tasks"]), 5)
+            self.assertFalse((lgwf / "react_task_plan_proposal.json").exists())
 
 
 @unittest.skipUnless(LGWF.exists(), f"LGWF facade not found: {LGWF}")
@@ -446,6 +504,14 @@ class LgwfPlanRuntimeEndToEndTest(unittest.TestCase):
                     seen_approval_contexts.append(context)
                     if isinstance(context, dict) and context.get("tasks"):
                         value = {"approval": "approve", "comment": "runtime e2e approved"}
+                    elif "业务门禁" in prompt or '"action"' in prompt or "continue|approve|skip|stop" in prompt or (
+                        isinstance(context, dict)
+                        and (context.get("route") == "requires_user_approval" or context.get("blocking_reason") == "manual_approval_required")
+                    ):
+                        value = {
+                            "action": "approve",
+                            "comment": "runtime e2e approved manual gate",
+                        }
                     elif "任务输入确认" in prompt or "react_task_request.json" in prompt:
                         value = {
                             "objective": "启动真实 lgwf-plan 工作流的 E2E 测试",
@@ -494,11 +560,18 @@ class LgwfPlanRuntimeEndToEndTest(unittest.TestCase):
             self.assertEqual(len(plan["tasks"]), 5)
             self.assertEqual(len(acceptance["tasks"]), 5)
             self.assertTrue(all(task["status"] == "passed" for task in plan["tasks"]))
+            self.assertEqual([task["title"] for task in plan["tasks"][1:4]], ["design_step_documents", "confirm_step_designs", "finalize_step_designs"])
+            self.assertEqual(plan["tasks"][2]["attempts"], 1)
+            self.assertEqual(plan["tasks"][2]["max_attempt_decision"]["action"], "approve")
             self.assertIsNone(report["current_task_id"])
-            self.assertEqual(report["history_count"], 5)
+            self.assertEqual(report["history_count"], 6)
             self.assertGreaterEqual(len(seen_approval_contexts), 2)
             self.assertTrue((work_dir / ".lgwf" / "workflow" / "workflow.lgwf").exists())
             self.assertTrue(any((work_dir / ".lgwf" / "codex").glob("**/prompt.txt")))
+            self.assertTrue((work_dir / ".lgwf" / "react_acceptance_reason.json").exists())
+            self.assertFalse((work_dir / ".lgwf" / "react_acceptance_reason.md").exists())
+            acceptance_reason = read_json(work_dir / ".lgwf" / "react_acceptance_reason.json")
+            self.assertTrue(acceptance_reason["task_alignment_summary"])
 
     def test_runtime_workflow_e2e_covers_reject_branch(self) -> None:
         with ExitStack() as stack:

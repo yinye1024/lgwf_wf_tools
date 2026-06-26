@@ -90,8 +90,8 @@
 
 ## Constraints
 
-- 本节点声明了 `OUTPUT_JSON ".lgwf/react_task_plan_proposal.json"`；最终回复只返回 JSON object，由 runtime 校验并写入该文件。
-- 不要自行创建、读取、覆盖或转码 `.lgwf/react_task_plan_proposal.json`。
+- 本节点声明了 `OUTPUT_JSON ".lgwf/react_task_plan_proposal.json" AS_FILE`；按 runtime 托管文件输出约定生成 JSON object 内容，由 runtime 校验并落盘。
+- 不要用 shell、PowerShell、脚本或编辑器自行创建、读取、覆盖或转码 `.lgwf/react_task_plan_proposal.json`。
 
 - 只写 `.lgwf/react_task_plan_proposal.json`。
 - 不得修改业务目标文件。

@@ -28,17 +28,21 @@
 
 ### reason
 
-`reason` 是 Draft Prompt。它负责分析验收逻辑，不生成正式验收 JSON。
+`reason` 是 Draft Prompt。它负责分析验收逻辑，不生成正式验收 JSON。为了降低托管 JSON 输出风险，`reason` 必须输出紧凑推理索引，不枚举完整检查清单。
 
 必须产出：
 
-- 每个 task 的验收目标。
-- 每个 `implementation_steps` 对应的可观察证据。
-- 从 `produced_artifacts`、`output_contract`、`acceptance_seed` 和 `required_checks_hint` 推导的检查方式。
-- 从 `scope_detail.out_of_scope` 和 task `out_of_scope` 推导的负向检查。
-- 从 `risk_notes` 推导的风险检查。
-- 检查类型分类：`file`、`json`、`command`、`audit`、`test`、`manual`。
-- 待确认或无法自动判定的人工检查项。
+- `reason_version: "compact_v1"`。
+- `task_acceptance_index`：逐 task 的短提示，覆盖验收目标、证据类型、检查类型、边界和风险。
+- `manual_gate_tasks`：人工确认 task 与确认后 artifact 的归属规则。
+- `global_check_principles`：后续 `act` 必须遵守的全局验收原则。
+- `open_questions`：仍需人工确认的问题；没有则为空数组。
+
+不得产出：
+
+- 完整 `required_checks`、`negative_checks`、`risk_checks` 或 `plan_validation_map`。
+- 大段自然语言 pass/fail 描述。
+- 超过 20KB 的 JSON。
 
 ### act
 
@@ -82,6 +86,16 @@
 9. **人工确认可复核**：APPROVAL 相关 task 必须检查确认节点和结果结构。
 10. **后续执行可消费**：验收 JSON 字段稳定，execute loop 不需要猜测。
 
+## Human Approval Acceptance Modeling
+
+验收方案必须区分草案生成、人工确认和确认后固化，不能让确认前 task 因缺少确认后 artifact 而失败。
+
+- `design_step_documents` 只能检查设计文档草案覆盖、字段完整、路径相对、归属清晰和可执行性。
+- `confirm_step_designs` 才检查人工确认记录、approve/revise/reject 结构和确认可追溯性。
+- `finalize_step_designs` 才检查 `.lgwf/step_designs.json` 存在、结构稳定，并且来源于已确认设计。
+- 如果一个 check 的通过条件依赖用户 approve，它必须属于 approval task 或 approval 之后的 finalize task。
+- execute loop 不应通过 Codex repair 解决人工确认缺失；这类失败必须暴露为人工门禁。
+
 ## Success Criteria
 
 - 验收草案顶层 `tasks` 与计划 task 逐项对齐。
@@ -92,11 +106,11 @@
 
 ## Output
 
-- `.lgwf/react_acceptance_reason.md`
+- `.lgwf/react_acceptance_reason.json`
 - `.lgwf/react_acceptance_proposal.json`
 - `.lgwf/react_acceptance_observe.json`
 
-其中 `.lgwf/react_acceptance_proposal.json` 和 `.lgwf/react_acceptance_observe.json` 必须通过 CODEX 节点的 `OUTPUT_JSON` 托管输出；agent 只返回 JSON object，不自行读写、覆盖或转码这些 JSON 文件。
+其中 `.lgwf/react_acceptance_reason.json`、`.lgwf/react_acceptance_proposal.json` 和 `.lgwf/react_acceptance_observe.json` 必须通过 CODEX 节点的 `OUTPUT_JSON` 托管输出；大 JSON 节点使用 `OUTPUT_JSON ... AS_FILE`，agent 按 runtime 托管文件输出约定生成 JSON object 内容，不自行读写、覆盖或转码这些 JSON 文件。
 
 ## Output Format
 

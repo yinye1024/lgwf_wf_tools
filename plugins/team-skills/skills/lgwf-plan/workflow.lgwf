@@ -20,6 +20,7 @@ APPROVAL confirm_plan_and_acceptance
   WRITE state.lgwf_plan.contract_approval
   RESULT state.lgwf_plan.contract_approval_result
   PERSIST ".lgwf/react_task_contract_approval.json"
+  ROUTE_ON_DECISION
   POLL 1;
 
 PY apply_confirmed_contracts
@@ -28,12 +29,24 @@ PY apply_confirmed_contracts
   RESULT state.lgwf_plan.apply_contracts_result
   UPDATES_STATE;
 
+PY finish_contract_review
+  SCRIPT "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/finish_contract_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.contract_review_finish_result
+  UPDATES_STATE;
+
 STEP execute_react_loop
   WORKFLOW "04_execute_react_loop/workflow.lgwf";
 
 FLOW generate_plan
   THEN generate_acceptance
-  THEN confirm_plan_and_acceptance
-  THEN apply_confirmed_contracts
+  THEN confirm_plan_and_acceptance;
+
+ROUTE confirm_plan_and_acceptance
+  WHEN "approve" THEN apply_confirmed_contracts
+  WHEN "revise" THEN finish_contract_review
+  WHEN "reject" THEN finish_contract_review;
+
+FLOW apply_confirmed_contracts
   THEN execute_react_loop;
 

@@ -21,7 +21,6 @@ def main() -> None:
                     "workflow_root": "目标 workflow package 根目录，默认 workflow_lgwf 所在目录。",
                     "test_output_dir": "测试输出目录，默认 tests。",
                     "test_name_prefix": "测试文件名前缀，默认从 WORKFLOW 名称推导。",
-                    "real_codex_env": "真实 Codex E2E 开关环境变量，默认按测试前缀推导。",
                 },
                 "fixed_outputs": [
                     "test_<workflow>_script_flow_e2e.py",

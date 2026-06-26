@@ -21,6 +21,11 @@ def normalize_action(value: Any) -> str:
     if isinstance(value, str):
         raw = value
     elif isinstance(value, dict):
+        nested_value = value.get("value")
+        if isinstance(nested_value, dict):
+            nested_action = normalize_action(nested_value)
+            if nested_action:
+                return nested_action
         raw = str(
             value.get("action")
             or value.get("decision")
@@ -42,6 +47,8 @@ def normalize_action(value: Any) -> str:
         "continue_repair": "continue",
         "skip_task": "skip",
         "skipped": "skip",
+        "reject": "stop",
+        "rejected": "stop",
         "abort": "stop",
         "cancel": "stop",
         "blocked": "stop",
@@ -65,7 +72,16 @@ def get_next_pending_task(plan: dict[str, Any]) -> str | None:
     for task in plan.get("tasks", []):
         if not isinstance(task, dict):
             continue
-        if task.get("status") in {None, "", "planned", "pending", "needs_repair", "in_progress", "blocked_for_user"}:
+        if task.get("status") in {
+            None,
+            "",
+            "planned",
+            "pending",
+            "acceptance_specified",
+            "needs_repair",
+            "in_progress",
+            "blocked_for_user",
+        }:
             return task.get("task_id")
     return None
 

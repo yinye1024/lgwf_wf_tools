@@ -8,7 +8,7 @@
 
 - `.lgwf/react_task_request.json`: 用户确认后的任务输入。
 - `.lgwf/react_task_plan_proposal.json`: 计划草案。
-- `.lgwf/react_acceptance_reason.md`: 前序 reason 生成的验收推理。
+- `.lgwf/react_acceptance_reason.json`: 前序 reason 生成的紧凑验收推理索引。它只提供方向提示；正式验收明细必须以计划草案为准生成。
 
 ## Task
 
@@ -18,6 +18,7 @@
 4. 覆盖计划中的 `acceptance_seed` 和 `required_checks_hint`。
 5. 为每个 task 生成 `evidence_requirements`、`required_checks`、`negative_checks` 和 `risk_checks`。
 6. 每个 required check 和 plan validation map 条目都必须包含 pass/fail 条件。
+7. 如果 reason 只给出短提示，不要抱怨信息不足；必须回到计划草案的 `implementation_steps`、`produced_artifacts`、`acceptance_seed`、`required_checks_hint`、`out_of_scope` 和 `risk_notes` 推导完整验收明细。
 
 ## Success Criteria
 
@@ -97,8 +98,8 @@
 
 ## Constraints
 
-- 本节点声明了 `OUTPUT_JSON ".lgwf/react_acceptance_proposal.json"`；最终回复只返回 JSON object，由 runtime 校验并写入该文件。
-- 不要自行创建、读取、覆盖或转码 `.lgwf/react_acceptance_proposal.json`。
+- 本节点声明了 `OUTPUT_JSON ".lgwf/react_acceptance_proposal.json" AS_FILE`；按 runtime 托管文件输出约定生成 JSON object 内容，由 runtime 校验并落盘。
+- 不要用 shell、PowerShell、脚本或编辑器自行创建、读取、覆盖或转码 `.lgwf/react_acceptance_proposal.json`。
 
 - 只写 `.lgwf/react_acceptance_proposal.json`。
 - 不得修改目标文件或计划草案。

@@ -50,7 +50,7 @@ REACT implement_react_task MAX 3
     RESULT state.lgwf_plan.implement_decide_result
     UPDATES_STATE
   ON_MAX ASK
-    PROMPT "当前 task 达到 ReAct 最大轮次。请根据 required_follow_up 选择继续、调整方向、接受当前结果、跳过或停止。"
+    PROMPT "当前 task 需要人工决策，可能是达到 ReAct 最大轮次，也可能是遇到必须用户确认的业务门禁。请根据 required_follow_up 选择继续修复、接受当前结果、跳过当前 task 或停止。"
     READ state.lgwf_plan.current_review
     WRITE state.lgwf_plan.max_attempt_decision
     RESULT state.lgwf_plan.max_attempt_approval
@@ -76,6 +76,15 @@ PY route_react_task_review
   RESULT state.lgwf_plan.route_task_result
   UPDATES_STATE;
 
+APPROVAL decide_react_task_block
+  PROMPT "当前 task 需要人工决策，可能是达到 ReAct 最大轮次，也可能是遇到必须用户确认的业务门禁。请提交 JSON：{\"action\":\"continue|approve|skip|stop\",\"comment\":\"决策说明\"}。continue 表示继续修复；approve 表示接受当前结果并进入下一 task；skip 表示跳过当前 task；stop 表示停止执行。直接 reject 会按 stop 处理并正常走业务路由，不会让 workflow 变成 runtime failed。"
+  READ state.lgwf_plan.current_review
+  WRITE state.lgwf_plan.max_attempt_decision
+  RESULT state.lgwf_plan.max_attempt_approval
+  PERSIST ".lgwf/react_task_max_attempt_decision.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
 PY resolve_max_attempt_decision
   SCRIPT "04_resolve/scripts/resolve_max_attempt_decision.py"
   TIMEOUT 60
@@ -98,8 +107,12 @@ FLOW prepare_react_task_review
 ROUTE route_react_task_review
   WHEN "move_next_task" THEN prepare_react_task_review
   WHEN "continue_repair" THEN prepare_react_task_review
-  WHEN "requires_user_approval" THEN resolve_max_attempt_decision
+  WHEN "requires_user_approval" THEN decide_react_task_block
   WHEN "all_done" THEN finish_react_task_review;
+
+ROUTE decide_react_task_block
+  WHEN "approve" THEN resolve_max_attempt_decision
+  WHEN "reject" THEN resolve_max_attempt_decision;
 
 FLOW resolve_max_attempt_decision
   THEN route_react_task_review;
