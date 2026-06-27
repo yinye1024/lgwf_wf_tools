@@ -1,0 +1,6 @@
+assets/*.zip
+vendor/lgwf-client-assist/assets/install-state.*
+.local/
+.local/
+__pycache__/
+*.pyc

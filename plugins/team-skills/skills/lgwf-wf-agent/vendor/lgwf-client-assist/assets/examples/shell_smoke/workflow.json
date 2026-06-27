@@ -1,0 +1,15 @@
+{
+  "nodes": [
+    {
+      "id": "run_shell",
+      "capability": "exec.run_shell",
+      "config": {
+        "command": "echo hello from lgwf-env-init",
+        "timeout_seconds": 300
+      }
+    }
+  ],
+  "edges": [],
+  "routes": [],
+  "entry_point": "run_shell"
+}

@@ -1,0 +1,7 @@
+interface:
+  display_name: "LGWF Client 辅助"
+  short_description: "LGWF 对外唯一入口：初始化环境、运行 workflow、检查 DSL 和排查 runtime。"
+  default_prompt: "使用 $lgwf-client-assist 初始化或检查 LGWF 环境，运行 workflow.json 或 workflow.lgwf，并按 LGWF 规则创建、检查或修复 workflow。"
+
+policy:
+  allow_implicit_invocation: true

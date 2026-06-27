@@ -1,0 +1,32 @@
+{
+  "workflows": [
+    {
+      "id": "wf-fix",
+      "description": "运行并修复目标 LGWF workflow，支持候选目录修复、验证和 promote。",
+      "workflow_lgwf": "workflows/wf-fix/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-fix/ws",
+      "agents_md": "workflows/wf-fix/AGENTS.md"
+    },
+    {
+      "id": "wf-prompt-fix",
+      "description": "盘点、验收并修复目标 workflow 引用的 prompt 基础规范问题。",
+      "workflow_lgwf": "workflows/wf-prompt-fix/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-prompt-fix/ws",
+      "agents_md": "workflows/wf-prompt-fix/AGENTS.md"
+    },
+    {
+      "id": "wf-prompt-upgrade",
+      "description": "为目标 workflow 引用的 prompt 生成设计升级方案，并在确认后应用。",
+      "workflow_lgwf": "workflows/wf-prompt-upgrade/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-prompt-upgrade/ws",
+      "agents_md": "workflows/wf-prompt-upgrade/AGENTS.md"
+    },
+    {
+      "id": "e2e-test-generator",
+      "description": "为目标 LGWF workflow 生成三类端到端测试。",
+      "workflow_lgwf": "workflows/e2e-test-generator/workflow.lgwf",
+      "work_dir": "workflows/e2e-test-generator/ws",
+      "agents_md": "workflows/e2e-test-generator/AGENTS.md"
+    }
+  ]
+}

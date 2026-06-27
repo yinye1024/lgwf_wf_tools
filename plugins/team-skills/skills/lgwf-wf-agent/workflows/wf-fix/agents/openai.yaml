@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "LGWF Workflow Fix"
+  short_description: "Run and repair LGWF workflows from logs."
+  default_prompt: "Use lgwf-wf-agent to run a target workflow, collect its startup parameters, and automatically repair failures until it passes."
