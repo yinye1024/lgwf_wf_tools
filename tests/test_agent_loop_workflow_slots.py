@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "$extract"))
 from lgwf_dsl.lowerer import WorkflowLowerer
 from lgwf_dsl.parser import Parser
 from lgwf_dsl.validator import WorkflowValidator
+from lgwf.capabilities.subgraph.agent_loop.capability import SubgraphAgentLoopCapability
 
 
 class AgentLoopWorkflowSlotTest(unittest.TestCase):
@@ -94,6 +95,45 @@ AGENT_LOOP repair_loop MAX_ITERATIONS 2 ARTIFACTS ".lgwf/loops/repair" {
 """.strip()
         with self.assertRaisesRegex(Exception, "requires RESULT"):
             Parser.from_text(source).parse_workflow()
+
+    def test_agent_loop_runtime_accepts_workflow_slot(self) -> None:
+        assign_node = {
+            "capability": "flow.assign",
+            "config": {"assignments": {"demo.slot": {"ok": True}}},
+        }
+        workflow_slot = {
+            "capability": "subgraph.workflow",
+            "config": {
+                "workflow": {
+                    "nodes": [
+                        {
+                            "id": "verify",
+                            "capability": "flow.assign",
+                            "config": {"assignments": {"demo.verification": {"passed": True}}},
+                        }
+                    ],
+                    "edges": [],
+                    "routes": [],
+                    "entry_point": "verify",
+                },
+                "result_path": "demo.verification",
+            },
+        }
+        config = {
+            "max_iterations": 1,
+            "artifacts_path": ".lgwf/loops/repair",
+            "goal": "repair",
+            "observe": assign_node,
+            "diagnose": assign_node,
+            "plan": assign_node,
+            "act": assign_node,
+            "verify": workflow_slot,
+            "decide": assign_node,
+        }
+
+        node = SubgraphAgentLoopCapability().create_node("repair_loop", config)
+
+        self.assertTrue(callable(node))
 
 
 if __name__ == "__main__":

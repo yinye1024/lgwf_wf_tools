@@ -1,0 +1,19 @@
+{
+  "bootstrap_inputs": [],
+  "script_writes": {
+    "prepare_target": [
+      ".lgwf/self_fix_request.json",
+      ".lgwf/self_fix_target.json"
+    ],
+    "run_target_workflow": [
+      ".lgwf/target_repair/current/run.json"
+    ],
+    "observe_target_run": [
+      ".lgwf/self_fix_target.json",
+      ".lgwf/target_repair/current/observation.json"
+    ],
+    "prepare_repair_agent_loop": [
+      ".lgwf/target_repair/current/workspace.json"
+    ]
+  }
+}

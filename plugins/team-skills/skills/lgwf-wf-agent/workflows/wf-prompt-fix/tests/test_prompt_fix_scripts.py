@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,6 +39,8 @@ class PromptFixScriptsTest(unittest.TestCase):
             ".lgwf/prompt_acceptance/repair_plan.json",
             ".lgwf/prompt_acceptance/repair_review.json",
             ".lgwf/prompt_acceptance/react_history.json",
+            ".lgwf/prompt_acceptance/reference_context/AGENTS.md",
+            ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md",
         ):
             self.assertIn(artifact, source)
         self.assertNotIn(".lgwf/prompt_acceptance/fix_notes.md", source)
@@ -51,11 +54,31 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertIn("THEN check_lgwf_client_assist", source)
         self.assertIn("THEN build_prompt_inventory", source)
         self.assertIn("CONTEXT workspace file \".lgwf/prompt_fix_target.json\"", source)
+        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE', source)
+        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE', source)
+        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"', source)
         self.assertIn('WHEN "fix" THEN repair_target_prompts', source)
         self.assertIn('WHEN "summarize" THEN summarize_prompt_acceptance', source)
         self.assertIn('WHEN "auto_finish" THEN finish_prompt_acceptance', source)
         self.assertIn('WHEN "confirm" THEN confirm_prompt_acceptance', source)
         self.assertNotIn("THEN route_after_prompt_acceptance_summary\n  THEN confirm_prompt_acceptance", source)
+
+    def test_prompt_fix_declares_runtime_artifact_contracts(self) -> None:
+        contract = json.loads((ROOT / "wf" / "artifact_contracts.json").read_text(encoding="utf-8"))
+        self.assertIn(".lgwf/prompt_acceptance/react_history.json", contract["bootstrap_inputs"])
+        self.assertIn(".lgwf/prompt_acceptance/repair_review.json", contract["bootstrap_inputs"])
+        self.assertIn(
+            ".lgwf/prompt_acceptance/environment_check.json",
+            contract["script_writes"]["check_lgwf_client_assist"],
+        )
+        self.assertIn(
+            ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md",
+            contract["script_writes"]["check_lgwf_client_assist"],
+        )
+        self.assertEqual(
+            contract["script_writes"]["build_prompt_inventory"],
+            [".lgwf/prompt_acceptance/inventory.json"],
+        )
 
     def test_environment_check_detects_missing_and_present_skill(self) -> None:
         check_mod = load_module(
@@ -73,6 +96,32 @@ class PromptFixScriptsTest(unittest.TestCase):
             passed = check_mod.find_lgwf_client_assist([missing, found])
             self.assertTrue(passed["passed"])
             self.assertEqual(Path(passed["skill_md"]), found / "AGENTS.md")
+
+    def test_environment_check_copies_minimal_reference_context(self) -> None:
+        check_mod = load_module(
+            "00_check_environment/scripts/check_lgwf_client_assist.py",
+            "prompt_env_check_reference_context",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            skill = Path(temp) / "skill"
+            out_dir = Path(temp) / "work" / ".lgwf" / "prompt_acceptance"
+            for source_rel, _dest_rel in check_mod.REFERENCE_FILES:
+                source = skill / source_rel
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_text(f"# {source_rel}\n", encoding="utf-8")
+
+            result = check_mod.prepare_reference_context(skill, out_dir)
+
+            self.assertTrue(result["reference_context_ready"])
+            self.assertFalse(result["missing_reference_files"])
+            self.assertTrue((out_dir / "reference_context" / "AGENTS.md").is_file())
+            self.assertTrue(
+                (out_dir / "reference_context" / "prompt-assist" / "prompt-audit-checklist.md").is_file()
+            )
+            self.assertIn(
+                ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md",
+                result["copied_reference_files"],
+            )
 
     def test_environment_check_rejects_legacy_skill_marker_only(self) -> None:
         check_mod = load_module(
@@ -286,7 +335,12 @@ class PromptFixScriptsTest(unittest.TestCase):
         )
         summary = summary_mod.build_summary(
             inventory={"prompts": [{"prompt_path": "agents/prompt.md"}]},
-            audit={"passed": False, "issues": [{"id": "p1", "severity": "high"}]},
+            audit={
+                "passed": False,
+                "prompt_count": 1,
+                "file_results": [{"prompt_path": "agents/prompt.md", "passed": False, "issue_ids": ["p1"]}],
+                "issues": [{"id": "p1", "severity": "high"}],
+            },
             selection={"selected_issue_ids": ["p1"], "skip_fix": False},
             review={"passed": True, "remaining_issue_ids": []},
             history=[{"next": "exit"}],
@@ -296,6 +350,45 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertEqual(summary["status"], "fixed")
         self.assertEqual(summary["prompt_count"], 1)
         self.assertEqual(summary["selected_issue_ids"], ["p1"])
+
+    def test_prompt_acceptance_summary_marks_missing_audit_invalid(self) -> None:
+        summary_mod = load_module(
+            "05_summary/scripts/summarize_prompt_acceptance.py",
+            "prompt_summary_invalid_audit",
+        )
+        summary = summary_mod.build_summary(
+            inventory={"prompts": [{"prompt_path": "agents/prompt.md"}]},
+            audit={},
+            selection={"skip_fix": True},
+            review={"passed": False, "remaining_issue_ids": []},
+            history=[],
+        )
+        self.assertEqual(summary["status"], "invalid")
+        self.assertFalse(summary["audit_valid"])
+        self.assertFalse(summary["audit_passed"])
+        self.assertIn("missing or incomplete", summary["summary"])
+
+    def test_prompt_acceptance_summary_passes_only_complete_clean_audit(self) -> None:
+        summary_mod = load_module(
+            "05_summary/scripts/summarize_prompt_acceptance.py",
+            "prompt_summary_complete_clean_audit",
+        )
+        summary = summary_mod.build_summary(
+            inventory={"prompts": [{"prompt_path": "agents/prompt.md"}]},
+            audit={
+                "passed": True,
+                "prompt_count": 1,
+                "file_results": [{"prompt_path": "agents/prompt.md", "passed": True, "issue_ids": []}],
+                "issues": [],
+                "summary": "通过。",
+            },
+            selection={},
+            review={},
+            history=[],
+        )
+        self.assertEqual(summary["status"], "passed")
+        self.assertTrue(summary["audit_valid"])
+        self.assertTrue(summary["audit_passed"])
 
     def test_prompt_acceptance_summary_route_auto_finishes_clean_repair_only(self) -> None:
         route_mod = load_module(

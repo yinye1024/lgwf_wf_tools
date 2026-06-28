@@ -35,6 +35,7 @@ REACT design_prompt_upgrade MAX 3
     CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
   ACT CODEX
     PROMPT "02_design_upgrade/agents/act.md"
@@ -42,6 +43,7 @@ REACT design_prompt_upgrade MAX 3
     CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/proposal.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_act_result
   OBSERVE CODEX
     PROMPT "02_design_upgrade/agents/observe.md"
@@ -49,6 +51,7 @@ REACT design_prompt_upgrade MAX 3
     CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/proposal_review.json"
     RESULT state.lgwf_wf_prompt_upgrade.design_observe_result
   DECIDE PY
     SCRIPT "02_design_upgrade/scripts/decide_prompt_upgrade_design.py"
@@ -90,6 +93,7 @@ REACT apply_prompt_upgrade MAX 3
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/decision.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/apply_plan.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.apply_reason_result
   ACT CODEX
     PROMPT "04_apply_upgrade/agents/act.md"
@@ -104,6 +108,7 @@ REACT apply_prompt_upgrade MAX 3
     CONTEXT workspace file ".lgwf/prompt_upgrade/decision.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/apply_plan.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/apply_review.json"
     RESULT state.lgwf_wf_prompt_upgrade.apply_observe_result
   DECIDE PY
     SCRIPT "04_apply_upgrade/scripts/decide_prompt_upgrade_apply.py"

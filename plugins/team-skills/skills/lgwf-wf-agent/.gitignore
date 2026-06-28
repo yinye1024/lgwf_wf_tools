@@ -1,6 +1,7 @@
 assets/*.zip
 vendor/lgwf-client-assist/assets/install-state.*
 .local/
-.local/
+workflows/*/ws/*
+!workflows/*/ws/.gitkeep
 __pycache__/
 *.pyc

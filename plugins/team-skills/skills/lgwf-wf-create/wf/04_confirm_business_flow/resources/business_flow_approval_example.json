@@ -1,0 +1,8 @@
+{
+  "decision": "revise",
+  "changes": [
+    "补充 package_scaffold 阶段与 step_design 阶段之间的 handoff 说明",
+    "明确需要人工确认的节点命名"
+  ],
+  "comment": "示例 fixture：用于说明 confirm_business_flow 的结构，不代表当前 run 必须生成正式确认结果。"
+}

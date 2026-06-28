@@ -27,6 +27,13 @@
       "workflow_lgwf": "workflows/e2e-test-generator/workflow.lgwf",
       "work_dir": "workflows/e2e-test-generator/ws",
       "agents_md": "workflows/e2e-test-generator/AGENTS.md"
+    },
+    {
+      "id": "plan",
+      "description": "把复杂任务拆成可确认的计划契约、验收契约，并在用户确认后按 ReAct 闭环执行。",
+      "workflow_lgwf": "workflows/plan/wf/workflow.lgwf",
+      "work_dir": "workflows/plan/ws",
+      "agents_md": "workflows/plan/AGENTS.md"
     }
   ]
 }

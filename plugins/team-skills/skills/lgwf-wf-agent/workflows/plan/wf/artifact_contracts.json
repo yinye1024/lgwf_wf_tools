@@ -1,0 +1,12 @@
+{
+  "bootstrap_inputs": [],
+  "script_writes": {
+    "apply_confirmed_contracts": [
+      ".lgwf/react_task_plan.json",
+      ".lgwf/react_acceptance_plan.json"
+    ],
+    "prepare_react_task_review": [
+      ".lgwf/react_task_context.json"
+    ]
+  }
+}

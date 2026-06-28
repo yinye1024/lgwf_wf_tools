@@ -1,0 +1,12 @@
+{
+  "id": "YYYYMMDD-HHMMSS-short-slug",
+  "created_at": "UTC ISO-8601 timestamp",
+  "type": "routing|monitoring|approval|input_contract|reporting|release|docs",
+  "severity": "low|medium|high",
+  "summary": "一句话说明发生了什么",
+  "evidence": [],
+  "expected_behavior": "",
+  "actual_behavior": "",
+  "suspected_area": "",
+  "follow_up": "none|add_eval|create_proposal"
+}

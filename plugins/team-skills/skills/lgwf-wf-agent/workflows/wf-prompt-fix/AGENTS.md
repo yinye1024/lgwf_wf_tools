@@ -51,7 +51,7 @@
 ## 业务流程
 
 1. `init_prompt_fix_target`：请求用户确认目标 workflow 信息，并写入 `.lgwf/prompt_fix_target.json`。
-2. `check_lgwf_client_assist`：确认 facade 内置 `lgwf-client-assist` 可用；只接受 bundled client 或测试显式注入的 client。
+2. `check_lgwf_client_assist`：确认 facade 内置 `lgwf-client-assist` 可用；只接受 bundled client 或测试显式注入的 client，并把最小 prompt reference 运行时复制到 `.lgwf/prompt_acceptance/reference_context/`。
 3. `build_prompt_inventory`：扫描目标 workflow DSL 和 prompt 引用，生成 `.lgwf/prompt_acceptance/inventory.json`。
 4. `audit_target_prompts`：由 Codex 审计 prompt 文件、引用关系、上下文和输出契约，生成 `.lgwf/prompt_acceptance/audit.json`。
 5. `prepare_prompt_fix_selection_context`：整理 audit summary 和可选 issue，准备人工选择上下文。
@@ -71,6 +71,8 @@
 ```text
 .lgwf/prompt_fix_target.json
 .lgwf/prompt_acceptance/environment_check.json
+.lgwf/prompt_acceptance/reference_context/AGENTS.md
+.lgwf/prompt_acceptance/reference_context/prompt-assist/*.md
 .lgwf/prompt_acceptance/inventory.json
 .lgwf/prompt_acceptance/audit.json
 .lgwf/prompt_acceptance/fix_selection.json
@@ -81,7 +83,7 @@
 .lgwf/prompt_acceptance/confirmation.json
 ```
 
-其中 `repair_plan.json`、`repair_review.json` 和 `react_history.json` 只有在用户选择进入修复路径时才一定存在；如果用户跳过修复，最终摘要仍应说明未修复项和后续建议。
+其中 `reference_context/` 是每次运行从 facade bundled client 复制出的临时上下文，不是源码副本，不需要人工维护或提交；`repair_plan.json`、`repair_review.json` 和 `react_history.json` 只有在用户选择进入修复路径时才一定存在。如果用户跳过修复，最终摘要仍应说明未修复项和后续建议。`audit.json` 缺失或结构不完整时，summary 必须标记为 `invalid`，不得因为 `issues=[]` 判定通过。
 
 ## 使用方式
 

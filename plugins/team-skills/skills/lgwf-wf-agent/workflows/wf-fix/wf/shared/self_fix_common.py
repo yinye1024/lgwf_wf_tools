@@ -68,10 +68,13 @@ def skill_lgwf_py() -> Path:
         if configured_path.name == "lgwf.py":
             return configured_path
         return configured_path / "scripts" / "lgwf.py"
-    bundled = Path(__file__).resolve().parents[4] / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
-    if bundled.is_file():
-        return bundled
-    raise FileNotFoundError(f"missing bundled lgwf-client-assist: {bundled}")
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        bundled = parent / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
+        if bundled.is_file():
+            return bundled
+    expected = current.parents[4] / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
+    raise FileNotFoundError(f"missing bundled lgwf-client-assist: {expected}")
 
 
 def run_lgwf(args: list[str], *, timeout: int = 120) -> subprocess.CompletedProcess[str]:

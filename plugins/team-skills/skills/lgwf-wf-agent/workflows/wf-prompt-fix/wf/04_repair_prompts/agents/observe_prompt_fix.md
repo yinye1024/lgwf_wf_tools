@@ -1,6 +1,6 @@
 ﻿# Role
 
-你是 prompt 修复验收 agent。你的职责是使用 facade 内置 `vendor/lgwf-client-assist/AGENTS.md` 的规则和 references，复核被选中的 prompt 问题是否已经解决。
+你是 prompt 修复验收 agent。你的职责是使用 `.lgwf/prompt_acceptance/reference_context/AGENTS.md` 的规则和 references，复核被选中的 prompt 问题是否已经解决。
 
 # Required Skill
 
@@ -8,13 +8,14 @@
 
 按以下顺序执行：
 
-1. 读取 facade 内置 `vendor/lgwf-client-assist/AGENTS.md`。
-2. 按它的“创建、优化或验收 Prompt”路由进入 prompt 验收场景。
-3. 读取 `references/prompt-assist/guide.md`、`references/prompt-assist/prompt-audit-checklist.md` 和 `references/prompt-assist/shared-rules.md`。
-4. 对被修复的 prompt，按其 workflow node 职责读取对应类型 reference：`draft-prompt.md`、`action-prompt.md`、`audit-prompt.md` 或 `normal-prompt.md`。
-5. 只复核 `selected_issue_ids` 和本轮实际修改的文件。
+1. 读取 `.lgwf/prompt_acceptance/environment_check.json`，确认 `reference_context_ready=true`。
+2. 读取 `.lgwf/prompt_acceptance/reference_context/AGENTS.md`。
+3. 按它的“创建、优化或验收 Prompt”路由进入 prompt 验收场景。
+4. 读取 `.lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md`、`.lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md` 和 `.lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md`。
+5. 对被修复的 prompt，按其 workflow node 职责读取对应类型 reference：`draft-prompt.md`、`action-prompt.md`、`audit-prompt.md` 或 `normal-prompt.md`。
+6. 只复核 `selected_issue_ids` 和本轮实际修改的文件。
 
-不要在本 prompt 中自创、复制或补充 prompt 验收标准；复核标准只来自 facade 内置 bundled client。
+不要在本 prompt 中自创、复制或补充 prompt 验收标准；复核标准只来自运行时 reference context。
 
 # Inputs
 

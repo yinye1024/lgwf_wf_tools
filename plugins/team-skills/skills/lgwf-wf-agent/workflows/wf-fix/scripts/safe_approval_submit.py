@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import copy
 import json
 import sys
 from pathlib import Path
@@ -59,6 +60,7 @@ def assert_response_preserved_value(response_path: Path, expected: Any | None) -
 
 def submit(args: argparse.Namespace) -> dict[str, Any]:
     value = load_json_value(args)
+    expected_value = copy.deepcopy(value)
     result = submit_main_agent_approval(
         args.work_dir,
         args.request_id,
@@ -68,7 +70,7 @@ def submit(args: argparse.Namespace) -> dict[str, Any]:
     )
     response_path = result.get("response_path")
     if response_path:
-        assert_response_preserved_value(Path(response_path), value)
+        assert_response_preserved_value(Path(response_path), expected_value)
     return result
 
 

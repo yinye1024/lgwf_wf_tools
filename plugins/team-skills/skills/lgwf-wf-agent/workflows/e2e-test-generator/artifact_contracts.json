@@ -1,0 +1,17 @@
+{
+  "bootstrap_inputs": [],
+  "script_writes": {
+    "validate_target_request": [
+      ".lgwf/e2e_target_request.normalized.json"
+    ],
+    "scan_workflow_package": [
+      ".lgwf/e2e_workflow_sources.json"
+    ],
+    "parse_workflow_graph": [
+      ".lgwf/e2e_workflow_graph.json"
+    ],
+    "build_coverage_matrix": [
+      ".lgwf/e2e_coverage_matrix.json"
+    ]
+  }
+}

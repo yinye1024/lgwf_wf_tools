@@ -1,0 +1,12 @@
+WORKFLOW design_steps_react;
+ENTRY design_steps_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+}
+
+CODEX design_steps_react
+  PROMPT "agents/act.md"
+  OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
+  RESULT state.lgwf_wf_create.step_design_result;

@@ -25,6 +25,7 @@
 - 单节点、人工确认和输出校验优先作为普通 step，不强制包装成子 workflow。
 - 如果兼容旧 package 时同时存在 `workflow.lgwf` 和 `workflow.json`，snapshot 中的新编译结果覆盖旧 JSON。
 - `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
+- 新建 workflow 优先使用 `FLOW { ... }` 集中表达全局流程；块内 `THEN` lowering 为 `edges`，`WHEN "route_key" THEN` lowering 为 `routes`。旧 `FLOW ...;` 和独立 `ROUTE ...;` 只作为兼容写法保留。
 - `READ`、`WRITE`、`RESULT`、`INSTRUCTION` 必须使用 `state.*` runtime state path。
 - `PROMPT`、`SCRIPT`、`CONTEXT file|dir` 必须使用相对文件资源路径。
 - `REACT` sugar 只表达 `subgraph.react`，必须包含 `REASON`、`ACT`、`OBSERVE`、`DECIDE`；slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`，其中 `WORKFLOW` slot 必须声明 `RESULT state.*`。

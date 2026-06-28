@@ -1,0 +1,12 @@
+{
+  "bootstrap_inputs": [],
+  "script_writes": {
+    "check_lgwf_client_assist": [
+      ".lgwf/prompt_upgrade/environment_check.json"
+    ],
+    "build_prompt_inventory": [
+      ".lgwf/prompt_upgrade_target.json",
+      ".lgwf/prompt_upgrade/inventory.json"
+    ]
+  }
+}

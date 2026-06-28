@@ -1,0 +1,13 @@
+WORKFLOW scaffold_package;
+ENTRY scaffold_package;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+}
+
+PY scaffold_package
+  SCRIPT "scripts/scaffold_package.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.scaffold_package_result
+  UPDATES_STATE;

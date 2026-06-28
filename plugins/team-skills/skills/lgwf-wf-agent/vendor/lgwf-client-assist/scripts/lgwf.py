@@ -82,6 +82,8 @@ def main(
         )
     if command == "audit":
         return run_module("lgwf_dsl.cli", ["audit", *args])
+    if command == "debug-runtime":
+        return run_module("lgwf_dsl.cli", ["debug-runtime", *args])
     if command == "compile":
         return run_module("lgwf_dsl.cli", ["compile", *args])
     if command == "schema":
@@ -182,7 +184,10 @@ def _module_runner(
             force=False,
             stderr=stderr,
         )
-        completed = support.python.run_module(module_name, argv)
+        resolved_argv = list(argv)
+        if module_name == "lgwf_dsl.cli" and _needs_bundled_wheel_arg(resolved_argv):
+            resolved_argv.extend(["--bundled-wheel", str(wheel)])
+        completed = support.python.run_module(module_name, resolved_argv)
         if completed.stdout:
             stdout.write(completed.stdout)
         if completed.stderr:
@@ -190,6 +195,16 @@ def _module_runner(
         return completed.returncode
 
     return run
+
+
+def _needs_bundled_wheel_arg(argv: list[str]) -> bool:
+    if "--bundled-wheel" in argv:
+        return False
+    if not argv:
+        return False
+    if argv[0] == "debug-runtime":
+        return True
+    return argv[0] == "audit" and "--debug-runtime" in argv
 
 
 def _resolve_runtime_skill_root(root: pathlib.Path) -> pathlib.Path:
@@ -226,7 +241,7 @@ class _ArgumentParser(argparse.ArgumentParser):
 
 def _write_usage(stream: TextIO) -> None:
     stream.write(
-        "usage: lgwf.py {doctor,audit,compile,schema,run,status,stop,wait,approval,runs,tool,codex} ...\n"
+        "usage: lgwf.py {doctor,audit,compile,schema,debug-runtime,run,status,stop,wait,approval,runs,tool,codex} ...\n"
     )
 
 

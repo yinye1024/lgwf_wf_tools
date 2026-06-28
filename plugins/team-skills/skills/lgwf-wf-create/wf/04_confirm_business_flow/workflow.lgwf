@@ -1,0 +1,73 @@
+WORKFLOW design_structure;
+ENTRY propose_business_flow_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+STEP propose_business_flow_react
+  WORKFLOW "03_propose_business_flow_react/workflow.lgwf";
+
+PY prepare_business_flow_confirmation
+  SCRIPT "scripts/prepare_business_flow_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_business_flow_confirmation_result
+  UPDATES_STATE;
+
+APPROVAL confirm_business_flow
+  PROMPT_REF "confirm_business_flow.md"
+  READ state.lgwf_wf_create.business_flow_confirmation_context
+  WRITE state.lgwf_wf_create.business_flow_decision
+  RESULT state.lgwf_wf_create.business_flow_decision_result
+  PERSIST ".lgwf/business_flow_approval.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY apply_confirmed_business_flow
+  SCRIPT "scripts/apply_confirmed_business_flow.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.apply_business_flow_result
+  UPDATES_STATE;
+
+PY prepare_business_flow_revision_confirmation
+  SCRIPT "scripts/prepare_business_flow_revision_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
+  UPDATES_STATE;
+
+APPROVAL revise_business_flow
+  PROMPT_REF "revise_business_flow.md"
+  READ state.lgwf_wf_create.business_flow_revision_context
+  WRITE state.lgwf_wf_create.business_flow_revision_decision
+  RESULT state.lgwf_wf_create.business_flow_revision_decision_result
+  PERSIST ".lgwf/business_flow_revision_approval.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY finish_confirmation
+  SCRIPT "scripts/finish_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.business_flow_finish_result
+  UPDATES_STATE;
+
+STEP scaffold_package
+  WORKFLOW "05_scaffold_package/workflow.lgwf";
+
+FLOW {
+  propose_business_flow_react THEN prepare_business_flow_confirmation THEN confirm_business_flow;
+
+  confirm_business_flow
+    WHEN "approve" THEN apply_confirmed_business_flow
+    WHEN "revise" THEN prepare_business_flow_revision_confirmation
+    WHEN "reject" THEN finish_confirmation;
+
+  prepare_business_flow_revision_confirmation THEN revise_business_flow;
+
+  revise_business_flow
+    WHEN "approve" THEN apply_confirmed_business_flow
+    WHEN "revise" THEN prepare_business_flow_revision_confirmation
+    WHEN "reject" THEN finish_confirmation;
+
+  apply_confirmed_business_flow THEN scaffold_package;
+}

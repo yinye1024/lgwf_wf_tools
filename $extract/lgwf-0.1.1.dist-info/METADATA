@@ -1,0 +1,84 @@
+Metadata-Version: 2.4
+Name: lgwf
+Version: 0.1.1
+Summary: Local DSL-driven LangGraph workflow runtime
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: langgraph<2.0.0,>=1.2.2
+Requires-Dist: langchain-core>=0.3.0
+Requires-Dist: jsonschema<5.0,>=4.0
+Dynamic: license-file
+
+# LGWF
+
+`lgwf` 是本地 DSL-driven LangGraph workflow runtime，提供 DSL compiler、capability、local client runner、human approval 和 run record。
+
+## 环境准备
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -e .
+```
+
+## 统一 Facade
+
+Agent 和常规用户统一通过 `lgwf-client-assist/scripts/lgwf.py` 操作：
+
+```powershell
+python <lgwf-client-assist>\scripts\lgwf.py doctor
+python <lgwf-client-assist>\scripts\lgwf.py audit examples\workflows\tool_smoke\workflow.lgwf
+python <lgwf-client-assist>\scripts\lgwf.py run --workflow-lgwf examples\workflows\tool_smoke\workflow.lgwf --work-dir testws --input-json "{}"
+```
+
+运行 `.lgwf` 时，facade 将 workflow package 复制到 `<work_dir>/.lgwf/workflow/`，在隐藏 snapshot 中 audit、compile 和运行。用户 package 只保存 authoring source 与静态资源，不生成 `workflow.json`。
+
+旧 `scripts/run_workflow.py`、`python -m lgwf_dsl.cli` 和 `python -m lgwf_client.cli` 保持兼容，仅用于已有集成和底层排障。
+
+## Authoring DSL
+
+`.lgwf` 是人和 LLM 维护的 authoring source，`workflow.json` 是隐藏 runtime IR 或显式兼容输入。
+
+当前主要语法：
+
+- `PY`：workflow 专属 Python 脚本。
+- `TOOL`：公开稳定 client 工具。
+- `CODEX`：Codex prompt 节点。
+- `APPROVAL`：人工确认。
+- `REACT`、`PARALLEL`：固定子图模式。
+- `STEP ... WORKFLOW`：嵌套 workflow。
+- `FLOW`、`EDGE`、`ROUTE`：拓扑和路由。
+
+语法说明见 [docs/LGWF_TEXT_DSL.md](docs/LGWF_TEXT_DSL.md)，package 规则见 [docs/WORKFLOW_PACKAGE.md](docs/WORKFLOW_PACKAGE.md)。
+
+## Tool
+
+稳定 client 工具在 `.lgwf` 中使用原生 `TOOL`：
+
+```lgwf
+TOOL ensure_output
+  USE ensure_dir
+  OPTIONS {"path": "output"}
+  RESULT state.ensure_output_result;
+```
+
+公开工具可通过 facade 查询：
+
+```powershell
+python <lgwf-client-assist>\scripts\lgwf.py tool list
+python <lgwf-client-assist>\scripts\lgwf.py tool describe ensure_dir
+```
+
+## 架构边界
+
+- `lgwf`：DSL 校验、lowering、graph orchestration 和 runtime state。
+- `lgwf_client`：shell、Python、Codex 和 tool runner。
+- `exec.*` capability 只构造 instruction 并调用当前 client。
+- runtime state 是控制面；workspace 文件是数据面。
+
+## 验证
+
+```powershell
+.venv\Scripts\python.exe -m compileall -q src test
+.venv\Scripts\python.exe -m unittest discover -s test -p "test_*.py"
+```

@@ -1,0 +1,12 @@
+WORKFLOW propose_business_flow_react;
+ENTRY propose_business_flow_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+}
+
+CODEX propose_business_flow_react
+  PROMPT "agents/act.md"
+  OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
+  RESULT state.lgwf_wf_create.business_flow_proposal_result;

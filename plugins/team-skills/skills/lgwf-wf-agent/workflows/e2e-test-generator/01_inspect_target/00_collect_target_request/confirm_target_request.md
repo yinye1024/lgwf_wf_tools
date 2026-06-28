@@ -42,8 +42,8 @@
 
 ```json
 {
-  "workflow_lgwf": "D:/repo/plugins/team-skills/skills/lgwf-plan/wf/workflow.lgwf",
-  "workflow_root": "D:/repo/plugins/team-skills/skills/lgwf-plan",
+  "workflow_lgwf": "D:/repo/plugins/team-skills/skills/lgwf-wf-agent/workflows/plan/wf/workflow.lgwf",
+  "workflow_root": "D:/repo/plugins/team-skills/skills/lgwf-wf-agent/workflows/plan",
   "test_output_dir": "tests",
   "test_name_prefix": "lgwf_plan"
 }

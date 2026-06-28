@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "workflow-health-wf-fix-role-boundary",
+      "category": "workflow_health",
+      "input": {
+        "workflow_id": "wf-fix",
+        "context": ["目标 workflow 失败", "需要真实运行证据和修复闭环"]
+      },
+      "expected": {
+        "workflow_id": "wf-fix",
+        "must_read": ["workflows/wf-fix/AGENTS.md"],
+        "required_text": [
+          {
+            "path": "workflows/wf-fix/AGENTS.md",
+            "contains": "不负责系统性 prompt 质量升级"
+          }
+        ]
+      }
+    },
+    {
+      "id": "workflow-health-prompt-fix-role-boundary",
+      "category": "workflow_health",
+      "input": {
+        "workflow_id": "wf-prompt-fix",
+        "context": ["prompt 基础规范", "不要求运行目标 workflow"]
+      },
+      "expected": {
+        "workflow_id": "wf-prompt-fix",
+        "must_read": ["workflows/wf-prompt-fix/AGENTS.md"],
+        "required_text": [
+          {
+            "path": "workflows/wf-prompt-fix/AGENTS.md",
+            "contains": "本 workflow 不启动目标 workflow runtime"
+          }
+        ]
+      }
+    },
+    {
+      "id": "workflow-health-prompt-upgrade-approval-boundary",
+      "category": "workflow_health",
+      "input": {
+        "workflow_id": "wf-prompt-upgrade",
+        "context": ["prompt 设计升级", "需要用户确认后 apply"]
+      },
+      "expected": {
+        "workflow_id": "wf-prompt-upgrade",
+        "must_read": ["workflows/wf-prompt-upgrade/AGENTS.md"],
+        "required_text": [
+          {
+            "path": "workflows/wf-prompt-upgrade/AGENTS.md",
+            "contains": "在用户 approve 后"
+          }
+        ]
+      }
+    },
+    {
+      "id": "workflow-health-e2e-generator-role-boundary",
+      "category": "workflow_health",
+      "input": {
+        "workflow_id": "e2e-test-generator",
+        "context": ["生成测试", "不修复目标 workflow"]
+      },
+      "expected": {
+        "workflow_id": "e2e-test-generator",
+        "must_read": ["workflows/e2e-test-generator/AGENTS.md"],
+        "required_text": [
+          {
+            "path": "workflows/e2e-test-generator/AGENTS.md",
+            "contains": "不负责修复目标 workflow 本身"
+          }
+        ]
+      }
+    }
+  ]
+}

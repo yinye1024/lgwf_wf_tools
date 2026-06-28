@@ -1,0 +1,267 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "copy_directory",
+      "description": "Recursively copy a directory tree.",
+      "public": true,
+      "path_mode": "external",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["source", "destination"],
+        "additionalProperties": false,
+        "properties": {
+          "source": {"type": "string"},
+          "destination": {"type": "string"},
+          "overwrite": {"type": "boolean", "default": false}
+        }
+      }
+    },
+    {
+      "name": "copy_file",
+      "description": "Copy one file byte-for-byte while preserving metadata.",
+      "public": true,
+      "path_mode": "external",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["source", "destination"],
+        "additionalProperties": false,
+        "properties": {
+          "source": {"type": "string"},
+          "destination": {"type": "string"},
+          "overwrite": {"type": "boolean", "default": false}
+        }
+      }
+    },
+    {
+      "name": "ensure_dir",
+      "description": "Create one or more directories inside a workspace.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["path"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": {"type": "string"}}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "file_replace",
+      "description": "Copy a template tree and replace UTF-8 text tokens.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["source_dir", "output_dir", "exec_log_dir"],
+        "additionalProperties": false,
+        "properties": {
+          "source_dir": {"type": "string"},
+          "output_dir": {"type": "string"},
+          "exec_log_dir": {"type": "string"},
+          "token_map": {
+            "type": "object",
+            "default": {},
+            "additionalProperties": {"type": "string"}
+          },
+          "dry_run": {"type": "boolean", "default": false},
+          "clear_output_dir": {"type": "boolean", "default": false}
+        }
+      }
+    },
+    {
+      "name": "sandbox_prepare",
+      "description": "Create validation sandbox baseline and candidate roots for work_dir and optional target_dir.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["sandbox_path", "work_dir"],
+        "additionalProperties": false,
+        "properties": {
+          "sandbox_path": {"type": "string"},
+          "work_dir": {"$ref": "#/$defs/sandbox_root"},
+          "target_dir": {
+            "allOf": [
+              {"$ref": "#/$defs/sandbox_root"},
+              {
+                "type": "object",
+                "required": ["path"],
+                "properties": {"path": {"type": "string"}}
+              }
+            ]
+          }
+        },
+        "$defs": {
+          "sandbox_root": {
+            "type": "object",
+            "required": ["include", "promote_include"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string"},
+              "include": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+              "exclude": {"type": "array", "items": {"type": "string"}, "default": []},
+              "promote_include": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "sandbox_diff",
+      "description": "Compute a structured diff between validation sandbox baseline and candidate roots.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["sandbox_path", "work_dir"],
+        "additionalProperties": false,
+        "properties": {
+          "sandbox_path": {"type": "string"},
+          "work_dir": {"$ref": "#/$defs/sandbox_root"},
+          "target_dir": {
+            "allOf": [
+              {"$ref": "#/$defs/sandbox_root"},
+              {
+                "type": "object",
+                "required": ["path"],
+                "properties": {"path": {"type": "string"}}
+              }
+            ]
+          }
+        },
+        "$defs": {
+          "sandbox_root": {
+            "type": "object",
+            "required": ["include", "promote_include"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string"},
+              "include": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+              "exclude": {"type": "array", "items": {"type": "string"}, "default": []},
+              "promote_include": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "sandbox_promote",
+      "description": "Promote allowed candidate changes back to real roots, including deletions, after rejecting roots changed since baseline.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["sandbox_path", "work_dir"],
+        "additionalProperties": false,
+        "properties": {
+          "sandbox_path": {"type": "string"},
+          "work_dir": {"$ref": "#/$defs/sandbox_root"},
+          "target_dir": {
+            "allOf": [
+              {"$ref": "#/$defs/sandbox_root"},
+              {
+                "type": "object",
+                "required": ["path"],
+                "properties": {"path": {"type": "string"}}
+              }
+            ]
+          }
+        },
+        "$defs": {
+          "sandbox_root": {
+            "type": "object",
+            "required": ["include", "promote_include"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string"},
+              "include": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+              "exclude": {"type": "array", "items": {"type": "string"}, "default": []},
+              "promote_include": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "sandbox_archive",
+      "description": "Write validation sandbox validation and decision artifacts.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["sandbox_path", "work_dir"],
+        "additionalProperties": false,
+        "properties": {
+          "sandbox_path": {"type": "string"},
+          "work_dir": {"$ref": "#/$defs/sandbox_root"},
+          "target_dir": {
+            "allOf": [
+              {"$ref": "#/$defs/sandbox_root"},
+              {
+                "type": "object",
+                "required": ["path"],
+                "properties": {"path": {"type": "string"}}
+              }
+            ]
+          },
+          "validation": {"type": "object", "default": {}},
+          "decision": {"type": "object", "default": {}}
+        },
+        "$defs": {
+          "sandbox_root": {
+            "type": "object",
+            "required": ["include", "promote_include"],
+            "additionalProperties": false,
+            "properties": {
+              "path": {"type": "string"},
+              "include": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+              "exclude": {"type": "array", "items": {"type": "string"}, "default": []},
+              "promote_include": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write_text_file",
+      "description": "Write or append UTF-8 text inside a workspace.",
+      "public": true,
+      "path_mode": "workspace",
+      "workflow_path_mode": "workspace",
+      "mutates_files": true,
+      "options_schema": {
+        "type": "object",
+        "required": ["path"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string"},
+          "content": {"type": "string", "default": ""},
+          "append": {"type": "boolean", "default": false}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "nodes": [
+    {
+      "id": "check_input",
+      "capability": "flow.if",
+      "config": {
+        "condition": {
+          "path": "input",
+          "op": "exists"
+        }
+      }
+    },
+    {
+      "id": "echo",
+      "capability": "exec.echo"
+    },
+    {
+      "id": "missing_input",
+      "capability": "exec.missing_input"
+    }
+  ],
+  "edges": [],
+  "routes": [
+    {
+      "from": "check_input",
+      "branches": {
+        "true": "echo",
+        "false": "missing_input"
+      }
+    }
+  ],
+  "entry_point": "check_input"
+}
+

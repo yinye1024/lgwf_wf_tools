@@ -1,7 +1,7 @@
 ﻿{
   "name": "lgwf-wf-create-plan",
-  "workflow_lgwf": "D:/allen/github/lgwf_plugins/plugins/team-skills/skills/lgwf-plan/workflow.lgwf",
-  "work_dir": "D:/allen/github/lgwf_plugins/plugins/team-skills/skills/lgwf-plan/.tmp/lgwf-wf-create-plan",
+  "workflow_lgwf": "D:/allen/github/lgwf_plugins/plugins/team-skills/skills/lgwf-wf-agent/workflows/plan/wf/workflow.lgwf",
+  "work_dir": "D:/allen/github/lgwf_plugins/plugins/team-skills/skills/lgwf-wf-agent/workflows/plan/ws",
   "approval_submitter": "D:/allen/github/lgwf_plugins/plugins/team-skills/skills/lgwf-wf-agent/workflows/wf-fix/scripts/safe_approval_submit.py",
   "task_input": {
     "objective": "基于已落盘的 `lgwf-wf-create` 设计文档，规划并实现独立的 `lgwf-wf-create` skill/workflow。",

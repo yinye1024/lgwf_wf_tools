@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "name": "lgwf-wf-agent-self-improve",
+  "entrypoint": "scripts/self_improve.py",
+  "local_state_root": ".local/self-improve",
+  "protected_local_roots": [
+    ".local/self-improve",
+    ".local/overrides",
+    ".local/upgrade-reports"
+  ],
+  "commands": {
+    "changed-files": "scripts/collect_changed_files.py",
+    "eval": "scripts/run_self_evals.py",
+    "incident": "scripts/record_incident.py",
+    "proposal": "scripts/create_proposal.py",
+    "eval-case": "scripts/create_eval_case.py",
+    "scorecard": "scripts/generate_scorecard.py",
+    "upgrade-report": "scripts/write_upgrade_report.py",
+    "pre-release": "scripts/pre_release_check.py",
+    "promote-eval": "scripts/promote_eval_case.py",
+    "workflow-health": "scripts/check_workflow_health.py",
+    "workflow-tests": "scripts/run_workflow_tests.py",
+    "workflow-proposal": "scripts/create_workflow_improvement_proposal.py"
+  },
+  "release_policy": {
+    "may_overwrite": [
+      "self-improve",
+      "SKILL.md",
+      "AGENTS.md",
+      "registry.json",
+      "workflows",
+      "vendor",
+      "scripts"
+    ],
+    "must_preserve": [
+      ".local"
+    ]
+  }
+}

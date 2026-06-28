@@ -1,0 +1,774 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "name": "exec.echo",
+      "kind": "exec",
+      "description": "Echo state.input into state.output for runtime smoke tests.",
+      "config_schema": {},
+      "reads": ["input"],
+      "writes": ["output"],
+      "side_effects": [],
+      "examples": [
+        {
+          "id": "echo",
+          "capability": "exec.echo"
+        }
+      ]
+    },
+    {
+      "name": "exec.missing_input",
+      "kind": "exec",
+      "description": "Write a missing input message into state.output.",
+      "config_schema": {},
+      "reads": [],
+      "writes": ["output"],
+      "side_effects": [],
+      "examples": [
+        {
+          "id": "missing_input",
+          "capability": "exec.missing_input"
+        }
+      ]
+    },
+    {
+      "name": "exec.run_shell",
+      "kind": "exec",
+      "description": "Run a shell command in the client workspace.",
+      "config_schema": {
+        "command": {"type": "string", "required": true},
+        "cwd": {"type": "string", "legacy": true, "description": "Legacy working directory. When cwd is omitted, the client runner defaults to workspace root."},
+        "timeout_seconds": {"type": "integer", "default": 300},
+        "instruction_path": {"type": "string", "default": "last_instruction"},
+        "result_path": {"type": "string", "default": "last_result"}
+      },
+      "reads": [],
+      "writes": ["last_instruction", "last_result"],
+      "side_effects": ["may_read_files", "may_modify_files", "may_execute_process"],
+      "examples": [
+        {
+          "id": "list_files",
+          "capability": "exec.run_shell",
+          "config": {
+            "command": "dir"
+          }
+        }
+      ]
+    },
+    {
+      "name": "exec.run_python",
+      "kind": "exec",
+      "description": "Run Python code or a Python script in the client workspace.",
+      "config_schema": {
+        "code": {"type": "string", "mutually_exclusive_with": "script_path, script_ref, builtin_script"},
+        "script_path": {
+          "type": "string",
+          "mutually_exclusive_with": "code, script_ref, builtin_script",
+          "description": "Legacy client-side relative path resolved under effective cwd. Prefer script_ref with ref_root for package resources. Absolute paths and '..' are rejected by the client runner."
+        },
+        "script_ref": {
+          "type": "resource_ref",
+          "mutually_exclusive_with": "code, script_path, builtin_script",
+          "description": "Client-side script resource reference object. If root is omitted, it resolves under ref_root when provided, otherwise under effective cwd."
+        },
+        "builtin_script": {
+          "type": "string",
+          "mutually_exclusive_with": "code, script_path, script_ref",
+          "enum": ["ensure_dir", "write_text_file", "file_replace", "copy_file", "copy_directory"],
+          "description": "Public Python builtin bundled with lgwf_client. copy_file and copy_directory remain workspace-scoped when invoked by a workflow."
+        },
+        "options": {
+          "type": "object",
+          "requires": "builtin_script",
+          "description": "Options object passed to the selected builtin_script as JSON."
+        },
+        "args": {"type": "list[string]", "default": []},
+        "cwd": {"type": "string", "legacy": true, "description": "Legacy working directory. When cwd is omitted, the client runner defaults to workspace root."},
+        "ref_root": {
+          "type": "root_ref",
+          "description": "Optional base for script_ref when script_ref omits root. Use {\"root\":\"workflow\",\"path\":\".\"} to read package scripts while executing in workspace root."
+        },
+        "timeout_seconds": {"type": "integer", "default": 300},
+        "instruction_path": {"type": "string", "default": "last_instruction"},
+        "result_path": {"type": "string", "default": "last_result"},
+        "state_updates_from_stdout": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true and execution succeeds, stdout must be a JSON object whose keys are runtime state paths to write."
+        }
+      },
+      "reads": [],
+      "writes": ["last_instruction", "last_result", "optional stdout state update paths"],
+      "side_effects": ["may_read_client_resource", "may_read_files", "may_modify_files", "may_execute_process"],
+      "examples": [
+        {
+          "id": "run_python",
+          "capability": "exec.run_python",
+          "config": {
+            "script_ref": {"path": "03_run/scripts/task.py"},
+            "ref_root": {"root": "workflow", "path": "."}
+          }
+        }
+      ]
+    },
+    {
+      "name": "exec.codex_prompt",
+      "kind": "exec",
+      "description": "Run a Codex CLI prompt in the client workspace.",
+      "config_schema": {
+        "prompt": {"type": "string", "mutually_exclusive_with": "prompt_ref"},
+        "prompt_ref": {
+          "type": "resource_ref",
+          "mutually_exclusive_with": "prompt",
+          "description": "Client-side main prompt resource reference object. If root is omitted, it resolves under ref_root when provided, otherwise under effective cwd. The client passes a short handoff prompt to Codex and asks Codex to read this file itself."
+        },
+        "spec_ref": {
+          "type": "resource_ref",
+          "required": false,
+          "description": "Optional governing spec resource. Codex reads it before the main prompt and treats it as authoritative when the two conflict."
+        },
+        "cwd": {"type": "string", "legacy": true, "description": "Legacy working directory. When cwd is omitted, the client runner defaults to workspace root."},
+        "ref_root": {
+          "type": "root_ref",
+          "description": "Optional base for prompt_ref when prompt_ref omits root. Use {\"root\":\"workflow\",\"path\":\".\"} to read package prompts while running Codex in workspace root."
+        },
+        "context_refs": {
+          "type": "list[resource_ref]",
+          "default": [],
+          "description": "Optional reference files or directories that Codex should read after the main prompt. Each item must include path and type=file|dir; root may be workflow or workspace."
+        },
+        "target_dirs": {
+          "type": "list[string]",
+          "default": [],
+          "description": "Optional analysis target directories authorized by the workflow or runtime state. Paths may be absolute and are validated by the Codex client runner."
+        },
+        "target_files": {
+          "type": "list[string]",
+          "default": [],
+          "description": "Optional analysis target files authorized by the workflow or runtime state. Paths may be absolute and are validated by the Codex client runner."
+        },
+        "target_dirs_path": {
+          "type": "string",
+          "description": "Optional runtime state path whose value is a list of analysis target directory paths to merge into target_dirs."
+        },
+        "target_files_path": {
+          "type": "string",
+          "description": "Optional runtime state path whose value is a list of analysis target file paths to merge into target_files."
+        },
+        "mode": {"type": "string", "default": "exec", "allowed": ["exec"]},
+        "model": {
+          "type": "string",
+          "default": "gpt-5.4",
+          "description": "Codex model to use. Prefer this field over passing -m or --model through args."
+        },
+        "args": {"type": "list[string]", "default": []},
+        "timeout_seconds": {
+          "type": ["integer", "null"],
+          "default": null,
+          "description": "Client-side Codex subprocess timeout in seconds. null means no timeout."
+        },
+        "instruction_path": {"type": "string", "default": "last_instruction"},
+        "result_path": {"type": "string", "default": "last_result"},
+        "foreground": {
+          "type": "boolean",
+          "default": false,
+          "description": "false runs Codex as a background subprocess and records prompt, command, stdout, stderr, and metadata under .lgwf/codex/<instruction-id>-<timestamp>/. On Windows, true opens Codex interactive CLI in a visible console window and closes it 5 seconds after completion."
+        }
+      },
+      "reads": [],
+      "writes": ["last_instruction", "last_result", "token_usage.<node>"],
+      "side_effects": ["may_read_client_resource", "may_read_files", "may_modify_files", "may_execute_process", "may_call_model_provider"],
+      "examples": [
+        {
+          "id": "ask_codex",
+          "capability": "exec.codex_prompt",
+          "config": {
+            "prompt_ref": {"path": "02_design/01_draft/agents/prompt.md"},
+            "context_refs": [
+              {"root": "workspace", "path": "data/input.json", "type": "file"}
+            ],
+            "ref_root": {"root": "workflow", "path": "."}
+          }
+        }
+      ]
+    },
+    {
+      "name": "exec.run_tool",
+      "kind": "exec",
+      "description": "Run a public client tool inside the workflow workspace.",
+      "config_schema": {
+        "tool": {
+          "type": "string",
+          "required": true,
+          "description": "Public tool name from the machine-readable client tool catalog."
+        },
+        "options": {
+          "type": "object",
+          "default": {},
+          "description": "Static options validated against the selected tool schema."
+        },
+        "timeout_seconds": {"type": ["integer", "null"], "default": 300},
+        "result_path": {"type": "string", "default": "last_result"}
+      },
+      "reads": [],
+      "writes": ["config.result_path"],
+      "side_effects": ["may_read_files", "may_modify_files"],
+      "examples": [
+        {
+          "id": "ensure_output",
+          "capability": "exec.run_tool",
+          "config": {
+            "tool": "ensure_dir",
+            "options": {"path": "output"},
+            "result_path": "results.ensure_output"
+          }
+        }
+      ]
+    },
+    {
+      "name": "exec.run_tests",
+      "kind": "exec",
+      "description": "Run a test command in the client workspace.",
+      "config_schema": {
+        "command": {"type": "string", "required": true},
+        "cwd": {"type": "string", "legacy": true, "description": "Legacy working directory. When cwd is omitted, the client runner defaults to workspace root."},
+        "timeout_seconds": {"type": "integer", "default": 300},
+        "instruction_path": {"type": "string", "default": "test_instruction"},
+        "result_path": {"type": "string", "default": "test_result"}
+      },
+      "reads": [],
+      "writes": ["test_instruction", "test_result"],
+      "side_effects": ["may_read_files", "may_execute_process"],
+      "examples": [
+        {
+          "id": "run_tests",
+          "capability": "exec.run_tests",
+          "config": {
+            "command": ".venv\\\\Scripts\\\\python.exe -m unittest discover -s test -p \"test_*.py\""
+          }
+        }
+      ]
+    },
+    {
+      "name": "exec.inspect_project",
+      "kind": "exec",
+      "description": "Refresh the client workspace manifest and write a project summary into runtime state.",
+      "config_schema": {
+        "cwd": {"type": "string", "default": "."},
+        "max_files": {"type": "integer", "default": 500},
+        "refresh": {"type": "boolean", "default": true},
+        "context_path": {"type": "string", "default": "project_context"}
+      },
+      "reads": [".lgwf/context.json when refresh is false"],
+      "writes": ["project_context", ".lgwf/context.json when refresh is true"],
+      "side_effects": ["may_read_files", "may_write_manifest"],
+      "examples": [
+        {
+          "id": "inspect_project",
+          "capability": "exec.inspect_project",
+          "config": {
+            "cwd": ".",
+            "max_files": 500
+          }
+        }
+      ]
+    },
+    {
+      "name": "flow.if",
+      "kind": "flow",
+      "description": "Evaluate a condition and route to true or false.",
+      "config_schema": {
+        "condition": {"type": "object", "required": true}
+      },
+      "reads": ["condition.path"],
+      "writes": ["internal_route_key"],
+      "side_effects": [],
+      "examples": [
+        {
+          "id": "check_input",
+          "capability": "flow.if",
+          "config": {
+            "condition": {"path": "input", "op": "exists"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "flow.check",
+      "kind": "flow",
+      "description": "Run a workspace file or JSON field check, write a check result, and route to pass or fail.",
+      "config_schema": {
+        "check": {
+          "type": "string",
+          "required": true,
+          "allowed": ["artifact_exists", "dir_exists", "file_exists", "file_not_exists", "json_field_equals", "json_field_exists", "json_field_in"]
+        },
+        "options": {"type": "object", "default": {}},
+        "result_path": {"type": "string", "default": "last_check"},
+        "pass_route": {"type": "string", "default": "pass"},
+        "fail_route": {"type": "string", "default": "fail"}
+      },
+      "reads": ["client workspace files"],
+      "writes": ["last_check", "internal_route_key"],
+      "side_effects": ["may_read_files"],
+      "examples": [
+        {
+          "id": "check_artifact",
+          "capability": "flow.check",
+          "config": {
+            "check": "file_exists",
+            "options": {"path": "dist/result.json"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "flow.switch",
+      "kind": "flow",
+      "description": "Read a state path and route by the value at that path.",
+      "config_schema": {
+        "path": {"type": "string", "required": true},
+        "default": {"type": "string", "required": false}
+      },
+      "reads": ["config.path"],
+      "writes": ["internal_route_key"],
+      "side_effects": [],
+      "examples": [
+        {
+          "id": "select_next",
+          "capability": "flow.switch",
+          "config": {"path": "next", "default": "exit"}
+        }
+      ]
+    },
+    {
+      "name": "flow.guard",
+      "kind": "flow",
+      "description": "Evaluate a condition and route to pass or fail.",
+      "config_schema": {
+        "condition": {"type": "object", "required": true},
+        "pass_route": {"type": "string", "default": "pass"},
+        "fail_route": {"type": "string", "default": "fail"}
+      },
+      "reads": ["condition.path"],
+      "writes": ["internal_route_key"],
+      "side_effects": [],
+      "examples": [
+        {
+          "id": "guard_input",
+          "capability": "flow.guard",
+          "config": {
+            "condition": {"path": "input", "op": "not_empty"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "flow.assign",
+      "kind": "flow",
+      "description": "Assign literal values to state paths.",
+      "config_schema": {
+        "assignments": {"type": "object", "required": true}
+      },
+      "reads": [],
+      "writes": ["config.assignments.keys"],
+      "side_effects": [],
+      "examples": [
+        {
+          "id": "assign_status",
+          "capability": "flow.assign",
+          "config": {
+            "assignments": {"meta.status": "ready"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "flow.human_approval",
+      "kind": "flow",
+      "description": "Pause the workflow until a human approval response is written under the workspace human approval files.",
+      "config_schema": {
+        "prompt": {
+          "type": "string",
+          "description": "Inline approval prompt. Exactly one of prompt or prompt_ref is required."
+        },
+        "prompt_ref": {
+          "type": "resource_ref",
+          "description": "Workflow-root Markdown prompt reference. Exactly one of prompt or prompt_ref is required."
+        },
+        "context_path": {"type": "string", "required": true},
+        "approved_value_path": {"type": "string", "required": true},
+        "result_path": {"type": "string", "default": "human_approval"},
+        "persist_value_path": {
+          "type": "string",
+          "description": "Optional workspace-relative JSON path that receives the approved value."
+        },
+        "timeout_seconds": {
+          "type": ["number", "null"],
+          "default": null,
+          "description": "Human approval wait timeout in seconds. null means wait indefinitely."
+        },
+        "poll_interval_seconds": {"type": "number", "default": 1}
+      },
+      "reads": ["config.prompt_ref", "config.context_path", ".lgwf/human/<request_id>.response.json"],
+      "writes": ["config.approved_value_path", "config.result_path", "config.persist_value_path", ".lgwf/human/<request_id>.request.json"],
+      "side_effects": ["may_write_human_request", "waits_for_human_response"],
+      "examples": [
+        {
+          "id": "confirm_params",
+          "capability": "flow.human_approval",
+          "config": {
+            "prompt": "请确认工作流启动参数",
+            "context_path": "collected_params",
+            "approved_value_path": "confirmed_params"
+          }
+        }
+      ]
+    },
+    {
+      "name": "subgraph.waterfall",
+      "kind": "subgraph",
+      "description": "Run configured steps sequentially as a fixed subgraph pattern.",
+      "config_schema": {
+        "steps": {"type": "list[node]", "required": true}
+      },
+      "reads": ["steps.reads"],
+      "writes": ["steps.writes"],
+      "side_effects": ["depends_on_steps"],
+      "examples": [
+        {
+          "id": "pipeline",
+          "capability": "subgraph.waterfall",
+          "config": {
+            "steps": [
+              {"id": "prepare", "capability": "flow.assign", "config": {"assignments": {"input": "hello"}}},
+              {"id": "echo", "capability": "exec.echo"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "subgraph.parallel",
+      "kind": "subgraph",
+      "description": "Run configured independent steps concurrently as a fixed subgraph pattern, merging only each step output_path into its result_path. Step context should be organized explicitly through state, config, resource refs, and workspace files.",
+      "config_schema": {
+        "steps": {
+          "type": "list[parallel_step]",
+          "required": true,
+          "description": "Independent steps. Each step requires id, capability, result_path, and may include config, output_path, and policies."
+        },
+        "max_concurrency": {
+          "type": "integer",
+          "required": false,
+          "description": "Positive maximum number of steps to run at once. Defaults to the number of steps."
+        },
+        "fail_strategy": {
+          "type": "string",
+          "required": false,
+          "default": "fail_fast",
+          "allowed": ["fail_fast", "collect"],
+          "description": "fail_fast raises on the first failed step. collect writes completed or failed status objects to each result_path."
+        }
+      },
+      "reads": ["steps.output_path"],
+      "writes": ["steps.result_path"],
+      "side_effects": ["depends_on_steps", "runs_steps_concurrently"],
+      "examples": [
+        {
+          "id": "parallel_rules",
+          "capability": "subgraph.parallel",
+          "config": {
+            "max_concurrency": 2,
+            "fail_strategy": "collect",
+            "steps": [
+              {
+                "id": "rule_a",
+                "capability": "exec.echo",
+                "output_path": "output",
+                "result_path": "reports.rule_a"
+              },
+              {
+                "id": "rule_b",
+                "capability": "exec.echo",
+                "output_path": "output",
+                "result_path": "reports.rule_b"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "subgraph.agent_loop",
+      "kind": "subgraph",
+      "description": "Run an engineering agent loop with explicit iteration state, per-iteration sandbox execution, verification, decision, archive, memory, and report artifacts.",
+      "config_schema": {
+        "max_iterations": {"type": "integer", "required": true},
+        "artifacts_path": {"type": "string", "required": true},
+        "status_path": {"type": "state_path", "required": false, "default": "agent_loop.<node>.status"},
+        "report_path": {"type": "state_path", "required": false, "default": "agent_loop.<node>.report"},
+        "target_dirs_path": {"type": "state_path", "required": false, "default": "targets.dirs"},
+        "target_files_path": {"type": "state_path", "required": false, "default": "targets.files"},
+        "goal": {"type": "string", "required": true},
+        "token_max": {
+          "type": "integer",
+          "required": false,
+          "default": 1000000,
+          "description": "Loop-scoped token budget. The runtime checks the per-iteration delta of state.run.token_usage.totals.total_tokens before starting the next iteration and enters waiting_human when the budget is reached."
+        },
+        "on_max": {
+          "type": "string",
+          "required": false,
+          "default": "block",
+          "allowed": ["block", "wait_human"],
+          "description": "Control policy when max_iterations is reached before finish."
+        },
+        "on_error": {
+          "type": "string",
+          "required": false,
+          "default": "block",
+          "allowed": ["block", "wait_human"],
+          "description": "Control policy when a slot raises before VERIFY/DECIDE can complete."
+        },
+        "slot_order": {
+          "type": "list[string]",
+          "required": false,
+          "default": ["observe", "diagnose", "plan", "act", "verify", "decide"],
+          "description": "Execution order for the six required slots. Authoring DSL AGENT_LOOP lowers this from the declaration order. Slots may lower from PY, CODEX, TOOL, or WORKFLOW declarations; WORKFLOW slots must provide a result_path for the loop contract."
+        },
+        "observe": {"type": "node", "required": true},
+        "diagnose": {"type": "node", "required": true},
+        "plan": {"type": "node", "required": true},
+        "act": {"type": "node", "required": true},
+        "verify": {"type": "node", "required": true},
+        "decide": {"type": "node", "required": true}
+      },
+      "reads": ["workflow state", "targets.dirs", "targets.files", "config.artifacts_path/memory.json", "slot reads"],
+      "writes": ["config.status_path", "config.report_path", "config.artifacts_path", "config.artifacts_path/memory.json", "slot writes"],
+      "side_effects": ["copies_candidate_roots", "runs_slots", "promotes_files_on_success", "archives_iterations", "updates_loop_memory"],
+      "examples": [
+        {
+          "id": "repair_loop",
+          "capability": "subgraph.agent_loop",
+          "config": {
+            "max_iterations": 5,
+            "artifacts_path": ".lgwf/loops/repair_loop",
+            "goal": "Repair until verification passes.",
+            "observe": {"capability": "exec.echo"},
+            "diagnose": {"capability": "exec.echo"},
+            "plan": {"capability": "exec.echo"},
+            "act": {"capability": "exec.echo"},
+            "verify": {"capability": "subgraph.workflow", "config": {"workflow": {"nodes": [{"id": "verify", "capability": "flow.assign", "config": {"assignments": {"verification": {"passed": true}}}}], "edges": [], "routes": [], "entry_point": "verify"}, "result_path": "verification"}},
+            "decide": {"capability": "exec.echo"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "subgraph.validation_sandbox",
+      "kind": "subgraph",
+      "description": "Run an embedded workflow in candidate work_dir and optional target_dir roots, then promote allowed changes back only after successful validation and baseline conflict checks.",
+      "config_schema": {
+        "sandbox_path": {
+          "type": "string",
+          "required": true,
+          "description": "Relative artifact path under the current work_dir, for example .lgwf/sandboxes/repair_loop."
+        },
+        "work_dir": {
+          "type": "sandbox_root",
+          "required": true,
+          "description": "Rules for copying and promoting the LGWF work_dir root."
+        },
+        "target_dir": {
+          "type": "sandbox_target_root",
+          "required": false,
+          "description": "Optional target package root resolved relative to the current work_dir."
+        },
+        "workflow": {
+          "type": "workflow_dsl",
+          "required": true,
+          "description": "Embedded workflow JSON IR that runs against the candidate roots."
+        },
+        "result_path": {
+          "type": "state_path",
+          "required": false,
+          "default": "sandbox",
+          "description": "State path receiving sandbox decision metadata."
+        }
+      },
+      "reads": ["work_dir.include", "target_dir.include", "workflow state"],
+      "writes": ["work_dir.promote_include", "target_dir.promote_include", "result_path"],
+      "side_effects": ["copies_candidate_roots", "runs_embedded_workflow", "promotes_files_on_success", "deletes_promoted_files_removed_from_candidate", "rejects_promote_when_real_roots_changed_since_baseline"],
+      "examples": [
+        {
+          "id": "sandbox",
+          "capability": "subgraph.validation_sandbox",
+          "config": {
+            "sandbox_path": ".lgwf/sandboxes/repair_loop",
+            "work_dir": {
+              "include": ["**"],
+              "exclude": [".lgwf/**"],
+              "promote_include": ["reports/**"]
+            },
+            "target_dir": {
+              "root": "workspace",
+              "path": "target_package",
+              "include": ["workflow.lgwf", "agents/**", "scripts/**"],
+              "exclude": [".lgwf/**"],
+              "promote_include": ["workflow.lgwf", "agents/**", "scripts/**"]
+            },
+            "workflow": {
+              "nodes": [],
+              "edges": [],
+              "routes": [],
+              "entry_point": "repair"
+            },
+            "result_path": "sandbox.repair_loop"
+          }
+        }
+      ]
+    },
+    {
+      "name": "subgraph.workflow",
+      "kind": "subgraph",
+      "description": "Run a complete embedded workflow DSL as a nested graph with shared state.",
+      "config_schema": {
+        "workflow": {
+          "type": "workflow_dsl",
+          "required": true,
+          "description": "Complete workflow JSON IR with nodes, edges, routes, and entry_point."
+        }
+      },
+      "reads": ["workflow state"],
+      "writes": ["workflow state"],
+      "side_effects": ["depends_on_embedded_workflow"],
+      "examples": [
+        {
+          "id": "nested_step",
+          "capability": "subgraph.workflow",
+          "config": {
+            "workflow": {
+              "nodes": [
+                {
+                  "id": "prepare",
+                  "capability": "flow.assign",
+                  "config": {
+                    "assignments": {
+                      "status": "ready"
+                    }
+                  }
+                }
+              ],
+              "edges": [],
+              "routes": [],
+              "entry_point": "prepare"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "subgraph.react",
+      "kind": "subgraph",
+      "description": "Run a fixed reason, act, observe, decide loop pattern.",
+      "config_schema": {
+        "max_steps": {"type": "integer", "default": 5},
+        "spec_ref": {
+          "type": "resource_ref",
+          "required": false,
+          "description": "Optional governing spec injected into reason, act, and observe. It is not passed to decide."
+        },
+        "reason": {"type": "node", "required": true},
+        "act": {"type": "node", "required": true},
+        "observe": {"type": "node", "required": true},
+        "decide": {"type": "node", "required": true},
+        "on_max": {
+          "type": "object",
+          "required": false,
+          "description": "Optional human approval prompt when decide requests continue at the current ReAct max-step limit.",
+          "fields": {
+            "type": {"type": "string", "enum": ["human_approval"], "required": true},
+            "prompt": {"type": "string", "required": true},
+            "context_path": {"type": "string", "required": true},
+            "approved_value_path": {"type": "string", "required": true},
+            "result_path": {"type": "string", "required": true},
+            "status_path": {"type": "string", "required": true},
+            "extra_max_steps": {"type": "integer", "required": true},
+            "timeout_seconds": {"type": ["number", "null"], "required": false},
+            "poll_interval_seconds": {"type": "number", "required": false, "default": 1}
+          }
+        }
+      },
+      "reads": ["next", "slots.reads", "config.on_max.context_path"],
+      "writes": ["next", "slots.writes", "config.on_max.approved_value_path", "config.on_max.result_path", "config.on_max.status_path"],
+      "side_effects": ["depends_on_slots", "may_write_human_request", "waits_for_human_response"],
+      "examples": [
+        {
+          "id": "agent",
+          "capability": "subgraph.react",
+          "config": {
+            "max_steps": 5,
+            "reason": {"capability": "exec.echo"},
+            "act": {"capability": "exec.echo"},
+            "observe": {"capability": "exec.echo"},
+            "decide": {"capability": "flow.assign", "config": {"assignments": {"next": "exit"}}}
+          }
+        }
+      ]
+    },
+    {
+      "name": "policy.retry",
+      "kind": "policy",
+      "description": "Lower a retry policy onto a LangGraph node.",
+      "config_schema": {
+        "max_attempts": {"type": "integer", "required": true},
+        "initial_interval": {"type": "number", "required": false},
+        "jitter": {"type": "boolean", "required": false}
+      },
+      "reads": [],
+      "writes": [],
+      "side_effects": ["may_repeat_node_execution"],
+      "examples": [
+        {
+          "capability": "policy.retry",
+          "config": {"max_attempts": 2}
+        }
+      ]
+    },
+    {
+      "name": "policy.timeout",
+      "kind": "policy",
+      "description": "Lower an async node timeout onto a LangGraph node.",
+      "config_schema": {
+        "run_timeout": {"type": "number", "required": true}
+      },
+      "reads": [],
+      "writes": [],
+      "side_effects": ["may_cancel_node_execution"],
+      "examples": [
+        {
+          "capability": "policy.timeout",
+          "config": {"run_timeout": 5}
+        }
+      ]
+    },
+    {
+      "name": "policy.fallback",
+      "kind": "policy",
+      "description": "Lower a fallback error handler that writes literal assignments.",
+      "config_schema": {
+        "assignments": {"type": "object", "required": true}
+      },
+      "reads": [],
+      "writes": ["config.assignments.keys"],
+      "side_effects": ["handles_node_error"],
+      "examples": [
+        {
+          "capability": "policy.fallback",
+          "config": {"assignments": {"output": "fallback"}}
+        }
+      ]
+    }
+  ]
+}

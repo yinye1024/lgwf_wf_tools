@@ -1,0 +1,119 @@
+WORKFLOW execute_react_loop;
+ENTRY prepare_react_task_review;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_plan.execute.instructions.{node}";
+  result_path "lgwf_plan.execute.results.{node}";
+}
+
+PY prepare_react_task_review
+  SCRIPT "00_prepare/scripts/prepare_react_task_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.prepare_task_result
+  UPDATES_STATE;
+
+PY validate_execute_codex_inputs
+  SCRIPT "00_validate_execute_targets/scripts/validate_execute_codex_inputs.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.execute_input_validation_result
+  UPDATES_STATE;
+
+REACT implement_react_task MAX 3
+  SPEC "01_implement_task/agents/spec.md"
+  REASON CODEX
+    PROMPT "01_implement_task/agents/reason.md"
+    CONTEXT workspace file ".lgwf/react_task_context.json"
+    CONTEXT workspace file ".lgwf/react_acceptance_plan.json"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    OUTPUT_FILE ".lgwf/react_task_implementation_reason.md"
+    RESULT state.lgwf_plan.implement_reason_result
+  ACT CODEX
+    PROMPT "01_implement_task/agents/act.md"
+    CONTEXT workspace file ".lgwf/react_task_context.json"
+    CONTEXT workspace file ".lgwf/react_task_implementation_reason.md"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    OUTPUT_JSON ".lgwf/react_task_input.json"
+    RESULT state.lgwf_plan.implement_act_result
+  OBSERVE CODEX
+    PROMPT "01_implement_task/agents/observe.md"
+    CONTEXT workspace file ".lgwf/react_task_context.json"
+    CONTEXT workspace file ".lgwf/react_task_input.json"
+    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    OUTPUT_JSON ".lgwf/react_task_result.json"
+    RESULT state.lgwf_plan.implement_observe_result
+  DECIDE PY
+    SCRIPT "01_implement_task/scripts/decide.py"
+    RESULT state.lgwf_plan.implement_decide_result
+    UPDATES_STATE
+  ON_MAX ASK
+    PROMPT "当前 task 需要人工决策，可能是达到 ReAct 最大轮次，也可能是遇到必须用户确认的业务门禁。请根据 required_follow_up 选择继续修复、接受当前结果、跳过当前 task 或停止。"
+    READ state.lgwf_plan.current_review
+    WRITE state.lgwf_plan.max_attempt_decision
+    RESULT state.lgwf_plan.max_attempt_approval
+    STATUS state.lgwf_plan.max_attempt_status
+    EXTRA_MAX 2
+    POLL 1;
+
+PY publish_react_task_outputs
+  SCRIPT "02_publish/scripts/publish_react_task_outputs.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.publish_task_result
+  UPDATES_STATE;
+
+PY record_react_task_review
+  SCRIPT "02_record/scripts/record_react_task_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.record_task_result
+  UPDATES_STATE;
+
+PY route_react_task_review
+  SCRIPT "03_route/scripts/route_react_task_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.route_task_result
+  UPDATES_STATE;
+
+APPROVAL decide_react_task_block
+  PROMPT "当前 task 需要人工决策，可能是达到 ReAct 最大轮次，也可能是遇到必须用户确认的业务门禁。请先阅读 required_follow_up，再提交 JSON：{\"action\":\"continue|accept|skip|stop\",\"comment\":\"决策说明\"}。continue 表示继续修复或继续当前 task；accept 表示明确接受当前结果并进入下一 task；skip 表示跳过当前 task；stop 表示停止执行。approve 会按 continue 处理，不会把 blocked task 标记为通过。若 required_follow_up 包含 approval_artifact 或 confirmed_artifact，必须先补齐业务审批或正式契约产物，不能直接 accept。直接 reject 会按 stop 处理并正常走业务路由，不会让 workflow 变成 runtime failed。"
+  READ state.lgwf_plan.current_review
+  WRITE state.lgwf_plan.max_attempt_decision
+  RESULT state.lgwf_plan.max_attempt_approval
+  PERSIST ".lgwf/react_task_max_attempt_decision.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY resolve_max_attempt_decision
+  SCRIPT "04_resolve/scripts/resolve_max_attempt_decision.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.max_attempt_resolution_result
+  UPDATES_STATE;
+
+PY finish_react_task_review
+  SCRIPT "05_finish/scripts/finish_react_task_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_plan.finish_task_result
+  UPDATES_STATE;
+
+FLOW prepare_react_task_review
+  THEN validate_execute_codex_inputs
+  THEN implement_react_task
+  THEN publish_react_task_outputs
+  THEN record_react_task_review
+  THEN route_react_task_review;
+
+ROUTE route_react_task_review
+  WHEN "move_next_task" THEN prepare_react_task_review
+  WHEN "continue_repair" THEN prepare_react_task_review
+  WHEN "requires_user_approval" THEN decide_react_task_block
+  WHEN "all_done" THEN finish_react_task_review;
+
+ROUTE decide_react_task_block
+  WHEN "approve" THEN resolve_max_attempt_decision
+  WHEN "reject" THEN resolve_max_attempt_decision;
+
+FLOW resolve_max_attempt_decision
+  THEN route_react_task_review;

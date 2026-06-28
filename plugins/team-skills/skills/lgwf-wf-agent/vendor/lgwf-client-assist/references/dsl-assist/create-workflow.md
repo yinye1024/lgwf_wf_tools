@@ -29,34 +29,42 @@
 ```text
 some_workflow/
   workflow.lgwf
-  workflow.json  # optional compiled runtime IR
   README.md
-  01_input_confirm/
-    workflow.lgwf
-    01_prepare/
-      scripts/
-        prepare.py
-    02_human_confirm/
+  01_generate_plan/
+    agents/
+      planner/
+        prompt.md
+  02_generate_acceptance/
+    agents/
+      acceptance/
+        prompt.md
+  03_confirm_plan_and_acceptance/
+    agents/
+      reviewer/
+        prompt.md
+  04_execute_react_loop/
+    01_reason/
       agents/
-        confirmer/
+        reasoner/
           prompt.md
-  02_do_plan/
-    workflow.lgwf
-    01_draft/
+    02_act/
       agents/
-        designer/
+        actor/
           prompt.md
-    02_review/
+    03_observe/
       agents/
-        reviewer/
+        observer/
           prompt.md
-  03_do_finish/
     scripts/
-      finalize.py
+      decide.py
+  tests/
+    test_workflow_contract.py
   shared/
 ```
 
-每个 workflow 目录的 `workflow.lgwf` 负责组装其直接普通 step 和直接子 workflow。普通 step 的 agent/script 由父 workflow 直接引用；子 workflow 使用 `STEP <id> WORKFLOW "<path>";` 引用。compiler 递归嵌入完整 JSON IR，runtime 不读取源文件路径。
+默认按 `lgwf-plan` 风格组织为根 workflow 直接组装普通 step：`01_generate_plan/` 生成计划，`02_generate_acceptance/` 生成验收标准，`03_confirm_plan_and_acceptance/` 做人工或模型确认，`04_execute_react_loop/` 执行迭代循环。`scripts/` 和 `tests/` 可以作为 workflow package 级资源目录；只有某个阶段需要独立拓扑、复用或嵌套编排时，才在该业务目录内增加自己的 `workflow.lgwf` 并由父 workflow 用 `STEP <id> WORKFLOW "<path>";` 引用。
+
+每个 workflow 目录的 `workflow.lgwf` 负责组装其直接普通 step 和直接子 workflow。普通 step 的 agent/script 由父 workflow 直接引用；子 workflow 使用 `STEP <id> WORKFLOW "<path>";` 引用。compiler 递归嵌入完整 JSON IR，runtime 不读取源文件路径。用户 authoring package 默认不保存 `workflow.json`，它只作为 snapshot 中的 compiled runtime IR。
 
 ### Workflow 组装边界
 
@@ -81,8 +89,8 @@ some_workflow/
 workflow 可以同时组装普通 step 和子 workflow：
 
 ```text
-WORKFLOW name;
-ENTRY prepare;
+WORKFLOW lgwf_plan_style;
+ENTRY generate_plan;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -91,19 +99,39 @@ DEFAULTS {
   result_path "{node}_result";
 }
 
-PY prepare
-  SCRIPT "01_input_confirm/01_prepare/scripts/prepare.py"
-  RESULT state.prepare_result;
+CODEX generate_plan
+  PROMPT "01_generate_plan/agents/planner/prompt.md"
+  RESULT state.plan;
 
-STEP plan
-  WORKFLOW "02_do_plan/workflow.lgwf";
+CODEX generate_acceptance
+  PROMPT "02_generate_acceptance/agents/acceptance/prompt.md"
+  RESULT state.acceptance;
 
-PY finish
-  SCRIPT "03_do_finish/scripts/finalize.py"
-  RESULT state.finish_result;
+APPROVAL confirm_plan_and_acceptance
+  PROMPT "请确认 plan 与 acceptance 是否可执行。"
+  VALUE state.confirmation;
 
-FLOW prepare THEN plan THEN finish;
+REACT execute_react_loop {
+  REASON CODEX reason
+    PROMPT_REF "04_execute_react_loop/01_reason/agents/reasoner/prompt.md"
+    RESULT state.react.reason;
+  ACT CODEX act
+    PROMPT_REF "04_execute_react_loop/02_act/agents/actor/prompt.md"
+    RESULT state.react.act;
+  OBSERVE CODEX observe
+    PROMPT_REF "04_execute_react_loop/03_observe/agents/observer/prompt.md"
+    RESULT state.react.observe;
+  DECIDE PY decide
+    SCRIPT "04_execute_react_loop/scripts/decide.py"
+    RESULT state.react.decision;
+}
+
+FLOW {
+  generate_plan THEN generate_acceptance THEN confirm_plan_and_acceptance THEN execute_react_loop;
+}
 ```
+
+推荐用 `FLOW { ... }` 集中描述完整流程；块内 `a THEN b THEN c` 表达无条件顺序边，`a WHEN "route_key" THEN b` 表达 route key 到目标节点的跳转。旧的单条 `FLOW a THEN b;` 和独立 `ROUTE a WHEN ...;` 仍兼容，但新建 workflow 优先使用块语法，避免跳转逻辑和整体流程分离。
 
 `workflow.json` 是 runtime IR，但用户 authoring package 默认不保存该文件。通过 `scripts/lgwf.py run` 运行时，client 先把 package 复制到 `<work_dir>\.lgwf\workflow\`，再在 snapshot 中生成 runtime IR。`workflow.json` 仍只使用 `src/lgwf/compiler/dsl_schema.json` 接受的字段：
 

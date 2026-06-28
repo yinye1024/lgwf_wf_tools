@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "monitoring-must-read-vendor-agent-host-guide",
+      "category": "monitoring",
+      "input": {
+        "user_request": "运行这个内部 workflow 并持续跟踪",
+        "context": ["workflow 可能包含 approval 或长时间 Codex 节点"]
+      },
+      "expected": {
+        "must_read": [
+          "vendor/lgwf-client-assist/AGENTS.md",
+          "vendor/lgwf-client-assist/references/agent-host-assist/guide.md",
+          "vendor/lgwf-client-assist/references/agent-host-assist/cli-agent-loop.md",
+          "vendor/lgwf-client-assist/references/workflow-usage.md"
+        ],
+        "required_text": [
+          {
+            "path": "AGENTS.md",
+            "contains": "waiting_human` 不是完成状态"
+          }
+        ]
+      }
+    },
+    {
+      "id": "approval-distinguishes-human-approval-and-agent-loop-wait",
+      "category": "approval",
+      "input": {
+        "user_request": "workflow 停在 waiting_human，继续处理",
+        "context": ["可能是 flow.human_approval", "也可能是 AGENT_LOOP 控制状态"]
+      },
+      "expected": {
+        "must_read": ["vendor/lgwf-client-assist/references/agent-host-assist/cli-agent-loop.md"],
+        "required_text": [
+          {
+            "path": "AGENTS.md",
+            "contains": "AGENT_LOOP` 控制状态但没有 human request"
+          }
+        ]
+      }
+    }
+  ]
+}

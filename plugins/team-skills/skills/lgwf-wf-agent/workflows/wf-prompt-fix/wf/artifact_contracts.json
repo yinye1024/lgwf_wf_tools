@@ -1,0 +1,22 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/prompt_acceptance/react_history.json",
+    ".lgwf/prompt_acceptance/repair_review.json"
+  ],
+  "script_writes": {
+    "check_lgwf_client_assist": [
+      ".lgwf/prompt_acceptance/environment_check.json",
+      ".lgwf/prompt_acceptance/reference_context/AGENTS.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/draft-prompt.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/action-prompt.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/audit-prompt.md",
+      ".lgwf/prompt_acceptance/reference_context/prompt-assist/normal-prompt.md"
+    ],
+    "build_prompt_inventory": [
+      ".lgwf/prompt_acceptance/inventory.json"
+    ]
+  }
+}

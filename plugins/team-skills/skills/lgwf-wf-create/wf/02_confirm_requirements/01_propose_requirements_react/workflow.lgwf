@@ -1,0 +1,12 @@
+WORKFLOW propose_requirements_react;
+ENTRY propose_requirements_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+}
+
+CODEX propose_requirements_react
+  PROMPT "agents/act.md"
+  OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
+  RESULT state.lgwf_wf_create.requirements_proposal_result;

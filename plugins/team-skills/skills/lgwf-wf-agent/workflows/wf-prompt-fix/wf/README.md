@@ -25,12 +25,16 @@ python $lgwfPy run --workflow-lgwf plugins\team-skills\skills\lgwf-wf-agent\work
 
 workflow 会先执行 `init_prompt_fix_target`，等待主 agent 在当前对话确认目标 JSON；确认后再执行 `check_lgwf_client_assist`，确认本地 bundled client 可用。
 
+`check_lgwf_client_assist` 还会把 prompt 验收所需的最小 bundled client reference 运行时复制到 `.lgwf/prompt_acceptance/reference_context/`。这是临时运行上下文，不是源码副本；源码仍只维护 facade 的 `vendor/lgwf-client-assist/`。
+
 ## 输出
 
 主要产物写入 work dir：
 
 - `.lgwf/prompt_fix_target.json`
 - `.lgwf/prompt_acceptance/environment_check.json`
+- `.lgwf/prompt_acceptance/reference_context/AGENTS.md`
+- `.lgwf/prompt_acceptance/reference_context/prompt-assist/*.md`
 - `.lgwf/prompt_acceptance/inventory.json`
 - `.lgwf/prompt_acceptance/audit.json`
 - `.lgwf/prompt_acceptance/fix_selection.json`

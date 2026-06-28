@@ -10,6 +10,29 @@ sys.path.insert(0, str(ROOT / "shared"))
 from prompt_fix_common import lgwf_dir, output_state, read_json, write_json
 
 
+def audit_is_valid(audit: dict[str, Any], prompt_count: int) -> bool:
+    if not isinstance(audit.get("passed"), bool):
+        return False
+    if audit.get("prompt_count") != prompt_count:
+        return False
+    if not isinstance(audit.get("file_results"), list):
+        return False
+    if len(audit["file_results"]) != prompt_count:
+        return False
+    if not isinstance(audit.get("issues"), list):
+        return False
+    for item in audit["file_results"]:
+        if not isinstance(item, dict):
+            return False
+        if not isinstance(item.get("prompt_path"), str) or not item["prompt_path"]:
+            return False
+        if not isinstance(item.get("passed"), bool):
+            return False
+        if not isinstance(item.get("issue_ids"), list):
+            return False
+    return True
+
+
 def build_summary(
     *,
     inventory: dict[str, Any],
@@ -21,7 +44,10 @@ def build_summary(
     prompts = inventory.get("prompts") if isinstance(inventory.get("prompts"), list) else []
     issues = audit.get("issues") if isinstance(audit.get("issues"), list) else []
     selected = selection.get("selected_issue_ids") if isinstance(selection.get("selected_issue_ids"), list) else []
-    if not issues:
+    audit_valid = audit_is_valid(audit, len(prompts))
+    if not audit_valid:
+        status = "invalid"
+    elif audit.get("passed") is True and not issues:
         status = "passed"
     elif selection.get("skip_fix"):
         status = "skipped"
@@ -37,9 +63,10 @@ def build_summary(
         "issue_count": len(issues),
         "selected_issue_ids": selected,
         "remaining_issue_ids": review.get("remaining_issue_ids", []),
-        "audit_passed": bool(audit.get("passed")) and not issues,
+        "audit_valid": audit_valid,
+        "audit_passed": audit_valid and bool(audit.get("passed")) and not issues,
         "repair_passed": review.get("passed"),
-        "summary": review.get("summary") or audit.get("summary") or "",
+        "summary": review.get("summary") or audit.get("summary") or ("prompt audit artifact is missing or incomplete" if not audit_valid else ""),
         "history": history,
     }
 

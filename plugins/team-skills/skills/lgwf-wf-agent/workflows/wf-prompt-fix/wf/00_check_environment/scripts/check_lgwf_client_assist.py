@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,10 +13,26 @@ from prompt_fix_common import lgwf_dir, output_state, write_json
 
 
 ARTIFACT_ROOT = ".lgwf/prompt_acceptance"
+REFERENCE_CONTEXT_ROOT = "reference_context"
+REFERENCE_FILES = (
+    ("AGENTS.md", "AGENTS.md"),
+    ("references/prompt-assist/guide.md", "prompt-assist/guide.md"),
+    ("references/prompt-assist/shared-rules.md", "prompt-assist/shared-rules.md"),
+    ("references/prompt-assist/prompt-audit-checklist.md", "prompt-assist/prompt-audit-checklist.md"),
+    ("references/prompt-assist/draft-prompt.md", "prompt-assist/draft-prompt.md"),
+    ("references/prompt-assist/action-prompt.md", "prompt-assist/action-prompt.md"),
+    ("references/prompt-assist/audit-prompt.md", "prompt-assist/audit-prompt.md"),
+    ("references/prompt-assist/normal-prompt.md", "prompt-assist/normal-prompt.md"),
+)
 
 
 def ensure_bundled_client_dir() -> Path:
-    return Path(__file__).resolve().parents[5] / "vendor" / "lgwf-client-assist"
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        candidate = parent / "vendor" / "lgwf-client-assist"
+        if (candidate / "AGENTS.md").is_file():
+            return candidate
+    return current.parents[5] / "vendor" / "lgwf-client-assist"
 
 
 def candidate_skill_dirs() -> list[Path]:
@@ -51,13 +68,40 @@ def find_lgwf_client_assist(candidates: list[Path] | None = None) -> dict[str, A
     }
 
 
+def prepare_reference_context(skill_dir: Path, out_dir: Path) -> dict[str, Any]:
+    context_root = out_dir / REFERENCE_CONTEXT_ROOT
+    if context_root.exists():
+        shutil.rmtree(context_root)
+    copied: list[str] = []
+    missing: list[str] = []
+    for source_rel, dest_rel in REFERENCE_FILES:
+        source = skill_dir / source_rel
+        dest = context_root / dest_rel
+        if not source.is_file():
+            missing.append(source_rel)
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, dest)
+        copied.append(f"{ARTIFACT_ROOT}/{REFERENCE_CONTEXT_ROOT}/{dest_rel}".replace("\\", "/"))
+    return {
+        "reference_context_root": f"{ARTIFACT_ROOT}/{REFERENCE_CONTEXT_ROOT}",
+        "copied_reference_files": copied,
+        "missing_reference_files": missing,
+        "reference_context_ready": not missing,
+    }
+
+
 def main() -> None:
     out_dir = lgwf_dir() / "prompt_acceptance"
     result = find_lgwf_client_assist()
     result["artifact_root"] = ARTIFACT_ROOT
-    write_json(out_dir / "environment_check.json", result)
     if not result["passed"]:
+        write_json(out_dir / "environment_check.json", result)
         raise RuntimeError(result["reason"])
+    result.update(prepare_reference_context(Path(result["skill_dir"]), out_dir))
+    write_json(out_dir / "environment_check.json", result)
+    if not result["reference_context_ready"]:
+        raise RuntimeError("bundled lgwf-client-assist prompt reference context is incomplete")
     output_state({"environment_check": result})
 
 
