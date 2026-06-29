@@ -1,6 +1,6 @@
 # LGWF Codex Plugins
 
-这个仓库维护 LGWF 相关的 Codex plugin。当前主要 plugin 是 `team-skills`，用于分发 `lgwf-wf-tools` workflow facade。
+这个仓库维护 LGWF workflow tools 的 Codex plugin。当前 plugin 安装名是 `team-skills`，对外分发的 skill 是 `lgwf-wf-tools` workflow facade。
 
 ## 目录结构
 
@@ -39,7 +39,7 @@ codex plugin marketplace upgrade
 
 新增 skill 放在 `plugins/team-skills/skills/<skill-name>/`。目录名使用小写 hyphen-case，每个 skill 必须包含 `SKILL.md`，并让 `SKILL.md` 聚焦 Codex 需要遵循的操作流程。
 
-如果这个 plugin 继续只发布 LGWF facade，应保持 `skills/` 下只有 `lgwf-wf-tools` 和必要的临时开发资料；临时资料不要在 `SKILL.md` 中声明为对外入口。
+如果这个 plugin 继续只发布 LGWF facade，应保持 `skills/` 下只有 `lgwf-wf-tools`。开发草稿、复现说明、临时 preset 和运行报告不要放进 `skills/`，除非它们属于某个正式 skill 的文档或测试夹具。
 
 发布前至少运行：
 

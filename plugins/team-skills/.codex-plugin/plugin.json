@@ -7,9 +7,9 @@
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "Team Skills",
-    "shortDescription": "LGWF workflow facade and support skills.",
-    "longDescription": "Team Skills packages LGWF-related Codex skills for routing user requests to workflows, monitoring workflow execution, and improving workflow behavior from run evidence.",
+    "displayName": "LGWF Workflow Tools",
+    "shortDescription": "LGWF workflow facade for Codex.",
+    "longDescription": "LGWF Workflow Tools packages the Codex facade skill for routing user requests to suitable workflows, monitoring workflow execution, and improving workflow behavior from run evidence.",
     "developerName": "LGWF Team",
     "category": "Productivity",
     "capabilities": ["Skills"],

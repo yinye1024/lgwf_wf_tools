@@ -1,7 +1,7 @@
 {
   "name": "lgwf-team",
   "interface": {
-    "displayName": "LGWF Team Plugins"
+    "displayName": "LGWF Workflow Tools"
   },
   "plugins": [
     {
