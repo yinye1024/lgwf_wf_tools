@@ -1,0 +1,4 @@
+interface:
+  display_name: "LGWF Workflow Runner"
+  short_description: "隔离启动和查询 LGWF workflow run"
+  default_prompt: "Use $lgwf-wf-runner to launch an LGWF workflow with an isolated run workspace."
