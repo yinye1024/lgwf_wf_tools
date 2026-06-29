@@ -22,7 +22,6 @@
 - 根 `workflow.lgwf` 可通过 `scripts/lgwf.py compile` 编译；运行时 facade 在 `<work_dir>\.lgwf\workflow\` snapshot 中自动完成编译。
 - 当前 workflow 可直接声明普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`PARALLEL`。
 - 子 workflow 通过 `STEP ... WORKFLOW` 引用，且父 workflow 不重复声明其内部节点。
-- 已有复杂 workflow 重构后，根 workflow 应只表达业务骨架；脚本、prompt、approval 和 ReAct 细节应下沉到对应阶段子 workflow。
 - 单节点、人工确认和输出校验优先作为普通 step，不强制包装成子 workflow。
 - 如果兼容旧 package 时同时存在 `workflow.lgwf` 和 `workflow.json`，snapshot 中的新编译结果覆盖旧 JSON。
 - `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
@@ -50,7 +49,6 @@
 - 多个直接子级共用资源放在当前 workflow 的 `shared/`。
 - workflow 引用路径相对当前 `workflow.lgwf`，必须指向 `.lgwf`，且引用链不存在循环。
 - `SCRIPT`、`PROMPT`、`CONTEXT workflow` 相对当前 `workflow.lgwf`，编译后成为 package-root 相对路径。
-- inventory、审计或治理脚本如果声称扫描 workflow package，必须覆盖嵌套 `workflow.lgwf`，并排除 `.git`、`.lgwf`、`__pycache__`、`ws`、`reports`、`data` 等运行或产物目录。
 
 ## Resource Reference Checklist
 
@@ -63,7 +61,6 @@
 - facade 把完整 package 复制到 `<work_dir>\.lgwf\workflow\`，并只在 snapshot 中生成 `workflow.json`；用户 package 中不保留 `.lgwf-compiled-*` 或生成的 JSON。
 - snapshot 复制按字节保留文件内容，排除 `.git/`、`__pycache__/`、`.lgwf-compiled-*` 和 package 内部 work dir，并拒绝 symlink、junction 或其他 reparse point。
 - runtime 不读取 client workspace 中的 prompt/script 内容。
-- 修改计划中的目标文件必须经过路径校验 gate：只允许目标 package 内相对路径，禁止绝对路径、盘符路径、`..`、`.lgwf/`、package 越界和 `target_dirs` 外路径。
 
 ## Prompt Integration Checklist
 
@@ -81,20 +78,9 @@
 - `subgraph.react` 包含 `reason`、`act`、`observe`、`decide`。
 - `max_steps` 明确。
 - slot 使用 `WORKFLOW` 时必须声明 `RESULT state.*`，并由子 workflow 写入该 state path。
-- 当 `ACT` slot 会修改文件且需要多个步骤时，优先使用 `ACT WORKFLOW` 子 workflow，并在子 workflow 中把 `validate_plan` 放在真正修改文件的节点之前。
 - `observe` 输出结构化 review，例如 `passed/issues/summary`。
 - `decide` 读取 review 结果并输出 `next=continue|exit`。
 - 如果 `decide` 使用 `exec.run_python` 更新 state，启用 `state_updates_from_stdout=true`，脚本打印 JSON object。
-
-## Governance Refactor Checklist
-
-- 根 workflow 的阶段命名能表达业务骨架，不暴露过多底层节点。
-- 每个子 workflow 有清晰入口、固定产物路径和最小 README 或 AGENTS 说明。
-- 人工确认只出现在会改变范围、批准修改或结束验收的边界上。
-- 修改前存在计划 artifact，修改后存在 review 或 audit artifact。
-- 路径校验失败时 workflow 停止进入修改节点，不允许由 prompt 自行“谨慎处理”替代校验。
-- `artifact_contracts.json` 声明 bootstrap inputs 和脚本写入的 workspace artifacts，避免 audit 因缺少 producer 误报，也避免只声明不实际创建运行所需文件。
-- 修改 DSL、workflow 文档、facade registry 或 bundled client 后，必须运行对应的 `audit`、单元测试和 facade workflow-health；不能只依赖模型审阅。
 
 ## Agent Loop Checklist
 
