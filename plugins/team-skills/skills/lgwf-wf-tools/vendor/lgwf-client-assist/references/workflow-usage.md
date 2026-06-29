@@ -60,7 +60,9 @@ python <skill-dir>\scripts\lgwf.py run --workflow-json <workflow_json> --work-di
 
 `--continue-existing` 只报告已有进程、pending human request 和 latest run 状态，不从失败节点恢复执行。
 
-`--resume-existing` 会查找 `.lgwf/checkpoints/<run_id>/checkpoint.json` 中最新的 failed checkpoint，并从失败节点重新执行；已完成前序节点不会重跑，失败节点本身会重跑一次。指定 `--resume-run-id <run_id>` 可恢复某个 run；调试新版 workflow 时可追加 `--resume-allow-workflow-changed` 跳过 workflow hash 一致性检查。
+`--resume-existing` 会优先查找 `.lgwf/checkpoints/<run_id>/checkpoint.json` 中最新的 failed checkpoint，并从失败节点重新执行；已完成前序节点不会重跑，失败节点本身会重跑一次。指定 `--resume-run-id <run_id>` 可恢复某个 run；调试新版 workflow 时可追加 `--resume-allow-workflow-changed` 跳过 failed checkpoint 的 workflow hash 一致性检查。
+
+如果没有 failed checkpoint，但存在 `status=running` 的 checkpoint，且 work-dir 中已知 workflow 进程已经停止，`--resume-existing` 会把它视为 orphaned running checkpoint：使用 `current_node` 和 `state_before_current_node` 从当前节点前状态重跑。这个场景默认允许 workflow hash 变化，因为常见用途是修复 workflow 后继续调试；它仍是节点边界重跑，不是节点内部续跑。
 
 后台模式发现旧 `.lgwf` 数据且未提供上述 flag 时，不会等待 stdin；runner 会返回退出码 `2`，并在 stdout 输出 `requires_existing_workflow_decision=true` 的 JSON。主 agent 必须在 chat 中询问用户选择，然后用 `--rerun-existing`、`--continue-existing` 或 `--resume-existing` 重新执行同一命令。
 

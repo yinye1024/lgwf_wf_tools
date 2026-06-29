@@ -189,6 +189,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Allow checkpoint resume even when the workflow JSON hash changed.",
     )
     parser.add_argument(
+        "--resume-orphaned-running",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "--doctor",
         action="store_true",
         help="Report Python, bundled wheel, installation, and optional path status without installing or running.",

@@ -28,6 +28,8 @@ def runtime_command(workflow_json: str, args: argparse.Namespace, support: Runti
         command.extend(["--resume-run-id", args.resume_run_id])
     if getattr(args, "resume_allow_workflow_changed", False):
         command.append("--resume-allow-workflow-changed")
+    if getattr(args, "resume_orphaned_running", False):
+        command.append("--resume-orphaned-running")
     return command
 
 

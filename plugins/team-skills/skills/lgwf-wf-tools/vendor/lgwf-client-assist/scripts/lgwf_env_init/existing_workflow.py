@@ -35,14 +35,28 @@ def handle_existing_workflow_data(
         run_id = args.resume_run_id
         if run_id:
             checkpoint = load_checkpoint(work_dir, run_id, support)
-            if checkpoint is None or checkpoint.get("status") != "failed":
+            if checkpoint is None:
+                print(f"[lgwf] failed checkpoint not found for run_id={run_id}. Use --rerun-existing to start over.", file=stderr)
+                return 2
+            if checkpoint.get("status") == "running":
+                if has_running_workflow_process(work_dir, support):
+                    print(f"[lgwf] running checkpoint still has a live workflow process for run_id={run_id}. Use --continue-existing.", file=stderr)
+                    return 2
+                args.resume_orphaned_running = True
+            elif checkpoint.get("status") != "failed":
                 print(f"[lgwf] failed checkpoint not found for run_id={run_id}. Use --rerun-existing to start over.", file=stderr)
                 return 2
         else:
             checkpoint = latest_failed_checkpoint(work_dir, support)
             if checkpoint is None:
-                print("[lgwf] no failed checkpoint found. Use --rerun-existing to start over.", file=stderr)
-                return 2
+                if has_running_workflow_process(work_dir, support):
+                    print("[lgwf] running checkpoint still has a live workflow process. Use --continue-existing.", file=stderr)
+                    return 2
+                checkpoint = latest_orphaned_running_checkpoint(work_dir, support)
+                if checkpoint is None:
+                    print("[lgwf] no failed or orphaned running checkpoint found. Use --rerun-existing to start over.", file=stderr)
+                    return 2
+                args.resume_orphaned_running = True
             args.resume_run_id = checkpoint["run_id"]
         return None
     if args.continue_existing:
@@ -136,6 +150,28 @@ def latest_failed_checkpoint(work_dir: pathlib.Path, support: RuntimeSupport) ->
     if not candidates:
         return None
     return sorted(candidates, key=lambda item: item[0], reverse=True)[0][1]
+
+
+def latest_orphaned_running_checkpoint(work_dir: pathlib.Path, support: RuntimeSupport) -> dict[str, object] | None:
+    if has_running_workflow_process(work_dir, support):
+        return None
+    root = support.workspace_layout.lgwf_dir(work_dir) / "checkpoints"
+    if not root.is_dir():
+        return None
+    candidates: list[tuple[float, dict[str, object]]] = []
+    for path in root.glob("*/checkpoint.json"):
+        checkpoint = _read_checkpoint(path)
+        if checkpoint and checkpoint.get("status") == "running" and isinstance(checkpoint.get("run_id"), str):
+            candidates.append((path.stat().st_mtime, checkpoint))
+    if not candidates:
+        return None
+    return sorted(candidates, key=lambda item: item[0], reverse=True)[0][1]
+
+
+def has_running_workflow_process(work_dir: pathlib.Path, support: RuntimeSupport) -> bool:
+    metadata = process_status_module.latest_process_metadata(work_dir, support)
+    pid = metadata.get("pid") if isinstance(metadata, dict) else None
+    return isinstance(pid, int) and process_status_module.is_process_running(pid, support)
 
 
 def load_checkpoint(work_dir: pathlib.Path, run_id: str, support: RuntimeSupport) -> dict[str, object] | None:
