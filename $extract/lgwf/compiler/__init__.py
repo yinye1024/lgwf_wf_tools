@@ -1,2 +1,0 @@
-"""DSL compiler package."""
-

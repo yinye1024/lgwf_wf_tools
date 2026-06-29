@@ -1,0 +1,4 @@
+.pytest_cache/
+.worktrees/
+_damaged_contents_backup_*/
+$extract/
