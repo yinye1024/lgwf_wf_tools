@@ -26,6 +26,8 @@ description: Use when users invoke /lgwf-wf-tools or need the LGWF workflow faca
 
 `help` 至少列出：`/lgwf-wf-tools help`、`/lgwf-wf-tools init`、`/lgwf-wf-tools doctor`、`/lgwf-wf-tools list`、`/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 优化方案`。
 
+机器可读指令清单维护在 `commands.json`。需要做脚本级补齐时运行 `python scripts/complete_commands.py "<prefix>"`，例如 `python scripts/complete_commands.py "/lgwf-wf-tools d"`。
+
 ## Facade 职责
 
 - 路由：先列出可用 workflow，再根据用户目标、目标目录、运行证据和 `registry.json` 选择一个最合适的 workflow，并说明选择理由。

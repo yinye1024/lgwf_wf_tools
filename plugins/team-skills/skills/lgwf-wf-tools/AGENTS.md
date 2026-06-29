@@ -73,6 +73,8 @@
 - `/lgwf-wf-tools list`：只运行 `python scripts/list_workflows.py`，只读列出 `registry.json` 中可派发的内部 workflow；不派发内部 workflow。
 - `/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 自我优化`、用户说“复盘这个 facade”“优化交互体验”“把这次问题沉淀成 case”：进入 self-improve 路由。
 
+`commands.json` 是对外指令的机器可读清单。维护显式命令时必须同步更新 `commands.json`，并运行 `python scripts/complete_commands.py "<prefix>"` 验证补齐输出。
+
 ## Facade 初始化
 
 初始化分三层处理，不放在内部 workflow node 里：

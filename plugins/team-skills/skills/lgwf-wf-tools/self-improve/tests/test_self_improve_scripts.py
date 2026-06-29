@@ -10,9 +10,42 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SELF_IMPROVE = ROOT / "self-improve"
+COMMANDS_JSON = ROOT / "commands.json"
 
 
 class SelfImproveScriptsTest(unittest.TestCase):
+    def test_command_completion_suggests_matching_commands(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "complete_commands.py"),
+                "/lgwf-wf-tools d",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        payload = json.loads(result.stdout)
+        self.assertEqual(
+            [item["command"] for item in payload["matches"]],
+            ["/lgwf-wf-tools doctor"],
+        )
+        self.assertIn("只读检查", payload["matches"][0]["description"])
+
+    def test_command_catalog_stays_documented(self) -> None:
+        catalog = json.loads(COMMANDS_JSON.read_text(encoding="utf-8"))
+        commands = [item["command"] for item in catalog["commands"]]
+        self.assertIn("/lgwf-wf-tools 优化方案", commands)
+
+        skill_md = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        agents_md = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        for command in commands:
+            self.assertIn(command, skill_md)
+            self.assertIn(command, agents_md)
+
     def test_self_eval_writes_report_to_requested_output_dir(self) -> None:
         with tempfile.TemporaryDirectory() as raw_dir:
             output_dir = Path(raw_dir)
