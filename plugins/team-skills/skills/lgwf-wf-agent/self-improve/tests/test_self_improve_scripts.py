@@ -632,7 +632,7 @@ class SelfImproveScriptsTest(unittest.TestCase):
         self.assertEqual(schema["title"], "lgwf-wf-agent workflow health inventory")
         self.assertEqual(
             {item["id"] for item in baseline["workflows"]},
-            {"wf-fix", "wf-prompt-fix", "wf-prompt-upgrade", "e2e-test-generator", "plan"},
+            {"wf-fix", "wf-create", "wf-prompt-fix", "wf-prompt-upgrade", "e2e-test-generator", "plan"},
         )
 
     def test_check_workflow_health_all_and_single(self) -> None:

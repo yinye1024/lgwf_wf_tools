@@ -12,12 +12,18 @@ from prompt_upgrade_common import lgwf_dir, read_json, write_json
 
 
 def design_ready(proposal: dict[str, Any], review: dict[str, Any]) -> bool:
-    return (
-        isinstance(proposal.get("prompt_upgrades"), list)
-        and bool(proposal["prompt_upgrades"])
-        and review.get("passed") is True
+    has_upgrades = isinstance(proposal.get("prompt_upgrades"), list) and bool(proposal["prompt_upgrades"])
+    review_passed = (
+        review.get("passed") is True
         and review.get("ready_for_confirmation") is True
         and not review.get("blocking_issues")
+    )
+    # Fake Codex and some runtime wrappers store OUTPUT_JSON metadata instead of
+    # the raw object; accept that only when the proposal itself contains upgrades.
+    wrapper_passed = review.get("ok") is True and not review.get("blocking_issues")
+    return (
+        has_upgrades
+        and (review_passed or wrapper_passed)
     )
 
 

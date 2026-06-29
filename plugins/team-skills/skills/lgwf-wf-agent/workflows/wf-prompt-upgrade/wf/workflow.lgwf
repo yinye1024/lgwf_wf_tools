@@ -1,5 +1,5 @@
 WORKFLOW lgwf_wf_prompt_upgrade;
-ENTRY init_prompt_upgrade_target;
+ENTRY prepare_target;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -8,75 +8,14 @@ DEFAULTS {
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
 
-APPROVAL init_prompt_upgrade_target
-  PROMPT "请确认 prompt-upgrade 目标 workflow 信息。返回 JSON object，至少包含 target_workflow_lgwf；建议包含 target_package_root 和 target_dirs。"
-  READ state.prompt_upgrade_target
-  WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_target
-  RESULT state.lgwf_wf_prompt_upgrade.init_target_result
-  PERSIST ".lgwf/prompt_upgrade_target.json"
-  POLL 1;
+STEP prepare_target
+  WORKFLOW "01_prepare_target/workflow.lgwf";
 
-PY check_lgwf_client_assist
-  SCRIPT "00_check_environment/scripts/check_lgwf_client_assist.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_prompt_upgrade.environment_check_result
-  UPDATES_STATE;
+STEP design_upgrade
+  WORKFLOW "02_design_upgrade/workflow.lgwf";
 
-PY build_prompt_inventory
-  SCRIPT "01_inventory/scripts/build_prompt_inventory.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_prompt_upgrade.prompt_inventory_result
-  UPDATES_STATE;
-
-REACT design_prompt_upgrade MAX 3
-  SPEC "02_design_upgrade/agents/spec.md"
-  REASON CODEX
-    PROMPT "02_design_upgrade/agents/reason.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
-    OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
-    RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
-  ACT CODEX
-    PROMPT "02_design_upgrade/agents/act.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
-    OUTPUT_JSON ".lgwf/prompt_upgrade/proposal.json" AS_FILE
-    RESULT state.lgwf_wf_prompt_upgrade.design_act_result
-  OBSERVE CODEX
-    PROMPT "02_design_upgrade/agents/observe.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
-    OUTPUT_JSON ".lgwf/prompt_upgrade/proposal_review.json"
-    RESULT state.lgwf_wf_prompt_upgrade.design_observe_result
-  DECIDE PY
-    SCRIPT "02_design_upgrade/scripts/decide_prompt_upgrade_design.py"
-    RESULT state.lgwf_wf_prompt_upgrade.design_decide_result
-    UPDATES_STATE;
-
-PY prepare_prompt_upgrade_confirmation
-  SCRIPT "03_confirm_upgrade/scripts/prepare_prompt_upgrade_confirmation.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_prompt_upgrade.prepare_confirmation_result
-  UPDATES_STATE;
-
-APPROVAL confirm_prompt_upgrade
-  PROMPT_REF "03_confirm_upgrade/confirm_prompt_upgrade.md"
-  READ state.lgwf_wf_prompt_upgrade.prompt_upgrade_confirmation_context
-  WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision
-  RESULT state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision_result
-  PERSIST ".lgwf/prompt_upgrade/decision.json"
-  POLL 1;
-
-PY validate_prompt_upgrade_decision
-  SCRIPT "03_confirm_upgrade/scripts/validate_prompt_upgrade_decision.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_prompt_upgrade.validate_decision_result
-  UPDATES_STATE;
+STEP confirm_upgrade
+  WORKFLOW "03_confirm_upgrade/workflow.lgwf";
 
 PY route_after_prompt_upgrade_decision
   SCRIPT "03_confirm_upgrade/scripts/route_after_prompt_upgrade_decision.py"
@@ -84,55 +23,20 @@ PY route_after_prompt_upgrade_decision
   RESULT state.lgwf_wf_prompt_upgrade.route_decision_result
   UPDATES_STATE;
 
-REACT apply_prompt_upgrade MAX 3
-  SPEC "04_apply_upgrade/agents/spec.md"
-  REASON CODEX
-    PROMPT "04_apply_upgrade/agents/reason.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/decision.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
-    OUTPUT_JSON ".lgwf/prompt_upgrade/apply_plan.json" AS_FILE
-    RESULT state.lgwf_wf_prompt_upgrade.apply_reason_result
-  ACT CODEX
-    PROMPT "04_apply_upgrade/agents/act.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/apply_plan.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
-    RESULT state.lgwf_wf_prompt_upgrade.apply_act_result
-  OBSERVE CODEX
-    PROMPT "04_apply_upgrade/agents/observe.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/decision.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/apply_plan.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
-    OUTPUT_JSON ".lgwf/prompt_upgrade/apply_review.json"
-    RESULT state.lgwf_wf_prompt_upgrade.apply_observe_result
-  DECIDE PY
-    SCRIPT "04_apply_upgrade/scripts/decide_prompt_upgrade_apply.py"
-    RESULT state.lgwf_wf_prompt_upgrade.apply_decide_result
-    UPDATES_STATE;
+STEP apply_upgrade
+  WORKFLOW "04_apply_upgrade/workflow.lgwf";
 
-PY summarize_prompt_upgrade
-  SCRIPT "05_summary/scripts/summarize_prompt_upgrade.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_prompt_upgrade.summary_result
-  UPDATES_STATE;
+STEP summary
+  WORKFLOW "05_summary/workflow.lgwf";
 
-FLOW init_prompt_upgrade_target
-  THEN check_lgwf_client_assist
-  THEN build_prompt_inventory
-  THEN design_prompt_upgrade
-  THEN prepare_prompt_upgrade_confirmation
-  THEN confirm_prompt_upgrade
-  THEN validate_prompt_upgrade_decision
+FLOW prepare_target
+  THEN design_upgrade
+  THEN confirm_upgrade
   THEN route_after_prompt_upgrade_decision;
 
-FLOW apply_prompt_upgrade
-  THEN summarize_prompt_upgrade;
+FLOW apply_upgrade
+  THEN summary;
 
 ROUTE route_after_prompt_upgrade_decision
-  WHEN "apply" THEN apply_prompt_upgrade
-  WHEN "summarize" THEN summarize_prompt_upgrade;
+  WHEN "apply" THEN apply_upgrade
+  WHEN "summarize" THEN summary;

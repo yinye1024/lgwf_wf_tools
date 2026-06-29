@@ -70,12 +70,31 @@ some_workflow/
 
 - 当前 workflow 可以直接声明其普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`PARALLEL` 节点。
 - 多个 ReAct Codex slot 共用稳定业务规则时，在 `REACT` 中声明可选 `SPEC "<path>"`；它约束 `REASON`、`ACT`、`OBSERVE`，不传给 `DECIDE PY`。
+- `REACT` slot 可以使用 `WORKFLOW`，并必须声明 `RESULT state.*`。当 `ACT` 需要先校验计划再修改文件时，优先使用 `ACT WORKFLOW`，把 `validate_plan -> apply_changes` 放入子 workflow。
 - 工程化长程循环使用 `AGENT_LOOP`，按声明顺序执行六个必填 slot：`OBSERVE`、`DIAGNOSE`、`PLAN`、`ACT`、`VERIFY`、`DECIDE`。循环 slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`CODEX` slot 使用 `PROMPT_REF`，`VERIFY` 结果必须包含 `passed: true|false`，`DECIDE` 结果必须包含 `category` 和 `reason`。
 - 只有出现独立拓扑、复用或嵌套编排需求时才创建子 workflow。
 - 子 workflow 的内部节点只由它自己的 `workflow.lgwf` 声明；父 workflow 不复制这些节点。
 - 多个直接子级共用的资源放在当前 workflow 的 `shared/`；单个 step 独占资源放在该业务 step 目录。
 - workflow 引用和 workflow-local resource 路径相对当前 `workflow.lgwf` 所在目录。
 - 禁止绝对路径、`..`、package 越界和 workflow 引用循环。
+
+### 已有 Workflow 治理与重构
+
+治理已有 workflow 时，目标不是机械拆目录，而是降低根 workflow 的认知负担并补齐边界校验。优先采用以下结构：
+
+- 根 `workflow.lgwf` 只保留业务骨架，例如 `prepare_target -> analyze -> confirm_plan -> repair_loop/apply_loop -> audit_check -> summary`。
+- 每个主要阶段用 `STEP ... WORKFLOW` 引用子 workflow；阶段内部的脚本、prompt、approval、route 和 ReAct 细节放入子 workflow。
+- 普通单节点动作仍保留为普通 step，不为统一形式额外创建子 workflow。
+- inventory 或审计脚本必须递归扫描目标 package 内所有 `workflow.lgwf`，包括嵌套 workflow；默认排除 `.git`、`.lgwf`、`__pycache__`、`ws`、`reports`、`data` 等运行或产物目录。
+- 会修改目标 package 的阶段必须先生成明确的计划 artifact，例如 `repair_plan.json`、`apply_plan.json` 或 `governance_plan.json`。
+- 进入真正修改文件的 `ACT` 前必须运行路径校验脚本，校验 `files_to_modify` 和每个 step 的目标文件：
+  - 必须是目标 package 内相对路径。
+  - 禁止绝对路径、盘符路径、`..`、`.lgwf/` 和 package 越界。
+  - 必须落在 `target_dirs` 允许范围内。
+  - 如果存在人工确认的选择或批准项，必须匹配已批准项的 `prompt_path`、`workflow_path` 或 `files_to_modify`。
+- `REACT` 的 `ACT` 阶段需要多个动作时，优先使用 `ACT WORKFLOW` 子 workflow，把校验和执行拆开，例如 `validate_apply_plan -> apply_changes`。
+- 修改后至少运行 `scripts/lgwf.py audit <workflow.lgwf>`；如果变更属于 facade 或内部 workflow，还应运行对应 workflow 的单元测试和 workflow-health。
+- 文档同步写清根 workflow 只负责编排、各阶段子 workflow 职责、固定产物路径、approval 边界和最小验证命令。
 
 ## Step 规范
 

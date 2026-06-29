@@ -17,6 +17,9 @@
     ],
     "build_prompt_inventory": [
       ".lgwf/prompt_acceptance/inventory.json"
+    ],
+    "validate_repair_plan": [
+      ".lgwf/prompt_acceptance/repair_plan_validation.json"
     ]
   }
 }

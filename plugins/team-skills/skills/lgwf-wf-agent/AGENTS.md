@@ -13,6 +13,7 @@
 | Workflow id | 入口 | 主要职责 | 典型使用时机 |
 | --- | --- | --- | --- |
 | `wf-fix` | `workflows/wf-fix/wf/workflow.lgwf` | 运行目标 LGWF workflow，观察失败、阻塞或输出不满足契约的原因，在候选目录中修复并验证后 promote。 | 用户要“修复当前 workflow 失败”“跑起来并自愈”“根据真实失败改 DSL/prompt/script”。 |
+| `wf-create` | `workflows/wf-create/wf/workflow.lgwf` | 根据用户原始意图创建新的 LGWF workflow 初稿，分阶段确认需求、业务流、步骤设计和实现初稿。 | 用户要“从零创建 workflow”“只有原始想法，帮我生成 workflow 初稿”“先确认需求和步骤设计再落目录”。 |
 | `wf-prompt-fix` | `workflows/wf-prompt-fix/wf/workflow.lgwf` | 盘点目标 workflow 引用的 prompt，审计并修复基础规范、引用、上下文和输出契约问题。 | 用户要“检查 prompt 是否合格”“修复 prompt 引用/格式/输出契约”“交付前做 prompt acceptance”。 |
 | `wf-prompt-upgrade` | `workflows/wf-prompt-upgrade/wf/workflow.lgwf` | 分析 prompt 的职责边界、上下游契约、质量指标和失败模式，生成升级方案并在用户确认后应用。 | 用户要“提升 prompt 质量”“优化 Agent 职责/决策标准/验收指标”“做 prompt 设计升级”。 |
 | `e2e-test-generator` | `workflows/e2e-test-generator/workflow.lgwf` | 为已有目标 workflow 生成脚本级、runtime fake 和真实 Codex 正向三类 E2E 测试。 | 用户要“补 E2E 测试”“交付前建立回归入口”“为 workflow 生成测试骨架”。 |
@@ -35,6 +36,7 @@
 优先根据用户的直接目标路由：
 
 - 目标是运行失败、卡住、产物不对、需要自动诊断修复：使用 `wf-fix`。
+- 目标是从原始意图创建新的 LGWF workflow 初稿、确认需求/业务流/步骤设计后再实现：使用 `wf-create`。
 - 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足：使用 `wf-prompt-fix`。
 - 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量：使用 `wf-prompt-upgrade`。
 - 目标是生成或刷新 workflow 的端到端测试：使用 `e2e-test-generator`。
@@ -46,8 +48,8 @@
 - 如果用户说“优化 prompt”，但现状是目标 workflow 已经运行失败且失败证据明确，先用 `wf-fix`；修复后再考虑 prompt workflow。
 - 如果用户说“交付/质量达标”，默认先 `wf-prompt-fix`，再 `wf-prompt-upgrade`，最后视需要 `e2e-test-generator`。
 - 如果用户说“生成测试”，但目标 `workflow.lgwf` 不能解析或基础契约明显缺失，先报告前置阻塞，并建议转入 `wf-fix` 或 `wf-prompt-fix`。
-- 如果用户的目标本身不是修复已有 workflow，而是要规划并执行一个复杂实现任务，优先用 `plan`；执行过程中发现目标 workflow 失败、prompt 缺陷或测试缺口时，再回到对应专项 workflow。
-- 如果目标目录还没有可解析的 `workflow.lgwf`，不要派发这些 workflow；先让用户补充目标或改为普通实现任务。
+- 如果用户的目标本身不是修复已有 workflow，而是要规划并执行一个复杂实现任务，优先用 `plan`；如果复杂任务的目标是创建新的 LGWF workflow 初稿，优先用 `wf-create`；执行过程中发现目标 workflow 失败、prompt 缺陷或测试缺口时，再回到对应专项 workflow。
+- 如果目标目录还没有可解析的 `workflow.lgwf`，但用户目标是创建新的 LGWF workflow，使用 `wf-create`；否则不要派发修复、prompt 或测试类 workflow，先让用户补充目标或改为普通实现任务。
 
 ## 组合顺序
 
@@ -58,6 +60,7 @@
 - 修复当前失败：`wf-fix`。如果修复发现 prompt 基础契约是根因，再转 `wf-prompt-fix`；如果发现 prompt 设计质量不足，再转 `wf-prompt-upgrade`。
 - 交付前验收：`wf-prompt-fix` -> `wf-prompt-upgrade` -> `e2e-test-generator`。
 - prompt 专项治理：先 `wf-prompt-fix` 清理基础问题，再 `wf-prompt-upgrade` 做设计升级。
+- 新建 workflow 初稿：先 `wf-create` 分阶段确认并生成第一版；初稿形成后如需质量治理，再按证据转 `wf-prompt-fix`、`wf-prompt-upgrade` 或 `e2e-test-generator`。
 - 测试补齐：先确认目标 workflow 可解析且基础契约清楚，再运行 `e2e-test-generator`；测试生成发现运行缺陷时回到 `wf-fix`。
 - 复杂实现任务：先 `plan` 生成计划和验收契约，经用户确认后执行；如果执行结果暴露 workflow 专项问题，再按证据转 `wf-fix`、`wf-prompt-fix` 或 `wf-prompt-upgrade`。
 
@@ -261,6 +264,14 @@ python self-improve\scripts\validate_manifest.py
     "target_package_root": "D:/example",
     "target_dirs": ["D:/example"]
   }
+}
+```
+
+`wf-create` 推荐输入：
+
+```json
+{
+  "raw_intent": "要创建的新 LGWF workflow 原始意图"
 }
 ```
 

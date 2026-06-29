@@ -1,0 +1,42 @@
+WORKFLOW prompt_fix_summary;
+ENTRY summarize_prompt_acceptance;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
+  result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
+}
+
+PY summarize_prompt_acceptance
+  SCRIPT "scripts/summarize_prompt_acceptance.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_result
+  UPDATES_STATE;
+
+PY route_after_prompt_acceptance_summary
+  SCRIPT "scripts/route_after_prompt_acceptance_summary.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_route_result
+  UPDATES_STATE;
+
+PY finish_prompt_acceptance
+  SCRIPT "scripts/finish_prompt_acceptance.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_finish_result
+  UPDATES_STATE;
+
+APPROVAL confirm_prompt_acceptance
+  PROMPT_REF "confirm_prompt_acceptance.md"
+  READ state.lgwf_wf_prompt_fix.prompt_acceptance_summary
+  WRITE state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation
+  RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation_result
+  PERSIST ".lgwf/prompt_acceptance/confirmation.json"
+  POLL 1;
+
+FLOW summarize_prompt_acceptance
+  THEN route_after_prompt_acceptance_summary;
+
+ROUTE route_after_prompt_acceptance_summary
+  WHEN "auto_finish" THEN finish_prompt_acceptance
+  WHEN "confirm" THEN confirm_prompt_acceptance;

@@ -1,0 +1,20 @@
+WORKFLOW prompt_fix_audit_prompts;
+ENTRY audit_target_prompts;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
+  result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
+}
+
+CODEX audit_target_prompts
+  PROMPT "agents/audit_target_prompts.md"
+  CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/environment_check.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md"
+  CONTEXT workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist"
+  TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+  OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE
+  RESULT state.lgwf_wf_prompt_fix.prompt_audit_result;

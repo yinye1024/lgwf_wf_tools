@@ -1,0 +1,13 @@
+WORKFLOW implement_steps_react;
+ENTRY implement_steps_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+CODEX implement_steps_react
+  PROMPT "agents/act.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"
+  OUTPUT_JSON ".lgwf/implementation_result.json"
+  RESULT state.lgwf_wf_create.implementation_result;

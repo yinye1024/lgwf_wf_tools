@@ -7,6 +7,7 @@
 1. 读取目标 workflow 目录或预期目录；如果存在根 `workflow.lgwf`，优先读取它。
 2. 读取 `references/dsl-assist/create-workflow.md`；涉及稳定 client 工具时再读取 `references/dsl-assist/tool-nodes.md`。
 3. 如果涉及 `prompt.md`、`refine.md`、review prompt、`exec.codex_prompt`、`subgraph.react` 或 `subgraph.agent_loop` 的 Codex slot，再读取 `references/prompt-assist/guide.md` 并按它的分流规则读取对应 reference。
+4. 如果是在治理或重构已有复杂 workflow，而不是从零创建，也优先使用 `references/dsl-assist/create-workflow.md` 的“已有 Workflow 治理与重构”章节；不要为治理场景另起一套目录模型。
 
 ## 验收 Workflow
 
@@ -24,6 +25,7 @@
 - 不使用固定的 `steps/`、`workflows/` 或 `rules/` 容器；当前 workflow 的直接子目录按业务职责和阶段命名。
 - 当前 `workflow.lgwf` 直接声明普通 step 的执行节点，并通过 `STEP ... WORKFLOW` 引用需要独立拓扑、复用或嵌套编排的子 workflow。
 - 普通 step 只保存自己的 `agents/`、`scripts/` 等资源；多个直接子级共用的资源放在当前 workflow 的 `shared/`。
+- 已有 workflow 过大时，优先把根 `workflow.lgwf` 收敛为业务骨架，让阶段细节进入子 workflow；根节点数量、人工确认点和路由应能被快速审阅。
 - `workflow.json` 是编译产物、runtime IR 和执行入口，必须能由 `scripts/lgwf.py compile` 从根 `.lgwf` 生成；通过 facade 运行时只保存在 `<work_dir>/.lgwf/workflow/` snapshot，不写入用户 package。
 - 子 workflow 可递归包含普通 step 和更深层子 workflow；父 workflow 不复制子 workflow 的内部节点。
 - authoring resource 和 workflow reference 路径相对当前 `workflow.lgwf` 所在目录，编译后统一转换为 package-root 相对路径。
@@ -31,8 +33,9 @@
 - runtime 不读取 client workspace 中的 prompt/script 内容。
 - `prompt_ref` / `script_ref` 必须作为 node config 传给 client。
 - resource path 必须是相对路径，不允许绝对路径或 `..`。
+- 修改目标 package 的 workflow 必须在 `ACT` 前设置路径校验 gate，校验修改计划只包含授权范围内的相对路径，禁止绝对路径、`..`、`.lgwf/` 和 package 越界。
 - `decide` 默认优先脚本或轻量节点，不默认设计成 LLM prompt。
-- 工程化长程循环优先使用 `AGENT_LOOP`。它 lowering 到 `subgraph.agent_loop`，内建每轮 sandbox、状态、归档、验证、决策、`TOKEN_MAX` 和 `ON_MAX` / `ON_ERROR` 控制策略；普通轻量 reason / act / observe / decide 循环仍可使用 `REACT`。
+- 工程化长程循环优先使用 `AGENT_LOOP`。它 lowering 到 `subgraph.agent_loop`，内建每轮 sandbox、状态、归档、验证、决策、`TOKEN_MAX` 和 `ON_MAX` / `ON_ERROR` 控制策略；普通轻量 reason / act / observe / decide 循环仍可使用 `REACT`。当 `REACT` 的某个 slot 需要多个节点编排时，使用 `WORKFLOW` slot，例如在 `ACT WORKFLOW` 中执行 `validate_plan -> apply_changes`。
 
 ## 验证
 

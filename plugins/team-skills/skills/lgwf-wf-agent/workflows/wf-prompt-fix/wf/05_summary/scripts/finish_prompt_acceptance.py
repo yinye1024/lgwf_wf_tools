@@ -11,11 +11,16 @@ from prompt_fix_common import lgwf_dir, output_state, read_json, write_json
 
 
 def build_confirmation(summary: dict[str, Any]) -> dict[str, Any]:
+    status = summary.get("status", "")
+    if status == "passed":
+        reason = "audit_passed=true and no prompt issues were found"
+    else:
+        reason = "repair_passed=true and remaining_issue_ids is empty"
     return {
         "confirmed": True,
         "auto_confirmed": True,
-        "reason": "repair_passed=true and remaining_issue_ids is empty",
-        "status": summary.get("status", ""),
+        "reason": reason,
+        "status": status,
         "remaining_issue_ids": summary.get("remaining_issue_ids", []),
         "comment": "",
     }

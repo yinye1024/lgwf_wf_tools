@@ -50,17 +50,14 @@
 
 ## 业务流程
 
-1. `init_prompt_fix_target`：请求用户确认目标 workflow 信息，并写入 `.lgwf/prompt_fix_target.json`。
-2. `check_lgwf_client_assist`：确认 facade 内置 `lgwf-client-assist` 可用；只接受 bundled client 或测试显式注入的 client，并把最小 prompt reference 运行时复制到 `.lgwf/prompt_acceptance/reference_context/`。
-3. `build_prompt_inventory`：扫描目标 workflow DSL 和 prompt 引用，生成 `.lgwf/prompt_acceptance/inventory.json`。
-4. `audit_target_prompts`：由 Codex 审计 prompt 文件、引用关系、上下文和输出契约，生成 `.lgwf/prompt_acceptance/audit.json`。
-5. `prepare_prompt_fix_selection_context`：整理 audit summary 和可选 issue，准备人工选择上下文。
-6. `select_prompt_fixes`：请求用户选择要修复的 issue；用户可以选择修复，也可以跳过修复直接汇总。
-7. `validate_prompt_fix_selection` 和 `route_after_prompt_selection`：校验选择结果，并决定进入修复循环或直接生成摘要。
-8. `repair_target_prompts`：对已确认 issue 执行最多 3 轮 `REACT` 修复，依次生成修复计划、应用修改、复核结果。
-9. `summarize_prompt_acceptance`：汇总 inventory、audit、选择、修复和复核结果。
-10. `route_after_prompt_acceptance_summary`：根据摘要状态决定自动结束或进入最终确认。
-11. `confirm_prompt_acceptance` 或 `finish_prompt_acceptance`：记录用户最终确认，或在无需确认时完成 workflow。
+根 `wf/workflow.lgwf` 只负责编排阶段，不直接展开每个脚本、prompt 和 approval 节点。阶段细节由子 workflow 承担：
+
+1. `prepare_target`：请求用户确认目标 workflow 信息，确认 facade 内置 `lgwf-client-assist` 可用，复制最小 prompt reference context，并生成 `.lgwf/prompt_acceptance/inventory.json`。
+2. `audit_prompts`：由 Codex 审计 prompt 文件、引用关系、上下文和输出契约，生成 `.lgwf/prompt_acceptance/audit.json`。
+3. `select_fixes`：整理 audit summary 和可选 issue，请求用户选择要修复的 issue，并校验选择结果。
+4. `route_after_prompt_selection`：根据 `.lgwf/prompt_acceptance/fix_selection.json` 决定进入 `repair_loop` 或直接进入 `summary`。
+5. `repair_loop`：对已确认 issue 执行最多 3 轮 `REACT` 修复，依次生成修复计划、应用修改、复核结果。`ACT` slot 内部会先校验 `.lgwf/prompt_acceptance/repair_plan.json` 的 `files_to_modify` 是否为目标 package 内、`target_dirs` 范围内的相对路径；校验失败时不得进入实际修改。
+6. `summary`：汇总 inventory、audit、选择、修复和复核结果；根据摘要状态自动完成或进入最终人工确认。
 
 进入 `waiting_human` 时，主 agent 必须展示 workflow 给出的 audit summary、issue 选项、修复风险或 acceptance summary，只提交用户明确确认的结果。不要绕过 approval，也不要直接修改 `.lgwf/` runtime artifacts。
 
@@ -77,6 +74,7 @@
 .lgwf/prompt_acceptance/audit.json
 .lgwf/prompt_acceptance/fix_selection.json
 .lgwf/prompt_acceptance/repair_plan.json
+.lgwf/prompt_acceptance/repair_plan_validation.json
 .lgwf/prompt_acceptance/repair_review.json
 .lgwf/prompt_acceptance/react_history.json
 .lgwf/prompt_acceptance/summary.json

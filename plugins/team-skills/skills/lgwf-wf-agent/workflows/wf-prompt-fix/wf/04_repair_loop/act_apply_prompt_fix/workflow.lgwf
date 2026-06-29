@@ -1,0 +1,31 @@
+WORKFLOW prompt_fix_apply_prompt_fix;
+ENTRY validate_repair_plan;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
+  result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
+}
+
+PY validate_repair_plan
+  SCRIPT "scripts/validate_repair_plan.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_prompt_fix.validate_repair_plan_result
+  UPDATES_STATE;
+
+CODEX apply_prompt_fix
+  PROMPT "agents/apply_prompt_fix.md"
+  CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/environment_check.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/fix_selection.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan_validation.json"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md"
+  CONTEXT workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist"
+  TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+  RESULT state.lgwf_wf_prompt_fix.prompt_repair_act_result;
+
+FLOW validate_repair_plan
+  THEN apply_prompt_fix;

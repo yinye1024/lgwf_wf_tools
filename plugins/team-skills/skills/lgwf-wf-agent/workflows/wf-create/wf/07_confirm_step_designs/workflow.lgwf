@@ -1,0 +1,79 @@
+WORKFLOW implement_draft;
+ENTRY prepare_dsl_reference_context;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_dsl_reference_context
+  SCRIPT "scripts/prepare_dsl_reference_context.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.dsl_reference_context
+  UPDATES_STATE;
+
+STEP design_steps_react
+  WORKFLOW "06_design_steps_react/workflow.lgwf";
+
+PY prepare_step_design_confirmation
+  SCRIPT "scripts/prepare_step_design_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_step_design_confirmation_result
+  UPDATES_STATE;
+
+APPROVAL confirm_step_designs
+  PROMPT_REF "confirm_step_designs.md"
+  READ state.lgwf_wf_create.step_design_confirmation_context
+  WRITE state.lgwf_wf_create.step_design_decision
+  RESULT state.lgwf_wf_create.step_design_decision_result
+  PERSIST ".lgwf/step_design_confirmation_record.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY apply_confirmed_step_designs
+  SCRIPT "scripts/apply_confirmed_step_designs.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.apply_step_designs_result
+  UPDATES_STATE;
+
+PY prepare_step_design_revision_confirmation
+  SCRIPT "scripts/prepare_step_design_revision_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_step_design_revision_confirmation_result
+  UPDATES_STATE;
+
+APPROVAL revise_step_designs
+  PROMPT_REF "revise_step_designs.md"
+  READ state.lgwf_wf_create.step_design_revision_context
+  WRITE state.lgwf_wf_create.step_design_revision_decision
+  RESULT state.lgwf_wf_create.step_design_revision_decision_result
+  PERSIST ".lgwf/step_design_revision_approval.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY finish_confirmation
+  SCRIPT "scripts/finish_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.step_design_finish_result
+  UPDATES_STATE;
+
+STEP implement_steps_react
+  WORKFLOW "08_implement_steps_react/workflow.lgwf";
+
+FLOW {
+  prepare_dsl_reference_context THEN design_steps_react THEN prepare_step_design_confirmation THEN confirm_step_designs;
+
+  confirm_step_designs
+    WHEN "approve" THEN apply_confirmed_step_designs
+    WHEN "revise" THEN prepare_step_design_revision_confirmation
+    WHEN "reject" THEN finish_confirmation;
+
+  prepare_step_design_revision_confirmation THEN revise_step_designs;
+
+  revise_step_designs
+    WHEN "approve" THEN apply_confirmed_step_designs
+    WHEN "revise" THEN prepare_step_design_revision_confirmation
+    WHEN "reject" THEN finish_confirmation;
+
+  apply_confirmed_step_designs THEN implement_steps_react;
+}

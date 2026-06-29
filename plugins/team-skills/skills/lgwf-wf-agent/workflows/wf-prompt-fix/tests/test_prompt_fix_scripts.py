@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,17 +21,37 @@ def load_module(relative: str, name: str):
 
 
 class PromptFixScriptsTest(unittest.TestCase):
+    def test_prompt_fix_root_workflow_wraps_major_phases_as_subworkflows(self) -> None:
+        source = (ROOT / "wf" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("WORKFLOW lgwf_wf_prompt_fix;", source)
+        self.assertIn("ENTRY prepare_target;", source)
+        for step_id, workflow_path in (
+            ("prepare_target", "01_prepare_target/workflow.lgwf"),
+            ("audit_prompts", "02_audit_prompts/workflow.lgwf"),
+            ("select_fixes", "03_select_fixes/workflow.lgwf"),
+            ("repair_loop", "04_repair_loop/workflow.lgwf"),
+            ("summary", "05_summary/workflow.lgwf"),
+        ):
+            self.assertIn(f"STEP {step_id}\n  WORKFLOW \"{workflow_path}\";", source)
+            self.assertTrue((ROOT / "wf" / workflow_path).is_file())
+        self.assertNotIn("CODEX audit_target_prompts", source)
+        self.assertNotIn("REACT repair_target_prompts", source)
+        self.assertNotIn("APPROVAL select_prompt_fixes", source)
+
     def test_prompt_fix_workflow_uses_owned_namespace_and_react(self) -> None:
         source = (ROOT / "wf" / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("WORKFLOW lgwf_wf_prompt_fix;", source)
-        self.assertIn("ENTRY init_prompt_fix_target;", source)
-        self.assertIn("APPROVAL init_prompt_fix_target", source)
-        self.assertIn("READ state.prompt_fix_target", source)
-        self.assertIn("WRITE state.lgwf_wf_prompt_fix.prompt_fix_target", source)
-        self.assertIn('PERSIST ".lgwf/prompt_fix_target.json"', source)
-        self.assertIn("PY check_lgwf_client_assist", source)
-        self.assertIn('SCRIPT "00_check_environment/scripts/check_lgwf_client_assist.py"', source)
         self.assertIn("lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}", source)
+        prepare_source = (ROOT / "wf" / "01_prepare_target" / "workflow.lgwf").read_text(encoding="utf-8")
+        select_source = (ROOT / "wf" / "03_select_fixes" / "workflow.lgwf").read_text(encoding="utf-8")
+        repair_source = (ROOT / "wf" / "04_repair_loop" / "workflow.lgwf").read_text(encoding="utf-8")
+        summary_source = (ROOT / "wf" / "05_summary" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("APPROVAL init_prompt_fix_target", prepare_source)
+        self.assertIn("READ state.prompt_fix_target", prepare_source)
+        self.assertIn("WRITE state.lgwf_wf_prompt_fix.prompt_fix_target", prepare_source)
+        self.assertIn('PERSIST ".lgwf/prompt_fix_target.json"', prepare_source)
+        self.assertIn("PY check_lgwf_client_assist", prepare_source)
+        self.assertIn('SCRIPT "scripts/check_lgwf_client_assist.py"', prepare_source)
         for artifact in (
             ".lgwf/prompt_fix_target.json",
             ".lgwf/prompt_acceptance/inventory.json",
@@ -40,28 +61,28 @@ class PromptFixScriptsTest(unittest.TestCase):
             ".lgwf/prompt_acceptance/repair_review.json",
             ".lgwf/prompt_acceptance/react_history.json",
             ".lgwf/prompt_acceptance/reference_context/AGENTS.md",
-            ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md",
+            ".lgwf/prompt_acceptance/reference_context/prompt-assist",
         ):
-            self.assertIn(artifact, source)
-        self.assertNotIn(".lgwf/prompt_acceptance/fix_notes.md", source)
-        self.assertIn("CODEX audit_target_prompts", source)
-        self.assertIn("APPROVAL select_prompt_fixes", source)
-        self.assertIn("REACT repair_target_prompts MAX 3", source)
-        self.assertIn("APPROVAL confirm_prompt_acceptance", source)
-        self.assertIn("PY route_after_prompt_acceptance_summary", source)
-        self.assertIn("PY finish_prompt_acceptance", source)
-        self.assertIn("FLOW init_prompt_fix_target", source)
-        self.assertIn("THEN check_lgwf_client_assist", source)
-        self.assertIn("THEN build_prompt_inventory", source)
-        self.assertIn("CONTEXT workspace file \".lgwf/prompt_fix_target.json\"", source)
-        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE', source)
-        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE', source)
-        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"', source)
-        self.assertIn('WHEN "fix" THEN repair_target_prompts', source)
-        self.assertIn('WHEN "summarize" THEN summarize_prompt_acceptance', source)
-        self.assertIn('WHEN "auto_finish" THEN finish_prompt_acceptance', source)
-        self.assertIn('WHEN "confirm" THEN confirm_prompt_acceptance', source)
-        self.assertNotIn("THEN route_after_prompt_acceptance_summary\n  THEN confirm_prompt_acceptance", source)
+            combined = "\n".join([source, prepare_source, select_source, repair_source, summary_source])
+            self.assertIn(artifact, combined)
+        self.assertNotIn(".lgwf/prompt_acceptance/fix_notes.md", "\n".join([source, prepare_source, select_source, repair_source, summary_source]))
+        self.assertIn("APPROVAL select_prompt_fixes", select_source)
+        self.assertIn("REACT repair_target_prompts MAX 3", repair_source)
+        self.assertIn("APPROVAL confirm_prompt_acceptance", summary_source)
+        self.assertIn("PY route_after_prompt_acceptance_summary", summary_source)
+        self.assertIn("PY finish_prompt_acceptance", summary_source)
+        self.assertIn("FLOW init_prompt_fix_target", prepare_source)
+        self.assertIn("THEN check_lgwf_client_assist", prepare_source)
+        self.assertIn("THEN build_prompt_inventory", prepare_source)
+        self.assertIn("CONTEXT workspace file \".lgwf/prompt_fix_target.json\"", "\n".join([source, prepare_source, repair_source]))
+        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE', (ROOT / "wf" / "02_audit_prompts" / "workflow.lgwf").read_text(encoding="utf-8"))
+        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE', repair_source)
+        self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"', repair_source)
+        self.assertIn('WHEN "fix" THEN repair_loop', source)
+        self.assertIn('WHEN "summarize" THEN summary', source)
+        self.assertIn('WHEN "auto_finish" THEN finish_prompt_acceptance', summary_source)
+        self.assertIn('WHEN "confirm" THEN confirm_prompt_acceptance', summary_source)
+        self.assertNotIn("THEN route_after_prompt_acceptance_summary\n  THEN confirm_prompt_acceptance", summary_source)
 
     def test_prompt_fix_declares_runtime_artifact_contracts(self) -> None:
         contract = json.loads((ROOT / "wf" / "artifact_contracts.json").read_text(encoding="utf-8"))
@@ -82,7 +103,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_environment_check_detects_missing_and_present_skill(self) -> None:
         check_mod = load_module(
-            "00_check_environment/scripts/check_lgwf_client_assist.py",
+            "01_prepare_target/scripts/check_lgwf_client_assist.py",
             "prompt_env_check",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -99,7 +120,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_environment_check_copies_minimal_reference_context(self) -> None:
         check_mod = load_module(
-            "00_check_environment/scripts/check_lgwf_client_assist.py",
+            "01_prepare_target/scripts/check_lgwf_client_assist.py",
             "prompt_env_check_reference_context",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -125,7 +146,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_environment_check_rejects_legacy_skill_marker_only(self) -> None:
         check_mod = load_module(
-            "00_check_environment/scripts/check_lgwf_client_assist.py",
+            "01_prepare_target/scripts/check_lgwf_client_assist.py",
             "prompt_env_check_legacy_marker",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -135,9 +156,29 @@ class PromptFixScriptsTest(unittest.TestCase):
             result = check_mod.find_lgwf_client_assist([legacy])
             self.assertFalse(result["passed"])
 
+    def test_environment_check_ignores_runtime_env_override_by_default(self) -> None:
+        check_mod = load_module(
+            "01_prepare_target/scripts/check_lgwf_client_assist.py",
+            "prompt_env_check_no_env_override",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            fake = Path(temp) / "fake"
+            fake.mkdir()
+            (fake / "AGENTS.md").write_text("# external\n", encoding="utf-8")
+            old = os.environ.get("LGWF_CLIENT_ASSIST")
+            os.environ["LGWF_CLIENT_ASSIST"] = str(fake)
+            try:
+                candidates = check_mod.candidate_skill_dirs()
+            finally:
+                if old is None:
+                    os.environ.pop("LGWF_CLIENT_ASSIST", None)
+                else:
+                    os.environ["LGWF_CLIENT_ASSIST"] = old
+        self.assertNotIn(fake, candidates)
+
     def test_prompt_inventory_discovers_prompt_references_in_nested_workflows(self) -> None:
         inventory_mod = load_module(
-            "01_inventory/scripts/build_prompt_inventory.py",
+            "01_prepare_target/scripts/build_prompt_inventory.py",
             "prompt_inventory",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -165,7 +206,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_prompt_inventory_excludes_runtime_and_cache_dirs(self) -> None:
         inventory_mod = load_module(
-            "01_inventory/scripts/build_prompt_inventory.py",
+            "01_prepare_target/scripts/build_prompt_inventory.py",
             "prompt_inventory_exclusions",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -188,7 +229,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_prompt_inventory_resolves_target_paths_from_workspace_ancestors(self) -> None:
         inventory_mod = load_module(
-            "01_inventory/scripts/build_prompt_inventory.py",
+            "01_prepare_target/scripts/build_prompt_inventory.py",
             "prompt_inventory_relative_target",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -206,7 +247,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_prompt_fix_selection_supports_all_partial_and_skip(self) -> None:
         selection_mod = load_module(
-            "03_select_prompt_fixes/scripts/validate_prompt_fix_selection.py",
+            "03_select_fixes/scripts/validate_prompt_fix_selection.py",
             "prompt_selection",
         )
         audit = {"issues": [{"id": "p1"}, {"id": "p2"}]}
@@ -222,7 +263,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_prompt_fix_selection_context_groups_file_results_and_issues(self) -> None:
         context_mod = load_module(
-            "03_select_prompt_fixes/scripts/prepare_prompt_fix_selection_context.py",
+            "03_select_fixes/scripts/prepare_prompt_fix_selection_context.py",
             "prompt_selection_context",
         )
         audit = {
@@ -275,7 +316,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_prompt_fix_selection_context_falls_back_without_file_results(self) -> None:
         context_mod = load_module(
-            "03_select_prompt_fixes/scripts/prepare_prompt_fix_selection_context.py",
+            "03_select_fixes/scripts/prepare_prompt_fix_selection_context.py",
             "prompt_selection_context_fallback",
         )
         audit = {
@@ -307,7 +348,7 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertIn("inventory.prompts[]", source)
 
     def test_select_prompt_fixes_prompts_for_file_grouped_confirmation(self) -> None:
-        source = (ROOT / "wf" / "03_select_prompt_fixes" / "select_prompt_fixes.md").read_text(encoding="utf-8")
+        source = (ROOT / "wf" / "03_select_fixes" / "select_prompt_fixes.md").read_text(encoding="utf-8")
         self.assertIn("file_results", source)
         self.assertIn("files_with_issues", source)
         self.assertIn("files_passed", source)
@@ -315,7 +356,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_prompt_react_decide_exits_only_when_selected_issues_pass(self) -> None:
         decide_mod = load_module(
-            "04_repair_prompts/scripts/decide_prompt_fix.py",
+            "04_repair_loop/scripts/decide_prompt_fix.py",
             "prompt_decide",
         )
         selection = {"selected_issue_ids": ["p1", "p2"], "skip_fix": False}
@@ -327,6 +368,74 @@ class PromptFixScriptsTest(unittest.TestCase):
             decide_mod.choose_next(selection, {"passed": False, "remaining_issue_ids": ["p2"]}),
             "continue",
         )
+
+    def test_repair_plan_validation_accepts_only_allowed_relative_paths(self) -> None:
+        validate_mod = load_module(
+            "04_repair_loop/act_apply_prompt_fix/scripts/validate_repair_plan.py",
+            "prompt_validate_repair_plan",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            package = Path(temp) / "target"
+            allowed = package / "agents"
+            outside_allowed = package / "other"
+            package.mkdir()
+            allowed.mkdir()
+            outside_allowed.mkdir()
+            target = {
+                "target_package_root": str(package),
+                "target_dirs": [str(allowed)],
+            }
+            valid_plan = {"files_to_modify": ["agents/prompt.md"]}
+            self.assertEqual(validate_mod.validate_repair_plan(valid_plan, target)["passed"], True)
+
+            invalid_cases = [
+                {"files_to_modify": [str(allowed / "prompt.md")]},
+                {"files_to_modify": ["../escape.md"]},
+                {"files_to_modify": [".lgwf/runtime.json"]},
+                {"files_to_modify": ["other/prompt.md"]},
+            ]
+            for plan in invalid_cases:
+                with self.subTest(plan=plan):
+                    self.assertFalse(validate_mod.validate_repair_plan(plan, target)["passed"])
+
+    def test_repair_plan_validation_limits_files_to_selected_issue_scope(self) -> None:
+        validate_mod = load_module(
+            "04_repair_loop/act_apply_prompt_fix/scripts/validate_repair_plan.py",
+            "prompt_validate_repair_plan_scope",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            package = Path(temp) / "target"
+            package.mkdir()
+            target = {
+                "target_package_root": str(package),
+                "target_dirs": [str(package)],
+            }
+            audit = {
+                "issues": [
+                    {
+                        "id": "p1",
+                        "prompt_path": "agents/prompt.md",
+                        "workflow_path": "workflow.lgwf",
+                    },
+                    {
+                        "id": "p2",
+                        "prompt_path": "agents/other.md",
+                        "workflow_path": "workflow.lgwf",
+                    },
+                ]
+            }
+            selection = {"selected_issue_ids": ["p1"]}
+            allowed_prompt = {"files_to_modify": ["agents/prompt.md"]}
+            allowed_workflow = {"files_to_modify": ["workflow.lgwf"]}
+            rejected_unselected_prompt = {"files_to_modify": ["agents/other.md"]}
+            rejected_unrelated = {"files_to_modify": ["README.md"]}
+
+            self.assertTrue(validate_mod.validate_repair_plan(allowed_prompt, target, audit, selection)["passed"])
+            self.assertTrue(validate_mod.validate_repair_plan(allowed_workflow, target, audit, selection)["passed"])
+            self.assertFalse(
+                validate_mod.validate_repair_plan(rejected_unselected_prompt, target, audit, selection)["passed"]
+            )
+            self.assertFalse(validate_mod.validate_repair_plan(rejected_unrelated, target, audit, selection)["passed"])
 
     def test_prompt_acceptance_summary_promotes_only_final_root_artifact(self) -> None:
         summary_mod = load_module(
@@ -415,6 +524,22 @@ class PromptFixScriptsTest(unittest.TestCase):
             ),
             "confirm",
         )
+
+    def test_prompt_acceptance_summary_route_auto_finishes_clean_audit_pass(self) -> None:
+        route_mod = load_module(
+            "05_summary/scripts/route_after_prompt_acceptance_summary.py",
+            "prompt_summary_route_clean_audit",
+        )
+        self.assertEqual(
+            route_mod.choose_route(
+                {
+                    "status": "passed",
+                    "audit_passed": True,
+                    "remaining_issue_ids": [],
+                }
+            ),
+            "auto_finish",
+        )
         self.assertEqual(
             route_mod.choose_route(
                 {
@@ -437,6 +562,16 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertTrue(confirmation["auto_confirmed"])
         self.assertEqual(confirmation["status"], "fixed")
         self.assertEqual(confirmation["remaining_issue_ids"], [])
+
+    def test_prompt_acceptance_auto_finish_explains_clean_audit(self) -> None:
+        finish_mod = load_module(
+            "05_summary/scripts/finish_prompt_acceptance.py",
+            "prompt_summary_finish_clean_audit",
+        )
+        confirmation = finish_mod.build_confirmation({"status": "passed", "remaining_issue_ids": []})
+        self.assertTrue(confirmation["confirmed"])
+        self.assertTrue(confirmation["auto_confirmed"])
+        self.assertIn("audit_passed", confirmation["reason"])
 
 
 if __name__ == "__main__":

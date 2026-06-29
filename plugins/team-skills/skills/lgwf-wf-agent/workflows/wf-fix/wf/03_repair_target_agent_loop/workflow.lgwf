@@ -79,9 +79,8 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
     CONTEXT workspace file ".lgwf/target_repair/current/workspace.json"
     OUTPUT_JSON ".lgwf/target_repair/current/apply.json" AS_FILE
     RESULT state.lgwf_wf_fix.apply_repair_plan_result;
-  VERIFY PY verify_repair_candidate
-    SCRIPT "05_fix_target/scripts/verify_repair_candidate.py"
-    TIMEOUT 180
+  VERIFY WORKFLOW verify_repair_candidate_with_review
+    WORKFLOW "05_fix_target/verify_repair_candidate_workflow.lgwf"
     RESULT state.lgwf_wf_fix.target_repair_current_verification;
   DECIDE PY decide_repair_loop
     SCRIPT "05_fix_target/scripts/decide_repair_loop.py"

@@ -8,6 +8,13 @@
       "agents_md": "workflows/wf-fix/AGENTS.md"
     },
     {
+      "id": "wf-create",
+      "description": "根据用户原始意图创建新的 LGWF workflow 初稿，按需求、业务流、步骤设计和实现初稿分阶段确认。",
+      "workflow_lgwf": "workflows/wf-create/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-create/ws",
+      "agents_md": "workflows/wf-create/AGENTS.md"
+    },
+    {
       "id": "wf-prompt-fix",
       "description": "盘点、验收并修复目标 workflow 引用的 prompt 基础规范问题。",
       "workflow_lgwf": "workflows/wf-prompt-fix/wf/workflow.lgwf",
