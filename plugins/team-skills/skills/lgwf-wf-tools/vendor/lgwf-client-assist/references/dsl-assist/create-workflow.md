@@ -73,6 +73,8 @@ some_workflow/
 - 工程化长程循环使用 `AGENT_LOOP`，按声明顺序执行六个必填 slot：`OBSERVE`、`DIAGNOSE`、`PLAN`、`ACT`、`VERIFY`、`DECIDE`。循环 slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`CODEX` slot 使用 `PROMPT_REF`，`VERIFY` 结果必须包含 `passed: true|false`，`DECIDE` 结果必须包含 `category` 和 `reason`。
 - 只有出现独立拓扑、复用或嵌套编排需求时才创建子 workflow。
 - 子 workflow 的内部节点只由它自己的 `workflow.lgwf` 声明；父 workflow 不复制这些节点。
+- 子 workflow 的内部确认闭环不泄露给父 workflow；父 workflow 不承接子 workflow 的 `approve` / `revise` / `reject` route。
+- 子 workflow 内部遇到用户拒绝、取消或不可继续的全局终止语义时，使用 `WHEN "reject" THEN FAIL_ALL`，而不是把 `reject` route 接到父 workflow 的汇总节点。
 - 多个直接子级共用的资源放在当前 workflow 的 `shared/`；单个 step 独占资源放在该业务 step 目录。
 - workflow 引用和 workflow-local resource 路径相对当前 `workflow.lgwf` 所在目录。
 - 禁止绝对路径、`..`、package 越界和 workflow 引用循环。
@@ -131,7 +133,27 @@ FLOW {
 }
 ```
 
-推荐用 `FLOW { ... }` 集中描述完整流程；块内 `a THEN b THEN c` 表达无条件顺序边，`a WHEN "route_key" THEN b` 表达 route key 到目标节点的跳转。旧的单条 `FLOW a THEN b;` 和独立 `ROUTE a WHEN ...;` 仍兼容，但新建 workflow 优先使用块语法，避免跳转逻辑和整体流程分离。
+推荐用 `FLOW { ... }` 集中描述完整流程；块内 `a THEN b THEN c` 表达无条件顺序边，`a WHEN "route_key" THEN b` 表达 route key 到目标节点的跳转。`THEN FAIL_ALL` 是保留控制流目标，用于失败终止当前 workflow 并向父 workflow 传播；不要创建名为 `FAIL_ALL` 的节点。旧的单条 `FLOW a THEN b;` 和独立 `ROUTE a WHEN ...;` 仍兼容，但新建 workflow 优先使用块语法，避免跳转逻辑和整体流程分离。
+
+子 workflow 内部的人工确认或修订循环应自洽表达，父 workflow 只串联阶段：
+
+```text
+FLOW {
+  confirm_design
+    WHEN "approve" THEN apply_design
+    WHEN "revise" THEN revise_design
+    WHEN "reject" THEN FAIL_ALL;
+
+  revise_design
+    WHEN "approve" THEN apply_design
+    WHEN "revise" THEN revise_design
+    WHEN "reject" THEN FAIL_ALL;
+
+  apply_design THEN scaffold_package;
+}
+```
+
+这样父 workflow 不需要出现 `__route__<child>`、`reject` 汇总分支或子流程内部节点名。
 
 `workflow.json` 是 runtime IR，但用户 authoring package 默认不保存该文件。通过 `scripts/lgwf.py run` 运行时，client 先把 package 复制到 `<work_dir>\.lgwf\workflow\`，再在 snapshot 中生成 runtime IR。`workflow.json` 仍只使用 `src/lgwf/compiler/dsl_schema.json` 接受的字段：
 

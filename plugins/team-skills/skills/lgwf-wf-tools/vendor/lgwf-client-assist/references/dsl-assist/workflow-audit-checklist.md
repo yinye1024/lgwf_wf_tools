@@ -22,10 +22,12 @@
 - 根 `workflow.lgwf` 可通过 `scripts/lgwf.py compile` 编译；运行时 facade 在 `<work_dir>\.lgwf\workflow\` snapshot 中自动完成编译。
 - 当前 workflow 可直接声明普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`PARALLEL`。
 - 子 workflow 通过 `STEP ... WORKFLOW` 引用，且父 workflow 不重复声明其内部节点。
+- 子 workflow 的 `approve` / `revise` / `reject` 等交互细节不得泄露到父 workflow；拒绝、取消或不可继续时，子 workflow 内部 route 到保留目标 `FAIL_ALL`。
 - 单节点、人工确认和输出校验优先作为普通 step，不强制包装成子 workflow。
 - 如果兼容旧 package 时同时存在 `workflow.lgwf` 和 `workflow.json`，snapshot 中的新编译结果覆盖旧 JSON。
 - `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
 - 新建 workflow 优先使用 `FLOW { ... }` 集中表达全局流程；块内 `THEN` lowering 为 `edges`，`WHEN "route_key" THEN` lowering 为 `routes`。旧 `FLOW ...;` 和独立 `ROUTE ...;` 只作为兼容写法保留。
+- `FAIL_ALL` 只能作为 route target 使用，不允许作为 node id；命中后当前 workflow failed，并向父 workflow 传播失败，父 workflow 后续 step 不应运行。
 - `READ`、`WRITE`、`RESULT`、`INSTRUCTION` 必须使用 `state.*` runtime state path。
 - `PROMPT`、`SCRIPT`、`CONTEXT file|dir` 必须使用相对文件资源路径。
 - `REACT` sugar 只表达 `subgraph.react`，必须包含 `REASON`、`ACT`、`OBSERVE`、`DECIDE`；slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`，其中 `WORKFLOW` slot 必须声明 `RESULT state.*`。
@@ -46,6 +48,7 @@
 
 - 每个 workflow 的 `workflow.lgwf` 只组装其直接普通 step 和直接子 workflow。
 - 普通 step 的资源由父 workflow 直接引用。
+- 父 workflow 只表达阶段编排，不写子 workflow 内部确认分支；检查是否存在把子 workflow 的 `reject` route 接到父级汇总节点的耦合写法，必要时改为子 workflow 内部 `THEN FAIL_ALL`。
 - 多个直接子级共用资源放在当前 workflow 的 `shared/`。
 - workflow 引用路径相对当前 `workflow.lgwf`，必须指向 `.lgwf`，且引用链不存在循环。
 - `SCRIPT`、`PROMPT`、`CONTEXT workflow` 相对当前 `workflow.lgwf`，编译后成为 package-root 相对路径。
