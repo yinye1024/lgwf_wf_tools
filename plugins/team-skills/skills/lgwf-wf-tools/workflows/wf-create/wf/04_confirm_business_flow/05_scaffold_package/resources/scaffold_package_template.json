@@ -1,0 +1,83 @@
+{
+  "template_id": "workflow_packaged_skill",
+  "template_version": 1,
+  "description": "外层 package 包住内层 wf/ workflow root 的脚手架模板。",
+  "default_profile": "internal_workflow_package",
+  "profiles": {
+    "internal_workflow_package": {
+      "description": "可迁移到 lgwf-wf-tools/workflows/* 的内部 workflow package，不生成根 SKILL.md。",
+      "root_files": [
+        "AGENTS.md",
+        "README.md"
+      ]
+    },
+    "skill_wrapped_workflow": {
+      "description": "可作为 Codex skill 暴露的 workflow packaged skill，根 SKILL.md 只作为入口说明和路由封装。",
+      "root_files": [
+        "SKILL.md",
+        "AGENTS.md",
+        "README.md"
+      ]
+    }
+  },
+  "root_dirs": [
+    "scripts",
+    "tests",
+    "ws",
+    "wf",
+    "wf/agents",
+    "wf/shared",
+    "wf/common",
+    "wf/docs/steps"
+  ],
+  "step_dirs": [
+    "02_confirm_requirements",
+    "02_confirm_requirements/00_collect_raw_intent",
+    "02_confirm_requirements/01_propose_requirements_react",
+    "04_confirm_business_flow",
+    "04_confirm_business_flow/03_propose_business_flow_react",
+    "04_confirm_business_flow/05_scaffold_package",
+    "07_confirm_step_designs",
+    "07_confirm_step_designs/06_design_steps_react",
+    "07_confirm_step_designs/08_implement_steps_react",
+    "09_summarize_create_result"
+  ],
+  "step_private_dirs": [
+    "agents",
+    "resources",
+    "scripts"
+  ],
+  "workflow_files": [
+    "wf/workflow.lgwf",
+    "wf/common/confirmation_io.py",
+    "wf/02_confirm_requirements/00_collect_raw_intent/scripts/finish_raw_intent.py",
+    "wf/02_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+    "wf/02_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
+    "wf/02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+    "wf/02_confirm_requirements/scripts/finish_confirmation.py",
+    "wf/04_confirm_business_flow/05_scaffold_package/scripts/scaffold_package.py",
+    "wf/04_confirm_business_flow/05_scaffold_package/resources/scaffold_package_template.json",
+    "wf/04_confirm_business_flow/05_scaffold_package/resources/scaffold_template_spec.md",
+    "wf/04_confirm_business_flow/05_scaffold_package/resources/scaffold_result_contract.md",
+    "wf/04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+    "wf/04_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
+    "wf/04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+    "wf/04_confirm_business_flow/scripts/finish_confirmation.py",
+    "wf/07_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+    "wf/07_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
+    "wf/07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+    "wf/07_confirm_step_designs/scripts/finish_confirmation.py",
+    "wf/09_summarize_create_result/scripts/summarize_create_result.py"
+  ],
+  "test_files": [
+    "tests/test_scaffold_package_rules.py",
+    "tests/README.md"
+  ],
+  "placeholders": {
+    "wf": "唯一 workflow package root；真实入口为 wf/workflow.lgwf",
+    "wf/docs/steps": "后续步骤设计文档落位目录",
+    "tests/test_scaffold_package_rules.py": "覆盖路径规则、关键文件存在性和状态边界的最小验证入口",
+    "ws": "work dir 根目录；运行状态写入 ws/.lgwf",
+    "SKILL.md": "仅在 package_profile=skill_wrapped_workflow 时生成；作为 Codex skill 入口，不承载内部 workflow 细节"
+  }
+}

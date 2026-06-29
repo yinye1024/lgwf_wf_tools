@@ -1,4 +1,4 @@
-﻿# LGWF Post-Run 自动分析与优化设计
+# LGWF Post-Run 自动分析与优化设计
 
 ## 目标
 
@@ -355,4 +355,4 @@ lgwf_post_run_apply_suggestions
 - 是否需要 `lgwf-client-assist` 在每次 `run` 后自动提供 “运行分析命令提示”。
 - 是否把 `run_context.json` 聚合能力下沉为 `lgwf.py runs collect-context`。
 - `deep` 分析是否允许读取 prompt/script 全文，还是只读取摘要。
-- 后续 patch workflow 是否与 `lgwf-wf-agent` 复用能力，避免重复实现修复逻辑。
+- 后续 patch workflow 是否与 `lgwf-wf-tools` 复用能力，避免重复实现修复逻辑。

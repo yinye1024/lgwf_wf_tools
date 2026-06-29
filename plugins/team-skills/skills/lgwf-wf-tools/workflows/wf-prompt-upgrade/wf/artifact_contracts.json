@@ -1,0 +1,18 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/prompt_upgrade/react_history.json"
+  ],
+  "script_writes": {
+    "check_lgwf_client_assist": [
+      ".lgwf/prompt_upgrade/environment_check.json"
+    ],
+    "build_prompt_inventory": [
+      ".lgwf/prompt_upgrade_target.json",
+      ".lgwf/prompt_upgrade/inventory.json",
+      ".lgwf/prompt_upgrade/react_history.json"
+    ],
+    "validate_apply_plan": [
+      ".lgwf/prompt_upgrade/apply_plan_validation.json"
+    ]
+  }
+}

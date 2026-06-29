@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "lgwf-wf-tools self eval cases",
+  "type": "object",
+  "required": ["version", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "input", "expected"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "category": {
+            "type": "string",
+            "enum": ["routing", "monitoring", "approval", "input_contract", "release", "reporting", "workflow_health"]
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "workflow_id": {"type": "string"},
+              "must_read": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "must_not_start": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "required_text": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["path", "contains"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "path": {"type": "string"},
+                    "contains": {"type": "string"}
+                  }
+                }
+              },
+              "changed_file_triggers": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
