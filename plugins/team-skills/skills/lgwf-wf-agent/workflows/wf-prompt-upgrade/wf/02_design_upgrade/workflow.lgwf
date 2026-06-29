@@ -1,0 +1,39 @@
+WORKFLOW prompt_upgrade_design_upgrade;
+ENTRY design_prompt_upgrade;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_prompt_upgrade.instructions.{node}";
+  result_path "lgwf_wf_prompt_upgrade.results.{node}";
+}
+
+REACT design_prompt_upgrade MAX 3
+  SPEC "agents/spec.md"
+  REASON CODEX
+    PROMPT "agents/reason.md"
+    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
+    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
+    RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
+  ACT CODEX
+    PROMPT "agents/act.md"
+    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
+    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/proposal.json" AS_FILE
+    RESULT state.lgwf_wf_prompt_upgrade.design_act_result
+  OBSERVE CODEX
+    PROMPT "agents/observe.md"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
+    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_upgrade/proposal_review.json"
+    RESULT state.lgwf_wf_prompt_upgrade.design_observe_result
+  DECIDE PY
+    SCRIPT "scripts/decide_prompt_upgrade_design.py"
+    RESULT state.lgwf_wf_prompt_upgrade.design_decide_result
+    UPDATES_STATE;

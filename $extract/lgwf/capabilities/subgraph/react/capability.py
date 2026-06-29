@@ -41,7 +41,12 @@ class SubgraphReactCapability:
         slots: dict[str, dict[str, Any]] = {}
         for slot_name in SLOTS:
             slot = config.get(slot_name)
-            slots[slot_name] = subgraph_node_module.validate_node(node_id, slot_name, slot)
+            slots[slot_name] = subgraph_node_module.validate_node(
+                node_id,
+                slot_name,
+                slot,
+                allow_nested_capabilities={"subgraph.workflow"},
+            )
 
         return slots
 

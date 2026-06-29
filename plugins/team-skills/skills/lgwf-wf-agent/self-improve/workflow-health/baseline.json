@@ -31,6 +31,35 @@
       "known_blockers": []
     },
     {
+      "id": "wf-create",
+      "expected_role": "根据用户原始意图创建新的 LGWF workflow 初稿，分阶段确认需求、业务流、步骤设计和实现初稿。",
+      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-create/wf/workflow.lgwf",
+      "test_command": "python -m unittest discover workflows/wf-create/tests",
+      "semantic_requirements": [
+        {
+          "id": "non_goal_boundary",
+          "description": "说明不负责的范围。",
+          "any_contains": ["不负责", "不接入"]
+        },
+        {
+          "id": "approval_boundary",
+          "description": "说明需求、业务流和步骤设计的 approval 边界。",
+          "any_contains": ["approval", "确认"]
+        },
+        {
+          "id": "output_contract",
+          "description": "说明固定产物或结果汇总。",
+          "any_contains": ["固定产物", "结果汇总"]
+        },
+        {
+          "id": "facade_route_back",
+          "description": "说明作为 facade 内部 workflow 由 registry 派发。",
+          "any_contains": ["facade", "registry", "内部 workflow"]
+        }
+      ],
+      "known_blockers": []
+    },
+    {
       "id": "wf-prompt-fix",
       "expected_role": "审计并修复目标 workflow 引用的 prompt 基础规范问题，不运行目标 workflow。",
       "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-prompt-fix/wf/workflow.lgwf",

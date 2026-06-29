@@ -44,7 +44,7 @@ class ArtifactContractAuditor:
         self._validate_script_write_nodes(diagnostics)
 
         for consumer in consumers:
-            if consumer.path not in producers:
+            if not self._has_producer(producers, consumer):
                 diagnostics.append(
                     diagnostics_module.Diagnostic(
                         f"{consumer.source} consumes workspace artifact without an explicit producer: {consumer.path}",
@@ -53,7 +53,7 @@ class ArtifactContractAuditor:
                         code="LGWF_ARTIFACT_CONTRACT_MISSING",
                         suggestion=(
                             "Add an upstream OUTPUT_JSON, APPROVAL PERSIST, or artifact_contracts.json "
-                            "bootstrap_inputs/script_writes declaration for this .lgwf file."
+                            "bootstrap_inputs/script_writes declaration for this .lgwf file or directory."
                         ),
                     )
                 )
@@ -174,8 +174,19 @@ class ArtifactContractAuditor:
     ) -> None:
         for resource in self._expand_contexts(contexts, context_sets):
             path = self._artifact_path(resource.path)
-            if resource.root == "workspace" and resource.type == "file" and path is not None:
-                consumers.append(ArtifactRef(path, node_id, "CONTEXT workspace file", resource.location))
+            if resource.root == "workspace" and path is not None:
+                if resource.type == "file":
+                    consumers.append(ArtifactRef(path, node_id, "CONTEXT workspace file", resource.location))
+                elif resource.type == "dir":
+                    consumers.append(ArtifactRef(path, node_id, "CONTEXT workspace dir", resource.location))
+
+    def _has_producer(self, producers: dict[str, list[ArtifactRef]], consumer: ArtifactRef) -> bool:
+        if consumer.path in producers:
+            return True
+        if consumer.source != "CONTEXT workspace dir":
+            return False
+        prefix = consumer.path.rstrip("/") + "/"
+        return any(path.startswith(prefix) for path in producers)
 
     def _collect_child_workflow(
         self,

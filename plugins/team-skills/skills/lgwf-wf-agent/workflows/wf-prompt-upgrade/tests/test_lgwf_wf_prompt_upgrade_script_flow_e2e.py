@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import contextlib
 import importlib.util
@@ -125,6 +125,7 @@ def patch_skill_discovery_env(workspace: Path, *, skill_dir: Path | None):
     if skill_dir is not None:
         env["LGWF_CLIENT_ASSIST"] = str(skill_dir)
         env["LGWF_CLIENT_ASSIST_SKILL_DIR"] = str(skill_dir)
+        env["LGWF_ALLOW_TEST_CLIENT_ASSIST_ENV"] = "1"
     with mock.patch.dict(os.environ, env, clear=True):
         yield
 
@@ -196,7 +197,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
 
             with patch_skill_discovery_env(workspace, skill_dir=skill_dir):
                 payload, _, error = run_script_main(
-                    "00_check_environment/scripts/check_lgwf_client_assist.py",
+                    "01_prepare_target/scripts/check_lgwf_client_assist.py",
                     "case_environment_check_success_writes_artifact",
                 )
 
@@ -220,7 +221,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
         with isolated_workspace_cwd() as workspace:
             with patch_skill_discovery_env(workspace, skill_dir=None):
                 payload, _, error = run_script_main(
-                    "00_check_environment/scripts/check_lgwf_client_assist.py",
+                    "01_prepare_target/scripts/check_lgwf_client_assist.py",
                     "case_environment_check_uses_bundled_client_without_external_skill",
                 )
 
@@ -248,7 +249,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
             )
 
             payload, _, error = run_script_main(
-                "01_inventory/scripts/build_prompt_inventory.py",
+                "01_prepare_target/scripts/build_prompt_inventory.py",
                 "case_inventory_builds_from_persisted_target",
             )
 
@@ -326,7 +327,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 ],
                 "files_to_modify": [
                     "wf/02_design_upgrade/agents/act.md",
-                    "wf/04_apply_upgrade/agents/act.md",
+                    "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
                 ],
                 "risks": ["需要保持审批语义稳定"],
             }
@@ -342,7 +343,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 {
                     "prompts": [
                         {"prompt_path": "wf/02_design_upgrade/agents/act.md"},
-                        {"prompt_path": "wf/04_apply_upgrade/agents/act.md"},
+                        {"prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"},
                     ]
                 },
             )
@@ -496,13 +497,13 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 {
                     "summary": "还有未完成的应用动作。",
                     "prompt_upgrades": [{"id": "upgrade_apply"}],
-                    "files_to_modify": ["wf/04_apply_upgrade/agents/act.md"],
+                    "files_to_modify": ["wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"],
                 },
             )
             write_utf8_json_fixture(
                 workspace,
                 ".lgwf/prompt_upgrade/inventory.json",
-                {"prompts": [{"prompt_path": "wf/04_apply_upgrade/agents/act.md"}]},
+                {"prompts": [{"prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"}]},
             )
             write_utf8_json_fixture(
                 workspace,
@@ -557,7 +558,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 {
                     "prompts": [
                         {"prompt_path": "wf/02_design_upgrade/agents/act.md"},
-                        {"prompt_path": "wf/04_apply_upgrade/agents/act.md"},
+                        {"prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"},
                     ]
                 },
             )

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -199,7 +199,7 @@ MAIN_PROMPT_TO_NODE = {
     "02_design_upgrade/agents/act.md": "design_prompt_upgrade__act",
     "02_design_upgrade/agents/observe.md": "design_prompt_upgrade__observe",
     "04_apply_upgrade/agents/reason.md": "apply_prompt_upgrade__reason",
-    "04_apply_upgrade/agents/act.md": "apply_prompt_upgrade__act",
+    "04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md": "apply_prompt_upgrade__act",
     "04_apply_upgrade/agents/observe.md": "apply_prompt_upgrade__observe",
 }
 
@@ -306,7 +306,7 @@ def write_proposal(workspace: pathlib.Path) -> list[str]:
             "prompt_upgrades": [
                 {
                     "id": "upgrade_runtime_fake_generation_contract",
-                    "prompt_path": "wf/04_apply_upgrade/agents/act.md",
+                    "prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
                     "workflow_path": "wf/workflow.lgwf",
                     "node_id": "apply_prompt_upgrade",
                     "react_phase": "act",
@@ -333,7 +333,7 @@ def write_proposal(workspace: pathlib.Path) -> list[str]:
                     "quality_metrics": ["modified_files 可审计"],
                     "planned_changes": [
                         {
-                            "file": "wf/04_apply_upgrade/agents/act.md",
+                            "file": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
                             "change": "补充执行摘要字段约束",
                             "reason": "增强可观察性",
                         }
@@ -342,7 +342,7 @@ def write_proposal(workspace: pathlib.Path) -> list[str]:
                     "risk_controls": ["不越界修改"],
                 }
             ],
-            "files_to_modify": ["wf/04_apply_upgrade/agents/act.md"],
+            "files_to_modify": ["wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"],
             "quality_metrics": ["proposal contains non-empty upgrades"],
             "acceptance_checks": ["files_to_modify within target package"],
             "risks": ["target package is test copy only"],
@@ -384,7 +384,7 @@ def write_apply_plan(workspace: pathlib.Path) -> list[str]:
                 {
                     "step_id": "step_1",
                     "upgrade_id": "upgrade_runtime_fake_generation_contract",
-                    "file": "wf/04_apply_upgrade/agents/act.md",
+                    "file": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
                     "intent": "补充稳定执行摘要契约。",
                 }
             ],
@@ -471,17 +471,19 @@ def main(argv: list[str]) -> int:
             "output_files": output_files,
         },
     )
-    print(
-        json.dumps(
-            {
-                "ok": True,
-                "node_key": node_key,
-                "call_index": call_index,
-                "output_files": output_files,
-            },
-            ensure_ascii=False,
-        )
-    )
+    payload = {
+        "ok": True,
+        "node_key": node_key,
+        "call_index": call_index,
+        "output_files": output_files,
+    }
+    if len(output_files) == 1 and output_files[0].startswith(".lgwf/prompt_upgrade/") and output_files[0].endswith(".json"):
+        artifact = workspace / output_files[0]
+        if artifact.exists():
+            loaded = read_json(artifact, {})
+            if isinstance(loaded, dict):
+                payload.update(loaded)
+    print(json.dumps(payload, ensure_ascii=False))
     return 0
 
 
@@ -528,7 +530,7 @@ def scenario_fake_responses(scenario_id: str) -> list[dict[str, Any]]:
                     "node_id": "apply_prompt_upgrade",
                     "phase": "act",
                     "call_index": 1,
-                    "output_files": ["wf/04_apply_upgrade/agents/act.md"],
+                    "output_files": ["wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"],
                 },
                 {
                     "node_id": "apply_prompt_upgrade",
@@ -642,6 +644,7 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
         env["LGWF_FAKE_CODEX_PROMPT_FILE_MODE"] = "1"
         env["LGWF_CLIENT_ASSIST"] = str(skill_dir)
         env["LGWF_CLIENT_ASSIST_SKILL_DIR"] = str(skill_dir)
+        env["LGWF_ALLOW_TEST_CLIENT_ASSIST_ENV"] = "1"
         return env, work_dir, log_file
 
     def _wait_for_status(self, pid: int, work_dir: Path, env: dict[str, str], timeout_seconds: int = 30) -> dict[str, Any]:
@@ -789,7 +792,11 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
                     value=initial_target_payload(target_package),
                     decision="approve",
                 )
-            elif isinstance(context, dict) and context.get("ready_for_confirmation") is True:
+            elif (
+                isinstance(context, dict)
+                and isinstance(context.get("prompt_upgrades"), list)
+                and isinstance(context.get("instructions"), dict)
+            ):
                 status = self._submit_approval(
                     pid=pid,
                     work_dir=work_dir,
@@ -828,7 +835,8 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
         self.assertTrue(read_json(prompt_root / "environment_check.json")["passed"])
         inventory = read_json(prompt_root / "inventory.json")
         self.assertTrue(inventory["prompts"])
-        self.assertTrue(read_json(prompt_root / "proposal_review.json")["ready_for_confirmation"])
+        self.assertTrue((prompt_root / "proposal_review.json").is_file())
+        self.assertEqual(read_json(prompt_root / "design_decision.json")["next"], "exit")
         decision = read_json(prompt_root / "decision.json")
         self.assertTrue(decision["approve"])
         self.assertTrue(decision["approved_upgrade_ids"])
@@ -841,7 +849,14 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
         self.assertEqual(react_history[-1]["next"], "exit")
         summary = read_json(work_dir / ".lgwf" / "target_prompt_upgrade_summary.json")
         self.assertEqual(summary["status"], "upgraded")
-        changed_target_file = Path(target["target_package_root"]) / "wf" / "04_apply_upgrade" / "agents" / "act.md"
+        changed_target_file = (
+            Path(target["target_package_root"])
+            / "wf"
+            / "04_apply_upgrade"
+            / "act_apply_prompt_upgrade"
+            / "agents"
+            / "act.md"
+        )
         self.assertIn("runtime fake e2e applied", changed_target_file.read_text(encoding="utf-8"))
         calls = [json.loads(line) for line in (work_dir / ".lgwf" / "fake_codex_calls.jsonl").read_text(encoding="utf-8").splitlines()]
         self.assertEqual(len(calls), 6)

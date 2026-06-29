@@ -15,6 +15,11 @@ def _has_items(value: Any) -> bool:
 
 
 def choose_route(summary: dict[str, Any]) -> str:
+    clean_audit = (
+        summary.get("status") == "passed"
+        and summary.get("audit_passed") is True
+        and not _has_items(summary.get("remaining_issue_ids"))
+    )
     repair_clean = (
         summary.get("status") == "fixed"
         and summary.get("repair_passed") is True
@@ -25,7 +30,7 @@ def choose_route(summary: dict[str, Any]) -> str:
         or _has_items(summary.get("unexpected_change_ids"))
         or _has_items(summary.get("unplanned_changes"))
     )
-    if repair_clean and not has_unexpected_changes:
+    if (clean_audit or repair_clean) and not has_unexpected_changes:
         return "auto_finish"
     return "confirm"
 

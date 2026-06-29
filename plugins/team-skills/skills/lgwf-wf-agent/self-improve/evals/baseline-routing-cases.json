@@ -75,6 +75,32 @@
       }
     },
     {
+      "id": "route-new-workflow-creation-to-wf-create",
+      "category": "routing",
+      "input": {
+        "user_request": "我只有一个原始想法，帮我创建一个新的 LGWF workflow 初稿",
+        "context": ["用户调用 lgwf-wf-agent", "目标是从零创建 workflow", "需要分阶段确认需求、业务流和步骤设计"]
+      },
+      "expected": {
+        "workflow_id": "wf-create",
+        "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create/AGENTS.md"],
+        "required_text": [
+          {
+            "path": "AGENTS.md",
+            "contains": "目标是从原始意图创建新的 LGWF workflow 初稿"
+          },
+          {
+            "path": "AGENTS.md",
+            "contains": "使用 `wf-create`"
+          },
+          {
+            "path": "registry.json",
+            "contains": "\"id\": \"wf-create\""
+          }
+        ]
+      }
+    },
+    {
       "id": "route-workflow-authoring-preflight-lists-workflows",
       "category": "routing",
       "input": {
@@ -108,7 +134,7 @@
       "id": "route-ambiguous-optimize-fix-requires-solution-first-plan",
       "category": "routing",
       "input": {
-        "user_request": "优化 修复 D:/repo/plugins/team-skills/skills/lgwf-wf-create 这个工作流",
+        "user_request": "优化 修复 D:/repo/plugins/team-skills/skills/lgwf-wf-agent/workflows/wf-create 这个工作流",
         "context": ["目标 workflow authoring audit passed", "用户没有明确授权立即运行或自动修复", "请求同时包含优化和修复"]
       },
       "expected": {
@@ -139,7 +165,7 @@
       "id": "route-ambiguous-modify-goal-requires-proposal-gate",
       "category": "routing",
       "input": {
-        "user_request": "修复优化 D:/repo/plugins/team-skills/skills/lgwf-wf-create",
+        "user_request": "修复优化 D:/repo/plugins/team-skills/skills/lgwf-wf-agent/workflows/wf-create",
         "context": ["用户给出目标 package 路径", "没有明确授权直接修改", "没有真实失败 run 证据"]
       },
       "expected": {

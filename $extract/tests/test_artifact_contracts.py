@@ -140,6 +140,62 @@ FLOW prepare THEN inspect;
 
         self.assertTrue(payload["passed"], json.dumps(payload["diagnostics"], ensure_ascii=False))
 
+    def test_artifact_contracts_script_writes_satisfies_workspace_dir_consumer(self) -> None:
+        payload = audit_package(
+            {
+                "workflow.lgwf": """
+WORKFLOW demo;
+ENTRY prepare;
+
+PY prepare
+  SCRIPT "prepare.py";
+
+CODEX inspect
+  PROMPT "prompt.md"
+  CONTEXT workspace dir ".lgwf/reference_context/prompt-assist";
+
+FLOW prepare THEN inspect;
+""",
+                "prompt.md": PROMPT,
+                "prepare.py": "print('{}')\n",
+                "artifact_contracts.json": json.dumps(
+                    {
+                        "script_writes": {
+                            "prepare": [
+                                ".lgwf/reference_context/prompt-assist/guide.md",
+                                ".lgwf/reference_context/prompt-assist/shared-rules.md",
+                            ]
+                        }
+                    }
+                ),
+            }
+        )
+
+        self.assertTrue(payload["passed"], json.dumps(payload["diagnostics"], ensure_ascii=False))
+
+    def test_missing_workspace_dir_artifact_producer_fails_audit(self) -> None:
+        payload = audit_package(
+            {
+                "workflow.lgwf": """
+WORKFLOW demo;
+ENTRY inspect;
+
+CODEX inspect
+  PROMPT "prompt.md"
+  CONTEXT workspace dir ".lgwf/reference_context/prompt-assist";
+""",
+                "prompt.md": PROMPT,
+            }
+        )
+
+        self.assertFalse(payload["passed"])
+        diagnostics = payload["diagnostics"]
+        self.assertIn("LGWF_ARTIFACT_CONTRACT_MISSING", {item["code"] for item in diagnostics})
+        self.assertTrue(
+            any("CONTEXT workspace dir" in item["message"] for item in diagnostics),
+            json.dumps(diagnostics, ensure_ascii=False),
+        )
+
     def test_artifact_contracts_script_writes_rejects_unknown_node(self) -> None:
         payload = audit_package(
             {

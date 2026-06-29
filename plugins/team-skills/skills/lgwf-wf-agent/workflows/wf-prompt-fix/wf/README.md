@@ -2,6 +2,8 @@
 
 `lgwf_wf_prompt_fix` 用于验收并修复目标 LGWF workflow package 中被 `PROMPT` 或 `PROMPT_REF` 引用的 prompt 文件。它只负责 prompt 验收、问题选择、修复和复核，不负责运行目标 workflow。
 
+根 `workflow.lgwf` 只编排 5 个主要阶段：`prepare_target`、`audit_prompts`、`select_fixes`、`repair_loop` 和 `summary`。每个阶段的脚本、prompt、approval 和 ReAct 细节由对应子 workflow 维护，避免根 workflow 直接展开全部节点。
+
 ## 输入
 
 启动时通过 `--input-json` 传入目标 workflow 信息：
@@ -39,6 +41,9 @@ workflow 会先执行 `init_prompt_fix_target`，等待主 agent 在当前对话
 - `.lgwf/prompt_acceptance/audit.json`
 - `.lgwf/prompt_acceptance/fix_selection.json`
 - `.lgwf/prompt_acceptance/repair_plan.json`
+- `.lgwf/prompt_acceptance/repair_plan_validation.json`
 - `.lgwf/prompt_acceptance/repair_review.json`
 - `.lgwf/prompt_acceptance/summary.json`
 - `.lgwf/prompt_acceptance/confirmation.json`
+
+`repair_plan_validation.json` 由 `repair_loop` 的 `ACT` 子 workflow 在实际修改前写入；如果 `repair_plan.json.files_to_modify` 包含绝对路径、`..`、`.lgwf/`、目标 package 外路径或 `target_dirs` 外路径，workflow 会停止在修改前。

@@ -1,0 +1,46 @@
+WORKFLOW prompt_fix_repair_loop;
+ENTRY repair_target_prompts;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
+  result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
+}
+
+REACT repair_target_prompts MAX 3
+  SPEC "agents/spec.md"
+  REASON CODEX
+    PROMPT "agents/reason_prompt_fix.md"
+    CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/environment_check.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/audit.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/fix_selection.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/react_history.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md"
+    CONTEXT workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist"
+    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_reason_result
+  ACT WORKFLOW apply_prompt_fix
+    WORKFLOW "act_apply_prompt_fix/workflow.lgwf"
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_act_result
+  OBSERVE CODEX
+    PROMPT "agents/observe_prompt_fix.md"
+    CONTEXT workspace file ".lgwf/prompt_fix_target.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/environment_check.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/audit.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/fix_selection.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/repair_review.json"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md"
+    CONTEXT workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist"
+    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_observe_result
+  DECIDE PY
+    SCRIPT "scripts/decide_prompt_fix.py"
+    RESULT state.lgwf_wf_prompt_fix.prompt_repair_decide_result
+    UPDATES_STATE;
