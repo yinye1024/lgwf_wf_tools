@@ -1,4 +1,4 @@
-﻿# `lgwf-wf-create` 决策草案
+# `lgwf-wf-create` 决策草案
 
 ## 摘要
 
@@ -7,7 +7,7 @@
 后续由主 agent 串联：
 
 ```text
-lgwf-wf-create -> lgwf-wf-prompt-fix -> lgwf-wf-agent
+lgwf-wf-create -> lgwf-wf-prompt-fix -> lgwf-wf-tools
 ```
 
 ## 核心流程
@@ -143,7 +143,7 @@ plugins/team-skills/skills/lgwf-wf-create/ws/.lgwf/
 第一版 `lgwf-wf-create` 不做这些事：
 
 - 不调用 `lgwf-wf-prompt-fix`。
-- 不调用 `lgwf-wf-agent`。
+- 不调用 `lgwf-wf-tools`。
 - 不保证目标 workflow 能端到端运行成功。
 - 不自动修复 prompt 质量问题。
 - 不自动循环修复运行失败。

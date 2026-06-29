@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "commands": [
+    {
+      "command": "/lgwf-wf-tools",
+      "description": "执行入口预检，通过后按用户目标路由到合适 workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools help",
+      "description": "只展示帮助，不修改文件、不派发内部 workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools init",
+      "description": "同步临时 zip 到 vendor，并输出初始化报告。"
+    },
+    {
+      "command": "/lgwf-wf-tools doctor",
+      "description": "只读检查 facade 安装完整性。"
+    },
+    {
+      "command": "/lgwf-wf-tools list",
+      "description": "只读列出 registry 中可派发的内部 workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools self-improve",
+      "description": "根据执行证据进入 self-improve 流程。"
+    },
+    {
+      "command": "/lgwf-wf-tools 优化方案",
+      "description": "查看最近或当前 self-improve proposal 的 review 计划，不直接执行修改。"
+    }
+  ]
+}
