@@ -1,22 +1,22 @@
 {
   "name": "team-skills",
   "version": "0.1.0",
-  "description": "Shared Codex skills for team development workflows and conventions.",
+  "description": "LGWF Codex skills for workflow routing, monitoring, and improvement.",
   "author": {
     "name": "LGWF Team"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Team Skills",
-    "shortDescription": "Shared team workflows and Codex skills.",
-    "longDescription": "Team Skills packages the reusable Codex skills that the team uses for development workflows, delivery conventions, and repository-specific operating procedures.",
+    "shortDescription": "LGWF workflow facade and support skills.",
+    "longDescription": "Team Skills packages LGWF-related Codex skills for routing user requests to workflows, monitoring workflow execution, and improving workflow behavior from run evidence.",
     "developerName": "LGWF Team",
     "category": "Productivity",
     "capabilities": ["Skills"],
     "defaultPrompt": [
-      "Follow our team workflow for this change.",
-      "Use the team conventions before editing code.",
-      "Add a new team skill to this plugin."
+      "Use /lgwf-wf-tools to route this request to a suitable workflow.",
+      "Check available LGWF workflows before choosing an execution path.",
+      "Improve the LGWF workflow facade from recent execution evidence."
     ]
   }
 }
