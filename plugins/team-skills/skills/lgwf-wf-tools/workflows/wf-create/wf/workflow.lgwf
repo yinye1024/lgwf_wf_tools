@@ -20,14 +20,7 @@ STEP implement_draft
 STEP summarize_create_result
   WORKFLOW "09_summarize_create_result/workflow.lgwf";
 
-FLOW {
-  define_requirements
-    WHEN "approve" THEN design_structure
-    WHEN "reject" THEN summarize_create_result;
-
-  design_structure
-    WHEN "approve" THEN implement_draft
-    WHEN "reject" THEN summarize_create_result;
-
-  implement_draft THEN summarize_create_result;
-}
+FLOW define_requirements
+  THEN design_structure
+  THEN implement_draft
+  THEN summarize_create_result;

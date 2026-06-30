@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import contextlib
 import importlib.util
@@ -327,7 +327,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 ],
                 "files_to_modify": [
                     "wf/02_design_upgrade/agents/act.md",
-                    "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
+                    "wf/04_apply_upgrade/agents/act.md",
                 ],
                 "risks": ["需要保持审批语义稳定"],
             }
@@ -343,7 +343,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 {
                     "prompts": [
                         {"prompt_path": "wf/02_design_upgrade/agents/act.md"},
-                        {"prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"},
+                        {"prompt_path": "wf/04_apply_upgrade/agents/act.md"},
                     ]
                 },
             )
@@ -434,7 +434,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                     },
                 )
 
-    def test_case_reject_route_to_summary_status_rejected(self) -> None:
+    def test_case_reject_routes_to_fail_all_without_summary(self) -> None:
         with isolated_workspace_cwd() as workspace:
             write_utf8_json_fixture(
                 workspace,
@@ -469,25 +469,11 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
 
             route_payload, _, route_error = run_script_main(
                 "03_confirm_upgrade/scripts/route_after_prompt_upgrade_decision.py",
-                "case_reject_route_to_summary_status_rejected_route",
+                "case_reject_routes_to_fail_all_without_summary_route",
             )
             self.assertIsNone(route_error)
-            self.assertEqual(route_payload["__route__route_after_prompt_upgrade_decision"], "summarize")
-
-            summary_payload, _, summary_error = run_script_main(
-                "05_summary/scripts/summarize_prompt_upgrade.py",
-                "case_reject_route_to_summary_status_rejected_summary",
-            )
-            self.assertIsNone(summary_error)
-            self.assertEqual(summary_payload["lgwf_wf_prompt_upgrade.prompt_upgrade_summary"]["status"], "rejected")
-            for relative in (".lgwf/prompt_upgrade/summary.json", ".lgwf/target_prompt_upgrade_summary.json"):
-                assert_json_file_matches_subset(
-                    workspace / relative,
-                    {
-                        "status": "rejected",
-                        "approved_upgrade_ids": [],
-                    },
-                )
+            self.assertEqual(route_payload["__route__route_after_prompt_upgrade_decision"], "reject")
+            self.assertFalse((workspace / ".lgwf" / "target_prompt_upgrade_summary.json").exists())
 
     def test_case_apply_decision_continue_and_summary_needs_attention(self) -> None:
         with isolated_workspace_cwd() as workspace:
@@ -497,13 +483,13 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 {
                     "summary": "还有未完成的应用动作。",
                     "prompt_upgrades": [{"id": "upgrade_apply"}],
-                    "files_to_modify": ["wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"],
+                    "files_to_modify": ["wf/04_apply_upgrade/agents/act.md"],
                 },
             )
             write_utf8_json_fixture(
                 workspace,
                 ".lgwf/prompt_upgrade/inventory.json",
-                {"prompts": [{"prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"}]},
+                {"prompts": [{"prompt_path": "wf/04_apply_upgrade/agents/act.md"}]},
             )
             write_utf8_json_fixture(
                 workspace,
@@ -558,7 +544,7 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
                 {
                     "prompts": [
                         {"prompt_path": "wf/02_design_upgrade/agents/act.md"},
-                        {"prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"},
+                        {"prompt_path": "wf/04_apply_upgrade/agents/act.md"},
                     ]
                 },
             )
@@ -593,3 +579,4 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

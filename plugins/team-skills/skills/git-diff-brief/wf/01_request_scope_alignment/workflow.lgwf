@@ -1,0 +1,49 @@
+WORKFLOW request_scope_alignment;
+ENTRY validate_repo_hint;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY validate_repo_hint
+  SCRIPT "scripts/validate_repo_hint.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.request_scope_validation_result
+  UPDATES_STATE;
+
+CODEX capture_request_context
+  PROMPT "agents/capture_request_context.md"
+  CONTEXT workflow file "resources/request_scope_contract.md"
+  OUTPUT_JSON ".lgwf/request_scope_capture.json"
+  RESULT state.git_diff_brief.request_scope_capture_result;
+
+PY prepare_scope_confirmation
+  SCRIPT "scripts/prepare_scope_confirmation.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.prepare_scope_confirmation_result
+  UPDATES_STATE;
+
+APPROVAL confirm_scope_if_needed
+  PROMPT_REF "agents/confirm_scope_if_needed.md"
+  READ state.git_diff_brief.scope_confirmation_input
+  WRITE state.git_diff_brief.scope_confirmation_decision
+  RESULT state.git_diff_brief.scope_confirmation_result
+  PERSIST ".lgwf/request_scope_confirmation.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY finalize_scope_confirmation
+  SCRIPT "scripts/finalize_scope_confirmation.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.finalize_scope_confirmation_result
+  UPDATES_STATE;
+
+FLOW {
+  validate_repo_hint THEN capture_request_context THEN prepare_scope_confirmation THEN confirm_scope_if_needed;
+
+  confirm_scope_if_needed
+    WHEN "approve" THEN finalize_scope_confirmation
+    WHEN "revise" THEN capture_request_context
+    WHEN "reject" THEN FAIL_ALL;
+}

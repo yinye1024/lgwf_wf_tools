@@ -1,0 +1,46 @@
+{
+  "workflow": "lgwf_wf_thinking",
+  "artifacts": [
+    {
+      "path": ".lgwf/lgwf_wf_thinking_request.json",
+      "producer": "collect_request",
+      "purpose": "保存用户原始 workflow 需求和运行上下文。"
+    },
+    {
+      "path": ".lgwf/available_workflows.json",
+      "producer": "list_available_workflows",
+      "purpose": "保存从 lgwf-wf-tools registry 读取到的可用 workflow 能力。"
+    },
+    {
+      "path": ".lgwf/need_classification.json",
+      "producer": "classify_need",
+      "purpose": "保存需求类型、推荐 workflow 候选和缺口判断。"
+    },
+    {
+      "path": ".lgwf/composition_plan.json",
+      "producer": "compose_plan",
+      "purpose": "保存 ReAct 生成的 workflow 组合方案。"
+    },
+    {
+      "path": ".lgwf/composition_plan_decision.json",
+      "producer": "confirm_plan",
+      "purpose": "保存用户对组合方案的确认、微调或拒绝意见。"
+    },
+    {
+      "path": ".lgwf/confirmed_composition_plan.json",
+      "producer": "apply_confirmed_plan",
+      "purpose": "保存确认后的组合方案。"
+    },
+    {
+      "path": ".lgwf/handoff_instructions.json",
+      "producer": "write_handoff",
+      "purpose": "保存交给 lgwf-wf-tools 的执行引导。"
+    },
+    {
+      "path": "reports/lgwf-wf-thinking/handoff.md",
+      "producer": "write_handoff",
+      "purpose": "保存面向人的执行摘要和下一步命令建议。"
+    }
+  ]
+}
+

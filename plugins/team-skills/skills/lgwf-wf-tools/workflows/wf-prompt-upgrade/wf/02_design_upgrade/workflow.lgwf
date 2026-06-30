@@ -1,5 +1,5 @@
 WORKFLOW prompt_upgrade_design_upgrade;
-ENTRY design_prompt_upgrade;
+ENTRY prepare_prompt_upgrade_design_feedback;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -8,12 +8,19 @@ DEFAULTS {
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
 
+PY prepare_prompt_upgrade_design_feedback
+  SCRIPT "scripts/prepare_prompt_upgrade_design_feedback.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_upgrade.design_feedback_prepare_result
+  UPDATES_STATE;
+
 REACT design_prompt_upgrade MAX 3
   SPEC "agents/spec.md"
   REASON CODEX
     PROMPT "agents/reason.md"
     CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/proposal_review.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
@@ -37,3 +44,6 @@ REACT design_prompt_upgrade MAX 3
     SCRIPT "scripts/decide_prompt_upgrade_design.py"
     RESULT state.lgwf_wf_prompt_upgrade.design_decide_result
     UPDATES_STATE;
+
+FLOW prepare_prompt_upgrade_design_feedback
+  THEN design_prompt_upgrade;

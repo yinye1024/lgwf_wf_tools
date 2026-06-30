@@ -83,7 +83,7 @@
 - `approval`：`confirm_requirements` 产出的 `create_requirements_approval` 决策结构，记录 `approve`、`revise`、`reject`。
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/create_requirements.json`，对应“确认后固化”产物。
 
-`approve` 后会把确认结果固化为 `.lgwf/create_requirements.json`；`revise` 和 `reject` 不进入下游业务流转阶段。
+`approve` 后会把确认结果固化为 `.lgwf/create_requirements.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游业务流转阶段。
 
 ## 业务流转与脚手架边界
 
@@ -93,7 +93,7 @@
 - `approval`：`confirm_business_flow` 产出的 `business_flow_approval` 决策结构，记录 `approve`、`revise`、`reject`。
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/business_flow.json`，对应“确认后固化”产物。
 
-`approve` 后会把确认结果固化为 `.lgwf/business_flow.json`；`revise` 和 `reject` 不进入下游脚手架和步骤设计阶段。
+`approve` 后会把确认结果固化为 `.lgwf/business_flow.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游脚手架和步骤设计阶段。
 
 `scaffold_package` 当前输出的是确定性规则和计划接口，重点约束：
 
@@ -109,7 +109,7 @@
 - `approval`：`confirm_step_designs` 产出的 `step_design_confirmation_record` 决策结构，记录 `approve`、`revise`、`reject`。
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/step_designs.json`，对应“确认后固化”产物。
 
-`approve` 后会把确认结果固化为 `.lgwf/step_designs.json`；`revise` 和 `reject` 不进入实现阶段。
+`approve` 后会把确认结果固化为 `.lgwf/step_designs.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入实现阶段。
 
 `implement_steps_react` 当前输出的是 workflow 初稿生成接口，重点约束：
 
@@ -158,4 +158,4 @@ python -m unittest discover plugins\team-skills\skills\lgwf-wf-tools\workflows\w
 - `lgwf-wf-prompt-fix` 自动调用、生成出的目标 workflow 自动接入 facade 路由、自动修复与端到端业务成功。
 ### revise 语义
 
-`revise` 表示局部调整，不等同于 `reject`。需求、业务流和步骤设计三个确认点收到 `revise` 后，会进入对应 `revise_*` 人工确认点；主 agent 可以根据 `changes` 提交修订后的 `approve` 结果，workflow 随后固化修订产物并继续下游。`reject` 才表示整体不继续，直接进入结果汇总。
+`revise` 表示局部调整，不等同于 `reject`。需求、业务流和步骤设计三个确认点收到 `revise` 后，会进入对应 `revise_*` 人工确认点；主 agent 可以根据 `changes` 提交修订后的 `approve` 结果，workflow 随后固化修订产物并继续下游。`reject` 表示整体失败，通过 `FAIL_ALL` 终止整个 run。

@@ -1,0 +1,18 @@
+WORKFLOW apply_confirmed_plan;
+ENTRY apply_confirmed_plan;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  instruction_path "lgwf_wf_thinking.apply_confirmed_plan.instructions.{node}";
+  result_path "lgwf_wf_thinking.apply_confirmed_plan.results.{node}";
+}
+
+PY apply_confirmed_plan
+  SCRIPT "scripts/apply_confirmed_plan.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_thinking.apply_plan_result
+  UPDATES_STATE;
+
+FLOW apply_confirmed_plan;
+

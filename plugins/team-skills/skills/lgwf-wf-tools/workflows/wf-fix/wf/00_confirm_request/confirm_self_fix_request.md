@@ -18,4 +18,4 @@
 
 确认后，workflow 会读取目标目录，分析目标 workflow 的启动参数契约，然后单独收集目标 workflow 的 `--input-json`。
 
-主 agent 提交该 JSON 时不要把包含中文或其他非 ASCII 字符的 payload 直接拼进 PowerShell/cmd 命令文本。必须使用 `scripts/safe_approval_submit.py`，通过 UTF-8 `--value-file`、ASCII-only `--value-json-ascii` 或 UTF-8 base64 传递，并在提交后读回 `.lgwf/human/*.response.json` 确认没有出现 `?` / `????` 编码损坏。
+主 agent 提交该 JSON 时不要把包含中文或其他非 ASCII 字符的 payload 直接拼进 PowerShell/cmd 命令文本。必须使用 `workflows/wf-fix/scripts/safe_approval_submit.py`（相对 `lgwf-wf-tools` skill 根目录），通过 UTF-8 `--value-file`、ASCII-only `--value-json-ascii` 或 UTF-8 base64 传递，并在提交后读回 `.lgwf/human/*.response.json` 确认没有出现 `?` / `????` 编码损坏。

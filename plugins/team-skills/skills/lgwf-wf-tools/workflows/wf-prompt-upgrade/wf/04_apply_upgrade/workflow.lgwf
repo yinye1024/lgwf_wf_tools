@@ -1,5 +1,5 @@
 WORKFLOW prompt_upgrade_apply_upgrade;
-ENTRY apply_prompt_upgrade;
+ENTRY route_apply_upgrade_entry;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -7,6 +7,18 @@ DEFAULTS {
   instruction_path "lgwf_wf_prompt_upgrade.instructions.{node}";
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
+
+PY route_apply_upgrade_entry
+  SCRIPT "scripts/route_apply_upgrade_entry.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_upgrade.route_apply_entry_result
+  UPDATES_STATE;
+
+PY finish_apply_upgrade_skip
+  SCRIPT "scripts/finish_apply_upgrade_skip.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_upgrade.finish_apply_skip_result
+  UPDATES_STATE;
 
 REACT apply_prompt_upgrade MAX 3
   SPEC "agents/spec.md"
@@ -18,12 +30,16 @@ REACT apply_prompt_upgrade MAX 3
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/decision.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/react_history.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/apply_review.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/apply_plan.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.apply_reason_result
 
-  ACT WORKFLOW apply_prompt_upgrade_once
-    WORKFLOW "act_apply_prompt_upgrade/workflow.lgwf"
+  ACT CODEX
+    PROMPT "agents/act.md"
+    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
+    CONTEXT workspace file ".lgwf/prompt_upgrade/apply_plan.json"
+    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     RESULT state.lgwf_wf_prompt_upgrade.apply_act_result
 
   OBSERVE CODEX
@@ -42,3 +58,7 @@ REACT apply_prompt_upgrade MAX 3
     TIMEOUT 60
     RESULT state.lgwf_wf_prompt_upgrade.apply_decide_result
     UPDATES_STATE;
+
+ROUTE route_apply_upgrade_entry
+  WHEN "apply" THEN apply_prompt_upgrade
+  WHEN "skip" THEN finish_apply_upgrade_skip;

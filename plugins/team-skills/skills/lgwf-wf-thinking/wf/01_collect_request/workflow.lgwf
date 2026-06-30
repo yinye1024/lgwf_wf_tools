@@ -1,0 +1,18 @@
+WORKFLOW collect_request;
+ENTRY collect_request;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  instruction_path "lgwf_wf_thinking.collect_request.instructions.{node}";
+  result_path "lgwf_wf_thinking.collect_request.results.{node}";
+}
+
+PY collect_request
+  SCRIPT "scripts/collect_request.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_thinking.request_result
+  UPDATES_STATE;
+
+FLOW collect_request;
+

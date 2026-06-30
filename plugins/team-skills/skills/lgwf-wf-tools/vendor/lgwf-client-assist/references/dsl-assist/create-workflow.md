@@ -168,7 +168,7 @@ FLOW {
 
 从 `src/lgwf/capabilities/catalog.json` 选择 runtime capability。不要靠猜测新增 DSL 字段。Authoring DSL v2 使用 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP` 高层声明 lowering 到现有 runtime JSON IR；不新增业务专属 mapper。
 
-`CODEX` 小型结构化结果可用 `OUTPUT_JSON "path.json"`；大 JSON 使用 `OUTPUT_JSON "path.json" AS_FILE`，由 Codex 写文件，LGWF runner 验证文件存在、UTF-8、JSON 可解析且顶层是 object。
+`CODEX` 小型结构化结果可用 `OUTPUT_JSON "path.json"`；大 JSON 使用 `OUTPUT_JSON "path.json" AS_FILE`，由 Codex 写文件，LGWF runner 验证文件存在、UTF-8、JSON 可解析且顶层是 object。通用文本 artifact 使用 `OUTPUT_FILE "path"`，由 Codex 写文件，runner 验证文件存在、UTF-8 可读并记录路径和大小，不解析内容。
 
 `APPROVAL` 已足够表达人工确认节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
 

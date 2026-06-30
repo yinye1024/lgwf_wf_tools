@@ -34,6 +34,7 @@ REACT generate_plan_proposal MAX 3
   REASON CODEX
     PROMPT "02_generate_plan_proposal/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_request.json"
+    CONTEXT workspace file ".lgwf/react_task_plan_observe.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_FILE ".lgwf/react_task_plan_reason.md"
@@ -68,11 +69,11 @@ PY route_plan_generation
   RESULT state.lgwf_plan.plan_route_result
   UPDATES_STATE;
 
-ROUTE collect_react_task_request
-  WHEN "approve" THEN validate_plan_analysis_targets
-  WHEN "reject" THEN finish_react_task_request;
+FLOW {
+  collect_react_task_request
+    WHEN "approve" THEN validate_plan_analysis_targets
+    WHEN "reject" THEN FAIL_ALL;
 
-FLOW validate_plan_analysis_targets
-  THEN generate_plan_proposal
-  THEN route_plan_generation;
+  validate_plan_analysis_targets THEN generate_plan_proposal THEN route_plan_generation;
+}
 

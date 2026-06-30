@@ -1,0 +1,49 @@
+WORKFLOW compose_plan;
+ENTRY prepare_compose_plan_feedback;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_thinking.compose_plan.instructions.{node}";
+  result_path "lgwf_wf_thinking.compose_plan.results.{node}";
+}
+
+PY prepare_compose_plan_feedback
+  SCRIPT "scripts/prepare_compose_plan_feedback.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_thinking.compose_feedback_prepare_result
+  UPDATES_STATE;
+
+REACT compose_plan MAX 3
+  SPEC "agents/spec.md"
+  REASON CODEX
+    PROMPT "agents/reason.md"
+    CONTEXT workspace file ".lgwf/lgwf_wf_thinking_request.json"
+    CONTEXT workspace file ".lgwf/available_workflows.json"
+    CONTEXT workspace file ".lgwf/need_classification.json"
+    CONTEXT workspace file ".lgwf/composition_plan_observe.json"
+    OUTPUT_JSON ".lgwf/compose_plan_reason.json" AS_FILE
+    RESULT state.lgwf_wf_thinking.compose_reason_result
+  ACT CODEX
+    PROMPT "agents/act.md"
+    CONTEXT workspace file ".lgwf/lgwf_wf_thinking_request.json"
+    CONTEXT workspace file ".lgwf/available_workflows.json"
+    CONTEXT workspace file ".lgwf/need_classification.json"
+    CONTEXT workspace file ".lgwf/compose_plan_reason.json"
+    OUTPUT_JSON ".lgwf/composition_plan.json" AS_FILE
+    RESULT state.lgwf_wf_thinking.compose_act_result
+  OBSERVE CODEX
+    PROMPT "agents/observe.md"
+    CONTEXT workspace file ".lgwf/lgwf_wf_thinking_request.json"
+    CONTEXT workspace file ".lgwf/available_workflows.json"
+    CONTEXT workspace file ".lgwf/need_classification.json"
+    CONTEXT workspace file ".lgwf/composition_plan.json"
+    OUTPUT_JSON ".lgwf/composition_plan_observe.json"
+    RESULT state.lgwf_wf_thinking.compose_observe_result
+  DECIDE PY
+    SCRIPT "scripts/decide.py"
+    RESULT state.lgwf_wf_thinking.compose_decide_result
+    UPDATES_STATE;
+
+FLOW prepare_compose_plan_feedback
+  THEN compose_plan;

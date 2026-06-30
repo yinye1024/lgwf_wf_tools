@@ -39,7 +39,7 @@
 - `confirm_business_flow` 只确认业务流转；`approve` 后才能写 `.lgwf/business_flow.json`。
 - `confirm_step_designs` 只确认步骤设计；`approve` 后才能写 `.lgwf/step_designs.json`。
 - `revise` 表示局部调整：先进入对应 `revise_*` 人工确认点，由主 agent 根据 `changes` 提交修订后的 `approve` 结果，再固化产物并继续下游。
-- `reject` 表示整体不通过，不继续进入下游实现阶段，直接进入结果汇总。
+- `reject` 表示整体不通过，通过 DSL `FAIL_ALL` 终止整个 run，不继续进入下游阶段。
 - 当前第一版不自动 approve 任何业务决策，也不接入自动修复链路。
 
 ## 固定产物

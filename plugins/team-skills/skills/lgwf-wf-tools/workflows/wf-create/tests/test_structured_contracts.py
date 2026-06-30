@@ -14,6 +14,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE_ROOT / "wf"
 ROOT_WORKFLOW = ROOT / "workflow.lgwf"
 SUMMARY_SCRIPT = ROOT / "09_summarize_create_result" / "scripts" / "summarize_create_result.py"
+STRUCTURE_VALIDATOR_SCRIPT = PACKAGE_ROOT / "scripts" / "validate_two_layer_workflow.py"
 sys.dont_write_bytecode = True
 
 
@@ -60,6 +61,14 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertTrue((PACKAGE_ROOT / "AGENTS.md").is_file())
         self.assertTrue((PACKAGE_ROOT / "ws").is_dir())
         self.assertFalse((ROOT / "ws").exists())
+        self.assertFalse((ROOT / "tests").exists())
+
+    def test_two_layer_structure_validator_exists(self) -> None:
+        module = load_module(STRUCTURE_VALIDATOR_SCRIPT, "validate_two_layer_workflow")
+        errors = module.validate_scaffold_paths(["wf/demo/workflow.lgwf", "wf/demo/scripts/run.py"])
+        self.assertEqual(errors, [])
+        self.assertTrue(module.validate_scaffold_paths(["wf/demo/sub/workflow.lgwf"]))
+        self.assertTrue(module.validate_scaffold_paths(["wf/tests/test_demo.py"]))
 
     def test_required_files_and_dirs_exist(self) -> None:
         for relative in (
@@ -73,7 +82,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         ):
             self.assertTrue((PACKAGE_ROOT / relative).exists(), relative)
 
-        for relative in ("ws", "tests", "wf/docs/steps", "wf/04_confirm_business_flow/05_scaffold_package/scripts"):
+        for relative in ("ws", "tests", "wf/docs/steps", "wf/04_confirm_business_flow/scripts"):
             self.assertTrue((PACKAGE_ROOT / relative).is_dir(), relative)
 
     def test_work_dir_boundary_is_documented_and_package_root_is_clean(self) -> None:
@@ -97,21 +106,22 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn("lgwf-wf-prompt-fix 集成", summary["scope_boundary"]["out_of_scope"])
         self.assertIn("生成出的目标 workflow 自动接入 facade 路由", summary["scope_boundary"]["out_of_scope"])
 
-    def test_gate_workflows_own_approval_nodes_and_business_decision_routes(self) -> None:
+    def test_gate_workflows_own_approval_nodes_and_reject_fail_all_routes(self) -> None:
         main_workflow = ROOT_WORKFLOW.read_text(encoding="utf-8")
-        for gate, workflow_ref, approve_target in (
+        for gate, workflow_ref, next_stage in (
             ("define_requirements", "02_confirm_requirements/workflow.lgwf", "design_structure"),
             ("design_structure", "04_confirm_business_flow/workflow.lgwf", "implement_draft"),
         ):
             self.assertIn(f"STEP {gate}", main_workflow)
             self.assertIn(f'WORKFLOW "{workflow_ref}"', main_workflow)
-            self.assertIn("FLOW {", main_workflow)
-            self.assertIn(gate, main_workflow)
-            self.assertIn(f'WHEN "approve" THEN {approve_target}', main_workflow)
-            self.assertIn('WHEN "reject" THEN summarize_create_result', main_workflow)
+            self.assertIn("FLOW define_requirements", main_workflow)
+            self.assertIn(f"THEN {next_stage}", main_workflow)
+        self.assertNotIn('WHEN "approve" THEN design_structure', main_workflow)
+        self.assertNotIn('WHEN "reject" THEN summarize_create_result', main_workflow)
         self.assertIn('STEP implement_draft', main_workflow)
         self.assertIn('WORKFLOW "07_confirm_step_designs/workflow.lgwf"', main_workflow)
-        self.assertIn("implement_draft THEN summarize_create_result", main_workflow)
+        self.assertIn("THEN implement_draft", main_workflow)
+        self.assertIn("THEN summarize_create_result", main_workflow)
 
         child_workflows = "\n".join(
             (
@@ -147,7 +157,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             self.assertIn(node, child_workflows)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', child_workflows)
             self.assertIn(f'WHEN "revise" THEN {prepare_revision}', child_workflows)
-            self.assertIn('WHEN "reject" THEN finish_confirmation', child_workflows)
+            self.assertIn('WHEN "reject" THEN FAIL_ALL', child_workflows)
             self.assertIn(revise_node, child_workflows)
         for persisted in (
             ".lgwf/create_requirements_approval.json",
@@ -162,26 +172,26 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
     def test_codex_nodes_and_prompts_define_output_json_contracts(self) -> None:
         contracts = (
             (
-                "02_confirm_requirements/01_propose_requirements_react/workflow.lgwf",
-                "02_confirm_requirements/01_propose_requirements_react/agents/act.md",
+                "02_confirm_requirements/workflow.lgwf",
+                "02_confirm_requirements/agents/propose_requirements_react.md",
                 ".lgwf/create_requirements_proposal.json",
                 True,
             ),
             (
-                "04_confirm_business_flow/03_propose_business_flow_react/workflow.lgwf",
-                "04_confirm_business_flow/03_propose_business_flow_react/agents/act.md",
+                "04_confirm_business_flow/workflow.lgwf",
+                "04_confirm_business_flow/agents/propose_business_flow_react.md",
                 ".lgwf/business_flow_proposal.json",
                 True,
             ),
             (
-                "07_confirm_step_designs/06_design_steps_react/workflow.lgwf",
-                "07_confirm_step_designs/06_design_steps_react/agents/act.md",
+                "07_confirm_step_designs/workflow.lgwf",
+                "07_confirm_step_designs/agents/design_steps_react.md",
                 ".lgwf/step_designs_proposal.json",
                 True,
             ),
             (
-                "07_confirm_step_designs/08_implement_steps_react/workflow.lgwf",
-                "07_confirm_step_designs/08_implement_steps_react/agents/act.md",
+                "07_confirm_step_designs/workflow.lgwf",
+                "07_confirm_step_designs/agents/implement_steps_react.md",
                 ".lgwf/implementation_result.json",
                 False,
             ),
@@ -196,9 +206,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             self.assertIn(artifact, prompt)
 
     def test_scaffold_template_spec_is_bound_to_template_and_react_prompts(self) -> None:
-        spec_path = ROOT / "04_confirm_business_flow/05_scaffold_package/resources/scaffold_template_spec.md"
-        template_path = ROOT / "04_confirm_business_flow/05_scaffold_package/resources/scaffold_package_template.json"
-        contract_path = ROOT / "04_confirm_business_flow/05_scaffold_package/resources/scaffold_result_contract.md"
+        spec_path = ROOT / "04_confirm_business_flow/resources/scaffold_template_spec.md"
+        template_path = ROOT / "04_confirm_business_flow/resources/scaffold_package_template.json"
+        contract_path = ROOT / "04_confirm_business_flow/resources/scaffold_result_contract.md"
         spec = spec_path.read_text(encoding="utf-8")
         template = json.loads(template_path.read_text(encoding="utf-8"))
         contract = contract_path.read_text(encoding="utf-8")
@@ -215,11 +225,11 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             self.assertIn(profile, contract)
 
         for prompt_relative in (
-            "07_confirm_step_designs/06_design_steps_react/agents/act.md",
-            "07_confirm_step_designs/08_implement_steps_react/agents/act.md",
+            "07_confirm_step_designs/agents/design_steps_react.md",
+            "07_confirm_step_designs/agents/implement_steps_react.md",
         ):
             prompt = (ROOT / prompt_relative).read_text(encoding="utf-8")
-            self.assertIn("04_confirm_business_flow/05_scaffold_package/resources/scaffold_template_spec.md", prompt)
+            self.assertIn("04_confirm_business_flow/resources/scaffold_template_spec.md", prompt)
             self.assertIn("scaffold_plan", prompt)
             self.assertIn("package_profile", prompt)
 
@@ -324,6 +334,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             shutil.rmtree(cache_dir)
         forbidden = {".tmp", "__pycache__", ".lgwf"}
         for path in PACKAGE_ROOT.rglob("*"):
+            if path == PACKAGE_ROOT / "ws" / ".lgwf":
+                continue
             self.assertNotIn(path.name, forbidden, path)
 
 

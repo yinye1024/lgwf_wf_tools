@@ -84,6 +84,97 @@ def normalize_runtime_artifact_path(raw_path: str) -> str:
     return normalized
 
 
+def load_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(data, dict):
+        raise TypeError(f"{path.as_posix()} 必须是 JSON object")
+    return data
+
+
+def strip_package_root(path: str, package_root: str) -> str:
+    normalized_path = path.replace("\\", "/").strip("/")
+    normalized_root = package_root.replace("\\", "/").strip("/")
+    if normalized_path == normalized_root:
+        return "."
+    prefix = f"{normalized_root}/"
+    if normalized_path.startswith(prefix):
+        return normalized_path[len(prefix) :]
+    return normalized_path
+
+
+def payload_from_implementation_result(root: Path) -> dict[str, Any]:
+    implementation = load_json(root / ".lgwf" / "implementation_result.json")
+    if not implementation:
+        return {}
+    package_root = str(implementation.get("target_package_root", "")).strip()
+    workflow_name = str(implementation.get("workflow_name", "")).strip()
+    if not package_root or not workflow_name:
+        return {}
+    generated = implementation.get("generated", {})
+    produced_files: list[str] = []
+    if isinstance(generated, dict):
+        root_files = generated.get("root_files", [])
+        if isinstance(root_files, list):
+            produced_files.extend(str(path) for path in root_files if str(path).strip())
+        by_step = generated.get("by_step", [])
+        if isinstance(by_step, list):
+            for item in by_step:
+                if not isinstance(item, dict):
+                    continue
+                files = item.get("generated_files", [])
+                if isinstance(files, list):
+                    produced_files.extend(str(path) for path in files if str(path).strip())
+    produced_files = [strip_package_root(path, package_root) for path in produced_files]
+    verification = implementation.get("verification", [])
+    validation_entry = ""
+    if isinstance(verification, list):
+        for item in verification:
+            if isinstance(item, dict) and str(item.get("command", "")).strip():
+                validation_entry = str(item["command"]).strip()
+                break
+    payload: dict[str, Any] = {
+        "workflow_name": workflow_name,
+        "target_package_root": package_root,
+    }
+    if produced_files:
+        payload["produced_files"] = produced_files
+    if validation_entry:
+        payload["validation_entry"] = validation_entry
+    return payload
+
+
+def payload_from_confirmed_artifacts(root: Path) -> dict[str, Any]:
+    lgwf_dir = root / ".lgwf"
+    requirements = load_json(lgwf_dir / "create_requirements.json").get("confirmed", {})
+    business_flow = load_json(lgwf_dir / "business_flow.json").get("confirmed", {})
+    if not isinstance(requirements, dict):
+        requirements = {}
+    if not isinstance(business_flow, dict):
+        business_flow = {}
+    workflow_name = str(requirements.get("workflow_name") or business_flow.get("workflow_name") or "").strip()
+    package_root = str(
+        requirements.get("target_package_root") or business_flow.get("target_package_root") or ""
+    ).strip()
+    if not workflow_name or not package_root:
+        return {}
+    return {
+        "workflow_name": workflow_name,
+        "target_package_root": package_root,
+    }
+
+
+def read_stdin_payload() -> dict[str, Any]:
+    raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+    if not raw.strip():
+        return {}
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise TypeError("stdin payload 必须是 JSON object")
+    return data
+
+
 def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
     """构建可审查的创建结果汇总。"""
 
@@ -144,7 +235,7 @@ def write_report(root: Path, summary: dict[str, Any]) -> Path:
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = root / relative_path
     lines = [
-        "# lgwf-wf-create 结果汇总",
+        f"# {summary['workflow_name']} 结果汇总",
         "",
         f"- workflow：`{summary['workflow_name']}`",
         f"- 状态：`{summary['status']}`",
@@ -168,7 +259,11 @@ def write_report(root: Path, summary: dict[str, Any]) -> Path:
 
 
 def main() -> None:
-    payload = json.load(sys.stdin) if not sys.stdin.isatty() else {}
+    payload = read_stdin_payload()
+    if not payload:
+        payload = payload_from_implementation_result(Path.cwd())
+    if not payload:
+        payload = payload_from_confirmed_artifacts(Path.cwd())
     summary = build_summary(payload)
     report_path = write_report(Path.cwd(), summary)
     summary["report_path"] = report_path.as_posix()

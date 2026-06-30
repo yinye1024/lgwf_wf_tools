@@ -1,0 +1,4 @@
+interface:
+  display_name: "LGWF Workflow Thinking"
+  short_description: "生成可确认的 LGWF workflow 组合方案"
+  default_prompt: "Use $lgwf-wf-thinking to turn my LGWF workflow request into a confirmable execution plan."

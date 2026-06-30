@@ -50,44 +50,43 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
 
     def test_workflow_route_matrix_covers_approve_revise_and_reject_branches(self) -> None:
         workflow_text = (WF_ROOT / "workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn("FLOW {", workflow_text)
-        self.assertIn("define_requirements", workflow_text)
-        self.assertIn('WHEN "approve" THEN design_structure', workflow_text)
-        self.assertIn('WHEN "reject" THEN summarize_create_result', workflow_text)
-        self.assertIn("design_structure", workflow_text)
-        self.assertIn('WHEN "approve" THEN implement_draft', workflow_text)
-        self.assertIn("implement_draft THEN summarize_create_result", workflow_text)
+        self.assertIn("FLOW define_requirements", workflow_text)
+        self.assertIn("THEN design_structure", workflow_text)
+        self.assertIn("THEN implement_draft", workflow_text)
+        self.assertIn("THEN summarize_create_result", workflow_text)
+        self.assertNotIn('WHEN "approve" THEN design_structure', workflow_text)
+        self.assertNotIn('WHEN "reject" THEN summarize_create_result', workflow_text)
 
         expected_routes = {
             "confirm_requirements": {
                 "approve": "apply_confirmed_requirements",
                 "revise": "prepare_requirements_revision_confirmation",
-                "reject": "finish_confirmation",
+                "reject": "FAIL_ALL",
             },
             "revise_requirements": {
                 "approve": "apply_confirmed_requirements",
                 "revise": "prepare_requirements_revision_confirmation",
-                "reject": "finish_confirmation",
+                "reject": "FAIL_ALL",
             },
             "confirm_business_flow": {
                 "approve": "apply_confirmed_business_flow",
                 "revise": "prepare_business_flow_revision_confirmation",
-                "reject": "finish_confirmation",
+                "reject": "FAIL_ALL",
             },
             "revise_business_flow": {
                 "approve": "apply_confirmed_business_flow",
                 "revise": "prepare_business_flow_revision_confirmation",
-                "reject": "finish_confirmation",
+                "reject": "FAIL_ALL",
             },
             "confirm_step_designs": {
                 "approve": "apply_confirmed_step_designs",
                 "revise": "prepare_step_design_revision_confirmation",
-                "reject": "finish_confirmation",
+                "reject": "FAIL_ALL",
             },
             "revise_step_designs": {
                 "approve": "apply_confirmed_step_designs",
                 "revise": "prepare_step_design_revision_confirmation",
-                "reject": "finish_confirmation",
+                "reject": "FAIL_ALL",
             },
         }
         child_workflow_text = "\n".join(
@@ -173,7 +172,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             )
             run_script(work_dir, "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
 
-            scaffold = run_script(work_dir, "04_confirm_business_flow/05_scaffold_package/scripts/scaffold_package.py")
+            scaffold = run_script(work_dir, "04_confirm_business_flow/scripts/scaffold_package.py")
             scaffold_plan = scaffold["lgwf_wf_create.scaffold_package_result"]["scaffold_plan"]
             self.assertEqual(scaffold_plan["workflow_name"], "fake_runtime_create")
             self.assertIn("wf/workflow.lgwf", scaffold_plan["create_files"])

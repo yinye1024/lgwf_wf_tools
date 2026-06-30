@@ -18,7 +18,7 @@
 让用户选择：
 - 批准全部升级：`approve=true`，`approved_upgrade_ids=[]`。
 - 只批准部分升级：`approve=true`，`approved_upgrade_ids` 填入要应用的 upgrade id。
-- 拒绝或暂不应用：`reject=true`。
+- 拒绝：`reject=true`，workflow 将通过 `FAIL_ALL` 终止，不进入 apply 或 summary。
 
 ## Success Criteria
 - 在返回 `decision.json` 前，已完整展示统计摘要、升级项细节、文件范围和风险信息。

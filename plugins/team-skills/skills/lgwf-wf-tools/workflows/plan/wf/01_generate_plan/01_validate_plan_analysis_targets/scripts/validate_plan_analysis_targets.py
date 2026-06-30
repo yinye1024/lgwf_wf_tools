@@ -17,6 +17,27 @@ def as_list(value: object) -> list:
     return value if isinstance(value, list) else []
 
 
+def ensure_observe_feedback_placeholder() -> None:
+    path = Path.cwd() / ".lgwf" / "react_task_plan_observe.json"
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "verdict": "pending",
+                "issues": [],
+                "summary": "首轮默认 observe 占位文件；等待 OBSERVE 阶段写入真实验收结果。",
+                "initial_placeholder": True,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> None:
     request_path = Path.cwd() / ".lgwf" / "react_task_request.json"
     request = read_json(request_path)
@@ -44,6 +65,7 @@ def main() -> None:
     if issues:
         print(json.dumps(result, ensure_ascii=False))
         raise SystemExit("; ".join(issues))
+    ensure_observe_feedback_placeholder()
     print(json.dumps(result, ensure_ascii=False))
 
 

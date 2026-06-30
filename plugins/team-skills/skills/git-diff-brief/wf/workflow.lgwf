@@ -1,0 +1,26 @@
+WORKFLOW git_diff_brief;
+ENTRY request_scope_alignment;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "git_diff_brief.instructions.{node}";
+  result_path "git_diff_brief.results.{node}";
+}
+
+STEP request_scope_alignment
+  WORKFLOW "01_request_scope_alignment/workflow.lgwf";
+
+STEP git_context_collection
+  WORKFLOW "02_git_context_collection/workflow.lgwf";
+
+STEP brief_synthesis
+  WORKFLOW "03_brief_synthesis/workflow.lgwf";
+
+STEP result_review_and_delivery
+  WORKFLOW "04_result_review_and_delivery/workflow.lgwf";
+
+FLOW request_scope_alignment
+  THEN git_context_collection
+  THEN brief_synthesis
+  THEN result_review_and_delivery;

@@ -1,0 +1,18 @@
+WORKFLOW classify_need;
+ENTRY classify_need;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  instruction_path "lgwf_wf_thinking.classify_need.instructions.{node}";
+  result_path "lgwf_wf_thinking.classify_need.results.{node}";
+}
+
+PY classify_need
+  SCRIPT "scripts/classify_need.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_thinking.classification_result
+  UPDATES_STATE;
+
+FLOW classify_need;
+

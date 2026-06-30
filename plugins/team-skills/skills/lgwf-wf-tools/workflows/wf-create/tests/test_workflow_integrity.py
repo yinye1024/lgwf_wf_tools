@@ -78,18 +78,17 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             self.assertIn(approval, text)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
             self.assertIn(f'WHEN "revise" THEN {prepare_revision}', text)
-            self.assertIn('WHEN "reject" THEN finish_confirmation', text)
+            self.assertIn('WHEN "reject" THEN FAIL_ALL', text)
             self.assertIn(revise_node, text)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
             self.assertIn(f'WHEN "revise" THEN {prepare_revision}', text)
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:
-        text = (ROOT / "02_confirm_requirements/00_collect_raw_intent/workflow.lgwf").read_text(encoding="utf-8")
+        text = (ROOT / "02_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn('PERSIST ".lgwf/raw_intent_request.json"', text)
-        self.assertNotIn("ROUTE_ON_DECISION", text)
-        self.assertIn("FLOW {", text)
-        self.assertIn("confirm_raw_intent", text)
-        self.assertIn("confirm_raw_intent THEN finish_raw_intent", text)
+        self.assertIn("APPROVAL collect_raw_intent", text)
+        self.assertIn("collect_raw_intent", text)
+        self.assertIn("THEN finish_raw_intent", text)
 
     def test_apply_scripts_reject_non_approve_decisions(self) -> None:
         cases = (
@@ -150,7 +149,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                     encoding="utf-8",
                 )
                 result = module.write_confirmed_artifact(root)
-                artifact = next(iter(result.values()))
+                artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
                 self.assertEqual(artifact["artifact_path"], f".lgwf/{output_name}")
                 self.assertEqual(artifact["source_approval_file"], f".lgwf/{revision_name}")
                 self.assertEqual(artifact["confirmed"], confirmed)
@@ -173,7 +172,8 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
         ):
             text = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("from common.confirmation_io import", text)
+            self.assertIn("from confirmation_io import", text)
+            self.assertIn("shared", text)
 
     def test_step_design_and_implementation_use_dsl_assist_context(self) -> None:
         parent_workflow = (ROOT / "07_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8")
@@ -182,15 +182,9 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
 
-        for relative in (
-            "07_confirm_step_designs/06_design_steps_react/workflow.lgwf",
-            "07_confirm_step_designs/08_implement_steps_react/workflow.lgwf",
-        ):
-            text = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn(
-                'CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"',
-                text,
-            )
+        text = (ROOT / "07_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"', text)
+        for _ in (0,):
             for reference in (
                 ".lgwf/create_reference_context/dsl-assist/guide.md",
                 ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
@@ -212,7 +206,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
     def test_scaffold_plan_includes_confirmation_apply_scripts(self) -> None:
         module = load_module(
-            ROOT / "04_confirm_business_flow/05_scaffold_package/scripts/scaffold_package.py",
+            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_integrity",
         )
         plan = module.build_scaffold_plan(
@@ -226,9 +220,10 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "wf/02_confirm_requirements/scripts/apply_confirmed_requirements.py",
             "wf/04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
             "wf/07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
-            "wf/common/confirmation_io.py",
+            "wf/shared/scripts/confirmation_io.py",
         ):
             self.assertIn(relative, plan["create_files"])
+        self.assertNotIn("wf/common/confirmation_io.py", plan["create_files"])
 
     def test_summary_workflow_uses_py_result_and_script_writes_json(self) -> None:
         workflow = (ROOT / "09_summarize_create_result/workflow.lgwf").read_text(encoding="utf-8")

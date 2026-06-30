@@ -1,5 +1,5 @@
 WORKFLOW runtime_fake_e2e;
-ENTRY runtime_fake_e2e_react;
+ENTRY prepare_runtime_fake_repair_context;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -8,6 +8,12 @@ DEFAULTS {
   result_path "lgwf_e2e.runtime_fake.results.{node}";
 }
 
+PY prepare_runtime_fake_repair_context
+  SCRIPT "00_prepare/scripts/prepare_runtime_fake_repair_context.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.runtime_fake_prepare_repair_context_result
+  UPDATES_STATE;
+
 REACT runtime_fake_e2e_react MAX 3
   SPEC "01_design/agents/spec.md"
   REASON CODEX
@@ -15,6 +21,8 @@ REACT runtime_fake_e2e_react MAX 3
     CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
     CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
     CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_runtime_fake_observe.json"
+    CONTEXT workspace file ".lgwf/e2e_runtime_fake_repair_context.json"
     TARGET_DIRS state.lgwf_e2e.target_dirs
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_runtime_fake_design.json"
@@ -25,6 +33,7 @@ REACT runtime_fake_e2e_react MAX 3
     CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
     CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
     CONTEXT workspace file ".lgwf/e2e_runtime_fake_design.json"
+    CONTEXT workspace file ".lgwf/e2e_runtime_fake_repair_context.json"
     TARGET_DIRS state.lgwf_e2e.target_dirs
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_runtime_fake_generation.json"
@@ -43,3 +52,6 @@ REACT runtime_fake_e2e_react MAX 3
     SCRIPT "04_repair/scripts/decide_runtime_fake.py"
     RESULT state.lgwf_e2e.runtime_fake_decide_result
     UPDATES_STATE;
+
+FLOW prepare_runtime_fake_repair_context
+  THEN runtime_fake_e2e_react;

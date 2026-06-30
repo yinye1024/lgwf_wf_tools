@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import importlib.util
 import os
@@ -37,6 +37,29 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
         self.assertNotIn("REACT design_prompt_upgrade", source)
         self.assertNotIn("REACT apply_prompt_upgrade", source)
 
+    def test_prompt_upgrade_workflow_layout_is_two_layers(self) -> None:
+        workflows = sorted(path.relative_to(ROOT / "wf").as_posix() for path in (ROOT / "wf").rglob("workflow.lgwf"))
+        self.assertEqual(
+            workflows,
+            [
+                "01_prepare_target/workflow.lgwf",
+                "02_design_upgrade/workflow.lgwf",
+                "03_confirm_upgrade/workflow.lgwf",
+                "04_apply_upgrade/workflow.lgwf",
+                "05_summary/workflow.lgwf",
+                "workflow.lgwf",
+            ],
+        )
+        for workflow in workflows:
+            if workflow == "workflow.lgwf":
+                continue
+            self.assertEqual(len(Path(workflow).parts), 2)
+        apply_source = (ROOT / "wf" / "04_apply_upgrade" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertNotIn('WORKFLOW "act_apply_prompt_upgrade/workflow.lgwf"', apply_source)
+        self.assertNotIn("ACT WORKFLOW apply_prompt_upgrade_once", apply_source)
+        self.assertIn("ACT CODEX", apply_source)
+        self.assertIn('PROMPT "agents/act.md"', apply_source)
+
     def test_prompt_upgrade_workflow_uses_owned_namespace_and_confirmation(self) -> None:
         source = (ROOT / "wf" / "workflow.lgwf").read_text(encoding="utf-8")
         prepare_source = (ROOT / "wf" / "01_prepare_target" / "workflow.lgwf").read_text(encoding="utf-8")
@@ -52,21 +75,26 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
         self.assertIn("REACT design_prompt_upgrade MAX 3", design_source)
         self.assertIn("APPROVAL confirm_prompt_upgrade", confirm_source)
         self.assertIn("REACT apply_prompt_upgrade MAX 3", apply_source)
-        self.assertIn("ACT WORKFLOW apply_prompt_upgrade_once", apply_source)
-        self.assertIn('WORKFLOW "act_apply_prompt_upgrade/workflow.lgwf"', apply_source)
-        act_source = (ROOT / "wf" / "04_apply_upgrade" / "act_apply_prompt_upgrade" / "workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn("PY validate_apply_plan", act_source)
-        self.assertIn("CODEX apply_prompt_upgrade", act_source)
+        self.assertNotIn("ACT WORKFLOW apply_prompt_upgrade_once", apply_source)
+        self.assertNotIn('WORKFLOW "act_apply_prompt_upgrade/workflow.lgwf"', apply_source)
+        self.assertIn("ACT CODEX", apply_source)
+        self.assertIn('PROMPT "agents/act.md"', apply_source)
         self.assertNotIn("APPROVAL confirm_prompt_upgrade_summary", "\n".join([source, prepare_source, design_source, confirm_source, apply_source]))
         self.assertIn(".lgwf/prompt_upgrade/inventory.json", "\n".join([prepare_source, design_source]))
         self.assertIn(".lgwf/prompt_upgrade/proposal.json", design_source)
         self.assertIn(".lgwf/prompt_upgrade/decision.json", confirm_source)
+        self.assertIn("PY route_after_prompt_upgrade_decision", confirm_source)
+        self.assertIn('WHEN "reject" THEN FAIL_ALL', confirm_source)
+        self.assertIn("PY route_apply_upgrade_entry", apply_source)
+        self.assertIn('WHEN "apply" THEN apply_prompt_upgrade', apply_source)
+        self.assertIn('WHEN "skip" THEN finish_apply_upgrade_skip', apply_source)
         observe_prompt = (ROOT / "wf" / "04_apply_upgrade" / "agents" / "observe.md").read_text(encoding="utf-8")
         self.assertIn(".lgwf/prompt_upgrade/apply_review.json", observe_prompt)
         self.assertNotIn(".lgwf/prompt_acceptance", source)
-        self.assertIn('WHEN "apply" THEN apply_upgrade', source)
-        self.assertIn('WHEN "summarize" THEN summary', source)
-        self.assertIn("FLOW apply_upgrade\n  THEN summary;", source)
+        self.assertNotIn("route_after_prompt_upgrade_decision", source)
+        self.assertNotIn('WHEN "apply" THEN apply_upgrade', source)
+        self.assertNotIn('WHEN "summarize" THEN summary', source)
+        self.assertIn("THEN confirm_upgrade\n  THEN apply_upgrade\n  THEN summary;", source)
         self.assertNotIn("THEN confirm_prompt_upgrade_summary", source)
 
     def test_environment_check_detects_missing_and_present_skill(self) -> None:
@@ -196,7 +224,35 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
             "upgrade_route",
         )
         self.assertEqual(route_mod.choose_route({"approve": True, "approved_upgrade_ids": ["u1"]}), "apply")
-        self.assertEqual(route_mod.choose_route({"reject": True, "approved_upgrade_ids": []}), "summarize")
+        self.assertEqual(route_mod.choose_route({"reject": True, "approved_upgrade_ids": []}), "reject")
+
+    def test_confirm_workflow_reject_decision_uses_fail_all_without_root_route(self) -> None:
+        workflow = (ROOT / "wf" / "workflow.lgwf").read_text(encoding="utf-8")
+        confirm_workflow = (ROOT / "wf" / "03_confirm_upgrade" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertNotIn("ROUTE route_after_prompt_upgrade_decision", workflow)
+        self.assertIn("ROUTE route_after_prompt_upgrade_decision", confirm_workflow)
+        self.assertIn('WHEN "apply" THEN finish_prompt_upgrade_confirmation', confirm_workflow)
+        self.assertIn('WHEN "summarize" THEN finish_prompt_upgrade_confirmation', confirm_workflow)
+        self.assertIn('WHEN "reject" THEN FAIL_ALL', confirm_workflow)
+
+    def test_apply_upgrade_entry_skips_when_no_approved_upgrade_ids(self) -> None:
+        route_mod = load_module(
+            "04_apply_upgrade/scripts/route_apply_upgrade_entry.py",
+            "upgrade_apply_entry_route",
+        )
+        self.assertEqual(route_mod.choose_route({"approve": True, "approved_upgrade_ids": ["u1"]}), "apply")
+        self.assertEqual(route_mod.choose_route({"approve": True, "approved_upgrade_ids": []}), "skip")
+        self.assertEqual(route_mod.choose_route({"reject": False}), "skip")
+
+    def test_apply_upgrade_skip_review_contract(self) -> None:
+        skip_mod = load_module(
+            "04_apply_upgrade/scripts/finish_apply_upgrade_skip.py",
+            "upgrade_apply_skip",
+        )
+        review = skip_mod.build_review()
+        self.assertTrue(review["passed"])
+        self.assertTrue(review["skipped"])
+        self.assertEqual(review["remaining_upgrade_ids"], [])
 
     def test_apply_decide_exits_when_no_remaining_upgrades(self) -> None:
         decide_mod = load_module(
@@ -237,7 +293,7 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
 
     def test_apply_plan_validation_limits_files_to_approved_upgrade_scope(self) -> None:
         validate_mod = load_module(
-            "04_apply_upgrade/act_apply_prompt_upgrade/scripts/validate_apply_plan.py",
+            "04_apply_upgrade/scripts/validate_apply_plan.py",
             "upgrade_validate_apply_plan",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -315,3 +371,4 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

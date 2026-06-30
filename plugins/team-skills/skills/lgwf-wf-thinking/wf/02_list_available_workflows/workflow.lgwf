@@ -1,0 +1,18 @@
+WORKFLOW list_available_workflows;
+ENTRY list_available_workflows;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  instruction_path "lgwf_wf_thinking.workflow_discovery.instructions.{node}";
+  result_path "lgwf_wf_thinking.workflow_discovery.results.{node}";
+}
+
+PY list_available_workflows
+  SCRIPT "scripts/list_available_workflows.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_thinking.workflow_registry_result
+  UPDATES_STATE;
+
+FLOW list_available_workflows;
+

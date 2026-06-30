@@ -11,7 +11,7 @@
     },
     {
       "command": "/lgwf-wf-tools init",
-      "description": "同步临时 zip 到 vendor，并输出初始化报告。"
+      "description": "同步临时 zip 到 vendor，安装 bundled LGWF wheel，并输出初始化报告。"
     },
     {
       "command": "/lgwf-wf-tools doctor",

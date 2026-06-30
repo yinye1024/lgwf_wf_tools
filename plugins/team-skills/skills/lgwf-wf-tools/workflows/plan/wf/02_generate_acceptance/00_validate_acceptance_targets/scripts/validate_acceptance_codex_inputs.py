@@ -13,6 +13,27 @@ def read(path: Path) -> dict:
     return data
 
 
+def ensure_observe_feedback_placeholder(root: Path) -> None:
+    path = root / ".lgwf" / "react_acceptance_observe.json"
+    if path.exists():
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "verdict": "pending",
+                "issues": [],
+                "summary": "首轮默认 observe 占位文件；等待 OBSERVE 阶段写入真实验收结果。",
+                "initial_placeholder": True,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> None:
     root = Path.cwd()
     plan = read(root / ".lgwf" / "react_task_plan_proposal.json")
@@ -24,6 +45,7 @@ def main() -> None:
         issues.append("plan observe must pass before acceptance generation")
     if issues:
         raise SystemExit("; ".join(issues))
+    ensure_observe_feedback_placeholder(root)
     print(json.dumps({"lgwf_plan.acceptance_inputs_valid": True}, ensure_ascii=False))
 
 

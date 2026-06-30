@@ -211,6 +211,7 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
         design = (ROOT / "04_runtime_fake_e2e" / "01_design" / "agents" / "reason.md").read_text(encoding="utf-8")
         generate = (ROOT / "04_runtime_fake_e2e" / "02_generate" / "agents" / "act.md").read_text(encoding="utf-8")
         observe = (ROOT / "04_runtime_fake_e2e" / "03_validate" / "agents" / "observe.md").read_text(encoding="utf-8")
+        workflow = (ROOT / "04_runtime_fake_e2e" / "workflow.lgwf").read_text(encoding="utf-8")
 
         for token in (
             "scenarios[]",
@@ -230,10 +231,107 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
         self.assertIn("scenario_generation[]", generate)
         self.assertIn("test_<scenario_id>", generate)
         self.assertIn("call_index", generate)
+        self.assertIn("e2e_runtime_fake_repair_context.json", design)
+        self.assertIn("e2e_runtime_fake_observe.json", design)
+        self.assertIn("repair_plan[]", design)
+        self.assertIn("e2e_runtime_fake_repair_context.json", generate)
+        self.assertIn("applied_repairs[]", generate)
         self.assertIn("scenario_checks", observe)
         self.assertIn("coverage_gaps", observe)
         self.assertIn("business_route_coverage", observe)
         self.assertIn("manual_approval_required", observe)
+        self.assertIn("issue_code", observe)
+        self.assertIn("prepare_runtime_fake_repair_context", workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/e2e_runtime_fake_repair_context.json"', workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/e2e_runtime_fake_observe.json"', workflow)
+
+    def test_react_reason_prompts_receive_observe_feedback(self) -> None:
+        contracts = (
+            (
+                "03_script_flow_e2e",
+                "prepare_script_flow_observe_feedback",
+                ".lgwf/e2e_script_flow_observe.json",
+            ),
+            (
+                "04_runtime_fake_e2e",
+                "prepare_runtime_fake_repair_context",
+                ".lgwf/e2e_runtime_fake_observe.json",
+            ),
+            (
+                "05_real_positive_e2e",
+                "prepare_real_positive_observe_feedback",
+                ".lgwf/e2e_real_positive_observe.json",
+            ),
+        )
+        for workflow_dir, prepare_node, observe_path in contracts:
+            with self.subTest(workflow_dir=workflow_dir):
+                workflow = (ROOT / workflow_dir / "workflow.lgwf").read_text(encoding="utf-8")
+                reason = (ROOT / workflow_dir / "01_design" / "agents" / "reason.md").read_text(encoding="utf-8")
+                self.assertIn(prepare_node, workflow)
+                self.assertIn(f'CONTEXT workspace file "{observe_path}"', workflow)
+                self.assertIn(observe_path, reason)
+                self.assertIn("initial_placeholder", reason)
+
+    def test_runtime_fake_decide_writes_repair_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+            write_json(
+                work / ".lgwf" / "e2e_runtime_fake_observe.json",
+                {
+                    "passed": False,
+                    "issues": ["fake 未命中真实 codex 命令"],
+                    "contract_checks": {
+                        "prompt_file_supported": {
+                            "passed": False,
+                            "issue_code": "fake_codex_command_not_intercepted",
+                            "evidence": "command.json 显示 cmd.exe /c codex ... -",
+                            "source_location": "command.json",
+                            "repair_hint": "拦截 cmd.exe /c codex ... - 并从 stdin handoff 解析 Main prompt file。",
+                        }
+                    },
+                    "scenario_checks": {},
+                    "coverage_gaps": [],
+                },
+            )
+
+            output = call_main("04_runtime_fake_e2e/04_repair/scripts/decide_runtime_fake.py", work, "decide_runtime_fake_once")
+
+            result = json.loads(output)
+            self.assertEqual(result["next"], "continue")
+            context = read_json(work / ".lgwf" / "e2e_runtime_fake_repair_context.json")
+            self.assertTrue(context["active"])
+            self.assertFalse(context["no_progress"])
+            self.assertEqual(context["blockers"][0]["issue_code"], "fake_codex_command_not_intercepted")
+            self.assertEqual(result["lgwf_e2e.runtime_fake_repair_context"]["issue_signature"], context["issue_signature"])
+
+    def test_runtime_fake_decide_stops_repeated_issue_signature(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+            observe = {
+                "passed": False,
+                "issues": ["fake 未命中真实 codex 命令"],
+                "contract_checks": {
+                    "prompt_file_supported": {
+                        "passed": False,
+                        "issue_code": "fake_codex_command_not_intercepted",
+                        "evidence": "command.json 显示 cmd.exe /c codex ... -",
+                        "source_location": "command.json",
+                        "repair_hint": "拦截 cmd.exe /c codex ... - 并从 stdin handoff 解析 Main prompt file。",
+                    }
+                },
+                "scenario_checks": {},
+                "coverage_gaps": [],
+            }
+            write_json(work / ".lgwf" / "e2e_runtime_fake_observe.json", observe)
+            call_main("04_runtime_fake_e2e/04_repair/scripts/decide_runtime_fake.py", work, "decide_runtime_fake_first")
+
+            output = call_main("04_runtime_fake_e2e/04_repair/scripts/decide_runtime_fake.py", work, "decide_runtime_fake_second")
+
+            result = json.loads(output)
+            self.assertEqual(result["next"], "exit")
+            self.assertTrue(result["lgwf_e2e.runtime_fake_validation"]["no_progress"])
+            context = read_json(work / ".lgwf" / "e2e_runtime_fake_repair_context.json")
+            self.assertTrue(context["no_progress"])
 
     def test_finish_report_records_fixed_three_generated_tests(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

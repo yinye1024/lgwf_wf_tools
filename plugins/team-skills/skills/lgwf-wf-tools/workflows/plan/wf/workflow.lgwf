@@ -38,15 +38,14 @@ PY finish_contract_review
 STEP execute_react_loop
   WORKFLOW "04_execute_react_loop/workflow.lgwf";
 
-FLOW generate_plan
-  THEN generate_acceptance
-  THEN confirm_plan_and_acceptance;
+FLOW {
+  generate_plan THEN generate_acceptance THEN confirm_plan_and_acceptance;
 
-ROUTE confirm_plan_and_acceptance
-  WHEN "approve" THEN apply_confirmed_contracts
-  WHEN "revise" THEN finish_contract_review
-  WHEN "reject" THEN finish_contract_review;
+  confirm_plan_and_acceptance
+    WHEN "approve" THEN apply_confirmed_contracts
+    WHEN "revise" THEN finish_contract_review
+    WHEN "reject" THEN FAIL_ALL;
 
-FLOW apply_confirmed_contracts
-  THEN execute_react_loop;
+  apply_confirmed_contracts THEN execute_react_loop;
+}
 

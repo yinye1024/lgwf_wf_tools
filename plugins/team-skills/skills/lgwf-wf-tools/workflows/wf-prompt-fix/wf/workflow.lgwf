@@ -17,12 +17,6 @@ STEP audit_prompts
 STEP select_fixes
   WORKFLOW "03_select_fixes/workflow.lgwf";
 
-PY route_after_prompt_selection
-  SCRIPT "03_select_fixes/scripts/route_after_prompt_selection.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_prompt_fix.route_prompt_selection_result
-  UPDATES_STATE;
-
 STEP repair_loop
   WORKFLOW "04_repair_loop/workflow.lgwf";
 
@@ -32,11 +26,5 @@ STEP summary
 FLOW prepare_target
   THEN audit_prompts
   THEN select_fixes
-  THEN route_after_prompt_selection;
-
-FLOW repair_loop
+  THEN repair_loop
   THEN summary;
-
-ROUTE route_after_prompt_selection
-  WHEN "fix" THEN repair_loop
-  WHEN "summarize" THEN summary;

@@ -1,0 +1,55 @@
+WORKFLOW lgwf_wf_thinking;
+ENTRY collect_request;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_thinking.instructions.{node}";
+  result_path "lgwf_wf_thinking.results.{node}";
+}
+
+STEP collect_request
+  WORKFLOW "01_collect_request/workflow.lgwf";
+
+STEP list_available_workflows
+  WORKFLOW "02_list_available_workflows/workflow.lgwf";
+
+STEP classify_need
+  WORKFLOW "03_classify_need/workflow.lgwf";
+
+STEP compose_plan
+  WORKFLOW "04_compose_plan/workflow.lgwf";
+
+STEP prepare_confirm_plan
+  WORKFLOW "05_confirm_plan/workflow.lgwf";
+
+APPROVAL confirm_plan
+  PROMPT_REF "05_confirm_plan/agents/confirm_plan.md"
+  READ state.lgwf_wf_thinking.confirm_context
+  WRITE state.lgwf_wf_thinking.plan_decision
+  RESULT state.lgwf_wf_thinking.plan_decision_result
+  PERSIST ".lgwf/composition_plan_decision.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+STEP apply_confirmed_plan
+  WORKFLOW "05_confirm_plan/01_apply_confirmed_plan/workflow.lgwf";
+
+STEP write_handoff
+  WORKFLOW "06_handoff/workflow.lgwf";
+
+FLOW {
+  collect_request
+    THEN list_available_workflows
+    THEN classify_need
+    THEN compose_plan
+    THEN prepare_confirm_plan
+    THEN confirm_plan;
+
+  confirm_plan
+    WHEN "approve" THEN apply_confirmed_plan
+    WHEN "revise" THEN compose_plan
+    WHEN "reject" THEN FAIL_ALL;
+
+  apply_confirmed_plan THEN write_handoff;
+}

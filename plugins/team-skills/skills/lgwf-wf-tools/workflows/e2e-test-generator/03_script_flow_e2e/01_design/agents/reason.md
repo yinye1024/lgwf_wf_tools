@@ -9,9 +9,11 @@
 - `.lgwf/e2e_target_request.normalized.json`
 - `.lgwf/e2e_workflow_graph.json`
 - `.lgwf/e2e_coverage_matrix.json`
+- `.lgwf/e2e_script_flow_observe.json`
 - `03_script_flow_e2e/01_design/agents/spec.md`
 
 额外要求：
+- 必须读取 `.lgwf/e2e_script_flow_observe.json`。首轮可能是 `initial_placeholder=true` 的默认占位；后续迭代必须把其中的失败项、覆盖缺口和验收结论作为修正设计的依据。
 - 优先从 coverage matrix 提取脚本级主路径、失败分支、approval persist 与脚本契约覆盖点。
 - 如果输入资料无法稳定定位某个状态文件、脚本入口、断言点或前置条件，不得补写成“常识默认值”，而要记录进 `design_warnings[]`。
 

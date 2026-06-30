@@ -3,7 +3,7 @@ ENTRY prepare_dsl_reference_context;
 
 DEFAULTS {
   ref_root workflow ".";
-  timeout_seconds 300;
+  timeout_seconds 900;
 }
 
 PY prepare_dsl_reference_context
@@ -12,8 +12,12 @@ PY prepare_dsl_reference_context
   RESULT state.lgwf_wf_create.dsl_reference_context
   UPDATES_STATE;
 
-STEP design_steps_react
-  WORKFLOW "06_design_steps_react/workflow.lgwf";
+CODEX design_steps_react
+  PROMPT "agents/design_steps_react.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"
+  OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
+  TIMEOUT 900
+  RESULT state.lgwf_wf_create.step_design_result;
 
 PY prepare_step_design_confirmation
   SCRIPT "scripts/prepare_step_design_confirmation.py"
@@ -51,14 +55,19 @@ APPROVAL revise_step_designs
   ROUTE_ON_DECISION
   POLL 1;
 
-PY finish_confirmation
-  SCRIPT "scripts/finish_confirmation.py"
+PY prepare_implementation_context
+  SCRIPT "scripts/prepare_implementation_context.py"
   TIMEOUT 30
-  RESULT state.lgwf_wf_create.step_design_finish_result
+  RESULT state.lgwf_wf_create.implementation_context
   UPDATES_STATE;
 
-STEP implement_steps_react
-  WORKFLOW "08_implement_steps_react/workflow.lgwf";
+CODEX implement_steps_react
+  PROMPT "agents/implement_steps_react.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"
+  CONTEXT workspace file ".lgwf/implementation_context.json"
+  OUTPUT_JSON ".lgwf/implementation_result.json"
+  TIMEOUT 900
+  RESULT state.lgwf_wf_create.implementation_result;
 
 FLOW {
   prepare_dsl_reference_context THEN design_steps_react THEN prepare_step_design_confirmation THEN confirm_step_designs;
@@ -66,14 +75,14 @@ FLOW {
   confirm_step_designs
     WHEN "approve" THEN apply_confirmed_step_designs
     WHEN "revise" THEN prepare_step_design_revision_confirmation
-    WHEN "reject" THEN finish_confirmation;
+    WHEN "reject" THEN FAIL_ALL;
 
   prepare_step_design_revision_confirmation THEN revise_step_designs;
 
   revise_step_designs
     WHEN "approve" THEN apply_confirmed_step_designs
     WHEN "revise" THEN prepare_step_design_revision_confirmation
-    WHEN "reject" THEN finish_confirmation;
+    WHEN "reject" THEN FAIL_ALL;
 
-  apply_confirmed_step_designs THEN implement_steps_react;
+  apply_confirmed_step_designs THEN prepare_implementation_context THEN implement_steps_react;
 }

@@ -38,6 +38,29 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertNotIn("REACT repair_target_prompts", source)
         self.assertNotIn("APPROVAL select_prompt_fixes", source)
 
+    def test_prompt_fix_workflow_layout_is_two_layers(self) -> None:
+        workflows = sorted(path.relative_to(ROOT / "wf").as_posix() for path in (ROOT / "wf").rglob("workflow.lgwf"))
+        self.assertEqual(
+            workflows,
+            [
+                "01_prepare_target/workflow.lgwf",
+                "02_audit_prompts/workflow.lgwf",
+                "03_select_fixes/workflow.lgwf",
+                "04_repair_loop/workflow.lgwf",
+                "05_summary/workflow.lgwf",
+                "workflow.lgwf",
+            ],
+        )
+        for workflow in workflows:
+            if workflow == "workflow.lgwf":
+                continue
+            self.assertEqual(len(Path(workflow).parts), 2)
+        repair_source = (ROOT / "wf" / "04_repair_loop" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertNotIn('WORKFLOW "act_apply_prompt_fix/workflow.lgwf"', repair_source)
+        self.assertNotIn("ACT WORKFLOW apply_prompt_fix", repair_source)
+        self.assertIn("ACT CODEX", repair_source)
+        self.assertIn('PROMPT "agents/apply_prompt_fix.md"', repair_source)
+
     def test_prompt_fix_workflow_uses_owned_namespace_and_react(self) -> None:
         source = (ROOT / "wf" / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("WORKFLOW lgwf_wf_prompt_fix;", source)
@@ -67,7 +90,12 @@ class PromptFixScriptsTest(unittest.TestCase):
             self.assertIn(artifact, combined)
         self.assertNotIn(".lgwf/prompt_acceptance/fix_notes.md", "\n".join([source, prepare_source, select_source, repair_source, summary_source]))
         self.assertIn("APPROVAL select_prompt_fixes", select_source)
+        self.assertNotIn("route_after_prompt_selection", source)
+        self.assertIn("PY route_repair_loop_entry", repair_source)
+        self.assertIn('WHEN "fix" THEN repair_target_prompts', repair_source)
+        self.assertIn('WHEN "skip" THEN finish_repair_loop_skip', repair_source)
         self.assertIn("REACT repair_target_prompts MAX 3", repair_source)
+        self.assertIn('PROMPT "agents/apply_prompt_fix.md"', repair_source)
         self.assertIn("APPROVAL confirm_prompt_acceptance", summary_source)
         self.assertIn("PY route_after_prompt_acceptance_summary", summary_source)
         self.assertIn("PY finish_prompt_acceptance", summary_source)
@@ -78,8 +106,9 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE', (ROOT / "wf" / "02_audit_prompts" / "workflow.lgwf").read_text(encoding="utf-8"))
         self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE', repair_source)
         self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"', repair_source)
-        self.assertIn('WHEN "fix" THEN repair_loop', source)
-        self.assertIn('WHEN "summarize" THEN summary', source)
+        self.assertNotIn('WHEN "fix" THEN repair_loop', source)
+        self.assertNotIn('WHEN "summarize" THEN summary', source)
+        self.assertIn("THEN select_fixes\n  THEN repair_loop\n  THEN summary;", source)
         self.assertIn('WHEN "auto_finish" THEN finish_prompt_acceptance', summary_source)
         self.assertIn('WHEN "confirm" THEN confirm_prompt_acceptance', summary_source)
         self.assertNotIn("THEN route_after_prompt_acceptance_summary\n  THEN confirm_prompt_acceptance", summary_source)
@@ -369,9 +398,28 @@ class PromptFixScriptsTest(unittest.TestCase):
             "continue",
         )
 
+    def test_repair_loop_entry_routes_fix_or_skip_inside_repair_stage(self) -> None:
+        route_mod = load_module(
+            "04_repair_loop/scripts/route_repair_loop_entry.py",
+            "prompt_repair_entry_route",
+        )
+        self.assertEqual(route_mod.choose_route({"selected_issue_ids": ["p1"], "skip_fix": False}), "fix")
+        self.assertEqual(route_mod.choose_route({"selected_issue_ids": [], "skip_fix": True}), "skip")
+        self.assertEqual(route_mod.choose_route({}), "skip")
+
+    def test_repair_loop_skip_review_contract(self) -> None:
+        skip_mod = load_module(
+            "04_repair_loop/scripts/finish_repair_loop_skip.py",
+            "prompt_repair_skip",
+        )
+        review = skip_mod.build_review()
+        self.assertFalse(review["passed"])
+        self.assertTrue(review["skipped"])
+        self.assertEqual(review["remaining_issue_ids"], [])
+
     def test_repair_plan_validation_accepts_only_allowed_relative_paths(self) -> None:
         validate_mod = load_module(
-            "04_repair_loop/act_apply_prompt_fix/scripts/validate_repair_plan.py",
+            "04_repair_loop/scripts/validate_repair_plan.py",
             "prompt_validate_repair_plan",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -400,7 +448,7 @@ class PromptFixScriptsTest(unittest.TestCase):
 
     def test_repair_plan_validation_limits_files_to_selected_issue_scope(self) -> None:
         validate_mod = load_module(
-            "04_repair_loop/act_apply_prompt_fix/scripts/validate_repair_plan.py",
+            "04_repair_loop/scripts/validate_repair_plan.py",
             "prompt_validate_repair_plan_scope",
         )
         with tempfile.TemporaryDirectory() as temp:

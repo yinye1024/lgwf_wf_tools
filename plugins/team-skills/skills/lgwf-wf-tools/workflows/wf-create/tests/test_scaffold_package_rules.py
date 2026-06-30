@@ -11,7 +11,6 @@ SCRIPT_PATH = (
     PACKAGE_ROOT
     / "wf"
     / "04_confirm_business_flow"
-    / "05_scaffold_package"
     / "scripts"
     / "scaffold_package.py"
 )
@@ -67,6 +66,27 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         self.assertIn("AGENTS.md", plan["create_files"])
         self.assertNotIn("SKILL.md", plan["create_files"])
         self.assertIn("wf/docs/steps", plan["create_dirs"])
+
+    def test_build_scaffold_plan_enforces_two_layer_workflow_paths(self) -> None:
+        plan = self.module.build_scaffold_plan(
+            {
+                "workflow_name": "demo",
+                "target_package_root": "plugins/team-skills/skills/demo",
+                "business_flow": {"stages": []},
+            }
+        )
+        all_paths = [*plan["create_dirs"], *plan["create_files"]]
+        self.assertIn("wf/02_confirm_requirements/workflow.lgwf", plan["create_files"])
+        self.assertNotIn("wf/02_confirm_requirements/00_collect_raw_intent/workflow.lgwf", all_paths)
+        self.assertFalse(any(path.startswith("wf/tests") for path in all_paths))
+        self.assertFalse(
+            any(
+                path.startswith("wf/")
+                and path.endswith("/workflow.lgwf")
+                and len(Path(path).parts) > 3
+                for path in all_paths
+            )
+        )
 
     def test_build_scaffold_plan_can_generate_skill_wrapped_workflow_profile(self) -> None:
         plan = self.module.build_scaffold_plan(
@@ -138,6 +158,13 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             self.module.validate_plan_paths({"create_dirs": ["agents"], "create_files": ["C:/bad"]})
+        with self.assertRaises(ValueError):
+            self.module.validate_plan_paths(
+                {
+                    "create_dirs": ["wf/demo/sub"],
+                    "create_files": ["wf/demo/sub/workflow.lgwf"],
+                }
+            )
 
 
 if __name__ == "__main__":

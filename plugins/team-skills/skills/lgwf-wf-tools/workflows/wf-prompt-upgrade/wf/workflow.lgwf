@@ -17,12 +17,6 @@ STEP design_upgrade
 STEP confirm_upgrade
   WORKFLOW "03_confirm_upgrade/workflow.lgwf";
 
-PY route_after_prompt_upgrade_decision
-  SCRIPT "03_confirm_upgrade/scripts/route_after_prompt_upgrade_decision.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_prompt_upgrade.route_decision_result
-  UPDATES_STATE;
-
 STEP apply_upgrade
   WORKFLOW "04_apply_upgrade/workflow.lgwf";
 
@@ -32,11 +26,5 @@ STEP summary
 FLOW prepare_target
   THEN design_upgrade
   THEN confirm_upgrade
-  THEN route_after_prompt_upgrade_decision;
-
-FLOW apply_upgrade
+  THEN apply_upgrade
   THEN summary;
-
-ROUTE route_after_prompt_upgrade_decision
-  WHEN "apply" THEN apply_upgrade
-  WHEN "summarize" THEN summary;

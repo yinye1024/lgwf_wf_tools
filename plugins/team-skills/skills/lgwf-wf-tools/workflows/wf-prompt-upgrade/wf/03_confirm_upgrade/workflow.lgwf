@@ -28,6 +28,24 @@ PY validate_prompt_upgrade_decision
   RESULT state.lgwf_wf_prompt_upgrade.validate_decision_result
   UPDATES_STATE;
 
+PY route_after_prompt_upgrade_decision
+  SCRIPT "scripts/route_after_prompt_upgrade_decision.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_upgrade.route_decision_result
+  UPDATES_STATE;
+
+PY finish_prompt_upgrade_confirmation
+  SCRIPT "scripts/finish_prompt_upgrade_confirmation.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_upgrade.finish_confirmation_result
+  UPDATES_STATE;
+
 FLOW prepare_prompt_upgrade_confirmation
   THEN confirm_prompt_upgrade
-  THEN validate_prompt_upgrade_decision;
+  THEN validate_prompt_upgrade_decision
+  THEN route_after_prompt_upgrade_decision;
+
+ROUTE route_after_prompt_upgrade_decision
+  WHEN "apply" THEN finish_prompt_upgrade_confirmation
+  WHEN "summarize" THEN finish_prompt_upgrade_confirmation
+  WHEN "reject" THEN FAIL_ALL;

@@ -972,9 +972,17 @@ class SelfFixScriptsTest(unittest.TestCase):
             "03_repair_target_agent_loop/04_observe_target/scripts/submit_target_approval.py",
             "submit_approval",
         )
+        target_value = {"decision": "approve", "comment": "ok", "tuning": {}}
+        decision, value, comment = submit.normalize_decision(
+            {"decision": "approve", "value": target_value},
+            {"context": {"ok": True}},
+        )
+        self.assertEqual(decision, "approve")
+        self.assertEqual(value, target_value)
+        self.assertEqual(comment, "user approved")
         decision, value, comment = submit.normalize_decision({"decision": "approve"}, {"context": {"ok": True}})
         self.assertEqual(decision, "approve")
-        self.assertEqual(value, {"ok": True})
+        self.assertEqual(value, {})
         self.assertEqual(comment, "user approved")
         decision, value, comment = submit.normalize_decision({"decision": "reject", "comment": "no"}, {})
         self.assertEqual(decision, "reject")

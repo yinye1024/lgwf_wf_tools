@@ -88,6 +88,14 @@
 }
 ```
 
+## JSON Prefill
+
+生成阶段的最终响应应直接从下面的左花括号继续，补全同一个顶层 JSON object：
+
+```json
+{
+```
+
 ## Constraints
 
 - 默认 `unittest discover` 不得启动真实 Codex。

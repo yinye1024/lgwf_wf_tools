@@ -1,0 +1,18 @@
+WORKFLOW prepare_confirm_plan;
+ENTRY prepare_confirm_plan;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  instruction_path "lgwf_wf_thinking.prepare_confirm_plan.instructions.{node}";
+  result_path "lgwf_wf_thinking.prepare_confirm_plan.results.{node}";
+}
+
+PY prepare_confirm_plan
+  SCRIPT "scripts/prepare_confirm_plan.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_thinking.confirm_context_result
+  UPDATES_STATE;
+
+FLOW prepare_confirm_plan;
+

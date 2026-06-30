@@ -7,20 +7,32 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
 
-from common.confirmation_io import load_json, normalize_relative_path, require_approve, unwrap_approval, write_json
+from confirmation_io import load_json, normalize_relative_path, require_approve, unwrap_approval, write_json
 
 
 APPROVAL_FILE = "create_requirements_approval.json"
 REVISION_APPROVAL_FILE = "create_requirements_revision_approval.json"
+PROPOSAL_FILE = "create_requirements_proposal.json"
 OUTPUT_FILE = "create_requirements.json"
 
 
 def output_artifact_name() -> str:
     return OUTPUT_FILE
+
+
+def resolve_confirmed_payload(lgwf_dir: Path, approval: dict[str, Any]) -> dict[str, Any]:
+    confirmed_value = approval.get("confirmed")
+    if isinstance(confirmed_value, dict):
+        return confirmed_value
+    payload = {key: value for key, value in approval.items() if key != "decision"}
+    proposal = load_json(lgwf_dir / PROPOSAL_FILE)
+    if proposal and set(payload).issubset({"changes", "comment"}):
+        return proposal
+    return payload
 
 
 def write_confirmed_artifact(root: Path) -> dict[str, Any]:
@@ -34,10 +46,7 @@ def write_confirmed_artifact(root: Path) -> dict[str, Any]:
     else:
         approval = unwrap_approval(load_json(lgwf_dir / APPROVAL_FILE), "create_requirements_approval")
     require_approve(approval)
-    confirmed_value = approval.get("confirmed")
-    confirmed_payload = confirmed_value if isinstance(confirmed_value, dict) else {
-        key: value for key, value in approval.items() if key != "decision"
-    }
+    confirmed_payload = resolve_confirmed_payload(lgwf_dir, approval)
     target_root = confirmed_payload.get("target_package_root")
     if isinstance(target_root, str) and target_root.strip():
         confirmed_payload["target_package_root"] = normalize_relative_path(target_root, "target_package_root")

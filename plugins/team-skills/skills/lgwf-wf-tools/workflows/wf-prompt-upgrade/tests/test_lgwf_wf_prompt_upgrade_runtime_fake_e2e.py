@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -199,7 +199,7 @@ MAIN_PROMPT_TO_NODE = {
     "02_design_upgrade/agents/act.md": "design_prompt_upgrade__act",
     "02_design_upgrade/agents/observe.md": "design_prompt_upgrade__observe",
     "04_apply_upgrade/agents/reason.md": "apply_prompt_upgrade__reason",
-    "04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md": "apply_prompt_upgrade__act",
+    "04_apply_upgrade/agents/act.md": "apply_prompt_upgrade__act",
     "04_apply_upgrade/agents/observe.md": "apply_prompt_upgrade__observe",
 }
 
@@ -306,7 +306,7 @@ def write_proposal(workspace: pathlib.Path) -> list[str]:
             "prompt_upgrades": [
                 {
                     "id": "upgrade_runtime_fake_generation_contract",
-                    "prompt_path": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
+                    "prompt_path": "wf/04_apply_upgrade/agents/act.md",
                     "workflow_path": "wf/workflow.lgwf",
                     "node_id": "apply_prompt_upgrade",
                     "react_phase": "act",
@@ -333,7 +333,7 @@ def write_proposal(workspace: pathlib.Path) -> list[str]:
                     "quality_metrics": ["modified_files 可审计"],
                     "planned_changes": [
                         {
-                            "file": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
+                            "file": "wf/04_apply_upgrade/agents/act.md",
                             "change": "补充执行摘要字段约束",
                             "reason": "增强可观察性",
                         }
@@ -342,7 +342,7 @@ def write_proposal(workspace: pathlib.Path) -> list[str]:
                     "risk_controls": ["不越界修改"],
                 }
             ],
-            "files_to_modify": ["wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"],
+            "files_to_modify": ["wf/04_apply_upgrade/agents/act.md"],
             "quality_metrics": ["proposal contains non-empty upgrades"],
             "acceptance_checks": ["files_to_modify within target package"],
             "risks": ["target package is test copy only"],
@@ -384,7 +384,7 @@ def write_apply_plan(workspace: pathlib.Path) -> list[str]:
                 {
                     "step_id": "step_1",
                     "upgrade_id": "upgrade_runtime_fake_generation_contract",
-                    "file": "wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md",
+                    "file": "wf/04_apply_upgrade/agents/act.md",
                     "intent": "补充稳定执行摘要契约。",
                 }
             ],
@@ -530,7 +530,7 @@ def scenario_fake_responses(scenario_id: str) -> list[dict[str, Any]]:
                     "node_id": "apply_prompt_upgrade",
                     "phase": "act",
                     "call_index": 1,
-                    "output_files": ["wf/04_apply_upgrade/act_apply_prompt_upgrade/agents/act.md"],
+                    "output_files": ["wf/04_apply_upgrade/agents/act.md"],
                 },
                 {
                     "node_id": "apply_prompt_upgrade",
@@ -709,7 +709,13 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
             time.sleep(1)
         raise AssertionError(f"approval {request_id} did not advance within 20s: {last_status}")
 
-    def _run_scenario(self, scenario_id: str, confirm_value: dict[str, Any], confirm_decision: str) -> tuple[Path, dict[str, Any]]:
+    def _run_scenario(
+        self,
+        scenario_id: str,
+        confirm_value: dict[str, Any],
+        confirm_decision: str,
+        expected_phase: str = "completed",
+    ) -> tuple[Path, dict[str, Any]]:
         retryable_launch_markers = ("PermissionError", "拒绝访问", ".pid.json")
         for attempt in range(1, 4):
             stack = ExitStack()
@@ -813,7 +819,7 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
             self.fail(f"workflow did not finish before timeout; log tail:\n{log[-8000:]}")
 
         self.assertIsNotNone(final_status)
-        self.assertEqual(final_status.get("phase"), "completed", final_status)
+        self.assertEqual(final_status.get("phase"), expected_phase, final_status)
         self.assertGreaterEqual(len(seen_request_ids), 2)
 
         summary = {
@@ -853,7 +859,6 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
             Path(target["target_package_root"])
             / "wf"
             / "04_apply_upgrade"
-            / "act_apply_prompt_upgrade"
             / "agents"
             / "act.md"
         )
@@ -869,20 +874,21 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
             "reject_to_summarize",
             {"reject": True, "comment": "runtime fake reject branch"},
             "approve",
+            expected_phase="failed",
         )
         prompt_root = work_dir / ".lgwf" / "prompt_upgrade"
         decision = read_json(prompt_root / "decision.json")
         self.assertTrue(decision["reject"])
         self.assertFalse((prompt_root / "apply_plan.json").exists())
         self.assertFalse((prompt_root / "apply_review.json").exists())
-        summary = read_json(work_dir / ".lgwf" / "target_prompt_upgrade_summary.json")
-        self.assertEqual(summary["status"], "rejected")
+        self.assertFalse((work_dir / ".lgwf" / "target_prompt_upgrade_summary.json").exists())
         calls = [json.loads(line) for line in (work_dir / ".lgwf" / "fake_codex_calls.jsonl").read_text(encoding="utf-8").splitlines()]
         self.assertEqual(len(calls), 3)
         self.assertEqual([item["node_key"] for item in calls], [resp["node_id"] + "__" + resp["phase"] for resp in scenario_fake_responses("reject_to_summarize")])
         self.assertFalse((work_dir / ".lgwf" / "fake_codex_unmatched.json").exists())
-        self.assertEqual(runtime["final_status"]["phase"], "completed")
+        self.assertEqual(runtime["final_status"]["phase"], "failed")
 
 
 if __name__ == "__main__":
     unittest.main()
+

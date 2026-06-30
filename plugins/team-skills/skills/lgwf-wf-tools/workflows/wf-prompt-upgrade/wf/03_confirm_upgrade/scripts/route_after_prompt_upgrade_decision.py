@@ -10,6 +10,8 @@ from prompt_upgrade_common import lgwf_dir, output_state, read_json
 
 
 def choose_route(decision: dict) -> str:
+    if decision.get("reject"):
+        return "reject"
     return "apply" if decision.get("approve") and decision.get("approved_upgrade_ids") else "summarize"
 
 

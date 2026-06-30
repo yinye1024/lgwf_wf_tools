@@ -21,6 +21,7 @@ REACT generate_acceptance_proposal MAX 3
     CONTEXT workspace file ".lgwf/react_task_request.json"
     CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
     CONTEXT workspace file ".lgwf/react_task_plan_observe.json"
+    CONTEXT workspace file ".lgwf/react_acceptance_observe.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_acceptance_reason.json" AS_FILE

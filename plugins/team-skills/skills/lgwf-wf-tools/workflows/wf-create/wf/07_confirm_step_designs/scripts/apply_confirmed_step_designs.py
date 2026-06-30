@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[2]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
 
-from common.confirmation_io import load_json, normalize_relative_path, require_approve, unwrap_approval, write_json
+from confirmation_io import load_json, normalize_relative_path, require_approve, unwrap_approval, write_json
 
 
 APPROVAL_FILE = "step_design_confirmation_record.json"

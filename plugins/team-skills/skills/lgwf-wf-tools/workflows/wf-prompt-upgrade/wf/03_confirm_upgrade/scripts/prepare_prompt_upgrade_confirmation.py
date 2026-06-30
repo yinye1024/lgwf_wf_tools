@@ -33,7 +33,7 @@ def build_confirmation_context(
         "instructions": {
             "approve": "Set true to apply the proposed prompt upgrades.",
             "approved_upgrade_ids": "Leave empty when approving all proposed upgrades; otherwise list upgrade ids to apply.",
-            "reject": "Set true to skip applying upgrades and finish with summary.",
+            "reject": "Set true to reject the upgrade proposal and stop the run via FAIL_ALL.",
             "comment": "Optional operator note.",
         },
     }

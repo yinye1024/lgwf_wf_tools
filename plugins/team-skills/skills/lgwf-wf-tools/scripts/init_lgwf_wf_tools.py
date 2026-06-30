@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -17,6 +18,7 @@ ZIP_PATH = FACADE_ROOT / "assets" / "lgwf-client-assist.zip"
 STATE_PATH = VENDOR_ROOT / ".lgwf-client-assist-vendor.json"
 TEXT_SUFFIXES = {".json", ".md", ".py", ".txt", ".yaml", ".yml"}
 LAST_INIT_PATH = FACADE_ROOT / ".local" / "init" / "last-init.json"
+INSTALL_OUTPUT_TAIL_LIMIT = 4000
 
 
 def sha256_file(path: Path) -> str:
@@ -104,6 +106,63 @@ def refresh_vendor(zip_hash: str) -> list[str]:
     return actions
 
 
+def summarize_install_output(text: str) -> dict[str, Any]:
+    return {
+        "length": len(text),
+        "truncated": len(text) > INSTALL_OUTPUT_TAIL_LIMIT,
+        "tail": text[-INSTALL_OUTPUT_TAIL_LIMIT:],
+    }
+
+
+def install_bundled_lgwf() -> dict[str, Any]:
+    if not LGWF_PY.is_file():
+        return {
+            "passed": False,
+            "skipped": True,
+            "reason": "missing_lgwf_py",
+            "lgwf_py": str(LGWF_PY),
+        }
+
+    completed = subprocess.run(
+        [sys.executable, str(LGWF_PY), "install", "--json"],
+        cwd=FACADE_ROOT,
+        text=True,
+        capture_output=True,
+        timeout=120,
+    )
+    install_state_path = VENDOR_ROOT / "assets" / "install-state.json"
+    install_state = {}
+    install_report = {}
+    if install_state_path.is_file():
+        try:
+            data = json.loads(install_state_path.read_text(encoding="utf-8-sig"))
+            if isinstance(data, dict):
+                install_state = data
+        except json.JSONDecodeError:
+            install_state = {}
+    try:
+        data = json.loads(completed.stdout)
+        if isinstance(data, dict):
+            install_report = data
+    except json.JSONDecodeError:
+        install_report = {}
+    return {
+        "passed": completed.returncode == 0,
+        "skipped": False,
+        "command": [sys.executable, str(LGWF_PY), "install", "--json"],
+        "returncode": completed.returncode,
+        "wheel_replaced": bool(install_report.get("wheel_replaced")),
+        "wheel": str(install_report.get("wheel") or install_state.get("wheel") or ""),
+        "wheel_sha256": str(install_report.get("wheel_sha256") or install_state.get("wheel_sha256") or ""),
+        "bundled_version": str(install_report.get("bundled_version") or install_state.get("bundled_version") or ""),
+        "installed_version": str(install_report.get("installed_version") or ""),
+        "install_report": install_report,
+        "install_state": install_state,
+        "stdout": summarize_install_output(completed.stdout),
+        "stderr": summarize_install_output(completed.stderr),
+    }
+
+
 def init_facade() -> dict[str, Any]:
     actions: list[str] = []
     zip_deleted = False
@@ -127,9 +186,13 @@ def init_facade() -> dict[str, Any]:
         zip_hash = str(state.get("zip_sha256", ""))
         action = "noop"
 
+    install = install_bundled_lgwf()
+    if install.get("passed"):
+        actions.append("installed_bundled_lgwf")
+
     doctor = run_doctor()
     return {
-        "passed": bool(doctor["passed"]),
+        "passed": bool(install["passed"]) and bool(doctor["passed"]),
         "action": action,
         "actions": actions,
         "facade_root": str(FACADE_ROOT),
@@ -137,6 +200,7 @@ def init_facade() -> dict[str, Any]:
         "lgwf_py": str(LGWF_PY),
         "zip_sha256": zip_hash,
         "zip_deleted": zip_deleted,
+        "install": install,
         "doctor": doctor,
         "timestamp": datetime.now(UTC).isoformat(),
     }

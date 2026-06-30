@@ -1,0 +1,45 @@
+WORKFLOW result_review_and_delivery;
+ENTRY present_brief;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+CODEX present_brief
+  PROMPT "agents/present_brief.md"
+  CONTEXT workflow file "resources/output_contract.md"
+  CONTEXT workspace file ".lgwf/change_brief_markdown.json"
+  CONTEXT workspace file ".lgwf/change_summary_context.json"
+  OUTPUT_JSON ".lgwf/delivery_review_context.json"
+  RESULT state.git_diff_brief.delivery_review_context_result;
+
+PY prepare_delivery_review
+  SCRIPT "scripts/prepare_delivery_review.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.prepare_delivery_review_result
+  UPDATES_STATE;
+
+APPROVAL confirm_delivery_or_revision
+  PROMPT_REF "agents/confirm_delivery_or_revision.md"
+  READ state.git_diff_brief.delivery_review_input
+  WRITE state.git_diff_brief.delivery_decision
+  RESULT state.git_diff_brief.delivery_decision_result
+  PERSIST ".lgwf/delivery_decision.json"
+  ROUTE_ON_DECISION
+  POLL 1;
+
+PY finalize_output
+  SCRIPT "scripts/finalize_brief_result.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.finalize_output_result
+  UPDATES_STATE;
+
+FLOW {
+  present_brief THEN prepare_delivery_review THEN confirm_delivery_or_revision;
+
+  confirm_delivery_or_revision
+    WHEN "approve" THEN finalize_output
+    WHEN "revise" THEN present_brief
+    WHEN "reject" THEN FAIL_ALL;
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Diff Brief"
+  short_description: "生成中文 Git 变更摘要"
+  default_prompt: "Use $git-diff-brief to summarize the current repository changes in Chinese."

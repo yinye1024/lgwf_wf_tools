@@ -139,7 +139,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_script_can_build_plan_from_confirmed_runtime_artifacts(self) -> None:
         module = load_module(
-            ROOT / "04_confirm_business_flow/05_scaffold_package/scripts/scaffold_package.py",
+            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_handoff",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -168,7 +168,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_script_has_safe_default_without_confirmed_artifacts(self) -> None:
         module = load_module(
-            ROOT / "04_confirm_business_flow/05_scaffold_package/scripts/scaffold_package.py",
+            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_default",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -177,7 +177,7 @@ class StateHandoffContractTest(unittest.TestCase):
             self.assertEqual(plan["target_package_root"], "plugins/team-skills/skills/example-workflow")
 
     def test_confirmation_decision_accepts_lgwf_value_wrappers(self) -> None:
-        helper = load_module(ROOT / "common/confirmation_io.py", "confirmation_io_contract")
+        helper = load_module(ROOT / "shared/scripts/confirmation_io.py", "confirmation_io_contract")
         for approval in (
             {"decision": "approve"},
             {"decision": {"value": "approve"}},
@@ -196,7 +196,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_plan_lists_confirmation_context_scripts(self) -> None:
         scaffold = load_module(
-            ROOT / "04_confirm_business_flow/05_scaffold_package/scripts/scaffold_package.py",
+            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_files",
         )
         plan = scaffold.build_scaffold_plan(
@@ -218,9 +218,9 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_prompt_docs_mention_confirmation_context_handoff(self) -> None:
         expectations = (
-            ("02_confirm_requirements/01_propose_requirements_react/agents/act.md", "requirements_confirmation_context"),
-            ("04_confirm_business_flow/03_propose_business_flow_react/agents/act.md", "business_flow_confirmation_context"),
-            ("07_confirm_step_designs/06_design_steps_react/agents/act.md", "step_design_confirmation_context"),
+            ("02_confirm_requirements/agents/propose_requirements_react.md", "requirements_confirmation_context"),
+            ("04_confirm_business_flow/agents/propose_business_flow_react.md", "business_flow_confirmation_context"),
+            ("07_confirm_step_designs/agents/design_steps_react.md", "step_design_confirmation_context"),
         )
         for relative, state_key in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
@@ -228,9 +228,21 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_apply_scripts_return_output_artifact_path(self) -> None:
         for relative, approval_name, output_name in (
-            ("02_confirm_requirements/scripts/apply_confirmed_requirements.py", "create_requirements_approval.json", "create_requirements.json"),
-            ("04_confirm_business_flow/scripts/apply_confirmed_business_flow.py", "business_flow_approval.json", "business_flow.json"),
-            ("07_confirm_step_designs/scripts/apply_confirmed_step_designs.py", "step_design_confirmation_record.json", "step_designs.json"),
+            (
+                "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "create_requirements_approval.json",
+                "create_requirements.json",
+            ),
+            (
+                "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "business_flow_approval.json",
+                "business_flow.json",
+            ),
+            (
+                "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "step_design_confirmation_record.json",
+                "step_designs.json",
+            ),
         ):
             module = load_module(ROOT / relative, relative.replace("/", "_return_path"))
             with tempfile.TemporaryDirectory() as temp:
@@ -239,8 +251,41 @@ class StateHandoffContractTest(unittest.TestCase):
                 lgwf_dir.mkdir()
                 (lgwf_dir / approval_name).write_text(json.dumps({"decision": "approve"}), encoding="utf-8")
                 result = module.write_confirmed_artifact(root)
-                self.assertIn("artifact_path", next(iter(result.values())))
-                self.assertEqual(next(iter(result.values()))["artifact_path"], f".lgwf/{output_name}")
+                artifacts = [value for value in result.values() if isinstance(value, dict) and "artifact_path" in value]
+                self.assertTrue(artifacts)
+                self.assertEqual(artifacts[0]["artifact_path"], f".lgwf/{output_name}")
+
+    def test_apply_scripts_use_proposal_when_approval_only_records_decision(self) -> None:
+        for relative, approval_name, proposal_name, expected_key in (
+            (
+                "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "create_requirements_approval.json",
+                "create_requirements_proposal.json",
+                "workflow_name",
+            ),
+            (
+                "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "business_flow_approval.json",
+                "business_flow_proposal.json",
+                "stages",
+            ),
+        ):
+            module = load_module(ROOT / relative, relative.replace("/", "_proposal_fallback"))
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                lgwf_dir = root / ".lgwf"
+                lgwf_dir.mkdir()
+                proposal = {"workflow_name": "demo", "target_package_root": "plugins/team-skills/skills/demo"}
+                if expected_key == "stages":
+                    proposal["stages"] = [{"stage_id": "collect"}]
+                (lgwf_dir / proposal_name).write_text(json.dumps(proposal), encoding="utf-8")
+                (lgwf_dir / approval_name).write_text(
+                    json.dumps({"decision": "approve", "changes": [], "comment": "确认通过"}),
+                    encoding="utf-8",
+                )
+                result = module.write_confirmed_artifact(root)
+                artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
+                self.assertEqual(artifact["confirmed"][expected_key], proposal[expected_key])
 
     def test_summary_report_path_is_relative(self) -> None:
         summary = load_module(ROOT / "09_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")

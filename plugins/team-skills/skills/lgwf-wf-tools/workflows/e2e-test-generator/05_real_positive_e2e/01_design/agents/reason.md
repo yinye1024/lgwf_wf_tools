@@ -10,17 +10,19 @@
 - `.lgwf/e2e_workflow_graph.json`
 - `.lgwf/e2e_coverage_matrix.json`
 - `.lgwf/e2e_business_flow_summary.json`
+- `.lgwf/e2e_real_positive_observe.json`
 - `05_real_positive_e2e/01_design/agents/spec.md`
 
 ## Task
 
-1. 为目标 workflow 设计一个小而真实的正向业务场景。
-2. 明确该测试是人工验收入口，默认必须通过 `load_tests` 从 `unittest discover` 回归集合中排除。
-3. 明确 `business_scenario` 的输入范围、规模边界和预期业务结果。
-4. 明确 fixture 如何创建、清理，以及失败或超时时如何保留 artifact。
-5. 明确 approval 如何自动提交。
-6. 明确最终黑盒断言，且断言必须面向可观察业务结果，不能只看内部 `.lgwf` 状态。
-7. 对真实执行前提不足、fixture 过大、黑盒结果不稳定或环境信息不明确的情况，写入 `design_warnings[]`。
+1. 读取 `.lgwf/e2e_real_positive_observe.json`。首轮可能是 `initial_placeholder=true` 的默认占位；后续迭代必须把其中的失败项、覆盖缺口和验收结论作为修正设计的依据。
+2. 为目标 workflow 设计一个小而真实的正向业务场景。
+3. 明确该测试是人工验收入口，默认必须通过 `load_tests` 从 `unittest discover` 回归集合中排除。
+4. 明确 `business_scenario` 的输入范围、规模边界和预期业务结果。
+5. 明确 fixture 如何创建、清理，以及失败或超时时如何保留 artifact。
+6. 明确 approval 如何自动提交。
+7. 明确最终黑盒断言，且断言必须面向可观察业务结果，不能只看内部 `.lgwf` 状态。
+8. 对真实执行前提不足、fixture 过大、黑盒结果不稳定或环境信息不明确的情况，写入 `design_warnings[]`。
 
 ## Success Criteria
 

@@ -10,9 +10,6 @@
       ".lgwf/prompt_upgrade_target.json",
       ".lgwf/prompt_upgrade/inventory.json",
       ".lgwf/prompt_upgrade/react_history.json"
-    ],
-    "validate_apply_plan": [
-      ".lgwf/prompt_upgrade/apply_plan_validation.json"
     ]
   }
 }

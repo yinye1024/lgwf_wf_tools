@@ -231,10 +231,9 @@ class StructuredContractsTest(unittest.TestCase):
         workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("APPROVAL confirm_plan_and_acceptance", workflow)
         self.assertIn("ROUTE_ON_DECISION", workflow)
-        self.assertIn("ROUTE confirm_plan_and_acceptance", workflow)
         self.assertIn('WHEN "approve" THEN apply_confirmed_contracts', workflow)
         self.assertIn('WHEN "revise" THEN finish_contract_review', workflow)
-        self.assertIn('WHEN "reject" THEN finish_contract_review', workflow)
+        self.assertIn('WHEN "reject" THEN FAIL_ALL', workflow)
         self.assertNotIn("route_contract_decision", workflow)
 
     def test_all_lgwf_plan_approval_nodes_use_business_decision_routes(self) -> None:
@@ -244,13 +243,12 @@ class StructuredContractsTest(unittest.TestCase):
 
         self.assertIn("APPROVAL confirm_plan_and_acceptance", root_workflow)
         self.assertIn("ROUTE_ON_DECISION", root_workflow)
-        self.assertIn('WHEN "reject" THEN finish_contract_review', root_workflow)
+        self.assertIn('WHEN "reject" THEN FAIL_ALL', root_workflow)
 
         self.assertIn("APPROVAL collect_react_task_request", generate_workflow)
         self.assertIn("ROUTE_ON_DECISION", generate_workflow)
-        self.assertIn("ROUTE collect_react_task_request", generate_workflow)
         self.assertIn('WHEN "approve" THEN validate_plan_analysis_targets', generate_workflow)
-        self.assertIn('WHEN "reject" THEN finish_react_task_request', generate_workflow)
+        self.assertIn('WHEN "reject" THEN FAIL_ALL', generate_workflow)
 
         self.assertIn("APPROVAL decide_react_task_block", execute_workflow)
         self.assertIn("ROUTE_ON_DECISION", execute_workflow)

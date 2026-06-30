@@ -1,0 +1,18 @@
+WORKFLOW write_handoff;
+ENTRY write_handoff;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  instruction_path "lgwf_wf_thinking.handoff.instructions.{node}";
+  result_path "lgwf_wf_thinking.handoff.results.{node}";
+}
+
+PY write_handoff
+  SCRIPT "scripts/write_handoff.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_thinking.handoff_result
+  UPDATES_STATE;
+
+FLOW write_handoff;
+

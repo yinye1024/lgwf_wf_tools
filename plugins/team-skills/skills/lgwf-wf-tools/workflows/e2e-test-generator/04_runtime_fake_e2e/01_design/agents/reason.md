@@ -9,10 +9,17 @@
 - `.lgwf/e2e_target_request.normalized.json`
 - `.lgwf/e2e_workflow_graph.json`
 - `.lgwf/e2e_coverage_matrix.json`
+- `.lgwf/e2e_runtime_fake_observe.json`
+- `.lgwf/e2e_runtime_fake_repair_context.json`
 - `04_runtime_fake_e2e/01_design/agents/spec.md`
 
 ## Task
 
+0. 先读取 `.lgwf/e2e_runtime_fake_repair_context.json`：
+   - 如果 `active=false`，按首轮设计生成完整 runtime fake E2E 设计。
+   - 如果 `active=true`，本轮是修复轮，只能围绕 `blockers[]` 生成 `repair_plan`，不得重新设计已通过的测试结构。
+   - 如果 `no_progress=true`，必须在输出中标记无法继续，并把 `blockers[]` 原样纳入 `design_warnings[]`，不要继续扩大方案。
+   同时读取 `.lgwf/e2e_runtime_fake_observe.json`，把上一轮 observe 的验收结果作为 repair evidence；首轮该文件可能是 `initial_placeholder=true` 的占位内容。
 1. 设计真实 runtime 驱动流程，必须通过 `lgwf.py run --workflow-lgwf` 启动目标 workflow。
 2. 设计 Python fake Codex 契约，fake 必须支持 `--prompt-file <path>` 读取 handoff prompt。
 3. 明确 fake 如何按 node id 或 `Main prompt file` 产生固定 `.lgwf/*.json` 输出，不依赖调用顺序。
@@ -26,6 +33,7 @@
 - `runtime_driver` 至少包含 `run_command`、`status_polling`、`timeout_budget`、`completion_signal`、`failure_diagnostics`。
 - `fake_codex_contract` 至少包含 `launcher`、`prompt_file_support`、`response_mapping_rules[]`、`output_files[]`、`fallback_behavior`。
 - `fake_codex_contract.response_mapping_rules[]` 必须基于 node id 或 `Main prompt file` 稳定映射。
+- 当 repair context `active=true` 时，输出必须包含 `repair_plan[]`，每项对应一个 `blockers[].issue_code`，并说明本轮 ACT 必须修改的文件、函数或断言。
 - `approval_strategy` 至少包含 `detection`、`decision_rules`、`submit_steps`、`stop_conditions`。
 - `artifact_assertions[]` 每项都包含 `artifact_path`、`producer_node`、`assertion`、`reason`。
 - `scenarios[]` 每项都包含 `scenario_id`、`goal`、`triggered_branches`、`fake_responses`、`approval_steps`、`expected_artifacts`、`expected_runtime_assertions`。
@@ -43,6 +51,14 @@
 {
   "test_file": "tests/test_<workflow>_runtime_fake_e2e.py",
   "purpose": "真实 runtime 编排连通，Python fake Codex 固定输出，并覆盖关键分支场景",
+  "repair_plan": [
+    {
+      "issue_code": "contract:prompt_file_supported",
+      "required_change": "本轮必须落地的修复",
+      "target_files": ["tests/test_<workflow>_runtime_fake_e2e.py"],
+      "acceptance": "observe 中对应检查必须通过"
+    }
+  ],
   "fake_codex_contract": {
     "launcher": "fake Codex 启动方式",
     "prompt_file_support": "如何解析 --prompt-file",

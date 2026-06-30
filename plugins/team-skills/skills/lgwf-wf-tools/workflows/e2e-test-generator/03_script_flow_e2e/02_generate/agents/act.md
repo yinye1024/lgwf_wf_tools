@@ -72,6 +72,14 @@
 }
 ```
 
+## JSON Prefill
+
+生成阶段的最终响应应直接从下面的左花括号继续，补全同一个顶层 JSON object：
+
+```json
+{
+```
+
 ## Constraints
 
 - 只生成或修复 `test_<workflow>_script_flow_e2e.py`。

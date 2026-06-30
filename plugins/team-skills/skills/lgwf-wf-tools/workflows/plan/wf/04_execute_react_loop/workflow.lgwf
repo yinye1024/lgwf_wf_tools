@@ -26,6 +26,7 @@ REACT implement_react_task MAX 3
     PROMPT "01_implement_task/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_context.json"
     CONTEXT workspace file ".lgwf/react_acceptance_plan.json"
+    CONTEXT workspace file ".lgwf/react_task_result.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_FILE ".lgwf/react_task_implementation_reason.md"

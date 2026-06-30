@@ -6,11 +6,24 @@ DEFAULTS {
   timeout_seconds 300;
 }
 
-STEP collect_raw_intent
-  WORKFLOW "00_collect_raw_intent/workflow.lgwf";
+APPROVAL collect_raw_intent
+  PROMPT_REF "confirm_raw_intent.md"
+  READ state.lgwf_wf_create.raw_intent_context
+  WRITE state.lgwf_wf_create.raw_intent_request
+  RESULT state.lgwf_wf_create.raw_intent_result
+  PERSIST ".lgwf/raw_intent_request.json"
+  POLL 1;
 
-STEP propose_requirements_react
-  WORKFLOW "01_propose_requirements_react/workflow.lgwf";
+PY finish_raw_intent
+  SCRIPT "scripts/finish_raw_intent.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.raw_intent_finish_result
+  UPDATES_STATE;
+
+CODEX propose_requirements_react
+  PROMPT "agents/propose_requirements_react.md"
+  OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
+  RESULT state.lgwf_wf_create.requirements_proposal_result;
 
 PY prepare_requirements_confirmation
   SCRIPT "scripts/prepare_requirements_confirmation.py"
@@ -48,24 +61,18 @@ APPROVAL revise_requirements
   ROUTE_ON_DECISION
   POLL 1;
 
-PY finish_confirmation
-  SCRIPT "scripts/finish_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.requirements_finish_result
-  UPDATES_STATE;
-
 FLOW {
-  collect_raw_intent THEN propose_requirements_react THEN prepare_requirements_confirmation THEN confirm_requirements;
+  collect_raw_intent THEN finish_raw_intent THEN propose_requirements_react THEN prepare_requirements_confirmation THEN confirm_requirements;
 
   confirm_requirements
     WHEN "approve" THEN apply_confirmed_requirements
     WHEN "revise" THEN prepare_requirements_revision_confirmation
-    WHEN "reject" THEN finish_confirmation;
+    WHEN "reject" THEN FAIL_ALL;
 
   prepare_requirements_revision_confirmation THEN revise_requirements;
 
   revise_requirements
     WHEN "approve" THEN apply_confirmed_requirements
     WHEN "revise" THEN prepare_requirements_revision_confirmation
-    WHEN "reject" THEN finish_confirmation;
+    WHEN "reject" THEN FAIL_ALL;
 }

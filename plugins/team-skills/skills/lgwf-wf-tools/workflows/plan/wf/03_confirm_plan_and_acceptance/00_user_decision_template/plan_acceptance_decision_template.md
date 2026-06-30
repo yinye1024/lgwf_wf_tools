@@ -113,7 +113,7 @@
 请确认：approve 继续落盘正式计划与验收契约，还是 reject 并说明需要调整的点？
 ```
 
-用户只能回复以下 JSON object 之一。当前节点启用 `ROUTE_ON_DECISION`：`approve` 会进入契约固化与执行，`reject` 会正常路由到结束/修订记录，不会把 workflow 标记为 runtime failed。`revise` 表示方向可接受但需要重生成方案，运行时会按业务字段路由处理。
+用户只能回复以下 JSON object 之一。当前节点启用 `ROUTE_ON_DECISION`：`approve` 会进入契约固化与执行，`reject` 会通过 `FAIL_ALL` 终止整个 run。`revise` 表示方向可接受但需要重生成方案，运行时会按业务字段路由处理。
 
 ```json
 {"approval": "approve", "comment": ""}
@@ -139,6 +139,6 @@
 - 展示时必须包含 `required_checks` / `required_checks_details`。
 - 展示时必须包含 `traceability` 和 `plan_validation_map[].plan_step_index`。
 - 如果 `summary` 或 task 字段中出现乱码、mojibake 或明显编码异常，必须在“质量风险”中披露。
-- 该节点必须启用 `ROUTE_ON_DECISION`，用户选择 `reject` 时应进入业务路由，不得直接让 workflow failed。
+- 该节点必须启用 `ROUTE_ON_DECISION`，用户选择 `reject` 时应通过 `FAIL_ALL` 终止整个 run，避免父子 workflow 通过人工确认 route 继续耦合。
 - 未明确 `approve` 前，不得创建 `.lgwf/react_task_plan.json` 或 `.lgwf/react_acceptance_plan.json`。
 - 不得修改业务目标文件。

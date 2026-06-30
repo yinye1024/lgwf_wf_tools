@@ -1,5 +1,5 @@
 WORKFLOW script_flow_e2e;
-ENTRY script_flow_e2e_react;
+ENTRY prepare_script_flow_observe_feedback;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -8,6 +8,11 @@ DEFAULTS {
   result_path "lgwf_e2e.script_flow.results.{node}";
 }
 
+PY prepare_script_flow_observe_feedback
+  SCRIPT "00_prepare/scripts/prepare_script_flow_observe_feedback.py"
+  RESULT state.lgwf_e2e.script_flow_observe_feedback_result
+  UPDATES_STATE;
+
 REACT script_flow_e2e_react MAX 3
   SPEC "01_design/agents/spec.md"
   REASON CODEX
@@ -15,6 +20,7 @@ REACT script_flow_e2e_react MAX 3
     CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
     CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
     CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_script_flow_observe.json"
     TARGET_DIRS state.lgwf_e2e.target_dirs
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_script_flow_design.json"
@@ -43,3 +49,6 @@ REACT script_flow_e2e_react MAX 3
     SCRIPT "04_repair/scripts/decide_script_flow.py"
     RESULT state.lgwf_e2e.script_flow_decide_result
     UPDATES_STATE;
+
+FLOW prepare_script_flow_observe_feedback
+  THEN script_flow_e2e_react;

@@ -42,4 +42,4 @@ plugins/team-skills/skills/lgwf-wf-tools/workflows/wf-fix/ws
 
 目标 workflow 运行中进入 `APPROVAL` 时，只有 `ask_main_agent_for_target_approvals=true` 才会转发该确认请求并在当前对话中等待用户 approve 或 reject。默认 `false` 时，fix 会以阻塞状态结束并提示人工接管目标 workflow。
 
-主 agent 提交任何 approval payload 时必须保护 UTF-8 语义。不要把包含中文的 JSON 直接写入 PowerShell/cmd 命令文本或直接传给 `--value-json`。统一使用 skill 根目录的 `scripts/safe_approval_submit.py`，通过 UTF-8 `--value-file`、ASCII-only `--value-json-ascii` 或 UTF-8 base64 传值；提交后读回 `.lgwf/human/*.response.json` 验证内容没有被替换成 `?`。
+主 agent 提交任何 approval payload 时必须保护 UTF-8 语义。不要把包含中文的 JSON 直接写入 PowerShell/cmd 命令文本或直接传给 `--value-json`。统一使用 `workflows/wf-fix/scripts/safe_approval_submit.py`（相对 `lgwf-wf-tools` skill 根目录），通过 UTF-8 `--value-file`、ASCII-only `--value-json-ascii` 或 UTF-8 base64 传值；提交后读回 `.lgwf/human/*.response.json` 验证内容没有被替换成 `?`。

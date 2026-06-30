@@ -1,5 +1,5 @@
 WORKFLOW real_positive_e2e;
-ENTRY real_positive_e2e_react;
+ENTRY prepare_real_positive_observe_feedback;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -7,6 +7,11 @@ DEFAULTS {
   instruction_path "lgwf_e2e.real_positive.instructions.{node}";
   result_path "lgwf_e2e.real_positive.results.{node}";
 }
+
+PY prepare_real_positive_observe_feedback
+  SCRIPT "00_prepare/scripts/prepare_real_positive_observe_feedback.py"
+  RESULT state.lgwf_e2e.real_positive_observe_feedback_result
+  UPDATES_STATE;
 
 REACT real_positive_e2e_react MAX 3
   SPEC "01_design/agents/spec.md"
@@ -16,6 +21,7 @@ REACT real_positive_e2e_react MAX 3
     CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
     CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
     CONTEXT workspace file ".lgwf/e2e_business_flow_summary.json"
+    CONTEXT workspace file ".lgwf/e2e_real_positive_observe.json"
     TARGET_DIRS state.lgwf_e2e.target_dirs
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_real_positive_design.json"
@@ -44,3 +50,6 @@ REACT real_positive_e2e_react MAX 3
     SCRIPT "04_repair/scripts/decide_real_positive.py"
     RESULT state.lgwf_e2e.real_positive_decide_result
     UPDATES_STATE;
+
+FLOW prepare_real_positive_observe_feedback
+  THEN real_positive_e2e_react;

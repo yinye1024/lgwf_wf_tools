@@ -31,9 +31,7 @@ def normalize_decision(raw: dict, request_context: dict) -> tuple[str, object | 
     if decision not in {"approve", "reject"}:
         raise ValueError("target approval decision must be approve or reject")
     if decision == "approve":
-        value = raw.get("value")
-        if value is None:
-            value = request_context.get("context", {})
+        value = raw.get("value", {})
         return "approve", value, raw.get("comment") or "user approved"
     comment = raw.get("comment")
     if not isinstance(comment, str) or not comment.strip():

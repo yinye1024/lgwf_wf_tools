@@ -52,12 +52,14 @@
   "contract_checks": {
     "py_compile": {
       "passed": true,
+      "issue_code": "",
       "evidence": "证据摘要",
       "source_location": "文件或命令位置",
       "repair_hint": ""
     },
     "unittest": {
       "passed": true,
+      "issue_code": "",
       "evidence": "证据摘要",
       "source_location": "文件或命令位置",
       "repair_hint": ""
@@ -102,6 +104,7 @@
   "scenario_checks": {
     "happy_path": {
       "passed": true,
+      "issue_code": "",
       "test_method": "test_happy_path",
       "covered_branches": [],
       "evidence": "scenario 级证据摘要",
@@ -119,6 +122,12 @@
 }
 ```
 
+## Strict JSON Output
+
+最终响应只允许输出严格 JSON object，不允许输出 Markdown、代码块或解释性前后缀。
+所有字符串值必须使用 JSON 双引号包裹；不得使用 Markdown 反引号作为字符串定界符。
+如需在字符串中提到命令、路径或代码片段，也必须放在双引号字符串内部。
+
 ## Constraints
 
 - 只写验收结果。
@@ -126,7 +135,9 @@
 - 不修改目标 workflow。
 - 保留顶层 `passed`，兼容当前 decide 脚本。
 - `contract_checks` 必须覆盖 Audit Criteria 1-7，不要输出无结构空对象。
+- `contract_checks.*.passed=false` 时必须填充稳定 `issue_code`，例如 `prompt_file_not_supported`、`fake_codex_command_not_intercepted`、`runtime_status_contract_mismatch`。
 - `contract_checks.business_route_coverage` 必须判断非 happy path 分支覆盖是否真实落地。
 - `scenario_checks` 必须覆盖设计 JSON 中的全部 `scenarios[]`。
+- `scenario_checks.*.passed=false` 时必须填充稳定 `issue_code`，例如 `scenario_not_reached_approval`、`scenario_missing_artifact`。
 - `coverage_gaps[]` 必须列出 route、approval、repair/retry 候选的未覆盖项；没有缺口时输出空数组。
 - `issues[]` 只写高层问题摘要，不替代 `contract_checks`、`scenario_checks` 或 `coverage_gaps`。
