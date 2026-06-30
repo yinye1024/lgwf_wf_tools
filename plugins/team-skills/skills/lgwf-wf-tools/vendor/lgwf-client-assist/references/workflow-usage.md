@@ -130,6 +130,36 @@ python <skill-dir>\scripts\lgwf.py tool run copy_file --options-json '{"source":
 
 公开 tools 为 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`。前三者要求 `--work-dir`；复制 CLI 可使用绝对路径或基于当前目录的相对路径。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
 
+## Codex Token Status
+
+主 agent 可读取当前 workflow runtime 写出的 Codex live token 状态：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py codex token-status --work-dir <work_dir>
+python <skill-dir>\scripts\lgwf.py codex token-status --work-dir <work_dir> --token-max 1000000
+```
+
+Codex runner 会在 runtime 进程内读取 Codex CLI JSONL，解析每个已完成 turn 的 `turn.completed.usage`，在内存中累加同一个 Codex instruction 的 token，并同步写入：
+
+```text
+<work_dir>\.lgwf\codex\status.json
+```
+
+`codex token-status` 只读这个 live status 快照，不扫描历史 stdout/stderr log，不读取最终 run record。主要返回字段：
+
+- `status`：当前 Codex instruction 的 `running` / `completed` / `failed` / `unavailable`。
+- `current_instruction_id`：当前或最近一个 Codex instruction，例如 `implement_steps_react:codex_prompt`。
+- `turn_count`：已解析到 `turn.completed.usage` 的 turn 数；同一个 Codex 节点多轮时会递增。
+- `token_usage`：当前 instruction 内按 turn 累加后的 token。
+- `health`：包含 `phase`、`stale`、`seconds_since_update`，用于判断 Codex 是否还在推进。
+- `over_token_limit`：传入 `--token-max` 时，根据当前 `token_usage.total_tokens` 判断是否超限。
+
+该接口不停止进程；如果 `over_token_limit=true` 或 `health.phase=stale`，主 agent 可再调用：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py stop --pid <pid>
+```
+
 ## Minimal Workflow
 
 ```json
