@@ -9,10 +9,12 @@
 
 ## 编码要求
 
-- 新增或重写包含中文的文本文件时，必须使用 UTF-8 编码保存。
-- 修改现有包含中文的文本文件时，必须保持或转换为 UTF-8，避免写入 GBK、ANSI 或其他本地代码页编码。
+- 文本文件统一使用 UTF-8 no BOM 保存，包括 Markdown、JSON、YAML、Python、LGWF DSL、prompt、报告和示例文件。
+- 新增或重写包含中文的文本文件时，必须使用 UTF-8 no BOM 编码保存。
+- 修改现有包含中文的文本文件时，必须保持或转换为 UTF-8 no BOM，避免写入 UTF-8 BOM、GBK、ANSI 或其他本地代码页编码。
 - 在 PowerShell 中读取中文文件时，优先显式使用 `-Encoding UTF8`；发现终端显示乱码时，先区分“文件编码问题”和“终端解码显示问题”，不要直接按乱码内容改写。
 - 生成脚本、prompt、Markdown、JSON 示例或报告时，中文字符串必须保证 UTF-8 可读；必要时在脚本中显式声明 `encoding="utf-8"`。
+- 在 PowerShell 写入文本时，避免使用会产生 BOM 的写法；若需要脚本化写入，优先使用 `.NET` 的 `System.Text.UTF8Encoding($false)` 或等价方式。
 
 ## 文档风格
 

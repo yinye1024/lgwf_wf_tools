@@ -1,4 +1,17 @@
 .pytest_cache/
+__pycache__/
+*.py[cod]
+.lgwf/
+.tmp/
+.local/
 .worktrees/
 _damaged_contents_backup_*/
 $extract/
+skills/**/ws/.lgwf/
+skills/**/ws/sessions/
+skills/**/ws/*.log
+skills/**/ws/*.pid.json
+skills/**/.tmp/
+skills/**/.local/
+skills/**/vendor/**/assets/install-state.json
+skills/**/vendor/**/assets/install-state.lock

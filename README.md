@@ -1,51 +1,40 @@
-# LGWF Codex Plugins
+# LGWF Codex Skills
 
-这个仓库维护 LGWF workflow tools 的 Codex plugin。当前 plugin 安装名是 `team-skills`，对外分发的 skill 是 `lgwf-wf-tools` workflow facade。
+这个仓库维护 LGWF workflow tools 的 Codex skills。每个目录都是可单独安装、复制或验证的 skill，不再使用额外发布层。
 
 ## 目录结构
 
-- `.agents/plugins/marketplace.json`：团队 marketplace manifest。
-- `plugins/team-skills/`：Codex plugin 根目录。
-- `plugins/team-skills/.codex-plugin/plugin.json`：plugin manifest，声明 plugin 名称、版本、展示信息和 skills 入口。
-- `plugins/team-skills/skills/lgwf-wf-tools/`：当前对外发布的 LGWF workflow facade skill。
+- `skills/git-diff-brief/`：生成 Git 变更中文摘要的 workflow skill。
+- `skills/lgwf-wf-runner/`：管理 LGWF workflow 运行工作目录和会话的辅助 skill。
+- `skills/lgwf-wf-thinking/`：把 workflow 创建、修复、转换和治理诉求整理成可确认方案的 skill。
+- `skills/lgwf-wf-tools/`：LGWF workflow facade skill，负责路由、监控、审批和自我优化。
+- `tests/`：仓库级回归测试。
 
 ## 本地安装
 
-在仓库根目录执行：
+按需把单个 skill 目录复制到本机 Codex skills 目录。例如：
 
 ```powershell
-codex plugin marketplace add D:\allen\github\lgwf_plugins
-codex plugin add team-skills@lgwf-team
+$target = "$env:USERPROFILE\.codex\skills\lgwf-wf-tools"
+Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item -LiteralPath D:\allen\github\lgwf_skills\skills\lgwf-wf-tools -Destination $target -Recurse
 ```
 
-安装或更新后，重新打开一个 Codex thread，让新 skill 列表重新加载。
+安装或更新后，重新打开一个 Codex thread，让 skill 列表重新加载。
 
-## 发布到团队
+## 分发方式
 
-把本仓库推送到 Git 仓库后，团队成员可以用 Git marketplace 安装：
-
-```powershell
-codex plugin marketplace add https://github.com/<org>/<repo> --ref main
-codex plugin add team-skills@lgwf-team
-```
-
-更新已安装 marketplace：
-
-```powershell
-codex plugin marketplace upgrade
-```
+把本仓库推送到 Git 仓库后，团队成员直接按需复制 `skills/<skill-name>/`。仓库只维护 skill 源码和验证资产。
 
 ## 维护 Skill
 
-新增 skill 放在 `plugins/team-skills/skills/<skill-name>/`。目录名使用小写 hyphen-case，每个 skill 必须包含 `SKILL.md`，并让 `SKILL.md` 聚焦 Codex 需要遵循的操作流程。
+新增 skill 放在 `skills/<skill-name>/`。目录名使用小写 hyphen-case，每个 skill 必须包含 `SKILL.md`，并让 `SKILL.md` 聚焦 Codex 需要遵循的操作流程。
 
-如果这个 plugin 继续只发布 LGWF facade，应保持 `skills/` 下只有 `lgwf-wf-tools`。开发草稿、复现说明、临时 preset 和运行报告不要放进 `skills/`，除非它们属于某个正式 skill 的文档或测试夹具。
+开发草稿、复现说明、临时 preset 和运行报告不要放进 `skills/`，除非它们属于某个正式 skill 的文档或测试夹具。
 
-发布前至少运行：
+修改单个 skill 后至少运行：
 
 ```powershell
 $env:PYTHONUTF8="1"
-python C:\Users\Administrator\.codex\skills\.system\skill-creator\scripts\quick_validate.py plugins\team-skills\skills\lgwf-wf-tools
-python -m json.tool plugins\team-skills\.codex-plugin\plugin.json > $null
-python -m json.tool .agents\plugins\marketplace.json > $null
+python C:\Users\Administrator\.codex\skills\.system\skill-creator\scripts\quick_validate.py skills\lgwf-wf-tools
 ```

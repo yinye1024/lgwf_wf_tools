@@ -1,0 +1,4 @@
+interface:
+  display_name: "LGWF 工作流工具"
+  short_description: "路由、监控和改进 LGWF 工作流"
+  default_prompt: "使用 $lgwf-wf-tools 将这个请求路由到合适的 LGWF 工作流。"
