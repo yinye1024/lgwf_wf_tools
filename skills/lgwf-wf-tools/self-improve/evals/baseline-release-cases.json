@@ -11,7 +11,7 @@
       "expected": {
         "required_text": [
           {
-            "path": "AGENTS.md",
+            "path": "docs/maintenance.md",
             "contains": "发布包不得覆盖或删除 `.local/self-improve/`"
           },
           {
@@ -38,7 +38,7 @@
       "expected": {
         "required_text": [
           {
-            "path": "AGENTS.md",
+            "path": "docs/self-improve.md",
             "contains": "self-improve 脚本只生成记录、报告和 proposal"
           },
           {

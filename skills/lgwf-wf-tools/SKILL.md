@@ -1,43 +1,45 @@
 ---
 name: lgwf-wf-tools
-description: 当用户调用 /lgwf-wf-tools，或需要 LGWF 工作流入口路由请求、监控执行、处理工作流审批、运行入口初始化、诊断、列表命令，或基于执行证据改进路由和监控行为时使用。
+description: 当用户调用 /lgwf-wf-tools，或需要 LGWF 工作流入口路由、运行监控、审批处理、初始化、诊断、列表或自我优化时使用。
 ---
 
 # LGWF 工作流工具
 
-本 skill 是 LGWF 工作流工具集合的统一入口。它对外只暴露一个入口，内部工作流统一放在 `workflows/*`，由根目录 `registry.json` 管理。
+本 skill 是 `lgwf-wf-tools` 的统一入口。它负责接收 LGWF workflow 相关请求，并把显式指令直接路由到对应引导文档；非显式指令交给同目录 `AGENTS.md`。
 
-## 入口职责
+## 使用场景
 
-- 根据用户目标路由到合适的内部工作流。
-- 当用户明确使用 `run <path>`、`target-run <path>` 或 `--target-workflow <path>` 时，先按目标路径直启 LGWF workflow；不匹配时再进入内部工作流路由。
-- 为外部 skill 提供脚本级代理入口 `scripts/run_skill_workflow.py`，把参数原样透传给本 skill 内置的 `vendor/lgwf-client-assist/scripts/lgwf.py run`。
-- 围绕同一个 LGWF run handle 监控工作流执行、处理审批、解释状态和收尾。
-- 根据真实执行中的路由、监控、审批、输入契约、报告、发布或文档问题进入自我优化。
+- 用户调用 `/lgwf-wf-tools`、`/lgwf-wf-tools help` 或 `/lgwf-wf-tools 帮助`。
+- 用户调用 `/lgwf-wf-tools self-improve` 或 `/lgwf-wf-tools 自我优化`。
+- 用户要求初始化、诊断、列出、运行或继续 LGWF workflow。
+- 用户要求修复、创建、优化、测试或规划 LGWF workflow package。
+- 用户要求 self-improve、自我优化、复盘、沉淀 case 或生成 proposal。
+- 外部 skill 需要通过 `scripts/run_skill_workflow.py` 代理调用本 skill 内置 LGWF client。
 
-## 强制第一跳
+## 第一跳
 
-除 `/lgwf-wf-tools help`、`/lgwf-wf-tools 帮助` 或纯帮助请求外，处理任何工作流相关请求前必须先读取同目录 [AGENTS.md](AGENTS.md)。
+- 显式指令先按下表读取对应文档。
+- 其他 `/lgwf-wf-tools` 或 LGWF workflow 相关请求，先读取同目录 [AGENTS.md](AGENTS.md)，再按其中的场景路由表继续。
 
-读取 `AGENTS.md` 后再按它的规则执行：
+## 显式指令
 
-- 如果请求显式匹配 `run <path>`、`target-run <path>` 或 `--target-workflow <path>`，必须先按 `AGENTS.md` 的目标 workflow 直启规则解析路径；解析失败时报告原因，不回退到内部工作流路由。
-- 如果请求不匹配上述显式直启形式，路由前必须先列出 `registry.json` 中可用工作流。
-- 必须说明为什么选择目标工作流。
-- 必须读取目标工作流的 `AGENTS.md`。
-- 必须遵守提案门禁、审批边界、监控循环和自我优化规则。
+| 指令 | 下一步 |
+| --- | --- |
+| `/lgwf-wf-tools` | 读取 [docs/maintenance.md](docs/maintenance.md)。 |
+| `/lgwf-wf-tools help` | 读取 [docs/maintenance.md](docs/maintenance.md)。 |
+| `/lgwf-wf-tools 帮助` | 读取 [docs/maintenance.md](docs/maintenance.md)。 |
+| `/lgwf-wf-tools init` | 读取 [docs/maintenance.md](docs/maintenance.md)。 |
+| `/lgwf-wf-tools doctor` | 读取 [docs/maintenance.md](docs/maintenance.md)。 |
+| `/lgwf-wf-tools list` | 读取 [docs/maintenance.md](docs/maintenance.md)。 |
+| `/lgwf-wf-tools run <path>` | 读取 [docs/target-run.md](docs/target-run.md)。 |
+| `/lgwf-wf-tools target-run <path>` | 读取 [docs/target-run.md](docs/target-run.md)。 |
+| `/lgwf-wf-tools --target-workflow <path>` | 读取 [docs/target-run.md](docs/target-run.md)。 |
+| `/lgwf-wf-tools self-improve` | 读取 [docs/self-improve.md](docs/self-improve.md)。 |
+| `/lgwf-wf-tools 自我优化` | 读取 [docs/self-improve.md](docs/self-improve.md)。 |
+| `/lgwf-wf-tools 优化方案` | 读取 [docs/self-improve.md](docs/self-improve.md)。 |
 
-`/lgwf-wf-tools self-improve` 或 `/lgwf-wf-tools 自我优化` 必须进入自我优化路由，具体执行边界见 `AGENTS.md` 和 [docs/self-improve.md](docs/self-improve.md)。
+## 暴露边界
 
-内部工作流不是 Codex skill，不得单独暴露；它们的规则统一写在各自目录的 `AGENTS.md`。
-
-## 帮助请求
-
-`/lgwf-wf-tools help`、`/lgwf-wf-tools 帮助` 或纯帮助请求只展示帮助：
-
-- 不修改文件。
-- 不派发内部工作流。
-- 不启动 LGWF run。
-- 不运行会写 `.local/` 的自我优化命令。
-
-帮助内容必须包含“可用指令”，并列出每个指令的简短用途和需要用户确认的操作。具体命令维护规则见 [docs/maintenance.md](docs/maintenance.md)。
+- 只暴露根目录 `SKILL.md` 作为 Codex skill。
+- `workflows/*` 是内部 workflow package，不作为独立 Codex skill。
+- `vendor/lgwf-client-assist/` 是内置运行客户端，不作为独立 Codex skill。

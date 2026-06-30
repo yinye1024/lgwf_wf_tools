@@ -1,6 +1,6 @@
 # Facade 维护说明
 
-本文保存 `lgwf-wf-tools` 的显式命令、bundled client 更新和最小验证说明。本仓库已经改为纯 skills 包，不再维护 plugin command Markdown。
+本文保存 `lgwf-wf-tools` 的帮助、初始化、诊断、列表、bundled client 更新、发布保护和最小验证说明。本仓库已经改为纯 skills 包，不再维护 plugin command Markdown。
 
 ## 显式命令
 
@@ -9,8 +9,8 @@
 - `/lgwf-wf-tools init`：运行 `python scripts/init_lgwf_wf_tools.py`，同步临时 zip 到 vendor，安装 vendor 内 bundled LGWF wheel，输出初始化报告；不派发内部 workflow。
 - `/lgwf-wf-tools doctor`：只运行 `python scripts/doctor_lgwf_wf_tools.py`，输出只读健康检查报告；不修改文件，不派发内部 workflow。需要完整审计时运行 `python scripts/doctor_lgwf_wf_tools.py --deep`。
 - `/lgwf-wf-tools list`：只运行 `python scripts/list_workflows.py`，只读列出 `registry.json` 中可派发的内部 workflow；不派发内部 workflow。
-- `/lgwf-wf-tools run <workflow-path>`、`/lgwf-wf-tools target-run <workflow-path>`、`/lgwf-wf-tools --target-workflow <workflow-path>`：优先进入目标 workflow 直启路由，解析 `workflow.lgwf` 文件或 workflow 目录路径后，用 bundled `vendor/lgwf-client-assist/scripts/lgwf.py run` 启动；如果目标 `work_dir/.lgwf` 已存在，先让用户选择 `continue`、`resume` 或 `rerun`。
-- `/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 自我优化`、用户说“复盘这个 facade”“优化交互体验”“把这次问题沉淀成 case”：进入 self-improve 路由。
+
+目标 workflow 直启命令见 [target-run.md](target-run.md)。self-improve 场景见 [self-improve.md](self-improve.md)。
 
 ## 脚本级代理入口
 
@@ -43,7 +43,23 @@ python scripts/complete_commands.py "/lgwf-wf-tools d"
 4. 确认 `.local/init/last-init.json` 中 `install.passed=true`，并记录了 bundled wheel 的 `wheel_sha256`、`bundled_version` 和 `installed_version`。
 5. 提交 `vendor/lgwf-client-assist/` 的实际内容变更；不要提交 zip 包。
 
+## 发布保护
+
+发布包不得覆盖或删除 `.local/self-improve/`、`.local/overrides/` 或 `.local/upgrade-reports/`。这些目录保存运行期历史、私有 override 和本地升级报告，不属于发布包基线。
+
 ## 最小验证
+
+修改 `SKILL.md`、`AGENTS.md`、`registry.json`、`workflows/*/AGENTS.md`、`workflows/**/workflow.lgwf`、`scripts/init_lgwf_wf_tools.py`、`scripts/doctor_lgwf_wf_tools.py`、`scripts/validate_registry.py`、`scripts/list_workflows.py` 或 vendor manifest 后，运行：
+
+```powershell
+python self-improve/scripts/run_self_evals.py
+```
+
+只检查 facade 自包含时运行：
+
+```powershell
+python scripts/doctor_lgwf_wf_tools.py
+```
 
 ```powershell
 Get-ChildItem -LiteralPath skills\lgwf-wf-tools -Recurse -Filter SKILL.md

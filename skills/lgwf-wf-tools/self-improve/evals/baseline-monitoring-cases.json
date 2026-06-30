@@ -17,7 +17,7 @@
         ],
         "required_text": [
           {
-            "path": "AGENTS.md",
+            "path": "docs/facade-dispatch.md",
             "contains": "waiting_human` 不是完成状态"
           }
         ]
@@ -34,7 +34,7 @@
         "must_read": ["vendor/lgwf-client-assist/references/agent-host-assist/cli-agent-loop.md"],
         "required_text": [
           {
-            "path": "AGENTS.md",
+            "path": "docs/facade-dispatch.md",
             "contains": "AGENT_LOOP` 控制状态但没有 human request"
           }
         ]

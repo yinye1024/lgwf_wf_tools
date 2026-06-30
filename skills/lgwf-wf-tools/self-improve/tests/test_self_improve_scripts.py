@@ -612,16 +612,20 @@ class SelfImproveScriptsTest(unittest.TestCase):
             self.assertTrue(payload["passed"])
 
     def test_incident_trigger_wording_exists(self) -> None:
-        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        self.assertIn("只能建议记录 incident；必须用户确认后才能调用", agents)
-        self.assertIn("路由错误", agents)
-        self.assertIn("监控 handle 丢失", agents)
+        self_improve = (ROOT / "docs" / "self-improve.md").read_text(encoding="utf-8")
+        self.assertIn("只能建议记录 incident；必须用户确认后才能调用", self_improve)
+        self.assertIn("路由错误", self_improve)
+        self.assertIn("监控 handle 丢失", self_improve)
 
     def test_help_command_is_documented_as_read_only(self) -> None:
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        for content in (skill, agents):
-            self.assertIn("/lgwf-wf-tools help", content)
+        maintenance = (ROOT / "docs" / "maintenance.md").read_text(encoding="utf-8")
+        self.assertIn("/lgwf-wf-tools help", skill)
+        self.assertIn("/lgwf-wf-tools init", skill)
+        self.assertIn("/lgwf-wf-tools doctor", skill)
+        self.assertIn("/lgwf-wf-tools list", skill)
+        self.assertIn("docs/maintenance.md", skill)
+        for content in (maintenance,):
             self.assertIn("只展示帮助", content)
             self.assertIn("可用指令", content)
             self.assertIn("不修改文件", content)
@@ -630,20 +634,57 @@ class SelfImproveScriptsTest(unittest.TestCase):
                 "/lgwf-wf-tools init",
                 "/lgwf-wf-tools doctor",
                 "/lgwf-wf-tools list",
-                "/lgwf-wf-tools self-improve",
             ):
                 self.assertIn(command, content)
 
     def test_self_improve_reminds_user_about_proposal_execution(self) -> None:
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        for content in (skill, agents):
+        self_improve = (ROOT / "docs" / "self-improve.md").read_text(encoding="utf-8")
+        self.assertIn("/lgwf-wf-tools self-improve", skill)
+        self.assertIn("/lgwf-wf-tools 自我优化", skill)
+        self.assertIn("/lgwf-wf-tools 优化方案", skill)
+        self.assertIn("docs/self-improve.md", skill)
+        for content in (self_improve,):
             self.assertIn("提醒用户是否查看或执行 proposal", content)
             self.assertIn("不直接执行 proposal", content)
             self.assertIn("执行前必须先展示 review 计划", content)
 
-    def test_ambiguous_modify_goal_requires_proposal_first_gate(self) -> None:
+    def test_agents_md_only_keeps_routing_scope(self) -> None:
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("场景路由表", agents)
+        self.assertIn("docs/target-run.md", agents)
+        self.assertIn("docs/workflow-routing.md", agents)
+        self.assertIn("docs/proposal-gate.md", agents)
+        self.assertIn("docs/self-improve.md", agents)
+        self.assertIn("docs/facade-dispatch.md", agents)
+        self.assertIn("docs/maintenance.md", agents)
+        self.assertIn("显式指令由根目录 `SKILL.md` 直接路由", agents)
+        self.assertNotIn("/lgwf-wf-tools init", agents)
+        self.assertNotIn("/lgwf-wf-tools doctor", agents)
+        self.assertNotIn("/lgwf-wf-tools list", agents)
+        self.assertNotIn("/lgwf-wf-tools run <path>", agents)
+        self.assertNotIn("workflow 选择表", agents)
+        self.assertNotIn("ambiguous_modify_goal", agents)
+        self.assertNotIn("waiting_human` 不是完成状态", agents)
+        self.assertNotIn("发布包不得覆盖或删除 `.local/self-improve/`", agents)
+        self.assertNotIn("只能建议记录 incident；必须用户确认后才能调用", agents)
+
+    def test_skill_md_only_declares_entrypoint_and_first_hop(self) -> None:
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("统一入口", skill)
+        self.assertIn("先读取同目录 [AGENTS.md](AGENTS.md)", skill)
+        self.assertIn("显式指令", skill)
+        self.assertIn("/lgwf-wf-tools run <path>", skill)
+        self.assertIn("/lgwf-wf-tools target-run <path>", skill)
+        self.assertIn("/lgwf-wf-tools --target-workflow <path>", skill)
+        self.assertIn("docs/target-run.md", skill)
+        self.assertNotIn("路由前必须先列出可用 workflow", skill)
+        self.assertNotIn("提案门禁", skill)
+        self.assertNotIn("监控循环", skill)
+        self.assertNotIn("self-improve 路由", skill)
+
+    def test_ambiguous_modify_goal_requires_proposal_first_gate(self) -> None:
+        proposal_gate = (ROOT / "docs" / "proposal-gate.md").read_text(encoding="utf-8")
         routing_cases = json.loads(
             (SELF_IMPROVE / "evals" / "baseline-routing-cases.json").read_text(encoding="utf-8")
         )
@@ -651,11 +692,11 @@ class SelfImproveScriptsTest(unittest.TestCase):
         self.assertIn("route-ambiguous-modify-goal-requires-proposal-gate", cases_by_id)
         case = cases_by_id["route-ambiguous-modify-goal-requires-proposal-gate"]
 
-        self.assertIn("ambiguous_modify_goal", agents)
-        self.assertIn("禁止改文件", agents)
-        self.assertIn("禁止启动任何内部 workflow", agents)
-        self.assertIn("目标、发现依据、候选路由、修改范围", agents)
-        self.assertIn("除非用户明确说“直接修改”", agents)
+        self.assertIn("ambiguous_modify_goal", proposal_gate)
+        self.assertIn("禁止改文件", proposal_gate)
+        self.assertIn("禁止启动任何内部 workflow", proposal_gate)
+        self.assertIn("目标、发现依据、候选路由、修改范围", proposal_gate)
+        self.assertIn("除非用户明确说“直接修改”", proposal_gate)
         self.assertIn("修复优化", case["input"]["user_request"])
         self.assertIn("apply_patch", case["expected"]["must_not_start"])
 
