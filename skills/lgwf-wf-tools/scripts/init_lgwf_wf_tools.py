@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import shutil
-import subprocess
 import sys
 import tempfile
 import zipfile
@@ -123,16 +123,50 @@ def install_bundled_lgwf() -> dict[str, Any]:
             "lgwf_py": str(LGWF_PY),
         }
 
-    completed = subprocess.run(
-        [sys.executable, str(LGWF_PY), "install", "--json"],
-        cwd=FACADE_ROOT,
-        text=True,
-        capture_output=True,
-        timeout=120,
-    )
+    scripts_dir = LGWF_PY.parent
+    added_path = False
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+        added_path = True
+
+    stdout = ""
+    stderr_buffer = io.StringIO()
+    install_error = ""
+    returncode = 0
+    wheel_replaced = False
+    wheel = ""
+    wheel_sha256 = ""
+    bundled_version = ""
+    installed_version = ""
+    try:
+        from lgwf_env_init import bootstrap as bootstrap_module
+        from lgwf_env_init import install as install_module
+
+        wheel_path = install_module.find_bundled_wheel(VENDOR_ROOT)
+        support = bootstrap_module.load_runtime_support(wheel_path)
+        wheel_replaced = install_module.ensure_bundled_lgwf(
+            support,
+            VENDOR_ROOT,
+            force=False,
+            stderr=stderr_buffer,
+        )
+        wheel = str(wheel_path)
+        wheel_sha256 = sha256_file(wheel_path)
+        bundled_version = str(support.python.wheel_version(wheel_path) or "")
+        installed_version = str(support.python.installed_package_version("lgwf") or "")
+    except Exception as exc:
+        returncode = 1
+        install_error = f"{type(exc).__name__}: {exc}"
+        stderr_buffer.write(f"{install_error}\n")
+    finally:
+        if added_path:
+            try:
+                sys.path.remove(str(scripts_dir))
+            except ValueError:
+                pass
+
     install_state_path = VENDOR_ROOT / "assets" / "install-state.json"
     install_state = {}
-    install_report = {}
     if install_state_path.is_file():
         try:
             data = json.loads(install_state_path.read_text(encoding="utf-8-sig"))
@@ -140,26 +174,30 @@ def install_bundled_lgwf() -> dict[str, Any]:
                 install_state = data
         except json.JSONDecodeError:
             install_state = {}
-    try:
-        data = json.loads(completed.stdout)
-        if isinstance(data, dict):
-            install_report = data
-    except json.JSONDecodeError:
-        install_report = {}
+    install_report = {
+        "wheel_replaced": wheel_replaced,
+        "wheel": wheel or install_state.get("wheel", ""),
+        "wheel_sha256": wheel_sha256 or install_state.get("wheel_sha256", ""),
+        "bundled_version": bundled_version or install_state.get("bundled_version", ""),
+        "installed_version": installed_version,
+    }
+    if install_error:
+        install_report["error"] = install_error
+    stderr = stderr_buffer.getvalue()
     return {
-        "passed": completed.returncode == 0,
+        "passed": returncode == 0,
         "skipped": False,
-        "command": [sys.executable, str(LGWF_PY), "install", "--json"],
-        "returncode": completed.returncode,
-        "wheel_replaced": bool(install_report.get("wheel_replaced")),
-        "wheel": str(install_report.get("wheel") or install_state.get("wheel") or ""),
-        "wheel_sha256": str(install_report.get("wheel_sha256") or install_state.get("wheel_sha256") or ""),
-        "bundled_version": str(install_report.get("bundled_version") or install_state.get("bundled_version") or ""),
+        "command": [sys.executable, str(LGWF_PY), "<internal-install-api>"],
+        "returncode": returncode,
+        "wheel_replaced": bool(wheel_replaced),
+        "wheel": str(install_report.get("wheel") or ""),
+        "wheel_sha256": str(install_report.get("wheel_sha256") or ""),
+        "bundled_version": str(install_report.get("bundled_version") or ""),
         "installed_version": str(install_report.get("installed_version") or ""),
         "install_report": install_report,
         "install_state": install_state,
-        "stdout": summarize_install_output(completed.stdout),
-        "stderr": summarize_install_output(completed.stderr),
+        "stdout": summarize_install_output(stdout),
+        "stderr": summarize_install_output(stderr),
     }
 
 

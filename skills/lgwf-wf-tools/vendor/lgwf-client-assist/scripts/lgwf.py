@@ -1,5 +1,4 @@
 import argparse
-import json
 import pathlib
 import sys
 from collections.abc import Callable
@@ -65,8 +64,6 @@ def main(
             stderr=error_output,
             skill_root=skill_root,
         )
-    if command == "install":
-        return _run_install(args, stdout=output, stderr=error_output, skill_root=skill_root)
     if command == "run":
         return workflow_main(
             args,
@@ -149,45 +146,6 @@ def _run_status(
             args.session_id,
         ],
     )
-
-
-def _run_install(
-    argv: list[str],
-    *,
-    stdout: TextIO,
-    stderr: TextIO,
-    skill_root: pathlib.Path | None,
-) -> int:
-    parser = _ArgumentParser(
-        prog="lgwf.py install",
-        add_help=True,
-        error_output=stderr,
-    )
-    parser.add_argument("--force", action="store_true", help="force reinstall even if wheel hash matches")
-    parser.add_argument("--json", action="store_true", help="print installation state JSON after install")
-    try:
-        args = parser.parse_args(argv)
-    except _ParseError:
-        return 2
-
-    root = _resolve_runtime_skill_root(skill_root or pathlib.Path(__file__).resolve().parents[1])
-    wheel = install_module.find_bundled_wheel(root)
-    support = bootstrap_module.load_runtime_support(wheel)
-    replaced = install_module.ensure_bundled_lgwf(
-        support,
-        root,
-        force=bool(args.force),
-        stderr=stderr,
-    )
-    if args.json:
-        state = install_module.load_install_state(root)
-        report = {
-            **state,
-            "wheel_replaced": bool(replaced),
-            "installed_version": support.python.installed_package_version("lgwf") or "",
-        }
-        stdout.write(json.dumps(report, ensure_ascii=False) + "\n")
-    return 0
 
 
 def _run_group(
