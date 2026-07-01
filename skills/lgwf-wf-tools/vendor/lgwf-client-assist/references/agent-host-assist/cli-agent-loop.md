@@ -17,6 +17,7 @@
 - 用后台模式启动 workflow，避免 agent 被同步子进程占住。
 - 定时读取 workflow status，并在 chat 中同步当前节点、能力、最近结果、错误或等待事项。
 - 发现 `flow.human_approval` pending request 时，主 agent 不启动新窗口或 approval worker；它在当前对话读取 request、展示摘要、询问用户 approve/reject、写 controller payload 并一步提交。
+- 发现 `flow.handoff` pending action 时，主 agent 不把它当作 approval，也不自动启动下游 workflow；它展示 `workflow_id`、`input_json_file`、`suggested_command` 和 `source_artifacts`，说明当前 workflow 已完成职责，并等待用户确认是否运行下一 workflow。
 - Human approval 是当前 workflow loop 的一个等待状态，不是 workflow 结束。进入该状态后，主 agent 必须保留 `pid`、`work_dir`、`request_id` 并继续原 loop；不要结束成“一次性答复”，不要在用户后续回复 OK / 确认时重新执行启动前旧数据预检或提示 `rerun`。
 - `AGENT_LOOP` 的 `waiting_human` 是 loop 控制状态，通常写在 `state.agent_loop.<id>.status` 或显式 `STATUS` path；它不一定对应 `.lgwf/human/*.request.json`。如果没有 human request，先向用户汇报 loop 的 `reason`、`stop_reason`、`evidence` 和 artifact 路径，再等待用户决定是否调整输入或重新运行。
 - workflow 完成后读取 run summary 和 changed files，向用户汇总结果。
@@ -98,7 +99,7 @@ Agent display rule: `status` JSON is machine input, not user-facing output. Pref
 下一步：继续轮询，不重启 workflow
 ```
 
-If `phase=waiting_human`, the summary must say it is waiting for user approval and include the `human_request_id`; then follow the main-agent ask flow below. If the same `last_result` repeats across polls, do not print it again.
+If `phase=waiting_human`, the summary must say it is waiting for user approval and include the `human_request_id`; then follow the main-agent ask flow below. If `phase=waiting_handoff`, the summary must say the current workflow is handing off to the next workflow and include the `pending_action.request_id` and `pending_action.workflow_id`. If the same `last_result` repeats across polls, do not print it again.
 
 停止后台 workflow：
 
@@ -119,6 +120,8 @@ python <skill-dir>\scripts\lgwf.py status --pid <pid> --work-dir <work_dir>
 ```
 
 进入 `waiting_human` 后立即向用户同步，不继续自动 approve。
+
+进入 `waiting_handoff` 后立即向用户同步，不自动运行 `suggested_command`。
 
 重要：`waiting_human` 不是退出条件。进入该状态后，主 agent 不能把当前 workflow 视为已完成，也不能在后续用户消息中重新启动 workflow。后续用户消息如果是对当前 approval 的确认，应直接回到当前 `pid` / `work_dir` / `request_id`，读取 controller payload 并继续提交流程。
 
@@ -193,6 +196,25 @@ running workflow
 - 不要在当前 workflow 仍有 `pid` / `request_id` 时建议 `rerun`，除非用户明确说要从头重跑。
 
 `submit-human-controller-payload` 会把 `.controller_payload.json` 转换为 `.response.json`，并写入 `submitted_via="controller_payload"`、`final_user_confirmed=true` 和原始 `controller_payload` 审计字段。`reject` 会让 workflow 失败并写入 failed run artifacts。
+
+## Agent Handoff Main-Agent Flow
+
+当 workflow 运行到 `flow.handoff` 节点时，LGWF 会写入 `.lgwf/handoff/<request_id>.pending.json`，并在 `main_agent_status.pending_action` 暴露同一对象。这个事件表示当前 workflow 的职责已完成，下一步应由主 agent 在用户确认后接续另一个 workflow。
+
+主 agent 编排要求：
+
+1. 轮询 status，发现 `phase=waiting_handoff` 或 `pending_action.type="agent_handoff"`。
+2. 在当前对话展示 `workflow_id`、`input_json_file`、`suggested_command` 和关键 `source_artifacts`。
+3. 明确说明 `auto_execute=false`，不会自动启动下游 workflow。
+4. 如果 `requires_user_confirmation=true`，必须等待用户明确确认后才运行 `suggested_command` 或等价的 `scripts/lgwf.py run ...` 命令。
+5. 用户确认后，把下游 workflow 作为新的 workflow run 跟踪；不要把 handoff 当成 human approval，也不要写 `.lgwf/human/*.response.json`。
+
+主 agent 禁止事项：
+
+- 不要把 `agent_handoff` 显示成 approve/reject 审批。
+- 不要在用户未确认时启动下游 workflow。
+- 不要修改 handoff pending file 来模拟确认。
+- 不要把上游 workflow 重新运行来“继续 handoff”。
 
 低层兼容 API：
 
