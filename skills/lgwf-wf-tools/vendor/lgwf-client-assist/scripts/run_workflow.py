@@ -119,6 +119,7 @@ def main(
     )
 
     if args.workflow_lgwf:
+        workspace_cwd = _workflow_workspace_cwd(args.workflow_lgwf)
         copy_exit_code, snapshot = launcher_module.copy_workflow_package(
             args.workflow_lgwf,
             args.work_dir,
@@ -129,18 +130,18 @@ def main(
             return copy_exit_code
         snapshot_lgwf = snapshot["workflow_lgwf"]
         workflow_json = pathlib.Path(snapshot["workflow_json"])
-        audit_exit_code = launcher_module.audit_lgwf(snapshot_lgwf, error_output, support)
+        audit_exit_code = launcher_module.audit_lgwf(snapshot_lgwf, error_output, support, cwd=workspace_cwd)
         if audit_exit_code != 0:
             return audit_exit_code
-        compile_exit_code = launcher_module.compile_lgwf(snapshot_lgwf, workflow_json, error_output, support)
+        compile_exit_code = launcher_module.compile_lgwf(snapshot_lgwf, workflow_json, error_output, support, cwd=workspace_cwd)
         if compile_exit_code != 0:
             return compile_exit_code
         command = launcher_module.runtime_command(str(workflow_json), args, support)
         if args.background:
-            return launcher_module.run_in_background(command, args, workflow_json, output, error_output, support)
+            return launcher_module.run_in_background(command, args, workflow_json, output, error_output, support, cwd=workspace_cwd)
         if args.output_json:
-            return launcher_module.run_and_write_output_json(command, pathlib.Path(args.output_json), error_output, support)
-        return launcher_module.run_runtime_command(command, args, error_output, support)
+            return launcher_module.run_and_write_output_json(command, pathlib.Path(args.output_json), error_output, support, cwd=workspace_cwd)
+        return launcher_module.run_runtime_command(command, args, error_output, support, cwd=workspace_cwd)
 
     command = launcher_module.runtime_command(args.workflow_json, args, support)
     if args.background:
@@ -149,6 +150,16 @@ def main(
         return launcher_module.run_and_write_output_json(command, pathlib.Path(args.output_json), error_output, support)
 
     return launcher_module.run_runtime_command(command, args, error_output, support)
+
+
+def _workflow_workspace_cwd(workflow_lgwf: str) -> pathlib.Path:
+    workflow_path = pathlib.Path(workflow_lgwf).expanduser().resolve()
+    parts = workflow_path.parts
+    if "workflows" in parts:
+        index = parts.index("workflows")
+        if index > 0:
+            return pathlib.Path(*parts[:index])
+    return workflow_path.parent
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -180,7 +191,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--resume-existing",
         action="store_true",
-        help="When work-dir contains a failed checkpoint, resume from its failed node.",
+        help="When work-dir contains a failed or stopped checkpoint, resume from its saved node boundary.",
     )
     parser.add_argument("--resume-run-id", help="Resume a specific failed checkpoint run id.")
     parser.add_argument(

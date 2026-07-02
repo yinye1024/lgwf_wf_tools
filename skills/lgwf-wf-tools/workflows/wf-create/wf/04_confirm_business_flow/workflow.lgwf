@@ -17,14 +17,12 @@ PY prepare_business_flow_confirmation
   RESULT state.lgwf_wf_create.prepare_business_flow_confirmation_result
   UPDATES_STATE;
 
-APPROVAL confirm_business_flow
+REVIEW confirm_business_flow
   PROMPT_REF "confirm_business_flow.md"
-  READ state.lgwf_wf_create.business_flow_confirmation_context
-  WRITE state.lgwf_wf_create.business_flow_decision
+  CONTEXT state.lgwf_wf_create.business_flow_confirmation_context
   RESULT state.lgwf_wf_create.business_flow_decision_result
   PERSIST ".lgwf/business_flow_approval.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY apply_confirmed_business_flow
   SCRIPT "scripts/apply_confirmed_business_flow.py"
@@ -38,14 +36,12 @@ PY prepare_business_flow_revision_confirmation
   RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
   UPDATES_STATE;
 
-APPROVAL revise_business_flow
+REVIEW revise_business_flow
   PROMPT_REF "revise_business_flow.md"
-  READ state.lgwf_wf_create.business_flow_revision_context
-  WRITE state.lgwf_wf_create.business_flow_revision_decision
+  CONTEXT state.lgwf_wf_create.business_flow_revision_context
   RESULT state.lgwf_wf_create.business_flow_revision_decision_result
   PERSIST ".lgwf/business_flow_revision_approval.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY scaffold_package
   SCRIPT "scripts/scaffold_package.py"

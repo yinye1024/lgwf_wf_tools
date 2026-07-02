@@ -14,14 +14,12 @@ STEP generate_plan
 STEP generate_acceptance
   WORKFLOW "02_generate_acceptance/workflow.lgwf";
 
-APPROVAL confirm_plan_and_acceptance
+REVIEW confirm_plan_and_acceptance
   PROMPT_REF "03_confirm_plan_and_acceptance/00_user_decision_template/plan_acceptance_decision_template.md"
-  READ state.lgwf_plan.confirmation_context
-  WRITE state.lgwf_plan.contract_approval
+  CONTEXT state.lgwf_plan.confirmation_context
   RESULT state.lgwf_plan.contract_approval_result
   PERSIST ".lgwf/react_task_contract_approval.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY apply_confirmed_contracts
   SCRIPT "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/apply_confirmed_contracts.py"

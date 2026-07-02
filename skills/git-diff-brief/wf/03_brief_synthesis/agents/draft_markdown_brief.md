@@ -21,3 +21,7 @@
 - 顶层必须是 JSON object。
 - `change_brief_markdown` 字段内容必须是 Markdown。
 - 若某些事实缺失，应明确写“待补齐”而不是伪造内容。
+- Markdown 的“建议提交信息”章节必须同时展示：
+  - 英文版本：来自 `commit_message_suggestion`，作为默认实际 `git commit -m` 使用值。
+  - 中文版本：来自 `commit_message_suggestion_zh`，用于中文解释和人工审阅。
+  - 理由：来自 `commit_message_rationale`，说明为什么给出这两个版本。

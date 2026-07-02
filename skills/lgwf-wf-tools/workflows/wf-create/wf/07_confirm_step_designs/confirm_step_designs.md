@@ -19,14 +19,14 @@
 5. 输出决策是否与 `state.lgwf_wf_create.step_design_confirmation_context.allowed_decisions`、`approve_writes` 和 `approval_target` 一致。
 
 ## Output
-将当前节点的 approval decision record 写入 `.lgwf/step_design_confirmation_record.json`，供后续 route、revision 或正式固化读取。
+将当前节点的 approval record 写入 `.lgwf/step_design_confirmation_record.json`，供后续 route、revision 或正式固化读取。
 
 ## Output Format
 只允许以下三类 UTF-8 JSON 结果之一，节点命名必须保持 `confirm_step_designs`：
 
 ```json
 {
-  "decision": "approve",
+  "approval": "approve",
   "approved_step_slugs": ["prepare-package-layout"],
   "changes": [],
   "comment": "确认通过，可进入 implement_steps_react 生成 workflow 初稿"
@@ -35,7 +35,7 @@
 
 ```json
 {
-  "decision": "revise",
+  "approval": "revise",
   "approved_step_slugs": [],
   "changes": ["补充 prepare-package-layout 的 outputs 与 acceptance_notes"],
   "comment": "说明为什么当前步骤设计文档还需要修改"
@@ -44,14 +44,14 @@
 
 ```json
 {
-  "decision": "reject",
+  "approval": "reject",
   "reason": "拒绝原因",
   "comment": "说明为什么当前步骤设计文档不应继续进入实现阶段"
 }
 ```
 
 ## Constraints
-- 只输出 `.lgwf/step_design_confirmation_record.json` 对应的 approval decision record。
+- 只输出 `.lgwf/step_design_confirmation_record.json` 对应的 approval record。
 - 不修改 `.lgwf/step_designs_proposal.json` 或 `docs/steps/*.md`。
 - 不直接生成 `.lgwf/step_designs.json`；`approve` 只表示允许后续固化。
 - `revise` 表示进入 `revise_step_designs` 做局部调整，`reject` 表示整体不通过并结束该分支。

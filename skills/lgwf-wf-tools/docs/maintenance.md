@@ -52,7 +52,7 @@ python scripts/complete_commands.py "/lgwf-wf-tools d"
 修改 `SKILL.md`、`AGENTS.md`、`registry.json`、`workflows/*/AGENTS.md`、`workflows/**/workflow.lgwf`、`scripts/init_lgwf_wf_tools.py`、`scripts/doctor_lgwf_wf_tools.py`、`scripts/validate_registry.py`、`scripts/list_workflows.py` 或 vendor manifest 后，运行：
 
 ```powershell
-python self-improve/scripts/run_self_evals.py
+python workflows/self-improve/scripts/run_self_evals.py
 ```
 
 只检查 facade 自包含时运行：

@@ -1,0 +1,15 @@
+WORKFLOW collect_convert_target;
+ENTRY collect_prompt_workflow_target;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+APPROVAL collect_prompt_workflow_target
+  PROMPT_REF "confirm_prompt_workflow_target.md"
+  READ state.lgwf_wf_convert.target_context
+  WRITE state.lgwf_wf_convert.prompt_convert_target
+  RESULT state.lgwf_wf_convert.prompt_convert_target_result
+  PERSIST ".lgwf/prompt_convert_target.json"
+  POLL 1;

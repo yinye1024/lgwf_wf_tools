@@ -23,6 +23,7 @@ class PackageStructureTest(unittest.TestCase):
             "02_git_context_collection",
             "03_brief_synthesis",
             "04_result_review_and_delivery",
+            "05_git_commit",
         ]
         for stage in expected:
             stage_root = PACKAGE_ROOT / "wf" / stage

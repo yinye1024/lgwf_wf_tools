@@ -43,6 +43,8 @@ OUTPUT_JSON_FILES = [
 PERSIST_FILES = [
     ".lgwf/request_scope_confirmation.json",
     ".lgwf/delivery_decision.json",
+    ".lgwf/commit_plan.json",
+    ".lgwf/commit_action_result.json",
 ]
 TERMINAL_PHASES = {"completed", "failed", "stopped"}
 
@@ -269,7 +271,8 @@ def find_response(scenario: dict[str, Any], node_id: str, call_index: int) -> di
 def resolve_node_id(main_prompt_path: str) -> str:
     normalized = main_prompt_path.replace("\\", "/")
     for suffix, node_id in PROMPT_TO_NODE.items():
-        if normalized.endswith(suffix):
+        runtime_suffix = suffix.removeprefix("wf/")
+        if normalized.endswith(suffix) or normalized.endswith(runtime_suffix):
             return node_id
     return ""
 
@@ -350,10 +353,17 @@ def main(argv: list[str]) -> int:
         return 2
 
     written_outputs: list[str] = []
+    stdout_payload: Any = {
+        "ok": True,
+        "scenario_id": scenario.get("scenario_id"),
+        "resolved_node_id": resolved_node_id,
+        "call_index": call_index,
+    }
     for relative_path, payload in response.get("writes", {}).items():
         output_path = work_dir / relative_path
         write_json(output_path, payload)
         written_outputs.append(relative_path)
+        stdout_payload = payload
 
     append_jsonl(
         log_path,
@@ -370,13 +380,7 @@ def main(argv: list[str]) -> int:
     )
     print(
         json.dumps(
-            {
-                "ok": True,
-                "scenario_id": scenario.get("scenario_id"),
-                "resolved_node_id": resolved_node_id,
-                "call_index": call_index,
-                "written_outputs": written_outputs,
-            },
+            stdout_payload,
             ensure_ascii=False,
         )
     )
@@ -393,18 +397,19 @@ if __name__ == "__main__":
 
 
 def scenario_payloads() -> dict[str, dict[str, Any]]:
+    repo_hint = PACKAGE_ROOT.resolve().as_posix()
     happy_markdown = build_markdown(
         [
-            "基于占位 Git 上下文生成当前变更摘要。",
+            "基于真实 Git 上下文生成当前变更摘要。",
             "关键命令包括 `git status --short`、`git diff --stat`、`git log -1 --stat`。",
-            "当前风险集中在 Git 采集结果仍属于 placeholder 事实。",
+            "当前风险集中在 fake Codex 响应未覆盖真实语义判断。",
         ]
     )
     revised_markdown = build_markdown(
         [
             "请求范围已补充仓库边界说明，摘要链路继续执行。",
             "关键命令包括 `git status --short`、`git diff --stat`、`git log -1 --stat`。",
-            "仍需人工关注 placeholder Git 事实对最终判断的影响。",
+            "仍需人工关注 fake Codex 响应对最终判断的影响。",
         ]
     )
     return {
@@ -417,8 +422,8 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                     "writes": {
                         ".lgwf/request_scope_capture.json": {
                             "repository_input_context": {
-                                "repo_hint": "skills/git-diff-brief",
-                                "workspace_root": "skills/git-diff-brief",
+                                "repo_hint": repo_hint,
+                                "workspace_root": repo_hint,
                             },
                             "summary_scope": {
                                 "baseline": "worktree git diff + latest commit",
@@ -440,7 +445,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                     "writes": {
                         ".lgwf/git_context_review.json": {
                             "passed": True,
-                            "issues": ["Git 上下文仍为 placeholder，适合作为结构验证。"],
+                            "issues": ["Git 上下文来自真实采集脚本，fake Codex 仅验证编排结构。"],
                             "summary": "当前 Git 事实满足摘要编排验证要求。",
                         }
                     },
@@ -453,14 +458,14 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                             "change_overview": [
                                 "补齐 runtime fake E2E 的场景化验证入口。",
                                 "对两道人工确认门禁建立可追踪的自动审批。",
-                                "保留脚本 placeholder 事实，仅验证编排连通。",
+                                "保留 fake Codex 响应，仅验证编排连通。",
                             ],
                             "key_files": [
                                 "wf/workflow.lgwf",
                                 "tests/test_git_diff_brief_runtime_fake_e2e.py",
                             ],
                             "risk_points": [
-                                "Git 事实来自 placeholder 输出。",
+                                "Git 事实来自真实采集脚本，但摘要语义来自 fake Codex 响应。",
                                 "真实 Codex 语义未纳入本测试覆盖。",
                             ],
                             "validation_candidates": [
@@ -470,8 +475,10 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                             ],
                             "summary_supporting_context": {
                                 "source": "fake runtime codex",
-                                "placeholder": True,
+                                "context_kind": "real_git_context",
                             },
+                            "commit_message_suggestion": "test(git-diff-brief): cover runtime fake approval flow",
+                            "commit_message_rationale": "基于 runtime fake E2E 和审批链路相关变更生成。",
                         }
                     },
                 },
@@ -492,9 +499,15 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                         ".lgwf/delivery_review_context.json": {
                             "delivery_review_input": {
                                 "final_change_brief_markdown": happy_markdown,
+                                "commit_message_suggestion": "test(git-diff-brief): cover runtime fake approval flow",
+                                "commit_message_rationale": "基于 runtime fake E2E 和审批链路相关变更生成。",
+                                "commit_action_options": ["none", "stage", "commit"],
+                                "default_commit_action": "none",
                                 "open_delivery_questions": [],
                             },
                             "final_change_brief_markdown": happy_markdown,
+                            "commit_message_suggestion": "test(git-diff-brief): cover runtime fake approval flow",
+                            "commit_message_rationale": "基于 runtime fake E2E 和审批链路相关变更生成。",
                             "summary_supporting_context": {
                                 "validation_candidates": [
                                     "git status --short",
@@ -511,7 +524,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                 {
                     "approval_node": "confirm_scope_if_needed",
                     "submit_value": {
-                        "decision": "approve",
+                        "approval": "approve",
                         "comment": "最小范围成立，继续采集与摘要。",
                         "changes": [],
                     },
@@ -519,7 +532,10 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                 {
                     "approval_node": "confirm_delivery_or_revision",
                     "submit_value": {
-                        "decision": "approve",
+                        "approval": "approve",
+                        "commit_action": "none",
+                        "stage_scope": "target_scope",
+                        "commit_message": "test(git-diff-brief): cover runtime fake approval flow",
                         "comment": "接受当前摘要草稿并进入最终整理。",
                         "changes": [],
                     },
@@ -535,7 +551,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                     "writes": {
                         ".lgwf/request_scope_capture.json": {
                             "repository_input_context": {
-                                "repo_hint": "skills/git-diff-brief",
+                                "repo_hint": repo_hint,
                             },
                             "summary_scope": {
                                 "baseline": "worktree git diff + latest commit",
@@ -556,7 +572,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                     "writes": {
                         ".lgwf/request_scope_capture.json": {
                             "repository_input_context": {
-                                "repo_hint": "skills/git-diff-brief",
+                                "repo_hint": repo_hint,
                                 "confirmed_scope": "仅输出 git diff brief 当前包的中文摘要",
                             },
                             "summary_scope": {
@@ -579,7 +595,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                     "writes": {
                         ".lgwf/git_context_review.json": {
                             "passed": True,
-                            "issues": ["Git 上下文仍为 placeholder，适合作为结构验证。"],
+                            "issues": ["Git 上下文来自真实采集脚本，fake Codex 仅验证编排结构。"],
                             "summary": "仓库范围修订后，Git 审计阶段继续通过。",
                         }
                     },
@@ -605,8 +621,10 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                             ],
                             "summary_supporting_context": {
                                 "source": "fake runtime codex",
-                                "placeholder": True,
+                                "context_kind": "real_git_context",
                             },
+                            "commit_message_suggestion": "test(git-diff-brief): cover scope revision flow",
+                            "commit_message_rationale": "基于范围修订回路和 fake runtime 编排验证生成。",
                         }
                     },
                 },
@@ -627,9 +645,15 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                         ".lgwf/delivery_review_context.json": {
                             "delivery_review_input": {
                                 "final_change_brief_markdown": revised_markdown,
+                                "commit_message_suggestion": "test(git-diff-brief): cover scope revision flow",
+                                "commit_message_rationale": "基于范围修订回路和 fake runtime 编排验证生成。",
+                                "commit_action_options": ["none", "stage", "commit"],
+                                "default_commit_action": "none",
                                 "open_delivery_questions": [],
                             },
                             "final_change_brief_markdown": revised_markdown,
+                            "commit_message_suggestion": "test(git-diff-brief): cover scope revision flow",
+                            "commit_message_rationale": "基于范围修订回路和 fake runtime 编排验证生成。",
                             "summary_supporting_context": {
                                 "validation_candidates": [
                                     "git status --short",
@@ -646,7 +670,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                 {
                     "approval_node": "confirm_scope_if_needed",
                     "submit_value": {
-                        "decision": "revise",
+                        "approval": "revise",
                         "comment": "先模拟人工要求收敛请求范围。",
                         "changes": ["补充并确认仓库范围说明"],
                     },
@@ -654,7 +678,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                 {
                     "approval_node": "confirm_scope_if_needed",
                     "submit_value": {
-                        "decision": "approve",
+                        "approval": "approve",
                         "comment": "第二次确认后接受当前范围。",
                         "changes": [],
                     },
@@ -662,7 +686,10 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                 {
                     "approval_node": "confirm_delivery_or_revision",
                     "submit_value": {
-                        "decision": "approve",
+                        "approval": "approve",
+                        "commit_action": "none",
+                        "stage_scope": "target_scope",
+                        "commit_message": "test(git-diff-brief): cover scope revision flow",
                         "comment": "范围回路通过后，接受最终摘要。",
                         "changes": [],
                     },
@@ -754,13 +781,17 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         return None
 
     def _approval_get(self, *, session_id: str, work_dir: Path, env: dict[str, str], scenario_id: str, index: int) -> dict[str, Any]:
-        result = run_lgwf(
-            ["approval", "get", "--session-id", session_id],
-            env=env,
-            timeout=30,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        payload = parse_json_object(result.stdout)
+        del session_id, env
+        human_dir = work_dir / ".lgwf" / "human"
+        requests = sorted(human_dir.glob("*.request.json"), key=lambda item: item.stat().st_mtime, reverse=True)
+        payload: dict[str, Any] | None = None
+        for request_path in requests:
+            request_id = request_path.name.removesuffix(".request.json")
+            if not (human_dir / f"{request_id}.response.json").exists():
+                payload = read_json(request_path)
+                break
+        self.assertIsNotNone(payload, f"未找到 pending approval request: {human_dir}")
+        assert payload is not None
         write_json(trace_dir(work_dir, scenario_id) / f"approval_get_{index:02d}.json", payload)
         return payload
 
@@ -778,7 +809,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         raise AssertionError("unreachable")
 
     def _approval_id(self, approval_payload: dict[str, Any], request_id: str | None) -> str:
-        for key in ("approval_id", "id"):
+        for key in ("approval_id", "request_id", "id"):
             value = approval_payload.get(key)
             if isinstance(value, str) and value:
                 return value
@@ -801,18 +832,28 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         trace_root = trace_dir(work_dir, scenario_id)
         value_file = trace_root / f"approval_submit_{index:02d}.json"
         write_json(value_file, submit_value)
-        result = run_lgwf(
+        result = subprocess.run(
             [
-                "approval",
-                "submit",
-                "--session-id",
-                session_id,
-                "--approval-id",
+                sys.executable,
+                str(PACKAGE_ROOT.parent / "lgwf-wf-tools" / "workflows" / "wf-fix" / "scripts" / "safe_approval_submit.py"),
+                "--work-dir",
+                str(work_dir),
+                "--request-id",
                 approval_id,
+                "--decision",
+                "approve",
                 "--value-file",
                 str(value_file),
+                "--comment",
+                f"runtime fake approval {index}",
             ],
+            cwd=REPO_ROOT,
             env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             timeout=30,
         )
         response_payload: dict[str, Any]
@@ -832,8 +873,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         for attempt in range(1, 4):
             stack = ExitStack()
             env, work_dir, log_file = self._prepare_runtime(stack, scenario_id)
-            case_input_path = work_dir.parent / "case_input.json"
-            write_json(case_input_path, {"scenario_id": scenario_id})
+            case_input_json = json.dumps({"scenario_id": scenario_id}, ensure_ascii=False)
             launch = run_lgwf(
                 [
                     "run",
@@ -842,7 +882,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
                     "--work-dir",
                     str(work_dir),
                     "--input-json",
-                    str(case_input_path),
+                    case_input_json,
                     "--background",
                 ],
                 env=env,
@@ -979,7 +1019,14 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         self.assertIn("summary", git_review)
 
         summary_context = read_json(work_dir / ".lgwf/change_summary_context.json")
-        for key in ("change_overview", "key_files", "risk_points", "validation_candidates"):
+        for key in (
+            "change_overview",
+            "key_files",
+            "risk_points",
+            "validation_candidates",
+            "commit_message_suggestion",
+            "commit_message_rationale",
+        ):
             self.assertIn(key, summary_context)
 
         markdown_brief = read_json(work_dir / ".lgwf/change_brief_markdown.json")
@@ -995,13 +1042,22 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
             "delivery_review_input",
             "final_change_brief_markdown",
             "summary_supporting_context",
+            "commit_message_suggestion",
+            "commit_message_rationale",
             "open_delivery_questions",
         ):
             self.assertIn(key, delivery_context)
+        self.assertEqual(["none", "stage", "commit"], delivery_context["delivery_review_input"]["commit_action_options"])
+        self.assertEqual("none", delivery_context["delivery_review_input"]["default_commit_action"])
         self.assertEqual(
             delivery_context["delivery_review_input"]["final_change_brief_markdown"],
             markdown,
         )
+        commit_plan = read_json(work_dir / ".lgwf/commit_plan.json")
+        self.assertEqual("none", commit_plan["action"])
+        commit_action_result = read_json(work_dir / ".lgwf/commit_action_result.json")
+        self.assertTrue(commit_action_result["ok"])
+        self.assertFalse(commit_action_result["executed"])
 
     def _read_calls(self, work_dir: Path) -> list[dict[str, Any]]:
         calls_path = work_dir / ".lgwf" / "fake_codex_calls.jsonl"
@@ -1033,8 +1089,10 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
 
         scope_decision = read_json(work_dir / ".lgwf/request_scope_confirmation.json")
         delivery_decision = read_json(work_dir / ".lgwf/delivery_decision.json")
-        self.assertEqual(scope_decision.get("decision"), "approve")
-        self.assertEqual(delivery_decision.get("decision"), "approve")
+        self.assertEqual(scope_decision.get("approval", scope_decision.get("decision")), "approve")
+        self.assertEqual(delivery_decision.get("approval", delivery_decision.get("decision")), "approve")
+        self.assertEqual("none", delivery_decision.get("commit_action"))
+        self.assertEqual("target_scope", delivery_decision.get("stage_scope"))
 
         calls = self._read_calls(work_dir)
         self.assertEqual([item["resolved_node_id"] for item in calls], EXPECTED_CALL_ORDER)
@@ -1059,9 +1117,13 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         scope_capture = read_json(work_dir / ".lgwf/request_scope_capture.json")
         self.assertFalse(scope_capture.get("needs_confirmation"))
         self.assertEqual(scope_capture.get("open_questions"), [])
-        self.assertEqual(read_json(work_dir / ".lgwf/request_scope_confirmation.json").get("decision"), "approve")
+        final_scope_decision = read_json(work_dir / ".lgwf/request_scope_confirmation.json")
+        self.assertEqual(final_scope_decision.get("approval", final_scope_decision.get("decision")), "approve")
+        delivery_decision = read_json(work_dir / ".lgwf/delivery_decision.json")
+        self.assertEqual("none", delivery_decision.get("commit_action"))
+        self.assertEqual("target_scope", delivery_decision.get("stage_scope"))
         first_submit = read_json(trace_dir(work_dir, "scope_revise_then_approve") / "approval_submit_01.json")
-        self.assertEqual(first_submit.get("decision"), "revise")
+        self.assertEqual(first_submit.get("approval", first_submit.get("decision")), "revise")
 
         calls = self._read_calls(work_dir)
         self.assertEqual(

@@ -20,10 +20,12 @@ def list_workflows() -> dict[str, Any]:
                 items.append(
                     {
                         "id": item.get("id", ""),
+                        "kind": item.get("kind", "lgwf"),
                         "description": item.get("description", ""),
                         "workflow_lgwf": item.get("workflow_lgwf", ""),
                         "work_dir": item.get("work_dir", ""),
                         "agents_md": item.get("agents_md", ""),
+                        "entry": item.get("entry", ""),
                     }
                 )
     return {"facade_root": str(FACADE_ROOT), "workflows": items}

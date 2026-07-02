@@ -136,6 +136,7 @@
 
 ## Constraints
 
+- 只有 `.lgwf/e2e_coverage_matrix.json` 中 `runtime_fake.selected=true` 时才允许生成或修改该文件；如果不是 selected，必须报告 skipped，不得改目标测试文件。
 - 不使用 JS shim。
 - 不创建 `node_modules`。
 - 不运行真实 Codex。

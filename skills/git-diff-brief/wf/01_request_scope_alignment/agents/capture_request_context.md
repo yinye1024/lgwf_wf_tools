@@ -9,6 +9,7 @@
 - `state.input`：workflow 原始输入。
 - `state.git_diff_brief.normalized_repo_hint`
 - `state.git_diff_brief.request_scope_validation`
+- `state.git_diff_brief.scope_confirmation_decision`：上一轮人工确认值；当 `approval=revise` 时，必须优先吸收其中 `changes` 和 `comment` 对仓库路径或摘要范围的修订。
 - `resources/request_scope_contract.md`
 
 ## Task
@@ -16,7 +17,8 @@
 1. 提取仓库目录提示、摘要目标和任何显式范围说明。
 2. 固定最小摘要范围为“工作区 `git diff` + 最近一次提交信息”。
 3. 如果缺少仓库目录、路径无效或用户想扩展分支/提交范围，明确标记为需要确认。
-4. 输出 JSON object，至少包含：
+4. 当上一轮人工确认要求修改仓库目录时，输出的 `repository_input_context.repo_hint` 和 `normalized_repo_hint` 必须使用修订后的路径，不得继续沿用旧值。
+5. 输出 JSON object，至少包含：
    - `repository_input_context`
    - `summary_scope`
    - `scope_confirmation_input`

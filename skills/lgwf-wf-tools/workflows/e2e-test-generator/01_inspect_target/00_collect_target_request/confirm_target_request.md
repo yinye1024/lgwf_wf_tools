@@ -13,6 +13,7 @@
 1. 根据输入上下文确认要分析并生成端到端测试的目标 workflow。
 2. 返回一个 JSON object，供系统写入 `.lgwf/e2e_target_request.json` 和 `state.lgwf_e2e.target_request`。
 3. 仅在上下文已提供或可稳定推导时填写可选字段；缺失时可省略。
+4. 如果用户指定了要生成的测试类型，写入 `test_types`；如果用户未指定，省略该字段表示生成全部类型。
 
 ## Success Criteria
 
@@ -38,6 +39,7 @@
 - `workflow_root`：目标 workflow package 根目录。省略时使用 `workflow_lgwf` 所在目录。
 - `test_output_dir`：测试输出目录，默认 `tests`。
 - `test_name_prefix`：测试文件名前缀。省略时从 `WORKFLOW <name>;` 推导。
+- `test_types`：要生成的测试类型数组；合法值为 `script_flow`、`runtime_fake`、`real_positive`、`wf_fix_positive`。省略或空数组表示全部生成。
 ### 示例
 
 ```json
@@ -45,7 +47,8 @@
   "workflow_lgwf": "D:/repo/skills/lgwf-wf-tools/workflows/plan/wf/workflow.lgwf",
   "workflow_root": "D:/repo/skills/lgwf-wf-tools/workflows/plan",
   "test_output_dir": "tests",
-  "test_name_prefix": "lgwf_plan"
+  "test_name_prefix": "lgwf_plan",
+  "test_types": ["runtime_fake", "wf_fix_positive"]
 }
 ```
 

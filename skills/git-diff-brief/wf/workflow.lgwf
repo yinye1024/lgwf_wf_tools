@@ -20,7 +20,11 @@ STEP brief_synthesis
 STEP result_review_and_delivery
   WORKFLOW "04_result_review_and_delivery/workflow.lgwf";
 
+STEP git_commit
+  WORKFLOW "05_git_commit/workflow.lgwf";
+
 FLOW request_scope_alignment
   THEN git_context_collection
   THEN brief_synthesis
-  THEN result_review_and_delivery;
+  THEN result_review_and_delivery
+  THEN git_commit;

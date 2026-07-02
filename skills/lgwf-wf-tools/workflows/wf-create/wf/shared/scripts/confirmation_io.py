@@ -1,4 +1,4 @@
-"""确认类节点的通用 JSON、路径和 decision 校验工具。"""
+"""确认类节点的通用 JSON、路径和 approval 校验工具。"""
 
 from __future__ import annotations
 
@@ -45,12 +45,12 @@ def unwrap_approval(payload: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def require_approve(approval: dict[str, Any]) -> None:
-    raw_decision = approval.get("decision", "")
-    if isinstance(raw_decision, dict):
-        raw_decision = raw_decision.get("value", raw_decision.get("decision", ""))
-    decision = str(raw_decision).strip().lower()
+    raw_approval = approval.get("approval", approval.get("decision", ""))
+    if isinstance(raw_approval, dict):
+        raw_approval = raw_approval.get("value", raw_approval.get("approval", raw_approval.get("decision", "")))
+    decision = str(raw_approval).strip().lower()
     if decision != "approve":
-        raise ValueError("只有 decision=approve 才能固化 confirmed artifact")
+        raise ValueError("只有 approval=approve 才能固化 confirmed artifact")
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:

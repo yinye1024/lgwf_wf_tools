@@ -20,14 +20,12 @@ PY prepare_delivery_review
   RESULT state.git_diff_brief.prepare_delivery_review_result
   UPDATES_STATE;
 
-APPROVAL confirm_delivery_or_revision
+REVIEW confirm_delivery_or_revision
   PROMPT_REF "agents/confirm_delivery_or_revision.md"
-  READ state.git_diff_brief.delivery_review_input
-  WRITE state.git_diff_brief.delivery_decision
+  CONTEXT state.git_diff_brief.delivery_review_input
   RESULT state.git_diff_brief.delivery_decision_result
   PERSIST ".lgwf/delivery_decision.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY finalize_output
   SCRIPT "scripts/finalize_brief_result.py"

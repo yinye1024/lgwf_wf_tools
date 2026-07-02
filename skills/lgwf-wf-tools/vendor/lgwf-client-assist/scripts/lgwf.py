@@ -30,6 +30,9 @@ _APPROVAL_COMMANDS = {
     "controller-submit": "submit-human-controller-payload",
     "respond": "respond-human-request",
 }
+_REVIEW_COMMANDS = {
+    "submit": "submit-main-agent-review",
+}
 _RUN_COMMANDS = {
     "list": "list-runs",
     "summary": "get-run-summary",
@@ -81,9 +84,13 @@ def main(
             skill_root=skill_root,
         )
     if command == "audit":
-        return run_module("lgwf_dsl.cli", ["audit", *args])
+        if module_runner is not None:
+            return run_module("lgwf_dsl.cli", ["audit", *args])
+        return _run_audit(args, output, error_output, skill_root)
     if command == "compile":
-        return run_module("lgwf_dsl.cli", ["compile", *args])
+        if module_runner is not None:
+            return run_module("lgwf_dsl.cli", ["compile", *args])
+        return _run_compile(args, output, error_output, skill_root)
     if command == "schema":
         if module_runner is None and _write_source_schema_if_available(output):
             return 0
@@ -98,6 +105,8 @@ def main(
         return run_module("lgwf_client.cli", ["agent-sleep", *args])
     if command == "approval":
         return _run_group(args, _APPROVAL_COMMANDS, run_module, error_output, "approval")
+    if command == "review":
+        return _run_group(args, _REVIEW_COMMANDS, run_module, error_output, "review")
     if command == "runs":
         return _run_group(args, _RUN_COMMANDS, run_module, error_output, "runs")
 
@@ -192,6 +201,70 @@ def _module_runner(
     return run
 
 
+def _run_audit(
+    argv: list[str],
+    stdout: TextIO,
+    stderr: TextIO,
+    skill_root: pathlib.Path | None,
+) -> int:
+    root = _resolve_runtime_skill_root(skill_root or pathlib.Path(__file__).resolve().parents[1])
+    wheel = install_module.find_bundled_wheel(root)
+    support = bootstrap_module.load_runtime_support(wheel)
+    install_module.ensure_bundled_lgwf(
+        support,
+        root,
+        force=False,
+        stderr=stderr,
+    )
+    cwd = _workflow_workspace_cwd(argv[0]) if argv else None
+    completed = support.python.run_module("lgwf_dsl.cli", ["audit", *_normalize_workflow_arg(argv)], cwd=cwd)
+    if completed.stdout:
+        stdout.write(completed.stdout)
+    if completed.stderr:
+        stderr.write(completed.stderr)
+    return completed.returncode
+
+
+def _run_compile(
+    argv: list[str],
+    stdout: TextIO,
+    stderr: TextIO,
+    skill_root: pathlib.Path | None,
+) -> int:
+    root = _resolve_runtime_skill_root(skill_root or pathlib.Path(__file__).resolve().parents[1])
+    wheel = install_module.find_bundled_wheel(root)
+    support = bootstrap_module.load_runtime_support(wheel)
+    install_module.ensure_bundled_lgwf(
+        support,
+        root,
+        force=False,
+        stderr=stderr,
+    )
+    cwd = _workflow_workspace_cwd(argv[0]) if argv else None
+    completed = support.python.run_module("lgwf_dsl.cli", ["compile", *_normalize_workflow_arg(argv)], cwd=cwd)
+    if completed.stdout:
+        stdout.write(completed.stdout)
+    if completed.stderr:
+        stderr.write(completed.stderr)
+    return completed.returncode
+
+
+def _workflow_workspace_cwd(workflow_lgwf: str) -> pathlib.Path:
+    workflow_path = pathlib.Path(workflow_lgwf).expanduser().resolve()
+    parts = workflow_path.parts
+    if "workflows" in parts:
+        index = parts.index("workflows")
+        if index > 0:
+            return pathlib.Path(*parts[:index])
+    return workflow_path.parent
+
+
+def _normalize_workflow_arg(argv: list[str]) -> list[str]:
+    if not argv:
+        return []
+    return [str(pathlib.Path(argv[0]).expanduser().resolve()), *argv[1:]]
+
+
 def _resolve_runtime_skill_root(root: pathlib.Path) -> pathlib.Path:
     if _has_bundled_wheel(root):
         return root
@@ -226,7 +299,7 @@ class _ArgumentParser(argparse.ArgumentParser):
 
 def _write_usage(stream: TextIO) -> None:
     stream.write(
-        "usage: lgwf.py {doctor,audit,compile,schema,run,status,stop,wait,approval,runs,tool,codex} ...\n"
+        "usage: lgwf.py {doctor,audit,compile,schema,run,status,stop,wait,approval,review,runs,tool,codex} ...\n"
     )
 
 

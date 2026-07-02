@@ -1,0 +1,52 @@
+{
+  "commands": [
+    {
+      "command": "/lgwf-wf-tools",
+      "description": "显示维护入口和可用指令。"
+    },
+    {
+      "command": "/lgwf-wf-tools help",
+      "description": "显示帮助，不派发 workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools 帮助",
+      "description": "显示中文帮助，不派发 workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools init",
+      "description": "初始化内置 LGWF client。"
+    },
+    {
+      "command": "/lgwf-wf-tools doctor",
+      "description": "只读检查 facade、registry 和内置 client 状态。"
+    },
+    {
+      "command": "/lgwf-wf-tools list",
+      "description": "只读列出 registry 中可派发的 workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools run <path>",
+      "description": "按目标路径直启 LGWF workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools target-run <path>",
+      "description": "按目标路径直启 LGWF workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools --target-workflow <path>",
+      "description": "按目标路径直启 LGWF workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools self-improve",
+      "description": "路由到 self-improve tool workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools 自我优化",
+      "description": "路由到 self-improve tool workflow。"
+    },
+    {
+      "command": "/lgwf-wf-tools 优化方案",
+      "description": "查看或审查 self-improve proposal。"
+    }
+  ]
+}

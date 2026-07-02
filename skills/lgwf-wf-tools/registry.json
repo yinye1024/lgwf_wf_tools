@@ -2,6 +2,7 @@
   "workflows": [
     {
       "id": "wf-fix",
+      "kind": "lgwf",
       "description": "运行并修复目标 LGWF workflow，支持候选目录修复、验证和 promote。",
       "workflow_lgwf": "workflows/wf-fix/wf/workflow.lgwf",
       "work_dir": "workflows/wf-fix/ws",
@@ -9,13 +10,23 @@
     },
     {
       "id": "wf-create",
+      "kind": "lgwf",
       "description": "根据用户原始意图创建新的 LGWF workflow 初稿，按需求、业务流、步骤设计和实现初稿分阶段确认。",
       "workflow_lgwf": "workflows/wf-create/wf/workflow.lgwf",
       "work_dir": "workflows/wf-create/ws",
       "agents_md": "workflows/wf-create/AGENTS.md"
     },
     {
+      "id": "wf-convert",
+      "kind": "lgwf",
+      "description": "分析现有 prompt workflow，产出可被 wf-create 消费的创建输入包和转换报告。",
+      "workflow_lgwf": "workflows/wf-convert/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-convert/ws",
+      "agents_md": "workflows/wf-convert/AGENTS.md"
+    },
+    {
       "id": "wf-prompt-fix",
+      "kind": "lgwf",
       "description": "盘点、验收并修复目标 workflow 引用的 prompt 基础规范问题。",
       "workflow_lgwf": "workflows/wf-prompt-fix/wf/workflow.lgwf",
       "work_dir": "workflows/wf-prompt-fix/ws",
@@ -23,6 +34,7 @@
     },
     {
       "id": "wf-prompt-upgrade",
+      "kind": "lgwf",
       "description": "为目标 workflow 引用的 prompt 生成设计升级方案，并在确认后应用。",
       "workflow_lgwf": "workflows/wf-prompt-upgrade/wf/workflow.lgwf",
       "work_dir": "workflows/wf-prompt-upgrade/ws",
@@ -30,6 +42,7 @@
     },
     {
       "id": "e2e-test-generator",
+      "kind": "lgwf",
       "description": "为目标 LGWF workflow 生成三类端到端测试。",
       "workflow_lgwf": "workflows/e2e-test-generator/workflow.lgwf",
       "work_dir": "workflows/e2e-test-generator/ws",
@@ -37,10 +50,25 @@
     },
     {
       "id": "plan",
+      "kind": "lgwf",
       "description": "把复杂任务拆成可确认的计划契约、验收契约，并在用户确认后按 ReAct 闭环执行。",
       "workflow_lgwf": "workflows/plan/wf/workflow.lgwf",
       "work_dir": "workflows/plan/ws",
       "agents_md": "workflows/plan/AGENTS.md"
+    },
+    {
+      "id": "self-improve",
+      "kind": "tool-workflow",
+      "description": "对 lgwf-wf-tools 进行自我评估、问题沉淀、proposal 生成和发布前检查。",
+      "agents_md": "workflows/self-improve/AGENTS.md",
+      "entry": "workflows/self-improve/scripts/self_improve.py"
+    },
+    {
+      "id": "target-run",
+      "kind": "tool-workflow",
+      "description": "处理显式目标 workflow 直启、路径解析、已有 run 决策和后续监控。",
+      "agents_md": "workflows/target-run/AGENTS.md",
+      "entry": "docs/target-run.md"
     }
   ]
 }

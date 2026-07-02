@@ -20,12 +20,14 @@
 
 - 根 `workflow.lgwf` 可通过 `scripts/lgwf.py audit <package-root>\workflow.lgwf` 做 authoring 阶段机器可读检查；agent 应先读取 JSON diagnostics，修复后重复 audit。
 - 根 `workflow.lgwf` 可通过 `scripts/lgwf.py compile` 编译；运行时 facade 在 `<work_dir>\.lgwf\workflow\` snapshot 中自动完成编译。
-- 当前 workflow 可直接声明普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`PARALLEL`。
+- 当前 workflow 可直接声明普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`REACT`、`AGENT_LOOP`、`PARALLEL`。
 - 子 workflow 通过 `STEP ... WORKFLOW` 引用，且父 workflow 不重复声明其内部节点。
 - 子 workflow 的 `approve` / `revise` / `reject` 等交互细节不得泄露到父 workflow；拒绝、取消或不可继续时，子 workflow 内部 route 到保留目标 `FAIL_ALL`。
 - 单节点、人工确认和输出校验优先作为普通 step，不强制包装成子 workflow。
 - 如果兼容旧 package 时同时存在 `workflow.lgwf` 和 `workflow.json`，snapshot 中的新编译结果覆盖旧 JSON。
-- `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
+- `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`HANDOFF_FILES`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
+- `APPROVAL` route key 只能是 `approve` / `reject`；如果出现 `revise`、`minor_change` 等非二元 route，audit 应失败，并提示改用 `REVIEW ... OPTIONS [...]`。
+- `REVIEW` 用于 `approve` / `revise` / `reject` 等评审分支，`RESULT` 记录选择结果，`route` 作为后续 `WHEN` 的 route key。标准小改流程让 `revise` 接回同一个 `REVIEW` 节点，由主 agent 提交更新后的 `CONTEXT` 对象后重新等待用户确认。
 - 新建 workflow 优先使用 `FLOW { ... }` 集中表达全局流程；块内 `THEN` lowering 为 `edges`，`WHEN "route_key" THEN` lowering 为 `routes`。旧 `FLOW ...;` 和独立 `ROUTE ...;` 只作为兼容写法保留。
 - `FAIL_ALL` 只能作为 route target 使用，不允许作为 node id；命中后当前 workflow failed，并向父 workflow 传播失败，父 workflow 后续 step 不应运行。
 - `READ`、`WRITE`、`RESULT`、`INSTRUCTION` 必须使用 `state.*` runtime state path。
@@ -36,6 +38,11 @@
 - `AGENT_LOOP` slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`VERIFY` 结果必须包含 boolean `passed`；`DECIDE` 结果必须包含 `category` 和 `reason`，可包含 `evidence`、`stop_reason`。
 - `AGENT_LOOP` 默认 `TOKEN_MAX 1000000`，默认 Codex target 授权读取 `state.targets.dirs` 和 `state.targets.files`；slot 内不得覆盖 `TARGET_DIRS` / `TARGET_FILES`。
 - `AGENT_LOOP` 不依赖顶层 `SANDBOX`，每轮自动使用 sandbox；失败、blocked、retry 或验证失败轮次只归档，不 promote。
+- `RUN_WORKFLOW + PY map_*` 用于串联独立 workflow package；mapper 只做 state shape adapter，不默认复制文件。
+- `RUN_WORKFLOW WORKFLOW` 和 `WORK_DIR` 使用相对路径，不使用绝对路径或 `..`；运行时默认创建轻量隔离 `workspace/work_dir`，`WORK_DIR` 只作为 `declared_work_dir` 记录。
+- `RUN_WORKFLOW RESULT` 应被后续 `PY map_*`、汇总节点或下游 workflow 消费；`RUN_WORKFLOW INPUT` 应来自初始 input 或上游 mapper writer。
+- 需要从上游 child 交接业务文件或目录时，优先使用 `HANDOFF_FILES`。`FROM` 指向上游 `RUN_WORKFLOW RESULT`；`COPY_FILE` / `COPY_DIR` 源路径相对上游实际 `work_dir`；`AS` 目标路径相对父 `<work_dir>/.lgwf/handoff/<node_id>/`；`RESULT` 字段值是复制后文件或目录的绝对路径，供下游隔离 child 读取；结果同时包含 `handoff_files` 对象，适合下游 `PY INPUT state.handoff_files`；目录交接默认整体替换目标目录。
+- `.lgwf/child-runs/*.json` 只用于诊断和状态展示，不作为常规业务数据通道；record 中的实际 child `work_dir` 位于 `.lgwf/isolations/run_workflow/<node_id>/work_dir`，child 人工确认由父 status 透传为 `child_human_approval`。
 - 不使用旧 `NODE ... USE ... CONFIG`、`REACT ... MAX_STEPS ... CONFIG` 或 `WATERFALL` authoring 语法。
 - 编译后的 `workflow.json` 只使用 `nodes`、`edges`、`routes`、`entry_point` 顶层字段。
 - node id 唯一，`entry_point` 指向存在的 node。

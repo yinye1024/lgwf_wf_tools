@@ -1,0 +1,15 @@
+WORKFLOW git_commit;
+ENTRY execute_commit_action;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+}
+
+PY execute_commit_action
+  SCRIPT "scripts/execute_commit_action.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.execute_commit_action_result
+  UPDATES_STATE;
+
+FLOW execute_commit_action;

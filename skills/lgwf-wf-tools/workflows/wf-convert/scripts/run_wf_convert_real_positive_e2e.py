@@ -1,0 +1,438 @@
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from typing import Any
+
+
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+SKILL_ROOT = PACKAGE_ROOT.parent.parent
+REPO_ROOT = SKILL_ROOT.parent.parent
+WORKFLOW_LGWF = PACKAGE_ROOT / "wf" / "workflow.lgwf"
+FIXTURE_ROOT = PACKAGE_ROOT / "tests" / "fixtures" / "static_prompt_workflow"
+LGWF_PY = SKILL_ROOT / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
+STATUS_TIMEOUT_SECONDS = 1800
+PHASE_POLL_INTERVAL_SECONDS = 3
+PHASE_ADVANCE_TIMEOUT_SECONDS = 60
+
+
+def write_utf8_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def read_utf8_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def parse_json_object(text: str) -> dict[str, Any]:
+    for line in [text.strip(), *text.splitlines()[::-1]]:
+        candidate = line.strip()
+        if not candidate.startswith("{"):
+            continue
+        try:
+            value = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            return value
+    raise AssertionError(f"stdout 未包含可解析 JSON object:\n{text}")
+
+
+class RunWfConvertRealPositiveE2E(unittest.TestCase):
+    maxDiff = None
+
+    def test_static_prompt_workflow_converts_and_wf_create_generates_package(self) -> None:
+        self.require_runtime_prerequisites()
+        temp_root = Path(tempfile.mkdtemp(prefix="wf-convert-real-positive-"))
+        source_root = temp_root / "static_prompt_workflow"
+        work_dir = temp_root / "runtime"
+        input_json_path = temp_root / "input.json"
+        target_package_root = f"workflows/generated/e2e-static-approval-router-{temp_root.name}"
+        target_abs = SKILL_ROOT / target_package_root
+        shutil.copytree(FIXTURE_ROOT, source_root)
+        work_dir.mkdir(parents=True, exist_ok=True)
+        if target_abs.exists():
+            shutil.rmtree(target_abs)
+
+        write_utf8_json(
+            input_json_path,
+            {
+                "prompt_convert_target": {
+                    "target_dir": str(source_root),
+                    "entry_files": ["README.md", "flow/workflow.lgwf"],
+                    "target_workflow_name": "static-approval-router",
+                    "target_package_root": target_package_root,
+                    "constraints": ["完整跑完 wf-create", "生成结果需要保留审批路由业务语义"],
+                }
+            },
+        )
+
+        harness = WorkflowRuntimeHarness(work_dir=work_dir)
+        last_status: dict[str, Any] | None = None
+        cleanup = False
+        try:
+            start_payload = harness.start(input_json_path=input_json_path)
+            session_id = str(start_payload.get("session_id") or "")
+            self.assertTrue(session_id, f"run 输出缺少 session_id: {start_payload}")
+
+            handled_requests: set[str] = set()
+            phase_history: list[dict[str, Any]] = []
+            deadline = time.time() + STATUS_TIMEOUT_SECONDS
+            while time.time() < deadline:
+                last_status = harness.status(session_id)
+                phase = str(last_status.get("phase") or last_status.get("status") or "")
+                current_node = last_status.get("current_node")
+                pending_action = last_status.get("pending_action")
+                phase_history.append({"phase": phase, "current_node": current_node, "pending_action": pending_action})
+                if phase == "completed":
+                    break
+                if phase in {"failed", "stopped"}:
+                    raise AssertionError(f"workflow 终态失败: {last_status}")
+                if isinstance(pending_action, dict):
+                    request_id = str(pending_action.get("request_id") or pending_action.get("child_request_id") or "")
+                    if request_id and request_id not in handled_requests:
+                        self.handle_pending_action(harness, pending_action, request_id, source_root, target_package_root)
+                        handled_requests.add(request_id)
+                        session_id = self.wait_for_phase_change(harness, session_id, request_id, input_json_path)
+                        continue
+                time.sleep(PHASE_POLL_INTERVAL_SECONDS)
+            else:
+                raise AssertionError(f"等待完整 workflow 完成超时: last_status={last_status}")
+
+            self.assert_expected_parent_outputs(work_dir)
+            child_record = self.assert_child_workflow_completed(work_dir)
+            child_work_dir = Path(str(child_record["work_dir"]))
+            child_workspace = Path(str(child_record["workspace"]))
+            self.assert_expected_child_outputs(child_work_dir, target_package_root)
+            self.assert_generated_package_matches_prompt_business(child_workspace / target_package_root)
+            cleanup = True
+        except Exception as exc:
+            raise AssertionError(
+                f"{exc}\n"
+                f"保留临时目录: {temp_root}\n"
+                f"源 fixture 副本: {source_root}\n"
+                f"父 work_dir: {work_dir}\n"
+                f"目标 package: {target_abs}\n"
+                f"最后状态: {json.dumps(last_status, ensure_ascii=False) if last_status else '<none>'}"
+            ) from exc
+        finally:
+            if last_status and str(last_status.get("phase")) not in {"completed", "failed", "stopped"}:
+                pid = last_status.get("pid")
+                if isinstance(pid, int) and pid > 0:
+                    try:
+                        harness.stop(pid)
+                    except Exception:
+                        pass
+            if cleanup:
+                shutil.rmtree(temp_root, ignore_errors=True)
+                shutil.rmtree(target_abs, ignore_errors=True)
+
+    def require_runtime_prerequisites(self) -> None:
+        self.assertTrue(FIXTURE_ROOT.is_dir(), f"缺少固定 prompt workflow fixture: {FIXTURE_ROOT}")
+        self.assertTrue(WORKFLOW_LGWF.is_file(), f"缺少 workflow 文件: {WORKFLOW_LGWF}")
+        self.assertTrue(LGWF_PY.is_file(), f"缺少 LGWF CLI: {LGWF_PY}")
+        codex = shutil.which("codex")
+        self.assertIsNotNone(codex, "未找到 codex 命令，无法执行真实 Codex 正向 E2E。")
+        completed = subprocess.run(
+            [codex, "--version"],
+            cwd=str(SKILL_ROOT),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+
+    def handle_pending_action(
+        self,
+        harness: "WorkflowRuntimeHarness",
+        action: dict[str, Any],
+        request_id: str,
+        source_root: Path,
+        target_package_root: str,
+    ) -> None:
+        action_type = str(action.get("type") or "")
+        prompt = json.dumps(action, ensure_ascii=False)
+        if action_type in {"human_approval", "child_human_approval"}:
+            if "collect_prompt_workflow_target" in prompt:
+                value = {
+                    "target_dir": str(source_root),
+                    "entry_files": ["README.md", "flow/workflow.lgwf"],
+                    "target_workflow_name": "static-approval-router",
+                    "target_package_root": target_package_root,
+                    "constraints": ["完整跑完 wf-create", "生成结果需要保留审批路由业务语义"],
+                }
+            else:
+                value = {
+                    "raw_intent": (
+                        "创建 static-approval-router：收集审批请求，按 amount 和 risk_level 判断 "
+                        "auto_approve、human_review 或 needs_revision，并输出 decision、reason、audit_trail。"
+                    ),
+                    "target_package_root": target_package_root,
+                }
+            harness.approval_submit(request_id, value=value, comment=f"real e2e approve {request_id}")
+            return
+
+        if action_type in {"human_review", "child_human_review"}:
+            child_work_dir = Path(str(action.get("child_work_dir") or harness.work_dir))
+            value = self.review_value_for_action(action, child_work_dir, target_package_root)
+            harness.review_submit(request_id, route="approve", value=value, comment=f"real e2e review approve {request_id}")
+            return
+
+        raise AssertionError(f"未知 pending action: {action}")
+
+    def review_value_for_action(self, action: dict[str, Any], child_work_dir: Path, target_package_root: str) -> dict[str, Any]:
+        prompt = json.dumps(action, ensure_ascii=False)
+        if "confirm_create_input" in prompt:
+            proposal = self.read_required_json(child_work_dir / ".lgwf" / "wf_create_input_proposal.json")
+            return {
+                "decision": "approve",
+                "confirmed": proposal,
+                "comment": "真实 E2E 原样确认 wf-create 输入 proposal",
+            }
+        if "confirm_requirements" in prompt:
+            proposal = self.read_required_json(child_work_dir / ".lgwf" / "create_requirements_proposal.json")
+            proposal.setdefault("workflow_name", "static-approval-router")
+            proposal["target_package_root"] = target_package_root
+            return proposal
+        if "confirm_business_flow" in prompt:
+            proposal = self.read_required_json(child_work_dir / ".lgwf" / "business_flow_proposal.json")
+            proposal.setdefault("workflow_name", "static-approval-router")
+            proposal["target_package_root"] = target_package_root
+            return proposal
+        if "confirm_step_designs" in prompt:
+            proposal = self.read_required_json(child_work_dir / ".lgwf" / "step_designs_proposal.json")
+            return proposal
+        raise AssertionError(f"未知 review 节点: {action}")
+
+    def read_required_json(self, path: Path) -> dict[str, Any]:
+        self.assertTrue(path.is_file(), f"缺少 JSON 产物: {path}")
+        value = read_utf8_json(path)
+        self.assertIsInstance(value, dict, f"{path} 必须是 JSON object")
+        return value
+
+    def wait_for_phase_change(
+        self,
+        harness: "WorkflowRuntimeHarness",
+        session_id: str,
+        request_id: str,
+        input_json_path: Path,
+    ) -> str:
+        deadline = time.time() + PHASE_ADVANCE_TIMEOUT_SECONDS
+        last_status: dict[str, Any] | None = None
+        while time.time() < deadline:
+            last_status = harness.status(session_id)
+            pending = last_status.get("pending_action")
+            pending_id = ""
+            if isinstance(pending, dict):
+                pending_id = str(pending.get("request_id") or pending.get("child_request_id") or "")
+            if pending_id != request_id:
+                pid = last_status.get("pid")
+                if isinstance(pid, int) and not harness.is_process_running(pid):
+                    resumed = harness.resume_existing(input_json_path=input_json_path)
+                    return str(resumed.get("session_id") or session_id)
+                return session_id
+            time.sleep(PHASE_POLL_INTERVAL_SECONDS)
+        raise AssertionError(f"提交人工动作后流程未推进: request_id={request_id}; status={last_status}")
+
+    def assert_expected_parent_outputs(self, work_dir: Path) -> None:
+        for relative in [
+            ".lgwf/prompt_workflow_inspection.json",
+            ".lgwf/wf_create_input_proposal.json",
+            ".lgwf/wf_create_payload.json",
+            "reports/convert-workflow/convert_result_report.md",
+        ]:
+            self.assertTrue((work_dir / relative).is_file(), f"缺少父流程产物: {relative}")
+
+    def assert_child_workflow_completed(self, work_dir: Path) -> dict[str, Any]:
+        record = self.read_required_json(work_dir / ".lgwf" / "child-runs" / "wf_create.json")
+        self.assertEqual(record.get("node_id"), "wf_create")
+        self.assertEqual(record.get("status"), "completed", f"子 workflow 未成功完成: {record}")
+        self.assertTrue(
+            str(record.get("declared_work_dir", "")).replace("\\", "/").endswith("workflows/wf-create/ws"),
+            f"子 workflow 缺少声明 work_dir: {record}",
+        )
+        self.assertTrue(
+            str(record.get("workspace", "")).replace("\\", "/").endswith(
+                "/.lgwf/isolations/run_workflow/wf_create/workspace"
+            ),
+            f"子 workflow 未记录隔离 workspace: {record}",
+        )
+        self.assertTrue(
+            str(record.get("work_dir", "")).replace("\\", "/").endswith(
+                "/.lgwf/isolations/run_workflow/wf_create/work_dir"
+            ),
+            f"子 workflow 未使用隔离 work_dir: {record}",
+        )
+        self.assertNotIn("failure", record, f"子 workflow 失败: {record}")
+        return record
+
+    def assert_expected_child_outputs(self, child_work_dir: Path, target_package_root: str) -> None:
+        for relative in [
+            ".lgwf/create_requirements.json",
+            ".lgwf/business_flow.json",
+            ".lgwf/step_designs.json",
+            ".lgwf/implementation_result.json",
+            ".lgwf/create_result_summary.json",
+            "reports/create-workflow/create_result_report.md",
+        ]:
+            self.assertTrue((child_work_dir / relative).is_file(), f"缺少 wf-create 产物: {relative}")
+        summary = self.read_required_json(child_work_dir / ".lgwf" / "create_result_summary.json")
+        self.assertEqual(summary.get("target_package_root"), target_package_root)
+
+    def assert_generated_package_matches_prompt_business(self, target_abs: Path) -> None:
+        self.assertTrue(target_abs.is_dir(), f"wf-create 未生成目标 package: {target_abs}")
+        expected_files = [
+            target_abs / "AGENTS.md",
+            target_abs / "README.md",
+            target_abs / "wf" / "workflow.lgwf",
+        ]
+        self.assertTrue(any(path.is_file() for path in expected_files), f"目标 package 缺少基础文件: {target_abs}")
+        text_parts = []
+        for path in target_abs.rglob("*"):
+            if path.is_file() and path.suffix.lower() in {".md", ".lgwf", ".py", ".json"}:
+                text_parts.append(path.read_text(encoding="utf-8", errors="ignore"))
+        combined = "\n".join(text_parts).lower()
+        for keyword in ["approval", "risk", "audit"]:
+            self.assertIn(keyword, combined, f"生成 package 未保留业务关键词 {keyword}: {target_abs}")
+        self.assertTrue(
+            "human_review" in combined or "human review" in combined or "人工" in combined,
+            f"生成 package 未体现人工复核分支: {target_abs}",
+        )
+        self.assertTrue(
+            "auto_approve" in combined or "auto approve" in combined or "自动" in combined,
+            f"生成 package 未体现自动通过分支: {target_abs}",
+        )
+
+
+class WorkflowRuntimeHarness:
+    def __init__(self, *, work_dir: Path) -> None:
+        self.work_dir = work_dir
+        self.python = shutil.which("python") or "python"
+
+    def run_command(self, args: list[str], *, timeout: int = 300) -> dict[str, Any]:
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
+        completed = subprocess.run(
+            [self.python, str(LGWF_PY), *args],
+            cwd=str(SKILL_ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+        if completed.returncode != 0:
+            raise AssertionError(
+                "命令执行失败:\n"
+                f"command={[self.python, str(LGWF_PY), *args]}\n"
+                f"stdout={completed.stdout}\n"
+                f"stderr={completed.stderr}"
+            )
+        return parse_json_object(completed.stdout)
+
+    def start(self, *, input_json_path: Path) -> dict[str, Any]:
+        input_json = json.dumps(read_utf8_json(input_json_path), ensure_ascii=False)
+        return self.run_command(
+            [
+                "run",
+                "--workflow-lgwf",
+                str(WORKFLOW_LGWF),
+                "--work-dir",
+                str(self.work_dir),
+                "--input-json",
+                input_json,
+                "--background",
+            ],
+            timeout=120,
+        )
+
+    def resume_existing(self, *, input_json_path: Path) -> dict[str, Any]:
+        input_json = json.dumps(read_utf8_json(input_json_path), ensure_ascii=False)
+        return self.run_command(
+            [
+                "run",
+                "--workflow-json",
+                str(self.work_dir / ".lgwf" / "workflow" / "workflow.json"),
+                "--work-dir",
+                str(self.work_dir),
+                "--input-json",
+                input_json,
+                "--background",
+                "--resume-existing",
+            ],
+            timeout=120,
+        )
+
+    def status(self, session_id: str) -> dict[str, Any]:
+        return self.run_command(["status", "--work-dir", str(self.work_dir), "--session-id", session_id])
+
+    def is_process_running(self, pid: int) -> bool:
+        if os.name == "nt":
+            completed = subprocess.run(
+                ["tasklist", "/FI", f"PID eq {pid}"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=30,
+            )
+            return completed.returncode == 0 and str(pid) in completed.stdout
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return False
+        return True
+
+    def approval_submit(self, request_id: str, *, value: dict[str, Any], comment: str) -> dict[str, Any]:
+        return self.run_command(
+            [
+                "approval",
+                "submit",
+                "--work-dir",
+                str(self.work_dir),
+                "--request-id",
+                request_id,
+                "--decision",
+                "approve",
+                "--value-json",
+                json.dumps(value, ensure_ascii=False),
+                "--comment",
+                comment,
+            ]
+        )
+
+    def review_submit(self, request_id: str, *, route: str, value: dict[str, Any], comment: str) -> dict[str, Any]:
+        return self.run_command(
+            [
+                "review",
+                "submit",
+                "--work-dir",
+                str(self.work_dir),
+                "--request-id",
+                request_id,
+                "--route",
+                route,
+                "--value-json",
+                json.dumps(value, ensure_ascii=False),
+                "--comment",
+                comment,
+            ]
+        )
+
+    def stop(self, pid: int) -> dict[str, Any]:
+        return self.run_command(["stop", "--pid", str(pid)], timeout=60)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -18,6 +18,7 @@ python scripts/list_workflows.py
 | --- | --- |
 | `wf-fix` | 目标是运行失败、卡住、产物不对、需要自动诊断修复。 |
 | `wf-create` | 目标是从原始意图创建新的 LGWF workflow 初稿；使用 `wf-create`。 |
+| `wf-convert` | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告。 |
 | `wf-prompt-fix` | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足。 |
 | `wf-prompt-upgrade` | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量。 |
 | `e2e-test-generator` | 目标是生成或刷新 workflow 的端到端测试。 |
@@ -29,6 +30,7 @@ python scripts/list_workflows.py
 - 用户说“优化 prompt”，但目标 workflow 已经有明确运行失败证据：使用 `wf-fix`。
 - 用户说“生成测试”，但目标 `workflow.lgwf` 不能解析或基础契约明显缺失：报告前置阻塞，并建议转入 `wf-fix` 或 `wf-prompt-fix`。
 - 目标目录还没有可解析的 `workflow.lgwf`，且用户目标是创建新的 LGWF workflow：使用 `wf-create`。
+- 目标目录是 prompt workflow 或主要由 prompt/Markdown/JSON/YAML 文件组成，且用户目标是先生成 `wf-create` 输入包：使用 `wf-convert`。
 - 用户要求交付质量治理：从 `wf-prompt-fix` 开始；阶段完成后，基于结果证据决定是否重新路由。
 
 ## 连续路由

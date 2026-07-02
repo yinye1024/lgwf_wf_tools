@@ -23,14 +23,12 @@ STEP compose_plan
 STEP prepare_confirm_plan
   WORKFLOW "05_confirm_plan/workflow.lgwf";
 
-APPROVAL confirm_plan
+REVIEW confirm_plan
   PROMPT_REF "05_confirm_plan/agents/confirm_plan.md"
-  READ state.lgwf_wf_thinking.confirm_context
-  WRITE state.lgwf_wf_thinking.plan_decision
+  CONTEXT state.lgwf_wf_thinking.confirm_context
   RESULT state.lgwf_wf_thinking.plan_decision_result
   PERSIST ".lgwf/composition_plan_decision.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 STEP apply_confirmed_plan
   WORKFLOW "05_confirm_plan/01_apply_confirmed_plan/workflow.lgwf";

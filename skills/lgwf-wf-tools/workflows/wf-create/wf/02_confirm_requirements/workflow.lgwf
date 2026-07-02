@@ -31,14 +31,12 @@ PY prepare_requirements_confirmation
   RESULT state.lgwf_wf_create.prepare_requirements_confirmation_result
   UPDATES_STATE;
 
-APPROVAL confirm_requirements
+REVIEW confirm_requirements
   PROMPT_REF "confirm_requirements.md"
-  READ state.lgwf_wf_create.requirements_confirmation_context
-  WRITE state.lgwf_wf_create.requirements_decision
+  CONTEXT state.lgwf_wf_create.requirements_confirmation_context
   RESULT state.lgwf_wf_create.requirements_decision_result
   PERSIST ".lgwf/create_requirements_approval.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY apply_confirmed_requirements
   SCRIPT "scripts/apply_confirmed_requirements.py"
@@ -52,14 +50,12 @@ PY prepare_requirements_revision_confirmation
   RESULT state.lgwf_wf_create.prepare_requirements_revision_confirmation_result
   UPDATES_STATE;
 
-APPROVAL revise_requirements
+REVIEW revise_requirements
   PROMPT_REF "revise_requirements.md"
-  READ state.lgwf_wf_create.requirements_revision_context
-  WRITE state.lgwf_wf_create.requirements_revision_decision
+  CONTEXT state.lgwf_wf_create.requirements_revision_context
   RESULT state.lgwf_wf_create.requirements_revision_decision_result
   PERSIST ".lgwf/create_requirements_revision_approval.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 FLOW {
   collect_raw_intent THEN finish_raw_intent THEN propose_requirements_react THEN prepare_requirements_confirmation THEN confirm_requirements;

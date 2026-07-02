@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "lgwf-wf-tools local override",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "additional_rules": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "local_work_dirs": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "experimental_workflows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "agents_md"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"type": "string", "enum": ["lgwf", "tool-workflow"]},
+          "workflow_lgwf": {"type": "string"},
+          "work_dir": {"type": "string"},
+          "agents_md": {"type": "string"},
+          "entry": {"type": "string"},
+          "description": {"type": "string"}
+        }
+      }
+    }
+  }
+}

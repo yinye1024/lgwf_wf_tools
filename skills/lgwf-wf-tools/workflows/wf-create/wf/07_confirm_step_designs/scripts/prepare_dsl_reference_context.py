@@ -23,11 +23,25 @@ def output_state(payload: dict[str, Any]) -> None:
     print(json.dumps({"lgwf_wf_create.dsl_reference_context": payload}, ensure_ascii=False, indent=2))
 
 
-def find_bundled_client_dir(start: Path) -> Path:
+def find_bundled_client_dir(start: Path, work_dir: Path | None = None) -> Path:
     checked: list[Path] = []
-    for parent in start.resolve().parents:
+    roots = [start.resolve()]
+    if work_dir is not None:
+        roots.append(work_dir.resolve())
+
+    seen: set[Path] = set()
+    parents: list[Path] = []
+    for root in roots:
+        for parent in (root, *root.parents):
+            if parent in seen:
+                continue
+            seen.add(parent)
+            parents.append(parent)
+
+    for parent in parents:
         candidates = (
             parent / "vendor" / "lgwf-client-assist",
+            parent / "workspace" / "vendor" / "lgwf-client-assist",
             parent / "lgwf-wf-tools" / "vendor" / "lgwf-client-assist",
             parent / "skills" / "lgwf-wf-tools" / "vendor" / "lgwf-client-assist",
         )
@@ -67,7 +81,7 @@ def prepare_reference_context(skill_dir: Path, out_dir: Path) -> dict[str, Any]:
 def main() -> None:
     root = Path.cwd()
     out_dir = lgwf_dir(root) / "create_reference_context"
-    skill_dir = find_bundled_client_dir(Path(__file__))
+    skill_dir = find_bundled_client_dir(Path(__file__), root)
     result = prepare_reference_context(skill_dir, out_dir)
     (out_dir / "dsl_reference_context.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2),

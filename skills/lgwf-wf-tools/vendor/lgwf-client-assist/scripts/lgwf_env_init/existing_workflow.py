@@ -43,20 +43,22 @@ def handle_existing_workflow_data(
                     print(f"[lgwf] running checkpoint still has a live workflow process for run_id={run_id}. Use --continue-existing.", file=stderr)
                     return 2
                 args.resume_orphaned_running = True
-            elif checkpoint.get("status") != "failed":
-                print(f"[lgwf] failed checkpoint not found for run_id={run_id}. Use --rerun-existing to start over.", file=stderr)
+            elif checkpoint.get("status") not in {"failed", "stopped"}:
+                print(f"[lgwf] resumable checkpoint not found for run_id={run_id}. Use --rerun-existing to start over.", file=stderr)
                 return 2
         else:
             checkpoint = latest_failed_checkpoint(work_dir, support)
             if checkpoint is None:
-                if has_running_workflow_process(work_dir, support):
-                    print("[lgwf] running checkpoint still has a live workflow process. Use --continue-existing.", file=stderr)
-                    return 2
-                checkpoint = latest_orphaned_running_checkpoint(work_dir, support)
+                checkpoint = latest_stopped_checkpoint(work_dir, support)
                 if checkpoint is None:
-                    print("[lgwf] no failed or orphaned running checkpoint found. Use --rerun-existing to start over.", file=stderr)
-                    return 2
-                args.resume_orphaned_running = True
+                    if has_running_workflow_process(work_dir, support):
+                        print("[lgwf] running checkpoint still has a live workflow process. Use --continue-existing.", file=stderr)
+                        return 2
+                    checkpoint = latest_orphaned_running_checkpoint(work_dir, support)
+                    if checkpoint is None:
+                        print("[lgwf] no failed, stopped, or orphaned running checkpoint found. Use --rerun-existing to start over.", file=stderr)
+                        return 2
+                    args.resume_orphaned_running = True
             args.resume_run_id = checkpoint["run_id"]
         return None
     if args.continue_existing:
@@ -139,13 +141,25 @@ def has_existing_lgwf_data(work_dir: pathlib.Path, support: RuntimeSupport) -> b
 
 
 def latest_failed_checkpoint(work_dir: pathlib.Path, support: RuntimeSupport) -> dict[str, object] | None:
+    return latest_checkpoint_with_status(work_dir, support, {"failed"})
+
+
+def latest_stopped_checkpoint(work_dir: pathlib.Path, support: RuntimeSupport) -> dict[str, object] | None:
+    return latest_checkpoint_with_status(work_dir, support, {"stopped"})
+
+
+def latest_checkpoint_with_status(
+    work_dir: pathlib.Path,
+    support: RuntimeSupport,
+    statuses: set[str],
+) -> dict[str, object] | None:
     root = support.workspace_layout.lgwf_dir(work_dir) / "checkpoints"
     if not root.is_dir():
         return None
     candidates: list[tuple[float, dict[str, object]]] = []
     for path in root.glob("*/checkpoint.json"):
         checkpoint = _read_checkpoint(path)
-        if checkpoint and checkpoint.get("status") == "failed" and isinstance(checkpoint.get("run_id"), str):
+        if checkpoint and checkpoint.get("status") in statuses and isinstance(checkpoint.get("run_id"), str):
             candidates.append((path.stat().st_mtime, checkpoint))
     if not candidates:
         return None

@@ -1,0 +1,13 @@
+WORKFLOW summarize_convert_result;
+ENTRY summarize_convert_result;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY summarize_convert_result
+  SCRIPT "scripts/summarize_convert_result.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.summary_result
+  UPDATES_STATE;

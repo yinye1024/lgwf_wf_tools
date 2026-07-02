@@ -9,11 +9,38 @@ sys.path.insert(0, str(ROOT / "shared"))
 from e2e_generator_common import LGWF_DIR, output_state, read_json, slugify, workflow_name_from_text, write_json
 
 
+TEST_TYPE_ORDER = ("script_flow", "runtime_fake", "real_positive", "wf_fix_positive")
+
+
 def resolve_path(raw: str, base: Path) -> Path:
     path = Path(raw)
     if not path.is_absolute():
         path = base / path
     return path.resolve()
+
+
+def normalize_test_types(raw: object) -> list[str]:
+    if raw is None or raw == []:
+        return list(TEST_TYPE_ORDER)
+    if not isinstance(raw, list):
+        raise SystemExit("test_types must be an array of strings")
+    values = []
+    invalid = []
+    for item in raw:
+        if not isinstance(item, str):
+            invalid.append(repr(item))
+            continue
+        value = item.strip()
+        if value not in TEST_TYPE_ORDER:
+            invalid.append(value)
+        elif value not in values:
+            values.append(value)
+    if invalid:
+        allowed = ", ".join(TEST_TYPE_ORDER)
+        raise SystemExit(f"invalid test_types: {', '.join(invalid)}; allowed: {allowed}")
+    if not values:
+        return list(TEST_TYPE_ORDER)
+    return [value for value in TEST_TYPE_ORDER if value in values]
 
 
 def main() -> None:
@@ -46,16 +73,19 @@ def main() -> None:
     test_output_dir = str(request.get("test_output_dir") or "tests").strip().replace("\\", "/").strip("/")
     if not test_output_dir or ".." in Path(test_output_dir).parts or Path(test_output_dir).is_absolute():
         raise SystemExit("test_output_dir must be a non-empty relative path without '..'")
+    selected_test_types = normalize_test_types(request.get("test_types"))
     normalized = {
         "workflow_root": workflow_root.as_posix(),
         "workflow_lgwf": workflow_lgwf.as_posix(),
         "workflow_name": workflow_name,
         "test_output_dir": test_output_dir,
         "test_name_prefix": prefix,
+        "selected_test_types": selected_test_types,
         "generated_tests": {
             "script_flow": f"test_{prefix}_script_flow_e2e.py",
             "runtime_fake": f"test_{prefix}_runtime_fake_e2e.py",
-            "real_positive": f"test_{prefix}_real_positive_e2e.py",
+            "real_positive": f"lgwf_{prefix}_real_positive_e2e.py",
+            "wf_fix_positive": f"lgwf_{prefix}_real_positive_e2e_for_wf_fix.py",
         },
     }
     write_json(LGWF_DIR / "e2e_target_request.normalized.json", normalized)

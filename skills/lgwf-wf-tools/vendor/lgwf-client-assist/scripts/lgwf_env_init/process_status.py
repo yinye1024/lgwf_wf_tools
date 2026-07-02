@@ -106,6 +106,8 @@ def summarize_progress(lines: list[str]) -> dict:
                 summary["current_capability"] = capability
                 if capability == "flow.human_approval" and "node waiting" in line:
                     summary["phase"] = "waiting_human"
+                elif capability == "flow.human_review" and "node waiting" in line:
+                    summary["phase"] = "waiting_review"
                 else:
                     summary["phase"] = "running"
             if "node completed" in line:
@@ -113,6 +115,11 @@ def summarize_progress(lines: list[str]) -> dict:
                 summary["last_completed"] = parse_completed_progress(line)
         if "[workflow] human approval pending" in line:
             summary["phase"] = "waiting_human"
+            request_id = extract_progress_field(line, "request_id")
+            if request_id:
+                summary["human_request_id"] = request_id
+        if "[workflow] human review pending" in line:
+            summary["phase"] = "waiting_review"
             request_id = extract_progress_field(line, "request_id")
             if request_id:
                 summary["human_request_id"] = request_id

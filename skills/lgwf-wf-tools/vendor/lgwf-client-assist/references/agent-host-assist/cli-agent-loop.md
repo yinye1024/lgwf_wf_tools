@@ -38,7 +38,7 @@ python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-di
 
 - `rerun`：清空 `<work_dir>` 下的旧内容，重新运行 workflow。
 - `continue`：继续跟踪现有 workflow；这只报告或轮询现有进程状态，不从失败节点恢复。
-- `resume`：使用最新 failed checkpoint 从失败节点重新执行；失败节点会重跑一次，已完成前序节点不重跑。
+- `resume`：使用最新 failed / stopped checkpoint 从对应节点重新执行；对应节点会重跑一次，已完成前序节点不重跑。如果没有 failed / stopped checkpoint，且进程已停止，可使用 orphaned running checkpoint 调试恢复。
 
 用户选择 `continue` 时，保存返回的 `pid` 并进入 status 轮询；如果没有 `pid`，只汇报现有 run / pending human requests，不启动新 workflow。
 
@@ -55,6 +55,14 @@ python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-di
 ```
 
 `--rerun-existing` 会先调用随 runner 分发的 work-dir guard。非空目录只有在识别到 LGWF artifacts 后才会清理；识别失败时命令返回错误并保留目录内容。清理成功后启动新的 workflow，agent 后续跟踪新返回的 `session_id` / `pid`。
+
+如果 workflow 正在 review 或人工确认节点等待，用户发现后续 workflow 或资源需要修复，主 agent 应先受控停止当前进程，并传入 `--work-dir` 让 runtime checkpoint 标记为 `status=stopped`：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py stop --pid <pid> --work-dir <work_dir>
+```
+
+修复 workflow package 或资源后，用户确认继续时使用 `--resume-existing` 恢复同一个 run；不要用 `--rerun-existing` 重新创建 run，除非用户明确要放弃当前 run 数据。
 
 runner 会先通过 `scripts/lgwf_env_init/work_dir_guard.py` 验证非空 `work_dir` 的 LGWF 标记。验证失败时返回退出码 2 并保留全部文件；主 agent 将错误反馈给用户，不继续启动 workflow。
 
@@ -121,9 +129,11 @@ python <skill-dir>\scripts\lgwf.py status --pid <pid> --work-dir <work_dir>
 
 进入 `waiting_human` 后立即向用户同步，不继续自动 approve。
 
+进入 `waiting_review` 后立即向用户同步，不把 `revise` 当成 approval reject。
+
 进入 `waiting_handoff` 后立即向用户同步，不自动运行 `suggested_command`。
 
-重要：`waiting_human` 不是退出条件。进入该状态后，主 agent 不能把当前 workflow 视为已完成，也不能在后续用户消息中重新启动 workflow。后续用户消息如果是对当前 approval 的确认，应直接回到当前 `pid` / `work_dir` / `request_id`，读取 controller payload 并继续提交流程。
+重要：`waiting_human` / `waiting_review` 不是退出条件。进入该状态后，主 agent 不能把当前 workflow 视为已完成，也不能在后续用户消息中重新启动 workflow。后续用户消息如果是对当前 approval 或 review 的确认，应直接回到当前 `pid` / `work_dir` / `request_id`，读取 controller payload 并继续提交流程。
 
 ## Human Approval Main-Agent Ask Flow
 
@@ -196,6 +206,23 @@ running workflow
 - 不要在当前 workflow 仍有 `pid` / `request_id` 时建议 `rerun`，除非用户明确说要从头重跑。
 
 `submit-human-controller-payload` 会把 `.controller_payload.json` 转换为 `.response.json`，并写入 `submitted_via="controller_payload"`、`final_user_confirmed=true` 和原始 `controller_payload` 审计字段。`reject` 会让 workflow 失败并写入 failed run artifacts。
+
+## Human Review Main-Agent Ask Flow
+
+当 workflow 运行到 `flow.human_review` 节点时，LGWF 复用 `.lgwf/human/<request_id>.request.json` 通道，但 request 会包含 `kind="human_review"` 和 `options`。主 agent status 会返回 `phase=waiting_review`、`pending_action.type="human_review"`、`agent_instruction="ask_user_review_choice"`。
+
+处理要求：
+
+1. 展示 `prompt`、`context` 摘要和 `options`。
+2. 询问用户选择一个 option，例如 `approve`、`revise` 或 `reject`。
+3. 用户选择 `revise` 时，主 agent 先在当前对话中完成小改，再提交 review route 和改完后的 context；不要提交 `decision=reject`。
+4. 优先使用高层命令：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py review submit --work-dir <work_dir> --request-id <request_id> --route revise --value-json "{...updated context...}" --comment "user requested edits"
+```
+
+提交后继续轮询同一个 workflow。`REVIEW` 节点会把 route 写入 `RESULT.route`，并用该 route 匹配 `FLOW ... WHEN "<route>" THEN ...`。如果 `revise` route 回到同一个 `REVIEW` 节点，workflow 会再次进入 `waiting_review`，主 agent 必须再次询问用户确认。
 
 ## Agent Handoff Main-Agent Flow
 

@@ -1,0 +1,57 @@
+WORKFLOW wf_fix_positive_e2e;
+ENTRY prepare_wf_fix_positive_observe_feedback;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_e2e.wf_fix_positive.instructions.{node}";
+  result_path "lgwf_e2e.wf_fix_positive.results.{node}";
+}
+
+PY prepare_wf_fix_positive_observe_feedback
+  SCRIPT "00_prepare/scripts/prepare_wf_fix_positive_observe_feedback.py"
+  RESULT state.lgwf_e2e.wf_fix_positive_observe_feedback_result
+  UPDATES_STATE;
+
+REACT wf_fix_positive_e2e_react MAX 3
+  SPEC "01_design/agents/spec.md"
+  REASON CODEX
+    PROMPT "01_design/agents/reason.md"
+    CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+    CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
+    CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_real_positive_design.json"
+    CONTEXT workspace file ".lgwf/e2e_wf_fix_positive_observe.json"
+    TARGET_DIRS state.lgwf_e2e.target_dirs
+    TARGET_FILES state.lgwf_e2e.target_files
+    OUTPUT_JSON ".lgwf/e2e_wf_fix_positive_design.json"
+    RESULT state.lgwf_e2e.wf_fix_positive_reason_result
+  ACT CODEX
+    PROMPT "02_generate/agents/act.md"
+    CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+    CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
+    CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_real_positive_design.json"
+    CONTEXT workspace file ".lgwf/e2e_wf_fix_positive_design.json"
+    TARGET_DIRS state.lgwf_e2e.target_dirs
+    TARGET_FILES state.lgwf_e2e.target_files
+    OUTPUT_JSON ".lgwf/e2e_wf_fix_positive_generation.json"
+    RESULT state.lgwf_e2e.wf_fix_positive_act_result
+  OBSERVE CODEX
+    PROMPT "03_validate/agents/observe.md"
+    CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
+    CONTEXT workspace file ".lgwf/e2e_coverage_matrix.json"
+    CONTEXT workspace file ".lgwf/e2e_real_positive_design.json"
+    CONTEXT workspace file ".lgwf/e2e_wf_fix_positive_design.json"
+    CONTEXT workspace file ".lgwf/e2e_wf_fix_positive_generation.json"
+    TARGET_DIRS state.lgwf_e2e.target_dirs
+    TARGET_FILES state.lgwf_e2e.target_files
+    OUTPUT_JSON ".lgwf/e2e_wf_fix_positive_observe.json"
+    RESULT state.lgwf_e2e.wf_fix_positive_observe_result
+  DECIDE PY
+    SCRIPT "04_repair/scripts/decide_wf_fix_positive.py"
+    RESULT state.lgwf_e2e.wf_fix_positive_decide_result
+    UPDATES_STATE;
+
+FLOW prepare_wf_fix_positive_observe_feedback
+  THEN wf_fix_positive_e2e_react;

@@ -1,0 +1,16 @@
+WORKFLOW static_approval_router;
+ENTRY intake_request;
+
+STEP intake_request
+  PROMPT "agents/intake_request.md";
+
+STEP classify_risk
+  PROMPT "agents/classify_risk.md";
+
+STEP decide_route
+  PROMPT "agents/decide_route.md";
+
+FLOW intake_request
+  THEN classify_risk
+  THEN decide_route;
+

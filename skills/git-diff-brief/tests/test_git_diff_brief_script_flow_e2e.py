@@ -73,6 +73,52 @@ def capture_main_stdout_json(module: types.ModuleType, workdir: Path) -> dict[st
     return json.loads(buffer.getvalue())
 
 
+def capture_main_stdout_json_allowing_git(module: types.ModuleType, workdir: Path) -> dict[str, object]:
+    buffer = io.StringIO()
+    with mock.patch("sys.stdout", buffer):
+        previous_cwd = Path.cwd()
+        os.chdir(workdir)
+        try:
+            module.main()
+        finally:
+            os.chdir(previous_cwd)
+    return json.loads(buffer.getvalue())
+
+
+@contextlib.contextmanager
+def temporary_git_repo() -> Path:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        repo = Path(temp_dir)
+        subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        tracked = repo / "tracked.txt"
+        tracked.write_text("base\n", encoding="utf-8")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=repo, check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["git", "commit", "-m", "initial commit"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        tracked.write_text("base\nchanged\n", encoding="utf-8")
+        (repo / "new.txt").write_text("new\n", encoding="utf-8")
+        yield repo
+
+
 def assert_route_decision_map(
     testcase: unittest.TestCase,
     workflow_relative_path: str,
@@ -123,6 +169,9 @@ class ScriptFlowE2ETest(unittest.TestCase):
         cls.finalize_brief_result = load_script_module(
             "wf/04_result_review_and_delivery/scripts/finalize_brief_result.py"
         )
+        cls.execute_commit_action = load_script_module(
+            "wf/05_git_commit/scripts/execute_commit_action.py"
+        )
 
     def test_case_scope_validation_normalizes_repo_hint_and_rejects_invalid_inputs(self) -> None:
         self.assertEqual("foo/bar", self.validate_repo_hint.normalize_repo_hint(r"foo\bar"))
@@ -144,6 +193,28 @@ class ScriptFlowE2ETest(unittest.TestCase):
             result["request_scope_validation"]["baseline_scope"],
         )
         self.assertEqual("revise", result["scope_confirmation_input"]["recommended_decision"])
+
+    def test_case_scope_validation_loads_runtime_input_from_checkpoint(self) -> None:
+        with isolated_workdir_with_lgwf_state() as workdir:
+            checkpoint_dir = workdir / ".lgwf/checkpoints/run-1"
+            checkpoint_dir.mkdir(parents=True)
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/checkpoints/run-1/checkpoint.json",
+                {
+                    "state_before_current_node": {
+                        "repo_path": r"D:\allen\github\lgwf",
+                    }
+                },
+            )
+            previous_cwd = Path.cwd()
+            os.chdir(workdir)
+            try:
+                loaded = self.validate_repo_hint.load_runtime_input()
+            finally:
+                os.chdir(previous_cwd)
+
+        self.assertEqual(r"D:\allen\github\lgwf", loaded["repo_path"])
 
     def test_case_prepare_scope_confirmation_falls_back_when_capture_missing(self) -> None:
         with isolated_workdir_with_lgwf_state() as workdir:
@@ -221,10 +292,43 @@ class ScriptFlowE2ETest(unittest.TestCase):
             "confirm_scope_if_needed",
             {
                 "approve": "finalize_scope_confirmation",
-                "revise": "capture_request_context",
+                "revise": "validate_repo_hint",
                 "reject": "FAIL_ALL",
             },
         )
+
+    def test_case_scope_revision_extracts_repo_path_from_approval_changes(self) -> None:
+        revision = {
+            "approval": "revise",
+            "changes": ["将仓库路径从 . 改为 D:\\allen\\github\\lgwf_skills\\"],
+            "comment": "用户明确要求改用仓库根目录。",
+        }
+
+        self.assertEqual(
+            "D:/allen/github/lgwf_skills",
+            self.validate_repo_hint.repo_hint_from_revision(revision),
+        )
+
+    def test_case_collect_git_context_uses_confirmed_repo_path(self) -> None:
+        with temporary_git_repo() as repo, isolated_workdir_with_lgwf_state() as workdir:
+            capture_fixture = {
+                "repository_input_context": {
+                    "repo_hint": str(repo),
+                    "normalized_repo_hint": str(repo),
+                    "path_exists": True,
+                },
+                "summary_scope": {"baseline": "工作区 git diff + 最近一次提交信息"},
+                "scope_confirmation_input": {"recommended_decision": "approve"},
+            }
+            write_utf8_json_fixture(workdir, ".lgwf/request_scope_capture.json", capture_fixture)
+            payload = capture_main_stdout_json_allowing_git(self.collect_git_context, workdir)
+
+            self.assertEqual(
+                repo.resolve().as_posix(),
+                payload["git_diff_brief.git_collection_log"]["repo_path"],
+            )
+            self.assertEqual("ok", payload["git_diff_brief.git_collection_log"]["status"])
+            self.assertNotIn("placeholder", payload["git_diff_brief.git_context_collection_result"])
 
     def test_case_collect_git_context_writes_snapshot_and_deduplicates_changed_files(self) -> None:
         changed_files = self.collect_git_context.build_changed_files_index(
@@ -246,11 +350,22 @@ class ScriptFlowE2ETest(unittest.TestCase):
             ["a.py", "docs/readme.md"],
             snapshot["changed_files_index"]["files"],
         )
-        self.assertEqual("placeholder", snapshot["git_collection_log"]["status"])
+        self.assertEqual("ok", snapshot["git_collection_log"]["status"])
         self.assertIsInstance(snapshot["git_collection_log"]["warnings"], list)
 
-        with isolated_workdir_with_lgwf_state() as workdir:
-            payload = capture_main_stdout_json(self.collect_git_context, workdir)
+        with temporary_git_repo() as repo, isolated_workdir_with_lgwf_state() as workdir:
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/request_scope_capture.json",
+                {
+                    "repository_input_context": {
+                        "repo_hint": str(repo),
+                        "normalized_repo_hint": str(repo),
+                        "path_exists": True,
+                    }
+                },
+            )
+            payload = capture_main_stdout_json_allowing_git(self.collect_git_context, workdir)
             output_file = workdir / ".lgwf/git_context_snapshot.json"
             self.assertTrue(output_file.exists())
             persisted = json.loads(output_file.read_text(encoding="utf-8"))
@@ -258,12 +373,14 @@ class ScriptFlowE2ETest(unittest.TestCase):
             self.assertIn("latest_commit_context", persisted)
             self.assertIn("changed_files_index", persisted)
             self.assertIn("git_collection_log", persisted)
+            self.assertIn("tracked.txt", persisted["git_diff_snapshot"]["diff_name_only"])
+            self.assertIn("new.txt", persisted["changed_files_index"]["files"])
             self.assertEqual(
                 ".lgwf/git_context_snapshot.json",
                 payload["git_diff_brief.git_context_collection_result"]["output_file"],
             )
 
-    def test_case_derive_validation_suggestions_returns_placeholder_contract(self) -> None:
+    def test_case_derive_validation_suggestions_returns_real_context_contract(self) -> None:
         result = self.derive_validation_suggestions.build_validation_suggestions()
         self.assertEqual(
             ["git status --short", "git diff --stat", "git log -1 --stat"],
@@ -273,12 +390,15 @@ class ScriptFlowE2ETest(unittest.TestCase):
             ["git_diff_snapshot", "latest_commit_context", "changed_files_index"],
             result["summary_supporting_context"]["source_of_truth"],
         )
-        self.assertTrue(result["summary_supporting_context"]["placeholder"])
+        self.assertEqual("real_git_context", result["summary_supporting_context"]["context_kind"])
 
         with isolated_workdir_with_lgwf_state() as workdir:
             payload = capture_main_stdout_json(self.derive_validation_suggestions, workdir)
             self.assertTrue(payload["git_diff_brief.validation_suggestions_result"]["ok"])
-            self.assertTrue(payload["git_diff_brief.validation_suggestions_result"]["placeholder"])
+            self.assertEqual(
+                "real_git_context",
+                payload["git_diff_brief.summary_supporting_context"]["context_kind"],
+            )
 
     def test_case_prepare_delivery_review_falls_back_when_review_context_missing(self) -> None:
         with isolated_workdir_with_lgwf_state() as workdir:
@@ -339,12 +459,23 @@ class ScriptFlowE2ETest(unittest.TestCase):
                 result["run_artifact_index"]["suggested_output_path"],
             )
             self.assertEqual(
-                [".lgwf/change_brief_markdown.json", ".lgwf/delivery_decision.json"],
+                [".lgwf/change_brief_markdown.json", ".lgwf/git_context_snapshot.json", ".lgwf/delivery_decision.json"],
                 result["run_artifact_index"]["artifacts"],
             )
 
             payload = capture_main_stdout_json(self.finalize_brief_result, workdir)
             self.assertTrue(payload["git_diff_brief.finalize_output_result"]["ok"])
+            self.assertEqual("# 变更摘要\n\n正文\n", payload["git_diff_brief.final_change_brief_markdown"])
+            self.assertEqual("none", payload["git_diff_brief.commit_plan"]["action"])
+            self.assertIn("git_diff_brief.commit_message_suggestion", payload)
+            self.assertIn("git_diff_brief.commit_message_rationale", payload)
+            self.assertTrue((workdir / ".lgwf/commit_plan.json").exists())
+
+            action_payload = capture_main_stdout_json(self.execute_commit_action, workdir)
+            self.assertTrue(action_payload["git_diff_brief.execute_commit_action_result"]["ok"])
+            self.assertEqual("none", action_payload["git_diff_brief.commit_action_result"]["action"])
+            self.assertFalse(action_payload["git_diff_brief.commit_action_result"]["executed"])
+            self.assertTrue((workdir / ".lgwf/commit_action_result.json").exists())
 
         assert_route_decision_map(
             self,
@@ -356,6 +487,13 @@ class ScriptFlowE2ETest(unittest.TestCase):
                 "reject": "FAIL_ALL",
             },
         )
+        root_workflow_text = (PACKAGE_ROOT / "wf/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("STEP git_commit", root_workflow_text)
+        self.assertIn('WORKFLOW "05_git_commit/workflow.lgwf"', root_workflow_text)
+        self.assertIn("THEN git_commit", root_workflow_text)
+        git_commit_workflow_text = (PACKAGE_ROOT / "wf/05_git_commit/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("PY execute_commit_action", git_commit_workflow_text)
+        self.assertIn("FLOW execute_commit_action", git_commit_workflow_text)
 
     def test_runtime_guard_and_scripts_do_not_reference_forbidden_runtime_patterns(self) -> None:
         for relative_path in (
@@ -366,6 +504,7 @@ class ScriptFlowE2ETest(unittest.TestCase):
             "wf/03_brief_synthesis/scripts/derive_validation_suggestions.py",
             "wf/04_result_review_and_delivery/scripts/prepare_delivery_review.py",
             "wf/04_result_review_and_delivery/scripts/finalize_brief_result.py",
+            "wf/05_git_commit/scripts/execute_commit_action.py",
         ):
             text = (PACKAGE_ROOT / relative_path).read_text(encoding="utf-8").lower()
             for pattern in FORBIDDEN_PATTERNS:

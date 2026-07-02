@@ -24,14 +24,12 @@ PY prepare_scope_confirmation
   RESULT state.git_diff_brief.prepare_scope_confirmation_result
   UPDATES_STATE;
 
-APPROVAL confirm_scope_if_needed
+REVIEW confirm_scope_if_needed
   PROMPT_REF "agents/confirm_scope_if_needed.md"
-  READ state.git_diff_brief.scope_confirmation_input
-  WRITE state.git_diff_brief.scope_confirmation_decision
+  CONTEXT state.git_diff_brief.scope_confirmation_input
   RESULT state.git_diff_brief.scope_confirmation_result
   PERSIST ".lgwf/request_scope_confirmation.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY finalize_scope_confirmation
   SCRIPT "scripts/finalize_scope_confirmation.py"
@@ -44,6 +42,6 @@ FLOW {
 
   confirm_scope_if_needed
     WHEN "approve" THEN finalize_scope_confirmation
-    WHEN "revise" THEN capture_request_context
+    WHEN "revise" THEN validate_repo_hint
     WHEN "reject" THEN FAIL_ALL;
 }

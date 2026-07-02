@@ -5,11 +5,13 @@
 必须满足：
 
 - 使用真实 Codex。
-- 默认不被 `unittest discover` 收录；人工验收时直接执行测试文件。
+- 文件名不以 `test_` 开头，默认不被 `unittest discover` 收录；人工验收时直接执行测试文件。
+- 不用环境变量控制是否允许运行真实 Codex。
 - 业务 fixture 小、明确、可自动验收。
+- 真实运行前必须执行或封装 `lgwf.py audit <target workflow.lgwf>`，audit 目标是原始目标 `workflow.lgwf`。
 - 自动处理 approval。
 - 最终使用黑盒断言验证业务产物。
-- 失败时保留 `.tmp` 或等价运行目录。
+- audit 失败、真实运行失败或超时时，保留 audit 输出、`.tmp` 或等价运行目录、fixture 和相关 artifact。
 
 禁止：
 

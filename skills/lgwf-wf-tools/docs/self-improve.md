@@ -1,10 +1,10 @@
 # Self Improve 流程
 
-`self-improve/` 是本 facade 的自我提升工作台，只保存发布包内的 schema、baseline eval、模板和只读脚本。运行期历史、报告、proposal 和本地 override 必须写入 `.local/`，不要放入发布包基线。
+`workflows/self-improve/` 是本 facade 的自我提升 tool workflow，只保存发布包内的 schema、baseline eval、模板和只读脚本。运行期历史、报告、proposal 和本地 override 必须写入 `.local/`，不要放入发布包基线。
 
 ## 触发规则
 
-- 用户显式输入 `/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 自我优化`，或自然语言要求复盘、自我优化、优化交互体验、沉淀 case、生成 proposal、生成 eval case 时，必须进入 self-improve 路由；先归类问题、列出可执行的 self-improve 路径，再说明哪些操作需要用户确认。
+- 用户显式输入 `/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 自我优化`，或自然语言要求复盘、自我优化、优化交互体验、沉淀 case、生成 proposal、生成 eval case 时，根 `AGENTS.md` 必须路由到 `self-improve` workflow；先归类问题、列出可执行的 self-improve 路径，再说明哪些操作需要用户确认。
 - 真实运行中出现路由错误、approval 处理错误、监控 handle 丢失、旧 `work_dir` 处理错误或最终报告缺口时，主 agent 只能建议记录 incident；必须用户确认后才能调用 `record_incident.py`。
 - 只读类 self-improve 可直接执行：`eval`、`workflow-health`、`scorecard`、`changed-files`、`pre-release`。
 - 记录类 self-improve 需要确认：`incident`、`proposal`、`eval-case`。如果用户已经明确要求“记录这次问题/生成 proposal/生成 eval 草稿”，可以把当前对话作为证据直接执行。
@@ -25,11 +25,11 @@
 ## 常用命令
 
 ```powershell
-python self-improve\scripts\run_self_evals.py
-python self-improve\scripts\run_self_evals.py --changed-files <changed-files.json> --check-overrides
-python self-improve\scripts\self_improve.py eval --check-overrides
-python self-improve\scripts\self_improve.py workflow-health
-python self-improve\scripts\self_improve.py workflow-tests --workflow-id wf-fix
-python self-improve\scripts\self_improve.py pre-release --version <version> --source <source>
-python self-improve\scripts\validate_manifest.py
+python workflows\self-improve\scripts\run_self_evals.py
+python workflows\self-improve\scripts\run_self_evals.py --changed-files <changed-files.json> --check-overrides
+python workflows\self-improve\scripts\self_improve.py eval --check-overrides
+python workflows\self-improve\scripts\self_improve.py workflow-health
+python workflows\self-improve\scripts\self_improve.py workflow-tests --workflow-id wf-fix
+python workflows\self-improve\scripts\self_improve.py pre-release --version <version> --source <source>
+python workflows\self-improve\scripts\validate_manifest.py
 ```

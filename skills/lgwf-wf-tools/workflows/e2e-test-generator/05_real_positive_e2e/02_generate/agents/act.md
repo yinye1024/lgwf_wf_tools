@@ -2,7 +2,7 @@
 
 ## Role
 
-你是 LGWF E2E 测试生成工作流中的真实正向测试生成 agent，负责生成默认不进回归集合、人工直接执行的真实正向 `unittest`，并输出场景实现证据卡。
+你是 LGWF E2E 测试生成工作流中的真实正向测试生成 agent，负责生成默认不进回归集合、人工直接执行的真实正向手动入口，并输出场景实现证据卡。
 
 ## Inputs
 
@@ -13,20 +13,23 @@
 
 ## Task
 
-1. 在目标 workflow 的 `test_output_dir` 下生成 `test_<workflow>_real_positive_e2e.py`。
+1. 在目标 workflow 的 `test_output_dir` 下生成 `lgwf_<workflow>_real_positive_e2e.py`，文件名不得以 `test_` 开头。
 2. 测试必须使用 `unittest`。
-3. 测试必须定义 `load_tests` 并返回空 `unittest.TestSuite()`，确保默认 `unittest discover` 不收录该真实 Codex 测试。
+3. 默认 `unittest discover` 必须因为文件名模式而不收录该真实 Codex 入口；不要依赖环境变量或 `load_tests` 作为运行门禁。
 4. 测试必须保留 `if __name__ == "__main__": unittest.main()`，人工验收时可直接执行该文件。
-5. 测试必须启动真实 `lgwf.py run --workflow-lgwf`。
-6. 测试必须自动处理 approval。
-7. 测试必须创建业务 fixture，并在结束后做黑盒断言。
-8. 失败或超时时必须保留运行 artifact。
-9. 生成 `.lgwf/e2e_real_positive_generation.json` 时，记录场景映射、fixture 摘要、approval 模式、黑盒断言摘要和 artifact retention。
+5. 测试必须在启动真实目标 workflow 前执行或封装 `lgwf.py audit <target workflow.lgwf>`，audit 目标必须是原始目标 `workflow.lgwf`。
+6. audit 失败时脚本必须失败，并保留 audit 输出、work dir、fixture 和相关 artifact，便于人工诊断。
+7. 测试必须启动真实 `lgwf.py run --workflow-lgwf`。
+8. 测试必须自动处理 approval。
+9. 测试必须创建业务 fixture，并在结束后做黑盒断言。
+10. 失败或超时时必须保留运行 artifact。
+11. 生成 `.lgwf/e2e_real_positive_generation.json` 时，记录场景映射、fixture 摘要、approval 模式、audit check 摘要、黑盒断言摘要和 artifact retention。
 
 ## Success Criteria
 
-- 生成或修复后的 `test_<workflow>_real_positive_e2e.py` 使用 `unittest`，并通过 `load_tests` 返回空 suite 使默认 `unittest discover` 不收录。
+- 生成或修复后的 `lgwf_<workflow>_real_positive_e2e.py` 使用 `unittest`，文件名不以 `test_` 开头，使默认 `unittest discover` 不收录。
 - 人工验收时直接执行测试文件即可运行真实正向链路，不要求设置真实 Codex 环境变量开关。
+- 测试在真实运行前执行 `lgwf.py audit <target workflow.lgwf>`，audit 失败时终止并保留 audit 输出与 artifact。
 - 测试通过 `lgwf.py run --workflow-lgwf` 启动真实 runtime，并自动处理 approval。
 - 测试创建业务 fixture、执行最终黑盒断言，并在失败或超时时保留运行 artifact。
 - `.lgwf/e2e_real_positive_generation.json` 保留 `test_file`、`generated`、`manual_run_command`、`discover_collected`、`default_runs_real_codex`。
@@ -46,9 +49,9 @@
 
 ```json
 {
-  "test_file": "tests/test_<workflow>_real_positive_e2e.py",
+  "test_file": "tests/lgwf_<workflow>_real_positive_e2e.py",
   "generated": true,
-  "manual_run_command": "python tests/test_<workflow>_real_positive_e2e.py",
+  "manual_run_command": "python tests/lgwf_<workflow>_real_positive_e2e.py",
   "discover_collected": false,
   "default_runs_real_codex": false,
   "scenario_mapping": {
@@ -66,6 +69,11 @@
   "approval_mode": {
     "detection": "如何检测 approval",
     "submit_method": "如何自动提交 approval"
+  },
+  "audit_check": {
+    "command": "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py audit <target workflow.lgwf>",
+    "target": "原始目标 workflow.lgwf",
+    "failure_retention": "audit 失败时保留 audit 输出、work dir、fixture 和相关 artifact"
   },
   "black_box_assertions": [
     {
@@ -98,7 +106,9 @@
 
 ## Constraints
 
+- 只有 `.lgwf/e2e_coverage_matrix.json` 中 `real_positive.selected=true` 时才允许生成或修改该文件；如果不是 selected，必须报告 skipped，不得改目标测试文件。
 - 默认 `unittest discover` 不得启动真实 Codex。
+- 不得使用环境变量控制该手动入口是否允许运行；直接执行文件即运行真实正向链路。
 - 不生成 fake Codex。
 - 不承担全分支覆盖。
 - `notes[]` 只用于记录例外说明，不替代结构化字段。

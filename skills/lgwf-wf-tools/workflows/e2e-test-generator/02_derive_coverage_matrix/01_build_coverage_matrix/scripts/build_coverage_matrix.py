@@ -69,6 +69,7 @@ def main() -> None:
     graph = read_json(LGWF_DIR / "e2e_workflow_graph.json")
     routes = flatten_routes(graph.get("routes", []))
     runtime_branch_targets = branch_targets(graph.get("routes", []))
+    selected = set(request.get("selected_test_types") or ["script_flow", "runtime_fake", "real_positive", "wf_fix_positive"])
 
     nodes_by_kind: dict[str, list[dict]] = {}
     for node in graph.get("nodes", []):
@@ -80,14 +81,17 @@ def main() -> None:
             "test_name_prefix": request["test_name_prefix"],
             "test_output_dir": request["test_output_dir"],
             "generated_tests": request["generated_tests"],
+            "selected_test_types": request.get("selected_test_types", []),
         },
         "script_flow": {
+            "selected": "script_flow" in selected,
             "goal": "覆盖脚本级分支和状态推进，不启动 workflow runtime。",
             "script_contracts": graph.get("scripts", []),
             "routes": routes,
             "approval_persist": graph.get("persist", []),
         },
         "runtime_fake": {
+            "selected": "runtime_fake" in selected,
             "goal": "启动真实 LGWF runtime，使用 Python fake Codex 验证编排连通和关键分支。",
             "codex_like_nodes": nodes_by_kind.get("CODEX", []) + nodes_by_kind.get("REACT", []) + nodes_by_kind.get("AGENT_LOOP", []),
             "approval_nodes": nodes_by_kind.get("APPROVAL", []),
@@ -99,10 +103,21 @@ def main() -> None:
             "repair_or_retry_nodes": repair_or_retry_nodes(graph.get("nodes", []), runtime_branch_targets),
         },
         "real_positive": {
-            "goal": "真实 Codex 正向业务闭环，作为人工验收入口，默认不纳入 unittest discover。",
+            "selected": "real_positive" in selected,
+            "goal": "真实 Codex 正向业务闭环，作为人工验收入口；文件名不使用 test_ 前缀，默认不纳入 unittest discover。",
             "main_flows": graph.get("flows", []),
             "black_box_outputs": graph.get("output_json", []),
             "manual_run_command": f"python {request['test_output_dir']}/{request['generated_tests']['real_positive']}",
+            "discover_collected": False,
+        },
+        "wf_fix_positive": {
+            "selected": "wf_fix_positive" in selected,
+            "goal": "复用真实正向场景启动 wf-fix，驱动目标 workflow 边跑边修复，作为人工验收入口。",
+            "target_workflow_lgwf": request["workflow_lgwf"],
+            "scenario_source": ".lgwf/e2e_real_positive_design.json",
+            "max_attempts": 5,
+            "ask_main_agent_for_target_approvals": True,
+            "manual_run_command": f"python {request['test_output_dir']}/{request['generated_tests']['wf_fix_positive']}",
             "discover_collected": False,
         },
     }

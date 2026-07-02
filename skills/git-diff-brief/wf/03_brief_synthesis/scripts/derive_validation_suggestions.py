@@ -16,7 +16,7 @@ def build_validation_suggestions() -> dict[str, object]:
                 "latest_commit_context",
                 "changed_files_index",
             ],
-            "placeholder": True,
+            "context_kind": "real_git_context",
         },
     }
 
@@ -28,7 +28,6 @@ def main() -> None:
         "git_diff_brief.summary_supporting_context": suggestions["summary_supporting_context"],
         "git_diff_brief.validation_suggestions_result": {
             "ok": True,
-            "placeholder": True,
         },
     }
     print(json.dumps(payload, ensure_ascii=False))

@@ -87,6 +87,8 @@ def run_doctor(*, deep: bool = False) -> dict[str, Any]:
         if registry.get("passed"):
             registry_data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8-sig"))
             for item in registry_data.get("workflows", []):
+                if item.get("kind", "lgwf") != "lgwf":
+                    continue
                 workflow_lgwf = FACADE_ROOT / item["workflow_lgwf"]
                 deep_checks.append(
                     {

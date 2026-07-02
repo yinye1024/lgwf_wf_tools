@@ -39,6 +39,10 @@ def find_workspace_root(start: Path) -> Path:
     current = start.resolve()
     candidates = [current, *current.parents]
     for candidate in candidates:
+        isolation_workspace = candidate / "workspace"
+        if (isolation_workspace / "workflows").is_dir() or (isolation_workspace / "vendor").is_dir():
+            return isolation_workspace
+    for candidate in candidates:
         if (candidate / ".git").exists():
             return candidate
     for candidate in candidates:

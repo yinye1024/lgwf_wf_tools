@@ -2,6 +2,24 @@
 
 本文只保存 facade 准备 `--input-json` 时的常用摘要。最终以对应 workflow `AGENTS.md` 的输入契约为准。
 
+## PowerShell 输入建议
+
+在 PowerShell 中不要把复杂 JSON 直接塞进 `--input-json`，否则双引号容易被 shell 处理掉。推荐先把 JSON 写入 UTF-8 文件，再使用 `--input-json-file`：
+
+```powershell
+$inputPath = "D:/tmp/lgwf-input.json"
+$inputJson = @'
+{
+  "raw_intent": "要创建的新 LGWF workflow 原始意图"
+}
+'@
+[System.IO.File]::WriteAllText($inputPath, $inputJson, [System.Text.UTF8Encoding]::new($false))
+
+python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py run --workflow-lgwf <workflow.lgwf> --work-dir <ws> --input-json-file $inputPath --background
+```
+
+也可以使用 `--input-json @D:/tmp/lgwf-input.json`。新脚本仍兼容原有 `--input-json '{"key":"value"}'`，但不建议在 PowerShell 中用于复杂 JSON。
+
 ## wf-fix
 
 `wf-fix` 启动时使用空 JSON object：
@@ -47,6 +65,21 @@
 ```json
 {
   "raw_intent": "要创建的新 LGWF workflow 原始意图"
+}
+```
+
+## wf-convert
+
+推荐输入：
+
+```json
+{
+  "prompt_convert_target": {
+    "target_dir": "D:/example/prompt-workflow",
+    "entry_files": ["README.md"],
+    "target_workflow_name": "example-workflow",
+    "target_package_root": "skills/example-workflow"
+  }
 }
 ```
 

@@ -68,7 +68,7 @@ some_workflow/
 
 ### Workflow 组装边界
 
-- 当前 workflow 可以直接声明其普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP`、`PARALLEL` 节点。
+- 当前 workflow 可以直接声明其普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`REACT`、`AGENT_LOOP`、`PARALLEL` 节点。
 - 多个 ReAct Codex slot 共用稳定业务规则时，在 `REACT` 中声明可选 `SPEC "<path>"`；它约束 `REASON`、`ACT`、`OBSERVE`，不传给 `DECIDE PY`。
 - 工程化长程循环使用 `AGENT_LOOP`，按声明顺序执行六个必填 slot：`OBSERVE`、`DIAGNOSE`、`PLAN`、`ACT`、`VERIFY`、`DECIDE`。循环 slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`CODEX` slot 使用 `PROMPT_REF`，`VERIFY` 结果必须包含 `passed: true|false`，`DECIDE` 结果必须包含 `category` 和 `reason`。
 - 只有出现独立拓扑、复用或嵌套编排需求时才创建子 workflow。
@@ -109,9 +109,10 @@ CODEX generate_acceptance
   PROMPT "02_generate_acceptance/agents/acceptance/prompt.md"
   RESULT state.acceptance;
 
-APPROVAL confirm_plan_and_acceptance
-  PROMPT "请确认 plan 与 acceptance 是否可执行。"
-  VALUE state.confirmation;
+REVIEW confirm_plan_and_acceptance
+  CONTEXT state.plan
+  PROMPT "03_confirm_plan_and_acceptance/review.md"
+  RESULT state.confirmation;
 
 REACT execute_react_loop {
   REASON CODEX reason
@@ -155,6 +156,76 @@ FLOW {
 
 这样父 workflow 不需要出现 `__route__<child>`、`reject` 汇总分支或子流程内部节点名。
 
+### 独立 workflow 串联
+
+当父 workflow 需要调度已有的独立 workflow package，而不是把子 workflow 在编译期嵌入当前包时，使用 `RUN_WORKFLOW`。父 workflow 只负责规划顺序、准备输入、等待 child 完成和收集结果；运行时会默认为 child 创建轻量隔离 `workspace` 和 `work_dir`，避免不同 run 或并发 child 串 `.lgwf` 状态。`WORK_DIR` 仍必须声明安全相对路径，但只作为 `declared_work_dir` 记录，不作为实际 child 运行目录。
+
+```text
+RUN_WORKFLOW prompt_fix
+  WORKFLOW "workflows/wf-prompt-fix/wf/workflow.lgwf"
+  WORK_DIR "workflows/wf-prompt-fix/ws"
+  INPUT state.pipeline.target
+  RESULT state.pipeline.prompt_fix_result;
+
+PY map_prompt_upgrade_input
+  SCRIPT "scripts/map_prompt_upgrade_input.py"
+  INPUT state.pipeline.prompt_fix_result
+  RESULT state.pipeline.prompt_upgrade_input
+  UPDATES_STATE;
+
+RUN_WORKFLOW prompt_upgrade
+  WORKFLOW "workflows/wf-prompt-upgrade/wf/workflow.lgwf"
+  WORK_DIR "workflows/wf-prompt-upgrade/ws"
+  INPUT state.pipeline.prompt_upgrade_input
+  RESULT state.pipeline.prompt_upgrade_result;
+
+FLOW prompt_fix THEN map_prompt_upgrade_input THEN prompt_upgrade;
+```
+
+`PY map_*` 是业务输入适配器，不是 runtime 内置 mapper，也不默认做文件拷贝。它读取上一个 child result，把字段整理成下一个 child workflow 的 input shape；只有下游 workflow 明确要求固定文件位置时，mapper 才可以额外复制文件。推荐 mapper 从 stdin 读取 `INPUT state.*` 对应的 JSON object，并用 stdout 输出 state path updates：
+
+```python
+import json
+import sys
+
+prompt_fix_result = json.load(sys.stdin)
+payload = {
+    "target": prompt_fix_result["final_state"]["target"],
+    "fix_report": prompt_fix_result.get("latest_run", {}).get("change_summary", {}),
+}
+
+print(json.dumps({"pipeline.prompt_upgrade_input": payload}, ensure_ascii=False))
+```
+
+不要把 `.lgwf/child-runs/*.json` 作为常规业务数据通道；它是父 workflow 的 child 运行摘要，适合诊断和状态展示。`RUN_WORKFLOW` 中 child 的人工确认会通过父 workflow status 暴露为 `pending_action.type="child_human_approval"`，父侧 approval 提交后继续等待 child 完成。
+
+`RUN_WORKFLOW + PY map_*` 串联会在 authoring audit 中做基础 handoff check：`WORKFLOW` 和 `WORK_DIR` 必须是安全相对路径，重复 `WORK_DIR`、未被消费的 child result、缺少上游 writer 的 child input 会出现在 diagnostics 中。mapper 是 state shape adapter，不默认复制文件；复杂 mapper 仍可把 `target_dir`、`report_path`、`artifact_paths` 等字段写入下游 payload。如果只需要从上游 child 交接业务文件或目录，优先使用 `HANDOFF_FILES`，不要手写拷贝脚本。不要直接读取 `.lgwf/child-runs/*.json` 作为下游数据来源。
+
+`RUN_WORKFLOW` 的实际 child 运行目录位于父 `<work_dir>/.lgwf/isolations/run_workflow/<node_id>/work_dir`，隔离 workspace 位于同级 `workspace`。child run record 会同时记录 `declared_work_dir`、`workspace` 和实际 `work_dir`，排障和人工确认转发应优先使用 record 中的实际 `work_dir`。
+
+`HANDOFF_FILES` 用于两个 `RUN_WORKFLOW` 之间的文件交接。`FROM` 指向上游 `RUN_WORKFLOW RESULT`，`COPY_FILE` / `COPY_DIR` 的源路径相对上游实际 `work_dir`，`AS` 目标路径相对父 `<work_dir>/.lgwf/handoff/<node_id>/`。`RESULT` 字段值是复制后文件或目录的绝对路径，保证下游隔离 child workflow 可直接读取；结果同时包含 `handoff_files` 对象，方便下游 `PY INPUT state.handoff_files` 读取。目录交接默认整体替换目标目录；不支持复制 `.lgwf`、绝对路径或 `..` 逃逸。
+
+```text
+HANDOFF_FILES spec_to_impl
+  FROM state.pipeline.build_spec_result
+  COPY_FILE "outputs/spec.json" AS "spec.json" FIELD spec_path
+  COPY_DIR "generated" AS "generated" FIELD generated_dir
+  RESULT state.pipeline.impl_input;
+```
+
+上例输出给下游 `RUN_WORKFLOW INPUT` 的对象为：
+
+```json
+{
+  "spec_path": "D:/.../<parent-work-dir>/.lgwf/handoff/spec_to_impl/spec.json",
+  "generated_dir": "D:/.../<parent-work-dir>/.lgwf/handoff/spec_to_impl/generated",
+  "handoff_files": {
+    "spec_path": "D:/.../<parent-work-dir>/.lgwf/handoff/spec_to_impl/spec.json",
+    "generated_dir": "D:/.../<parent-work-dir>/.lgwf/handoff/spec_to_impl/generated"
+  }
+}
+```
+
 `workflow.json` 是 runtime IR，但用户 authoring package 默认不保存该文件。通过 `scripts/lgwf.py run` 运行时，client 先把 package 复制到 `<work_dir>\.lgwf\workflow\`，再在 snapshot 中生成 runtime IR。`workflow.json` 仍只使用 `src/lgwf/compiler/dsl_schema.json` 接受的字段：
 
 ```json
@@ -166,11 +237,11 @@ FLOW {
 }
 ```
 
-从 `src/lgwf/capabilities/catalog.json` 选择 runtime capability。不要靠猜测新增 DSL 字段。Authoring DSL v2 使用 `PY`、`CODEX`、`APPROVAL`、`REACT`、`AGENT_LOOP` 高层声明 lowering 到现有 runtime JSON IR；不新增业务专属 mapper。
+从 `src/lgwf/capabilities/catalog.json` 选择 runtime capability。不要靠猜测新增 DSL 字段。Authoring DSL v2 使用 `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`HANDOFF`、`RUN_WORKFLOW`、`REACT`、`AGENT_LOOP` 高层声明 lowering 到现有 runtime JSON IR；不新增 runtime 内置业务 mapper。
 
 `CODEX` 小型结构化结果可用 `OUTPUT_JSON "path.json"`；大 JSON 使用 `OUTPUT_JSON "path.json" AS_FILE`，由 Codex 写文件，LGWF runner 验证文件存在、UTF-8、JSON 可解析且顶层是 object。通用文本 artifact 使用 `OUTPUT_FILE "path"`，由 Codex 写文件，runner 验证文件存在、UTF-8 可读并记录路径和大小，不解析内容。
 
-`APPROVAL` 已足够表达人工确认节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
+`APPROVAL` 只表达二元人工审批，route key 只能是 `approve` / `reject`。需要 `approve` / `revise` / `reject` 或“小改后再确认”时使用 `REVIEW`，并在 `FLOW` 中把 `revise` 接回修订节点或当前评审节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
 
 ## 资源引用
 
@@ -213,6 +284,7 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 - `exec.run_python`：在 client 上运行 inline Python 或 script reference。
 - `exec.codex_prompt`：使用内联 prompt 或 `prompt_ref` 运行 Codex。
 - `flow.if`、`flow.switch`、`flow.guard`、`flow.assign`：控制 state 和 routing。
+- `flow.run_workflow`：运行期同步调度独立 child workflow package；authoring 时使用 `RUN_WORKFLOW`。
 - `subgraph.react`：固定 reason / act / observe / decide loop。
 - `subgraph.agent_loop`：工程化 Agent Loop，包含显式状态、每轮 sandbox、验证、决策、归档、报告、`TOKEN_MAX` 和人工接管控制策略；authoring 时使用 `AGENT_LOOP`。
 - `subgraph.workflow`：执行 compiler 嵌入的完整 workflow JSON IR；authoring 时使用 `STEP ... WORKFLOW`。

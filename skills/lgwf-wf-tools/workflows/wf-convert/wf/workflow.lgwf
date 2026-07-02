@@ -1,0 +1,33 @@
+WORKFLOW lgwf_wf_convert;
+ENTRY collect_target;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_convert.instructions.{node}";
+  result_path "lgwf_wf_convert.results.{node}";
+}
+
+STEP collect_target
+  WORKFLOW "02_confirm_requirements/workflow.lgwf";
+
+STEP analyze_source
+  WORKFLOW "04_confirm_business_flow/workflow.lgwf";
+
+STEP prepare_payload
+  WORKFLOW "07_confirm_step_designs/workflow.lgwf";
+
+STEP summarize_result
+  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+
+RUN_WORKFLOW wf_create
+  WORKFLOW "workflows/wf-create/wf/workflow.lgwf"
+  WORK_DIR "workflows/wf-create/ws"
+  INPUT state.lgwf_wf_convert.wf_create_payload.wf_create_payload
+  RESULT state.lgwf_wf_convert.wf_create_result;
+
+FLOW collect_target
+  THEN analyze_source
+  THEN prepare_payload
+  THEN summarize_result
+  THEN wf_create;

@@ -83,6 +83,7 @@
 ## Constraints
 
 - 只生成或修复 `test_<workflow>_script_flow_e2e.py`。
+- 只有 `.lgwf/e2e_coverage_matrix.json` 中 `script_flow.selected=true` 时才允许生成或修改该文件；如果不是 selected，必须报告 skipped，不得改目标测试文件。
 - 不运行测试命令。
 - 不修改目标 workflow 源码。
 - `notes[]` 只用于记录未实现原因、降级策略或与设计不一致的说明，不要把本应结构化的覆盖信息、case 映射或 guard 机制塞入备注。

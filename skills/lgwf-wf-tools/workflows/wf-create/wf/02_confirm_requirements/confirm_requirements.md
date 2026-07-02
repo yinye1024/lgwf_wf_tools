@@ -18,14 +18,14 @@
 5. 输出决策是否与 `state.lgwf_wf_create.requirements_confirmation_context.allowed_decisions`、`approve_writes` 和 `approval_target` 一致。
 
 ## Output
-将当前节点的 approval decision record 写入 `.lgwf/create_requirements_approval.json`，供后续 route、revision 或正式固化节点读取。
+将当前节点的 approval record 写入 `.lgwf/create_requirements_approval.json`，供后续 route、revision 或正式固化节点读取。
 
 ## Output Format
 只允许以下三类 UTF-8 JSON 结果之一，节点命名必须保持 `confirm_requirements`：
 
 ```json
 {
-  "decision": "approve",
+  "approval": "approve",
   "changes": [],
   "comment": "确认通过，可进入后续业务流转 proposal"
 }
@@ -33,7 +33,7 @@
 
 ```json
 {
-  "decision": "revise",
+  "approval": "revise",
   "changes": ["需要修改的点"],
   "comment": "说明为什么要修改"
 }
@@ -41,14 +41,14 @@
 
 ```json
 {
-  "decision": "reject",
+  "approval": "reject",
   "reason": "拒绝原因",
   "comment": "说明为什么当前 proposal 不应继续"
 }
 ```
 
 ## Constraints
-- 只输出 `.lgwf/create_requirements_approval.json` 对应的 approval decision record。
+- 只输出 `.lgwf/create_requirements_approval.json` 对应的 approval record。
 - 不修改 `.lgwf/create_requirements_proposal.json`。
 - 不直接生成 `.lgwf/create_requirements.json`；`approve` 只表示允许后续固化。
 - `revise` 表示进入 `revise_requirements` 做局部调整，`reject` 表示整体不通过并结束该分支。

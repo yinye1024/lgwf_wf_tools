@@ -15,7 +15,7 @@
 1. 说明目标 workflow 的主干业务流程。
 2. 标出人工审批点、route 分支、循环或重试点。
 3. 标出 CODEX、REACT、AGENT_LOOP 相关节点及其关键输出 artifact。
-4. 给三类测试分别提供生成关注点：脚本级、runtime fake、真实正向。
+4. 给四类测试分别提供生成关注点：脚本级、runtime fake、真实正向、wf-fix 正向。
 
 ## Success Criteria
 

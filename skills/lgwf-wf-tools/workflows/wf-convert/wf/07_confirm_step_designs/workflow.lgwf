@@ -1,0 +1,13 @@
+WORKFLOW prepare_wf_create_payload;
+ENTRY prepare_wf_create_payload;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_wf_create_payload
+  SCRIPT "scripts/prepare_wf_create_payload.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.wf_create_payload
+  UPDATES_STATE;

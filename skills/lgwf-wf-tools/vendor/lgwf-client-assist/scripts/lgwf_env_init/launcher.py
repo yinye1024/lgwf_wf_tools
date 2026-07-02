@@ -9,6 +9,15 @@ from typing import TextIO
 from .bootstrap import RuntimeSupport
 
 
+def _run_module_with_optional_cwd(support: RuntimeSupport, module: str, args: list[str], cwd: pathlib.Path | None):
+    try:
+        return support.python.run_module(module, args, cwd=cwd)
+    except TypeError as exc:
+        if "unexpected keyword argument 'cwd'" not in str(exc):
+            raise
+        return support.python.run_module(module, args)
+
+
 def runtime_command(workflow_json: str, args: argparse.Namespace, support: RuntimeSupport) -> list[str]:
     python_env = support.python.discover_python()
     command = python_env.module_command(
@@ -38,11 +47,14 @@ def compile_lgwf(
     workflow_json: pathlib.Path,
     stderr: TextIO,
     support: RuntimeSupport,
+    cwd: pathlib.Path | None = None,
 ) -> int:
     timer = support.timing.Timer.start()
-    completed = support.python.run_module(
+    completed = _run_module_with_optional_cwd(
+        support,
         "lgwf_dsl.cli",
-        ["compile", workflow_lgwf, "-o", str(workflow_json)],
+        ["compile", str(pathlib.Path(workflow_lgwf).expanduser().resolve()), "-o", str(workflow_json)],
+        cwd,
     )
     if completed.stdout:
         stderr.write(completed.stdout)
@@ -98,11 +110,14 @@ def audit_lgwf(
     workflow_lgwf: str,
     stderr: TextIO,
     support: RuntimeSupport,
+    cwd: pathlib.Path | None = None,
 ) -> int:
     timer = support.timing.Timer.start()
-    completed = support.python.run_module(
+    completed = _run_module_with_optional_cwd(
+        support,
         "lgwf_dsl.cli",
-        ["audit", workflow_lgwf],
+        ["audit", str(pathlib.Path(workflow_lgwf).expanduser().resolve())],
+        cwd,
     )
     if completed.stdout:
         stderr.write(completed.stdout)
@@ -120,8 +135,9 @@ def run_and_write_output_json(
     output_json: pathlib.Path,
     stderr: TextIO,
     support: RuntimeSupport,
+    cwd: pathlib.Path | None = None,
 ) -> int:
-    completed = support.python.run_command(command)
+    completed = support.python.run_command(command, cwd=cwd)
     if completed.returncode != 0:
         return completed.returncode
 
@@ -137,6 +153,7 @@ def run_in_background(
     stdout: TextIO,
     stderr: TextIO,
     support: RuntimeSupport,
+    cwd: pathlib.Path | None = None,
 ) -> int:
     timer = support.timing.Timer.start()
     process_dir = support.workspace_layout.processes_dir(pathlib.Path(args.work_dir))
@@ -155,6 +172,7 @@ def run_in_background(
             stdout=log_handle,
             stderr=subprocess.STDOUT,
             env=python_env.env(),
+            cwd=cwd,
         )
     except Exception:
         log_handle.close()
@@ -190,10 +208,11 @@ def run_runtime_command(
     args: argparse.Namespace,
     stderr: TextIO,
     support: RuntimeSupport,
+    cwd: pathlib.Path | None = None,
 ) -> int:
     if not args.show_console:
         python_env = support.python.discover_python(command[0])
-        return support.process_execution.call_command(command, env=python_env.env())
+        return support.process_execution.call_command(command, env=python_env.env(), cwd=cwd)
     return run_in_visible_console(command, stderr, support)
 
 

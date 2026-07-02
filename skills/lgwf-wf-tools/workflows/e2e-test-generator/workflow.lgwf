@@ -28,23 +28,75 @@ STEP inspect_target
 STEP derive_coverage_matrix
   WORKFLOW "02_derive_coverage_matrix/workflow.lgwf";
 
+PY route_script_flow_selection
+  SCRIPT "00_route_selection/scripts/route_script_flow_selection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.route_script_flow_selection_result
+  UPDATES_STATE;
+
 STEP script_flow_e2e
   WORKFLOW "03_script_flow_e2e/workflow.lgwf";
+
+PY route_runtime_fake_selection
+  SCRIPT "00_route_selection/scripts/route_runtime_fake_selection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.route_runtime_fake_selection_result
+  UPDATES_STATE;
 
 STEP runtime_fake_e2e
   WORKFLOW "04_runtime_fake_e2e/workflow.lgwf";
 
+PY route_real_positive_selection
+  SCRIPT "00_route_selection/scripts/route_real_positive_selection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.route_real_positive_selection_result
+  UPDATES_STATE;
+
 STEP real_positive_e2e
   WORKFLOW "05_real_positive_e2e/workflow.lgwf";
 
+PY route_wf_fix_positive_selection
+  SCRIPT "00_route_selection/scripts/route_wf_fix_positive_selection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.route_wf_fix_positive_selection_result
+  UPDATES_STATE;
+
+STEP wf_fix_positive_e2e
+  WORKFLOW "06_wf_fix_positive_e2e/workflow.lgwf";
+
 STEP finish
-  WORKFLOW "06_finish/workflow.lgwf";
+  WORKFLOW "07_finish/workflow.lgwf";
 
 FLOW prepare_target_request_context
   THEN collect_target_request
   THEN inspect_target
   THEN derive_coverage_matrix
-  THEN script_flow_e2e
-  THEN runtime_fake_e2e
-  THEN real_positive_e2e
+  THEN route_script_flow_selection;
+
+FLOW script_flow_e2e
+  THEN route_runtime_fake_selection;
+
+FLOW runtime_fake_e2e
+  THEN route_real_positive_selection;
+
+FLOW real_positive_e2e
+  THEN route_wf_fix_positive_selection;
+
+FLOW wf_fix_positive_e2e
   THEN finish;
+
+ROUTE route_script_flow_selection
+  WHEN "run" THEN script_flow_e2e
+  WHEN "skip" THEN route_runtime_fake_selection;
+
+ROUTE route_runtime_fake_selection
+  WHEN "run" THEN runtime_fake_e2e
+  WHEN "skip" THEN route_real_positive_selection;
+
+ROUTE route_real_positive_selection
+  WHEN "run" THEN real_positive_e2e
+  WHEN "skip" THEN route_wf_fix_positive_selection;
+
+ROUTE route_wf_fix_positive_selection
+  WHEN "run" THEN wf_fix_positive_e2e
+  WHEN "skip" THEN finish;

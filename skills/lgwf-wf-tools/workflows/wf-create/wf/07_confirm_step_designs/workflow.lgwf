@@ -25,14 +25,12 @@ PY prepare_step_design_confirmation
   RESULT state.lgwf_wf_create.prepare_step_design_confirmation_result
   UPDATES_STATE;
 
-APPROVAL confirm_step_designs
+REVIEW confirm_step_designs
   PROMPT_REF "confirm_step_designs.md"
-  READ state.lgwf_wf_create.step_design_confirmation_context
-  WRITE state.lgwf_wf_create.step_design_decision
+  CONTEXT state.lgwf_wf_create.step_design_confirmation_context
   RESULT state.lgwf_wf_create.step_design_decision_result
   PERSIST ".lgwf/step_design_confirmation_record.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY apply_confirmed_step_designs
   SCRIPT "scripts/apply_confirmed_step_designs.py"
@@ -46,14 +44,12 @@ PY prepare_step_design_revision_confirmation
   RESULT state.lgwf_wf_create.prepare_step_design_revision_confirmation_result
   UPDATES_STATE;
 
-APPROVAL revise_step_designs
+REVIEW revise_step_designs
   PROMPT_REF "revise_step_designs.md"
-  READ state.lgwf_wf_create.step_design_revision_context
-  WRITE state.lgwf_wf_create.step_design_revision_decision
+  CONTEXT state.lgwf_wf_create.step_design_revision_context
   RESULT state.lgwf_wf_create.step_design_revision_decision_result
   PERSIST ".lgwf/step_design_revision_approval.json"
-  ROUTE_ON_DECISION
-  POLL 1;
+  OPTIONS ["approve", "revise", "reject"];
 
 PY prepare_implementation_context
   SCRIPT "scripts/prepare_implementation_context.py"

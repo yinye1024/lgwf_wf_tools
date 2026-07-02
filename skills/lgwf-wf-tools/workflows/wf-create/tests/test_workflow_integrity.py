@@ -154,6 +154,50 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 self.assertEqual(artifact["source_approval_file"], f".lgwf/{revision_name}")
                 self.assertEqual(artifact["confirmed"], confirmed)
 
+    def test_apply_scripts_accept_approval_field_for_approved_revision(self) -> None:
+        cases = (
+            (
+                "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "create_requirements_approval.json",
+                "create_requirements_revision_approval.json",
+                "create_requirements.json",
+                {"workflow_name": "demo", "target_package_root": "skills/demo"},
+            ),
+            (
+                "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "business_flow_approval.json",
+                "business_flow_revision_approval.json",
+                "business_flow.json",
+                {"workflow_name": "demo", "stages": [{"stage_id": "scaffold"}]},
+            ),
+            (
+                "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "step_design_confirmation_record.json",
+                "step_design_revision_approval.json",
+                "step_designs.json",
+                {"step_designs": [{"step_slug": "scaffold"}]},
+            ),
+        )
+        for relative, approval_name, revision_name, output_name, confirmed in cases:
+            module = load_module(ROOT / relative, relative.replace("/", "_approval_field"))
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                lgwf_dir = root / ".lgwf"
+                lgwf_dir.mkdir()
+                (lgwf_dir / approval_name).write_text(
+                    json.dumps({"approval": "revise", "changes": ["local change"]}),
+                    encoding="utf-8",
+                )
+                (lgwf_dir / revision_name).write_text(
+                    json.dumps({"approval": "approve", "confirmed": confirmed}),
+                    encoding="utf-8",
+                )
+                result = module.write_confirmed_artifact(root)
+                artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
+                self.assertEqual(artifact["artifact_path"], f".lgwf/{output_name}")
+                self.assertEqual(artifact["source_approval_file"], f".lgwf/{revision_name}")
+                self.assertEqual(artifact["confirmed"], confirmed)
+
     def test_confirmed_runtime_artifacts_are_reported_separately_from_source_files(self) -> None:
         summary_module = load_module(
             ROOT / "09_summarize_create_result/scripts/summarize_create_result.py",

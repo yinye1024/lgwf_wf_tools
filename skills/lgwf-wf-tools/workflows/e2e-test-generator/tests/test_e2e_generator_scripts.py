@@ -143,7 +143,53 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             self.assertEqual(normalized["test_output_dir"], "tests")
             self.assertEqual(normalized["test_name_prefix"], "sample_target")
             self.assertEqual(normalized["generated_tests"]["script_flow"], "test_sample_target_script_flow_e2e.py")
+            self.assertEqual(normalized["generated_tests"]["real_positive"], "lgwf_sample_target_real_positive_e2e.py")
+            self.assertEqual(
+                normalized["generated_tests"]["wf_fix_positive"],
+                "lgwf_sample_target_real_positive_e2e_for_wf_fix.py",
+            )
+            self.assertFalse(normalized["generated_tests"]["real_positive"].startswith("test_"))
+            self.assertFalse(normalized["generated_tests"]["wf_fix_positive"].startswith("test_"))
+            self.assertEqual(
+                normalized["selected_test_types"],
+                ["script_flow", "runtime_fake", "real_positive", "wf_fix_positive"],
+            )
             self.assertNotIn("real_codex_env", normalized)
+
+    def test_validate_target_request_normalizes_selected_test_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "work"
+            target = Path(temp) / "target"
+            work.mkdir()
+            target.mkdir()
+            workflow = create_target_workflow(target)
+            write_json(
+                work / ".lgwf" / "e2e_target_request.json",
+                {
+                    "workflow_lgwf": workflow.as_posix(),
+                    "test_types": ["wf_fix_positive", "runtime_fake", "runtime_fake"],
+                },
+            )
+
+            call_main("01_inspect_target/01_validate_target_request/scripts/validate_target_request.py", work, "validate_selected")
+
+            normalized = read_json(work / ".lgwf" / "e2e_target_request.normalized.json")
+            self.assertEqual(normalized["selected_test_types"], ["runtime_fake", "wf_fix_positive"])
+
+    def test_validate_target_request_rejects_unknown_test_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "work"
+            target = Path(temp) / "target"
+            work.mkdir()
+            target.mkdir()
+            workflow = create_target_workflow(target)
+            write_json(
+                work / ".lgwf" / "e2e_target_request.json",
+                {"workflow_lgwf": workflow.as_posix(), "test_types": ["runtime_fake", "bad_kind"]},
+            )
+
+            with self.assertRaisesRegex(SystemExit, "invalid test_types"):
+                call_main("01_inspect_target/01_validate_target_request/scripts/validate_target_request.py", work, "validate_bad_types")
 
     def test_parse_workflow_graph_covers_core_node_types_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -183,6 +229,7 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
                 call_main(relative, work, name)
 
             matrix = read_json(work / ".lgwf" / "e2e_coverage_matrix.json")
+            normalized = read_json(work / ".lgwf" / "e2e_target_request.normalized.json")
             self.assertEqual(matrix["target"]["generated_tests"]["runtime_fake"], "test_sample_target_runtime_fake_e2e.py")
             self.assertEqual({route["value"] for route in matrix["script_flow"]["routes"]}, {"retry", "done"})
             self.assertIn(".lgwf/confirm.json", matrix["script_flow"]["approval_persist"])
@@ -193,8 +240,19 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             self.assertFalse(matrix["real_positive"]["discover_collected"])
             self.assertEqual(
                 matrix["real_positive"]["manual_run_command"],
-                "python tests/test_sample_target_real_positive_e2e.py",
+                "python tests/lgwf_sample_target_real_positive_e2e.py",
             )
+            self.assertFalse(matrix["wf_fix_positive"]["discover_collected"])
+            self.assertEqual(
+                matrix["wf_fix_positive"]["manual_run_command"],
+                "python tests/lgwf_sample_target_real_positive_e2e_for_wf_fix.py",
+            )
+            self.assertEqual(matrix["wf_fix_positive"]["target_workflow_lgwf"], normalized["workflow_lgwf"])
+            self.assertEqual(matrix["wf_fix_positive"]["scenario_source"], ".lgwf/e2e_real_positive_design.json")
+            self.assertTrue(matrix["script_flow"]["selected"])
+            self.assertTrue(matrix["runtime_fake"]["selected"])
+            self.assertTrue(matrix["real_positive"]["selected"])
+            self.assertTrue(matrix["wf_fix_positive"]["selected"])
             self.assertIn(
                 {"route_id": "choose_next", "value": "retry", "target": "repair_loop", "workflow": "workflow.lgwf"},
                 matrix["runtime_fake"]["branch_targets"],
@@ -205,6 +263,32 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             )
             repair_ids = {item["id"] for item in matrix["runtime_fake"]["repair_or_retry_nodes"]}
             self.assertIn("repair_loop", repair_ids)
+
+    def test_coverage_matrix_marks_only_selected_types(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "work"
+            target = Path(temp) / "target"
+            work.mkdir()
+            target.mkdir()
+            workflow = create_target_workflow(target)
+            write_json(
+                work / ".lgwf" / "e2e_target_request.json",
+                {"workflow_lgwf": workflow.as_posix(), "test_types": ["runtime_fake", "wf_fix_positive"]},
+            )
+
+            for relative, name in (
+                ("01_inspect_target/01_validate_target_request/scripts/validate_target_request.py", "validate_cov_selected"),
+                ("01_inspect_target/02_scan_workflow_package/scripts/scan_workflow_package.py", "scan_cov_selected"),
+                ("01_inspect_target/03_parse_workflow_graph/scripts/parse_workflow_graph.py", "parse_cov_selected"),
+                ("02_derive_coverage_matrix/01_build_coverage_matrix/scripts/build_coverage_matrix.py", "coverage_selected"),
+            ):
+                call_main(relative, work, name)
+
+            matrix = read_json(work / ".lgwf" / "e2e_coverage_matrix.json")
+            self.assertFalse(matrix["script_flow"]["selected"])
+            self.assertTrue(matrix["runtime_fake"]["selected"])
+            self.assertFalse(matrix["real_positive"]["selected"])
+            self.assertTrue(matrix["wf_fix_positive"]["selected"])
 
     def test_runtime_fake_prompts_require_scenario_coverage_schema(self) -> None:
         spec = (ROOT / "04_runtime_fake_e2e" / "01_design" / "agents" / "spec.md").read_text(encoding="utf-8")
@@ -262,6 +346,11 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
                 "prepare_real_positive_observe_feedback",
                 ".lgwf/e2e_real_positive_observe.json",
             ),
+            (
+                "06_wf_fix_positive_e2e",
+                "prepare_wf_fix_positive_observe_feedback",
+                ".lgwf/e2e_wf_fix_positive_observe.json",
+            ),
         )
         for workflow_dir, prepare_node, observe_path in contracts:
             with self.subTest(workflow_dir=workflow_dir):
@@ -271,6 +360,170 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
                 self.assertIn(f'CONTEXT workspace file "{observe_path}"', workflow)
                 self.assertIn(observe_path, reason)
                 self.assertIn("initial_placeholder", reason)
+
+    def test_wf_fix_positive_prompts_define_driver_contract(self) -> None:
+        workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        spec = (ROOT / "06_wf_fix_positive_e2e" / "01_design" / "agents" / "spec.md").read_text(encoding="utf-8")
+        design = (ROOT / "06_wf_fix_positive_e2e" / "01_design" / "agents" / "reason.md").read_text(encoding="utf-8")
+        generate = (ROOT / "06_wf_fix_positive_e2e" / "02_generate" / "agents" / "act.md").read_text(encoding="utf-8")
+        observe = (ROOT / "06_wf_fix_positive_e2e" / "03_validate" / "agents" / "observe.md").read_text(encoding="utf-8")
+
+        self.assertIn("STEP wf_fix_positive_e2e", workflow)
+        self.assertIn('WORKFLOW "06_wf_fix_positive_e2e/workflow.lgwf"', workflow)
+        self.assertIn("THEN wf_fix_positive_e2e", workflow)
+        for node in (
+            "route_script_flow_selection",
+            "route_runtime_fake_selection",
+            "route_real_positive_selection",
+            "route_wf_fix_positive_selection",
+        ):
+            self.assertIn(node, workflow)
+        self.assertIn('WHEN "run" THEN script_flow_e2e', workflow)
+        self.assertIn('WHEN "skip" THEN route_runtime_fake_selection', workflow)
+        for token in (
+            "wf-fix",
+            "target_workflow_lgwf",
+            "ask_main_agent_for_target_approvals=true",
+            "max_attempts=5",
+            "e2e_real_positive_design.json",
+        ):
+            self.assertIn(token, spec)
+            self.assertIn(token, design)
+        for token in (
+            "lgwf_<workflow>_real_positive_e2e_for_wf_fix.py",
+            "skills/lgwf-wf-tools/workflows/wf-fix/wf/workflow.lgwf",
+            "target_workflow_lgwf",
+            "target_workflow_input",
+            "自动处理 approval",
+            "self_fix_summary",
+            "artifact",
+        ):
+            self.assertIn(token, generate)
+        for token in (
+            "不真实启动 `wf-fix`",
+            "discover_collected",
+            "manual_filename_present",
+            "wf_fix_summary_assertions_present",
+            "artifact_retention_present",
+        ):
+            self.assertIn(token, observe)
+
+    def test_real_positive_prompts_require_audit_check(self) -> None:
+        spec = (ROOT / "05_real_positive_e2e" / "01_design" / "agents" / "spec.md").read_text(encoding="utf-8")
+        design = (ROOT / "05_real_positive_e2e" / "01_design" / "agents" / "reason.md").read_text(encoding="utf-8")
+        generate = (ROOT / "05_real_positive_e2e" / "02_generate" / "agents" / "act.md").read_text(encoding="utf-8")
+        observe = (ROOT / "05_real_positive_e2e" / "03_validate" / "agents" / "observe.md").read_text(encoding="utf-8")
+
+        for token in (
+            "lgwf.py audit",
+            "原始目标 `workflow.lgwf`",
+            "audit 输出",
+            "artifact",
+        ):
+            self.assertIn(token, spec)
+        for token in (
+            "audit_check",
+            "command",
+            "target",
+            "failure_behavior",
+            "retained_outputs",
+        ):
+            self.assertIn(token, design)
+        for token in (
+            "lgwf.py audit",
+            "workflow.lgwf",
+            "audit 失败",
+            "保留",
+            "audit 输出",
+        ):
+            self.assertIn(token, generate)
+        for token in (
+            "audit_check_present",
+            "lgwf.py audit",
+            "目标 workflow 路径",
+            "audit 输出",
+            "artifact",
+        ):
+            self.assertIn(token, observe)
+
+    def test_wf_fix_positive_prompts_require_target_audit_check(self) -> None:
+        spec = (ROOT / "06_wf_fix_positive_e2e" / "01_design" / "agents" / "spec.md").read_text(encoding="utf-8")
+        design = (ROOT / "06_wf_fix_positive_e2e" / "01_design" / "agents" / "reason.md").read_text(encoding="utf-8")
+        generate = (ROOT / "06_wf_fix_positive_e2e" / "02_generate" / "agents" / "act.md").read_text(encoding="utf-8")
+        observe = (ROOT / "06_wf_fix_positive_e2e" / "03_validate" / "agents" / "observe.md").read_text(encoding="utf-8")
+
+        for token in (
+            "lgwf.py audit",
+            "原始目标 `workflow.lgwf`",
+            "不得 audit Python 脚本",
+            "不得 audit `wf-fix` 自身",
+            "audit 输出",
+        ):
+            self.assertIn(token, spec)
+        for token in (
+            "audit_check",
+            "forbidden_targets",
+            "生成的 Python 脚本",
+            "wf-fix workflow.lgwf",
+            "retained_outputs",
+        ):
+            self.assertIn(token, design)
+        for token in (
+            "lgwf.py audit",
+            "原始目标 workflow",
+            "不得 audit Python 脚本",
+            "不得 audit `wf-fix` 自身",
+            "audit 失败",
+            "audit 输出",
+        ):
+            self.assertIn(token, generate)
+        for token in (
+            "audit_check_present",
+            "原始目标 workflow",
+            "不得 audit Python 脚本",
+            "不得 audit `wf-fix` 自身",
+            "audit 输出",
+        ):
+            self.assertIn(token, observe)
+
+    def test_selection_route_scripts_emit_runtime_route_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+            write_json(work / ".lgwf" / "e2e_target_request.normalized.json", {"selected_test_types": ["wf_fix_positive"]})
+            cases = [
+                ("route_script_flow_selection", "script_flow", "skip"),
+                ("route_runtime_fake_selection", "runtime_fake", "skip"),
+                ("route_real_positive_selection", "real_positive", "skip"),
+                ("route_wf_fix_positive_selection", "wf_fix_positive", "run"),
+            ]
+
+            for node_id, module_suffix, expected in cases:
+                with self.subTest(node_id=node_id):
+                    output = call_main(
+                        f"00_route_selection/scripts/{node_id}.py",
+                        work,
+                        f"route_{module_suffix}_once",
+                    )
+                    result = json.loads(output)
+                    self.assertEqual(result[f"__route__{node_id}"], expected)
+                    self.assertEqual(result["next"], expected)
+                    self.assertEqual(result["selected"], expected == "run")
+
+    def test_wf_fix_positive_prepare_creates_real_positive_design_placeholder(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+
+            call_main(
+                "06_wf_fix_positive_e2e/00_prepare/scripts/prepare_wf_fix_positive_observe_feedback.py",
+                work,
+                "prepare_wf_fix_positive_once",
+            )
+
+            design = read_json(work / ".lgwf" / "e2e_real_positive_design.json")
+            observe = read_json(work / ".lgwf" / "e2e_wf_fix_positive_observe.json")
+            self.assertTrue(design["source_missing"])
+            self.assertIn("等价固定正向场景", design["summary"])
+            self.assertTrue(observe["initial_placeholder"])
 
     def test_runtime_fake_decide_writes_repair_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -333,30 +586,43 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             context = read_json(work / ".lgwf" / "e2e_runtime_fake_repair_context.json")
             self.assertTrue(context["no_progress"])
 
-    def test_finish_report_records_fixed_three_generated_tests(self) -> None:
+    def test_finish_report_records_fixed_four_generated_tests(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             work = Path(temp)
             request = {
                 "workflow_lgwf": "D:/target/workflow.lgwf",
                 "test_output_dir": "tests",
+                "selected_test_types": ["runtime_fake", "wf_fix_positive"],
                 "generated_tests": {
                     "script_flow": "test_sample_script_flow_e2e.py",
                     "runtime_fake": "test_sample_runtime_fake_e2e.py",
-                    "real_positive": "test_sample_real_positive_e2e.py",
+                    "real_positive": "lgwf_sample_real_positive_e2e.py",
+                    "wf_fix_positive": "lgwf_sample_real_positive_e2e_for_wf_fix.py",
                 },
             }
             write_json(work / ".lgwf" / "e2e_target_request.normalized.json", request)
-            write_json(work / ".lgwf" / "e2e_coverage_matrix.json", {"script_flow": {"script_contracts": [], "routes": []}, "runtime_fake": {"output_json": []}})
+            write_json(
+                work / ".lgwf" / "e2e_coverage_matrix.json",
+                {"script_flow": {"script_contracts": [], "routes": []}, "runtime_fake": {"output_json": []}},
+            )
             write_json(work / ".lgwf" / "e2e_script_flow_observe.json", {"passed": True})
             write_json(work / ".lgwf" / "e2e_runtime_fake_observe.json", {"passed": True})
-            write_json(work / ".lgwf" / "e2e_real_positive_observe.json", {"passed": True})
+            write_json(work / ".lgwf" / "e2e_wf_fix_positive_observe.json", {"passed": True})
 
-            call_main("06_finish/01_generate_final_report/scripts/generate_final_report.py", work, "finish_report")
+            call_main("07_finish/01_generate_final_report/scripts/generate_final_report.py", work, "finish_report")
 
             report = read_json(work / "reports" / "e2e-test-generator" / "report.json")
-            self.assertEqual(set(report["generated_tests"]), {"script_flow", "runtime_fake", "real_positive"})
+            self.assertEqual(set(report["generated_tests"]), {"script_flow", "runtime_fake", "real_positive", "wf_fix_positive"})
+            self.assertEqual(report["selected_test_types"], ["runtime_fake", "wf_fix_positive"])
+            self.assertEqual(report["validations"]["script_flow"]["status"], "skipped")
+            self.assertEqual(report["validations"]["real_positive"]["status"], "skipped")
+            self.assertTrue(report["validations"]["runtime_fake"]["passed"])
+            self.assertTrue(report["validations"]["wf_fix_positive"]["passed"])
             report_md = (work / "reports" / "e2e-test-generator" / "report.md").read_text(encoding="utf-8")
             self.assertIn("人工直接执行", report_md)
+            self.assertIn("wf-fix", report_md)
+            self.assertIn("wf_fix_positive", report_md)
+            self.assertIn("skipped", report_md)
 
 
 if __name__ == "__main__":

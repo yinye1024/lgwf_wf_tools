@@ -36,11 +36,33 @@ def validate_relative_path(value: str, label: str) -> None:
 
 
 class RegistryWorkflowPathsTest(unittest.TestCase):
+    def test_registry_declares_lgwf_and_tool_workflow_kinds(self) -> None:
+        registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
+        workflows = {workflow["id"]: workflow for workflow in registry["workflows"]}
+
+        self.assertEqual("tool-workflow", workflows["self-improve"]["kind"])
+        self.assertEqual("workflows/self-improve/AGENTS.md", workflows["self-improve"]["agents_md"])
+        self.assertEqual("workflows/self-improve/scripts/self_improve.py", workflows["self-improve"]["entry"])
+        self.assertNotIn("workflow_lgwf", workflows["self-improve"])
+        self.assertNotIn("work_dir", workflows["self-improve"])
+
+        self.assertEqual("tool-workflow", workflows["target-run"]["kind"])
+        self.assertEqual("workflows/target-run/AGENTS.md", workflows["target-run"]["agents_md"])
+        self.assertEqual("docs/target-run.md", workflows["target-run"]["entry"])
+        self.assertNotIn("workflow_lgwf", workflows["target-run"])
+        self.assertNotIn("work_dir", workflows["target-run"])
+
+        for workflow_id, workflow in workflows.items():
+            if workflow_id in {"self-improve", "target-run"}:
+                continue
+            self.assertEqual("lgwf", workflow["kind"], workflow_id)
+
     def test_registry_declared_paths_exist(self) -> None:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
         for workflow in registry["workflows"]:
             with self.subTest(workflow=workflow["id"]):
-                for field in ("workflow_lgwf", "work_dir", "agents_md"):
+                fields = ("workflow_lgwf", "work_dir", "agents_md") if workflow["kind"] == "lgwf" else ("entry", "agents_md")
+                for field in fields:
                     relative = workflow[field]
                     validate_relative_path(relative, f"{workflow['id']}.{field}")
                     self.assertTrue((FACADE_ROOT / relative).exists(), f"{workflow['id']}.{field}: {relative}")
@@ -50,6 +72,8 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         missing: list[str] = []
         invalid: list[str] = []
         for workflow in registry["workflows"]:
+            if workflow["kind"] != "lgwf":
+                continue
             package_root = (FACADE_ROOT / workflow["workflow_lgwf"]).parent
             for workflow_file in package_root.rglob("workflow.lgwf"):
                 text = workflow_file.read_text(encoding="utf-8")

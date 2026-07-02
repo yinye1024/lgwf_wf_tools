@@ -2,8 +2,8 @@
 
 要求：
 
-- 仅接受 JSON object。
-- `decision` 只能是 `approve`、`revise` 或 `reject`。
+- 仅接受 JSON object，作为 approval 的 `value` 提交。
+- `approval` 只能是 `approve`、`revise` 或 `reject`。
 - `changes` 使用数组，列出需要补充或修正的点。
 - `comment` 用中文说明理由。
 

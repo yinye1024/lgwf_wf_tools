@@ -26,6 +26,7 @@
 $lgwfPy = "vendor/lgwf-client-assist/scripts/lgwf.py"
 python $lgwfPy run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json <json> --background
 python $lgwfPy status --work-dir <work_dir> --session-id <session-id>
+python $lgwfPy codex token-status --work-dir <work_dir>
 python $lgwfPy wait
 ```
 
@@ -41,6 +42,29 @@ python $lgwfPy wait
 - `vendor/lgwf-client-assist/references/workflow-usage.md`
 
 本 facade 使用 `registry.json` 中的固定 `work_dir`。如果已有旧数据，按 vendor 指引让用户选择 `continue` / `resume` / `rerun`。
+
+### Codex live token 监控
+
+对于包含 `exec.codex_prompt` 或 ReAct Codex slot 的长任务，普通 `status` 只能说明 workflow 当前节点和最近完成节点；它可能短时间内看起来不变化。主 agent 应同时使用 live token 状态判断 Codex 子任务是否仍在工作：
+
+```powershell
+python $lgwfPy codex token-status --work-dir <work_dir>
+```
+
+或直接读取：
+
+```text
+<work_dir>/.lgwf/codex/status.json
+```
+
+判断规则：
+
+- `current_instruction_id` 变化，说明 Codex 已进入新的 instruction。
+- `token_usage.total_tokens` 或 `turn_count` 增长，说明 Codex 仍在推进。
+- `updated_at_unix` 更新，说明 live status 新鲜；若命令返回 `health.stale=true`，再结合产物、stdout/stderr 和进程状态排查。
+- workflow `status` 看似停在旧节点，但 token status 已进入下一 instruction 时，以 token status 作为 Codex 子任务进度依据。
+
+只有 token status 长时间不更新、目标产物没有写出、进程也没有结束时，才把它当作疑似卡住处理；不要因为 `status` 中 `current_node` 短时间重复就重启或 rerun。
 
 ## Approval 和 waiting_human
 

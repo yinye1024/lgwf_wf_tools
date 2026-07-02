@@ -29,7 +29,19 @@ def check_workflow_item(item: Any, seen_ids: set[str]) -> list[dict[str, Any]]:
         checks.append({"label": "workflow_id_unique", "passed": workflow_id not in seen_ids, "workflow_id": workflow_id})
         seen_ids.add(workflow_id)
 
-    for key in ("workflow_lgwf", "work_dir", "agents_md"):
+    kind = item.get("kind", "lgwf")
+    kind_valid = kind in {"lgwf", "tool-workflow"}
+    checks.append({"label": f"{workflow_id}.kind_supported", "passed": kind_valid, "kind": kind})
+    if not kind_valid:
+        return checks
+
+    required_paths = ("workflow_lgwf", "work_dir", "agents_md") if kind == "lgwf" else ("entry", "agents_md")
+    forbidden_paths = ("workflow_lgwf", "work_dir") if kind == "tool-workflow" else ()
+
+    for key in forbidden_paths:
+        checks.append({"label": f"{workflow_id}.{key}.absent", "passed": key not in item, "path": item.get(key)})
+
+    for key in required_paths:
         raw_path = item.get(key)
         path_safe = is_safe_relative_path(raw_path)
         checks.append({"label": f"{workflow_id}.{key}.relative_path", "passed": path_safe, "path": raw_path})
@@ -49,7 +61,7 @@ def check_workflow_item(item: Any, seen_ids: set[str]) -> list[dict[str, Any]]:
 
     workflow_lgwf = item.get("workflow_lgwf")
     work_dir = item.get("work_dir")
-    if is_safe_relative_path(workflow_lgwf) and is_safe_relative_path(work_dir):
+    if kind == "lgwf" and is_safe_relative_path(workflow_lgwf) and is_safe_relative_path(work_dir):
         workflow_root = (FACADE_ROOT / str(workflow_lgwf)).parent
         work_dir_path = FACADE_ROOT / str(work_dir)
         checks.append(
