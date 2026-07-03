@@ -11,6 +11,7 @@ from _paths import FACADE_ROOT, SELF_IMPROVE_ROOT
 DEFAULT_OUTPUT_DIR = FACADE_ROOT / ".local" / "self-improve" / "reports"
 REGISTRY_PATH = FACADE_ROOT / "registry.json"
 BASELINE_PATH = SELF_IMPROVE_ROOT / "workflow-health" / "baseline.json"
+IGNORED_SKILL_SCAN_PARTS = {".git", ".hg", ".local", ".lgwf", "__pycache__"}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -102,7 +103,15 @@ def check_workflow(item: dict[str, Any], baseline: dict[str, dict[str, Any]], *,
         elif not path_for(facade_root, entry).is_file():
             issues.append(f"entry missing: {entry}")
 
-    skill_files = sorted(path.relative_to(workflow_root).as_posix() for path in workflow_root.rglob("SKILL.md")) if workflow_root.exists() else []
+    skill_files = (
+        sorted(
+            path.relative_to(workflow_root).as_posix()
+            for path in workflow_root.rglob("SKILL.md")
+            if not (set(path.relative_to(workflow_root).parts) & IGNORED_SKILL_SCAN_PARTS)
+        )
+        if workflow_root.exists()
+        else []
+    )
     if skill_files:
         issues.append(f"internal workflow must not contain SKILL.md: {skill_files}")
 

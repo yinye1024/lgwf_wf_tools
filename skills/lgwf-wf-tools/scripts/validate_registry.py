@@ -8,6 +8,7 @@ from typing import Any
 
 FACADE_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = FACADE_ROOT / "registry.json"
+IGNORED_SKILL_SCAN_PARTS = {".git", ".hg", ".local", ".lgwf", "__pycache__"}
 
 
 def is_safe_relative_path(raw: Any) -> bool:
@@ -94,6 +95,7 @@ def run_validation() -> dict[str, Any]:
     nested_skill_files = [
         str(path.relative_to(FACADE_ROOT))
         for path in (FACADE_ROOT / "workflows").rglob("SKILL.md")
+        if not (set(path.relative_to(FACADE_ROOT).parts) & IGNORED_SKILL_SCAN_PARTS)
     ]
     checks.append(
         {

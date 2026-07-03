@@ -40,6 +40,7 @@ FORBIDDEN_OVERRIDE_TERMS = [
 ALLOWED_OVERRIDE_KEYS = {"additional_rules", "local_work_dirs", "experimental_workflows"}
 ALLOWED_EXPERIMENTAL_WORKFLOW_KEYS = {"id", "kind", "workflow_lgwf", "work_dir", "agents_md", "entry", "description"}
 REQUIRED_EXPERIMENTAL_WORKFLOW_KEYS = {"id", "kind", "agents_md"}
+IGNORED_SKILL_SCAN_PARTS = {".git", ".hg", ".local", ".lgwf", "__pycache__"}
 
 
 def utc_stamp() -> str:
@@ -75,7 +76,11 @@ def registry_ids(registry: dict[str, Any]) -> set[str]:
 
 
 def check_root_only_skill() -> list[str]:
-    skill_files = sorted(path.relative_to(FACADE_ROOT).as_posix() for path in FACADE_ROOT.rglob("SKILL.md"))
+    skill_files = sorted(
+        path.relative_to(FACADE_ROOT).as_posix()
+        for path in FACADE_ROOT.rglob("SKILL.md")
+        if not (set(path.relative_to(FACADE_ROOT).parts) & IGNORED_SKILL_SCAN_PARTS)
+    )
     return [] if skill_files == ["SKILL.md"] else [f"expected only root SKILL.md, found {skill_files}"]
 
 

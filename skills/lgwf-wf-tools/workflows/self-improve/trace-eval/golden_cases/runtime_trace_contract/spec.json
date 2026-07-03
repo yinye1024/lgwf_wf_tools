@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "trajectory": {
+    "status": "completed",
+    "ordered_subsequence": [
+      {
+        "kind": "node",
+        "items": ["runtime_contract_tests"]
+      },
+      {
+        "kind": "event",
+        "items": ["workflow.started", "node.started", "client.started", "client.completed", "node.completed", "workflow.completed"]
+      },
+      {
+        "kind": "capability",
+        "items": ["exec.run_tests"]
+      }
+    ],
+    "node_status": [
+      {
+        "node_id": "runtime_contract_tests",
+        "status": "completed"
+      }
+    ],
+    "forbidden_routes": [
+      {
+        "source_node": "runtime_contract_tests",
+        "route_key": "fail",
+        "target_node": "failed"
+      }
+    ],
+    "client_call_counts": [
+      {
+        "type": "shell",
+        "node_id": "runtime_contract_tests",
+        "status": "completed",
+        "exact": 1
+      }
+    ],
+    "forbidden_capabilities": ["exec.codex_prompt"],
+    "token_budget": {
+      "total": 0
+    },
+    "no_failed_nodes": true
+  },
+  "policy": {
+    "forbidden_destructive": true,
+    "forbidden_capabilities": ["exec.codex_prompt"],
+    "forbidden_permissions": ["workspace:write", "network", "human:request"],
+    "allowed_error_codes": []
+  },
+  "metadata": {
+    "purpose": "self_improve_runtime_contract"
+  }
+}

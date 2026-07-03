@@ -41,7 +41,38 @@ def workflow_id_from_case(case: dict[str, Any]) -> str:
     return workflow_id if isinstance(workflow_id, str) else ""
 
 
-def build_scorecard(local_root: Path = LOCAL_SELF_IMPROVE) -> dict[str, Any]:
+def summarize_trace_eval(trace_eval_report: dict[str, Any] | None) -> dict[str, Any]:
+    if not trace_eval_report:
+        return {"available": False}
+    failed_cases = trace_eval_report.get("failed_cases", [])
+    failed_checks = trace_eval_report.get("failed_checks", [])
+    risk_summary = trace_eval_report.get("risk_summary", {})
+    if not isinstance(failed_cases, list):
+        failed_cases = []
+    if not isinstance(failed_checks, list):
+        failed_checks = []
+    if not isinstance(risk_summary, dict):
+        risk_summary = {}
+    return {
+        "available": True,
+        "passed": trace_eval_report.get("passed"),
+        "run_id": trace_eval_report.get("run_id"),
+        "trace_path": trace_eval_report.get("trace_path"),
+        "eval_suite_path": trace_eval_report.get("eval_suite_path"),
+        "failed_case_count": len(failed_cases),
+        "failed_check_count": len(failed_checks),
+        "destructive_policy_failure_count": risk_summary.get("destructive_policy_failure_count", 0),
+        "forbidden_permission_failure_count": risk_summary.get("forbidden_permission_failure_count", 0),
+        "unexpected_route_failure_count": risk_summary.get("unexpected_route_failure_count", 0),
+        "failed_cases": failed_cases,
+        "failed_checks": failed_checks,
+    }
+
+
+def build_scorecard(
+    local_root: Path = LOCAL_SELF_IMPROVE,
+    trace_eval_report: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     incidents = load_json_objects(local_root / "incidents", "*.json")
     reports = load_json_objects(local_root / "reports", "*self-eval.json")
     proposals = sorted((local_root / "proposals").glob("*.md")) if (local_root / "proposals").exists() else []
@@ -85,6 +116,7 @@ def build_scorecard(local_root: Path = LOCAL_SELF_IMPROVE) -> dict[str, Any]:
         "repeated_failed_workflows": repeated_failed_workflows,
         "routing_misroute_count": routing_misroute_count,
         "approval_blocker_count": approval_blocker_count,
+        "trace_eval": summarize_trace_eval(trace_eval_report),
     }
 
 
@@ -111,7 +143,37 @@ def write_markdown(path: Path, scorecard: dict[str, Any]) -> None:
         f"- routing_misroute_count: `{scorecard['routing_misroute_count']}`",
         f"- approval_blocker_count: `{scorecard['approval_blocker_count']}`",
         "",
+        "## Trace Eval",
+        "",
     ]
+    trace_eval = scorecard.get("trace_eval", {})
+    if isinstance(trace_eval, dict) and trace_eval.get("available"):
+        lines.extend(
+            [
+                f"- passed: `{trace_eval.get('passed')}`",
+                f"- run_id: `{trace_eval.get('run_id')}`",
+                f"- failed_case_count: `{trace_eval.get('failed_case_count')}`",
+                f"- failed_check_count: `{trace_eval.get('failed_check_count')}`",
+                f"- destructive_policy_failure_count: `{trace_eval.get('destructive_policy_failure_count')}`",
+                f"- forbidden_permission_failure_count: `{trace_eval.get('forbidden_permission_failure_count')}`",
+                f"- unexpected_route_failure_count: `{trace_eval.get('unexpected_route_failure_count')}`",
+            ]
+        )
+        failed_checks = trace_eval.get("failed_checks", [])
+        if isinstance(failed_checks, list) and failed_checks:
+            lines.append("")
+            for check in failed_checks:
+                if not isinstance(check, dict):
+                    continue
+                lines.append(
+                    "- "
+                    f"`{check.get('case_id', '')}` / `{check.get('check_name', '')}`: "
+                    f"node `{check.get('node_id')}` capability `{check.get('capability')}` "
+                    f"route `{check.get('route')}` client_call `{check.get('client_call_id')}`"
+                )
+    else:
+        lines.append("- available: `false`")
+    lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -120,9 +182,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--local-root", default=str(LOCAL_SELF_IMPROVE))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
+    parser.add_argument("--trace-eval-report")
     args = parser.parse_args()
 
-    scorecard = build_scorecard(Path(args.local_root))
+    trace_eval_report = read_json(Path(args.trace_eval_report)) if args.trace_eval_report else None
+    scorecard = build_scorecard(Path(args.local_root), trace_eval_report)
     base = Path(args.output_dir) / f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-scorecard"
     write_json(base.with_suffix(".json"), scorecard)
     write_markdown(base.with_suffix(".md"), scorecard)

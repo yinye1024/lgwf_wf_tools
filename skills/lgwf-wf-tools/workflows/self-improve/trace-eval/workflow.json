@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    {
+      "id": "runtime_contract_tests",
+      "capability": "exec.run_tests",
+      "config": {
+        "command": "echo trace eval contract",
+        "cwd": ".",
+        "timeout_seconds": 30
+      }
+    }
+  ],
+  "edges": [],
+  "routes": [],
+  "entry_point": "runtime_contract_tests"
+}

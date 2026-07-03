@@ -46,6 +46,15 @@ def failed_eval_cases(eval_report: dict[str, Any] | None) -> list[dict[str, Any]
     return [item for item in cases if isinstance(item, dict) and not item.get("passed")]
 
 
+def failed_trace_eval_checks(trace_eval_report: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not trace_eval_report:
+        return []
+    checks = trace_eval_report.get("failed_checks", [])
+    if not isinstance(checks, list):
+        return []
+    return [item for item in checks if isinstance(item, dict)]
+
+
 def candidate_files(workflow_id: str, workflow_result: dict[str, Any], changed_files: list[str]) -> list[str]:
     root = workflow_result.get("workflow_root")
     candidates: list[str] = []
@@ -73,13 +82,15 @@ def render_proposal(
     workflow_result: dict[str, Any],
     incident: dict[str, Any] | None,
     eval_report: dict[str, Any] | None,
+    trace_eval_report: dict[str, Any] | None,
     changed_files: list[str],
 ) -> str:
     issues = workflow_result.get("issues") or []
     baseline = workflow_result.get("baseline") if isinstance(workflow_result.get("baseline"), dict) else {}
     failed_cases = failed_eval_cases(eval_report)
+    trace_failed_checks = failed_trace_eval_checks(trace_eval_report)
     candidates = candidate_files(workflow_id, workflow_result, changed_files)
-    needs_approval = bool(issues or incident or failed_cases)
+    needs_approval = bool(issues or incident or failed_cases or trace_failed_checks)
     lines = [
         f"# Workflow Improvement Proposal: {workflow_id}",
         "",
@@ -113,6 +124,38 @@ def render_proposal(
         lines.extend(["", "## Eval Failures", ""])
         for case in failed_cases:
             lines.append(f"- `{case.get('id', '')}`: {case.get('issues', [])}")
+    if trace_eval_report:
+        lines.extend(
+            [
+                "",
+                "## Trace Eval Evidence",
+                "",
+                f"- trace_eval_passed: `{trace_eval_report.get('passed')}`",
+                f"- run_id: `{trace_eval_report.get('run_id', '')}`",
+                f"- trace_path: `{trace_eval_report.get('trace_path', '')}`",
+                f"- eval_suite_path: `{trace_eval_report.get('eval_suite_path', '')}`",
+            ]
+        )
+        if trace_failed_checks:
+            for check in trace_failed_checks:
+                lines.append(
+                    "- "
+                    f"case `{check.get('case_id', '')}` check `{check.get('check_name', '')}`: "
+                    f"{check.get('message', '')}"
+                )
+                lines.append(
+                    "  - "
+                    f"node `{check.get('node_id')}` capability `{check.get('capability')}` "
+                    f"route `{check.get('route')}` client_call `{check.get('client_call_id')}`"
+                )
+                lines.append(
+                    "  - "
+                    f"destructive `{check.get('involves_destructive')}` "
+                    f"forbidden_permission `{check.get('involves_forbidden_permission')}` "
+                    f"unexpected_route `{check.get('involves_unexpected_route')}`"
+                )
+        else:
+            lines.append("- 当前 trace eval 未发现失败 check。")
     lines.extend(
         [
             "",
@@ -161,6 +204,7 @@ def main() -> int:
     parser.add_argument("--health-report", required=True)
     parser.add_argument("--incident")
     parser.add_argument("--eval-report")
+    parser.add_argument("--trace-eval-report")
     parser.add_argument("--changed-files")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     args = parser.parse_args()
@@ -169,12 +213,21 @@ def main() -> int:
     health_report = read_json(health_report_path)
     incident = read_json(Path(args.incident)) if args.incident else None
     eval_report = read_json(Path(args.eval_report)) if args.eval_report else None
+    trace_eval_report = read_json(Path(args.trace_eval_report)) if args.trace_eval_report else None
     changed_files = read_changed_files(Path(args.changed_files)) if args.changed_files else []
     workflow_result = find_workflow_result(health_report, args.workflow_id)
     output = Path(args.output_dir) / f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-workflow-{args.workflow_id}.md"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
-        render_proposal(args.workflow_id, health_report_path, workflow_result, incident, eval_report, changed_files),
+        render_proposal(
+            args.workflow_id,
+            health_report_path,
+            workflow_result,
+            incident,
+            eval_report,
+            trace_eval_report,
+            changed_files,
+        ),
         encoding="utf-8",
     )
     print(json.dumps({"proposal": str(output)}, ensure_ascii=False))

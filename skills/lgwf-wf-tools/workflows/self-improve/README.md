@@ -22,7 +22,8 @@
 | 使用 `/lgwf-wf-tools` 前 | `python scripts\doctor_lgwf_wf_tools.py` | 只读检查安装状态，不修改文件。 |
 | vendor zip 更新 | `python scripts\init_lgwf_wf_tools.py` 后运行 `python scripts\doctor_lgwf_wf_tools.py` | `init` 有副作用，只用于同步 bundled client。 |
 | 开发期修改 facade 或内部 workflow | `python workflows\self-improve\scripts\self_improve.py workflow-health` 或 `python workflows\self-improve\scripts\self_improve.py eval --check-overrides` | 检查结构、语义、路由、approval 和 override 风险。 |
-| 发布前默认 gate | `python workflows\self-improve\scripts\self_improve.py pre-release --version <version> --source package` | 自动包含 doctor 和 workflow health；不自动 init。 |
+| 开发期验证 runtime trace contract | `python workflows\self-improve\scripts\self_improve.py trace-eval` | 运行固定 LGWF runtime workflow，生成 `trace.json` 和 `eval-suite.json`，检查真实运行轨迹。 |
+| 发布前默认 gate | `python workflows\self-improve\scripts\self_improve.py pre-release --version <version> --source package` | 自动包含 doctor、workflow health 和 trace eval；不自动 init。 |
 | 发布前严格 gate | `python workflows\self-improve\scripts\self_improve.py pre-release --version <version> --source package --run-workflow-tests` | 额外执行内部 workflow tests，可能更慢。 |
 
 `pre-release` 是发布前 gate，不是安装修复工具。doctor 失败时，pre-release 必须失败；如果需要同步 vendor，应先由人工或外部发布流程执行 `init -> doctor`，再重新运行 pre-release。
@@ -89,6 +90,15 @@
 - `scripts/create_workflow_improvement_proposal.py` 可合并 health report、incident、eval report 和 changed files，输出问题证据、影响范围、推荐修改文件、验收命令和是否需要用户 approval。
 - `scripts/generate_scorecard.py` 增加趋势字段：最近 incident 类型分布、重复失败 workflow、路由误判次数和 approval 卡点次数。
 
+## 第八版能力
+
+- `scripts/run_trace_eval.py`：运行固定 LGWF runtime contract workflow，生成 `trace.json` 和 `eval-suite.json`，再把摘要写入 `.local/self-improve/reports/*trace-eval.json` 和 `.md`。
+- `scripts/pre_release_check.py`：默认 gate 增加 `trace_eval` 步骤，顺序在 `workflow_health` 之后、`generate_scorecard` 之前。
+- `scripts/generate_scorecard.py --trace-eval-report <json>`：把 trace eval 的 failed case、failed check 和 risk summary 汇总进 scorecard。
+- `scripts/create_workflow_improvement_proposal.py --trace-eval-report <json>`：把 trace eval evidence 写入 workflow proposal，用于定位 node、capability、route、client call 和 policy 风险。
+
+Static self eval 和 trace eval 的分工不同：前者检查 facade 规则、baseline、override 风险；后者检查 LGWF runtime 实际运行轨迹、catalog policy 和 client call contract。两者都只生成 evidence，不自动修复。
+
 ## 常用命令
 
 ```powershell
@@ -100,7 +110,8 @@ python workflows\self-improve\scripts\create_eval_case.py --incident <incident.j
 python workflows\self-improve\scripts\self_improve.py workflow-health
 python workflows\self-improve\scripts\self_improve.py workflow-health --workflow-id wf-fix
 python workflows\self-improve\scripts\self_improve.py workflow-tests --workflow-id wf-fix
-python workflows\self-improve\scripts\self_improve.py workflow-proposal --workflow-id <id> --health-report <report.json> --incident <incident.json> --eval-report <eval.json> --changed-files <changed-files.json>
+python workflows\self-improve\scripts\self_improve.py trace-eval
+python workflows\self-improve\scripts\self_improve.py workflow-proposal --workflow-id <id> --health-report <report.json> --incident <incident.json> --eval-report <eval.json> --trace-eval-report <trace-eval.json> --changed-files <changed-files.json>
 python workflows\self-improve\scripts\validate_manifest.py
 ```
 

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "case_id": "runtime_trace_contract",
+  "description": "验证 self-improve trace-eval 固定 runtime workflow 的 trace、client call 和 catalog policy contract。",
+  "tags": ["self-improve", "trace", "runtime-contract"],
+  "kind": "runtime_contract"
+}

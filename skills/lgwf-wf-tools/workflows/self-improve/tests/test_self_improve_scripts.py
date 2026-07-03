@@ -414,6 +414,44 @@ class SelfImproveScriptsTest(unittest.TestCase):
             self.assertIn("incident_count", scorecard)
             self.assertTrue(Path(payload["md"]).is_file())
 
+    def test_generate_scorecard_consumes_trace_eval_report(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            temp_root = Path(raw_dir)
+            trace_eval = temp_root / "trace-eval.json"
+            trace_eval.write_text(
+                json.dumps(_failed_trace_eval_report(), ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "generate_scorecard.py"),
+                    "--output-dir",
+                    str(temp_root),
+                    "--trace-eval-report",
+                    str(trace_eval),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            payload = json.loads(result.stdout)
+            scorecard = json.loads(Path(payload["json"]).read_text(encoding="utf-8"))
+            self.assertTrue(scorecard["trace_eval"]["available"])
+            self.assertFalse(scorecard["trace_eval"]["passed"])
+            self.assertEqual(scorecard["trace_eval"]["failed_case_count"], 1)
+            self.assertEqual(scorecard["trace_eval"]["failed_check_count"], 3)
+            self.assertEqual(scorecard["trace_eval"]["destructive_policy_failure_count"], 1)
+            self.assertEqual(scorecard["trace_eval"]["forbidden_permission_failure_count"], 1)
+            self.assertEqual(scorecard["trace_eval"]["unexpected_route_failure_count"], 1)
+            markdown = Path(payload["md"]).read_text(encoding="utf-8")
+            self.assertIn("Trace Eval", markdown)
+            self.assertIn("policy.forbidden_destructive", markdown)
+
     def test_promote_eval_case_requires_approval_and_removes_draft_status(self) -> None:
         with tempfile.TemporaryDirectory() as raw_dir:
             temp_root = Path(raw_dir)
@@ -491,6 +529,7 @@ class SelfImproveScriptsTest(unittest.TestCase):
                     "collect_changed_files",
                     "run_self_evals",
                     "workflow_health",
+                    "trace_eval",
                     "generate_scorecard",
                     "write_upgrade_report",
                 ],
@@ -549,6 +588,7 @@ class SelfImproveScriptsTest(unittest.TestCase):
                     "collect_changed_files",
                     "run_self_evals",
                     "workflow_health",
+                    "trace_eval",
                     "workflow_tests",
                     "generate_scorecard",
                     "write_upgrade_report",
@@ -645,6 +685,90 @@ class SelfImproveScriptsTest(unittest.TestCase):
 
             payload = json.loads(result.stdout)
             self.assertTrue(payload["passed"])
+
+    def test_unified_self_improve_entrypoint_for_trace_eval(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            output_dir = Path(raw_dir)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "self_improve.py"),
+                    "trace-eval",
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            payload = json.loads(result.stdout)
+            self.assertTrue(payload["passed"])
+            self.assertTrue(Path(payload["json"]).is_file())
+            self.assertTrue(Path(payload["md"]).is_file())
+            self.assertTrue((output_dir / "latest-trace-eval.json").is_file())
+            report = json.loads(Path(payload["json"]).read_text(encoding="utf-8"))
+            self.assertTrue(Path(report["trace_path"]).is_file())
+            self.assertTrue(Path(report["eval_suite_path"]).is_file())
+            self.assertIn("failed_checks", report)
+            self.assertIn("risk_summary", report)
+
+    def test_workflow_proposal_consumes_trace_eval_report(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            temp_root = Path(raw_dir)
+            health = temp_root / "health.json"
+            trace_eval = temp_root / "trace-eval.json"
+            health.write_text(
+                json.dumps(
+                    {
+                        "workflow_results": [
+                            {
+                                "id": "wf-fix",
+                                "passed": True,
+                                "workflow_root": "workflows/wf-fix",
+                                "issues": [],
+                                "baseline": {
+                                    "expected_role": "fix runtime workflow",
+                                    "audit_command": "python audit.py",
+                                    "test_command": "python test.py",
+                                },
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            trace_eval.write_text(json.dumps(_failed_trace_eval_report(), ensure_ascii=False), encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "create_workflow_improvement_proposal.py"),
+                    "--workflow-id",
+                    "wf-fix",
+                    "--health-report",
+                    str(health),
+                    "--trace-eval-report",
+                    str(trace_eval),
+                    "--output-dir",
+                    str(temp_root),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            payload = json.loads(result.stdout)
+            proposal = Path(payload["proposal"]).read_text(encoding="utf-8")
+            self.assertIn("Trace Eval Evidence", proposal)
+            self.assertIn("policy.forbidden_destructive", proposal)
+            self.assertIn("exec.run_shell", proposal)
+            self.assertIn("unexpected_route `True`", proposal)
 
     def test_incident_trigger_wording_exists(self) -> None:
         self_improve = (ROOT / "docs" / "self-improve.md").read_text(encoding="utf-8")
@@ -1138,6 +1262,70 @@ class SelfImproveScriptsTest(unittest.TestCase):
     def test_local_state_is_gitignored(self) -> None:
         gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
         self.assertIn(".local/", gitignore)
+
+
+def _failed_trace_eval_report() -> dict[str, object]:
+    return {
+        "generated_at": "2026-01-01T00:00:00+00:00",
+        "passed": False,
+        "run_id": "run-001",
+        "trace_path": ".lgwf/runs/run-001/trace.json",
+        "eval_suite_path": ".lgwf/runs/run-001/eval-suite.json",
+        "cases_dir": "workflows/self-improve/trace-eval/golden_cases",
+        "failed_cases": [
+            {
+                "case_id": "runtime_trace_contract",
+                "description": "runtime contract failed",
+                "kind": "runtime_contract",
+            }
+        ],
+        "failed_checks": [
+            {
+                "case_id": "runtime_trace_contract",
+                "check_name": "policy.forbidden_destructive",
+                "message": "destructive capabilities used",
+                "evidence": [{"node_id": "run_shell", "capability": "exec.run_shell"}],
+                "node_id": "run_shell",
+                "capability": "exec.run_shell",
+                "route": None,
+                "client_call_id": None,
+                "involves_destructive": True,
+                "involves_forbidden_permission": False,
+                "involves_unexpected_route": False,
+            },
+            {
+                "case_id": "runtime_trace_contract",
+                "check_name": "policy.forbidden_permissions",
+                "message": "forbidden permissions used",
+                "evidence": [{"node_id": "run_shell", "capability": "exec.run_shell"}],
+                "node_id": "run_shell",
+                "capability": "exec.run_shell",
+                "route": None,
+                "client_call_id": None,
+                "involves_destructive": False,
+                "involves_forbidden_permission": True,
+                "involves_unexpected_route": False,
+            },
+            {
+                "case_id": "runtime_trace_contract",
+                "check_name": "trajectory.forbidden_routes",
+                "message": "forbidden route used",
+                "evidence": [{"source_node": "decide", "route_key": "fail", "target_node": "failed"}],
+                "node_id": "decide",
+                "capability": None,
+                "route": "fail",
+                "client_call_id": "decide:check",
+                "involves_destructive": False,
+                "involves_forbidden_permission": False,
+                "involves_unexpected_route": True,
+            },
+        ],
+        "risk_summary": {
+            "destructive_policy_failure_count": 1,
+            "forbidden_permission_failure_count": 1,
+            "unexpected_route_failure_count": 1,
+        },
+    }
 
 
 if __name__ == "__main__":

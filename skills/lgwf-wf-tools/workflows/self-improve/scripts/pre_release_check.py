@@ -117,6 +117,7 @@ def main() -> int:
             ],
         ),
         ("workflow_health", ["workflows/self-improve/scripts/check_workflow_health.py", "--output-dir", str(output_dir)]),
+        ("trace_eval", ["workflows/self-improve/scripts/run_trace_eval.py", "--output-dir", str(output_dir)]),
     ]
     if args.run_workflow_tests:
         commands.append(
@@ -137,7 +138,16 @@ def main() -> int:
         )
     commands.extend(
         [
-        ("generate_scorecard", ["workflows/self-improve/scripts/generate_scorecard.py", "--output-dir", str(output_dir)]),
+        (
+            "generate_scorecard",
+            [
+                "workflows/self-improve/scripts/generate_scorecard.py",
+                "--output-dir",
+                str(output_dir),
+                "--trace-eval-report",
+                str(output_dir / "latest-trace-eval.json"),
+            ],
+        ),
         (
             "write_upgrade_report",
             [

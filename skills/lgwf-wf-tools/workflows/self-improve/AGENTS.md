@@ -15,7 +15,7 @@
 
 - 用户显式输入 `/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 自我优化`，或自然语言要求复盘、自我优化、优化交互体验、沉淀 case、生成 proposal、生成 eval case 时，选择本 workflow；先归类问题、列出可执行的 self-improve 路径，再说明哪些操作需要用户确认。
 - 真实运行中出现路由错误、approval 处理错误、监控 handle 丢失、旧 `work_dir` 处理错误或最终报告缺口时，主 agent 只能建议记录 incident；必须用户确认后才能调用 `record_incident.py`。
-- 只读类命令可直接执行：`eval`、`workflow-health`、`scorecard`、`changed-files`、`pre-release`。
+- 只读类命令可直接执行：`eval`、`workflow-health`、`trace-eval`、`scorecard`、`changed-files`、`pre-release`。
 - 记录类命令需要确认：`incident`、`proposal`、`eval-case`。如果用户已经明确要求“记录这次问题”“生成 proposal”或“生成 eval 草稿”，可以把当前对话作为证据直接执行。
 - proposal 后续处理必须是两段式：先提醒用户是否查看或执行 proposal，再通过 `/lgwf-wf-tools 优化方案` 展示 review 计划；不直接执行 proposal，执行前必须先展示 review 计划并等待明确批准。
 - 发布包变更类操作必须人工批准：`promote-eval`、修改 `SKILL.md`、`AGENTS.md`、`registry.json`、baseline eval 或 workflow 文件。
@@ -25,6 +25,7 @@
 ```powershell
 python workflows/self-improve/scripts/self_improve.py eval --check-overrides
 python workflows/self-improve/scripts/self_improve.py workflow-health
+python workflows/self-improve/scripts/self_improve.py trace-eval
 python workflows/self-improve/scripts/self_improve.py workflow-tests --workflow-id wf-fix
 python workflows/self-improve/scripts/self_improve.py pre-release --version <version> --source <source>
 python workflows/self-improve/scripts/validate_manifest.py
