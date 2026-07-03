@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,6 +126,37 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
             (legacy / "SKILL.md").write_text("# lgwf-client-assist\n", encoding="utf-8")
             result = check_mod.find_lgwf_client_assist([legacy])
             self.assertFalse(result["passed"])
+
+    def test_environment_check_finds_bundled_client_from_isolated_workflow_path(self) -> None:
+        check_mod = load_module(
+            "01_prepare_target/scripts/check_lgwf_client_assist.py",
+            "upgrade_env_check_isolated_path",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            facade = Path(temp) / "lgwf-wf-tools"
+            bundled = facade / "vendor" / "lgwf-client-assist"
+            bundled.mkdir(parents=True)
+            (bundled / "AGENTS.md").write_text("# lgwf-client-assist\n", encoding="utf-8")
+            isolated_script = (
+                facade
+                / "workflows"
+                / "wf-post-fix"
+                / "ws"
+                / ".lgwf"
+                / "isolations"
+                / "run_workflow"
+                / "prompt_upgrade"
+                / "work_dir"
+                / ".lgwf"
+                / "workflow"
+                / "01_prepare_target"
+                / "scripts"
+                / "check_lgwf_client_assist.py"
+            )
+            isolated_script.parent.mkdir(parents=True)
+            isolated_script.write_text("# copied script placeholder\n", encoding="utf-8")
+            with mock.patch.object(check_mod, "__file__", str(isolated_script)):
+                self.assertEqual(check_mod.ensure_bundled_client_dir().resolve(), bundled.resolve())
 
     def test_environment_check_ignores_runtime_env_override_by_default(self) -> None:
         check_mod = load_module(

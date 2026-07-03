@@ -12,4 +12,10 @@ PY execute_commit_action
   RESULT state.git_diff_brief.execute_commit_action_result
   UPDATES_STATE;
 
-FLOW execute_commit_action;
+PY write_token_usage_by_node
+  SCRIPT "scripts/write_token_usage_by_node.py"
+  TIMEOUT 60
+  RESULT state.git_diff_brief.token_usage_by_node_result
+  UPDATES_STATE;
+
+FLOW execute_commit_action THEN write_token_usage_by_node;

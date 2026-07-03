@@ -1,0 +1,61 @@
+WORKFLOW post_fix_script_flow_e2e;
+ENTRY NODE script_flow_e2e_auto_route;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_post_fix.instructions.{node}";
+  result_path "lgwf_wf_post_fix.results.{node}";
+}
+
+ROUTE script_flow_e2e_auto_route
+  READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled
+  WHEN true THEN run_script_flow_e2e_flow
+  WHEN false THEN choose_script_flow_e2e;
+
+CHOICE choose_script_flow_e2e
+  PROMPT_REF "confirm_script_flow_e2e.md"
+  OPTION run LABEL "运行 script_flow E2E" THEN run_script_flow_e2e_flow
+  OPTION skip LABEL "跳过 script_flow E2E" THEN skip_script_flow_e2e_flow
+  OPTION auto LABEL "开启自动并运行 script_flow E2E" THEN auto_script_flow_e2e_flow
+  OPTION stop LABEL "停止整个 wf-post-fix" THEN FAIL_ALL
+  PERSIST ".lgwf/post_fix_decisions/script_flow_e2e.json"
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/script_flow_e2e.json";
+  };
+
+FLOW run_script_flow_e2e_flow
+  START run_script_flow_e2e;
+
+FLOW auto_script_flow_e2e_flow
+  START set_script_flow_e2e_auto
+  THEN run_script_flow_e2e;
+
+FLOW skip_script_flow_e2e_flow
+  START skip_script_flow_e2e;
+
+PY run_script_flow_e2e
+  SCRIPT "scripts/run_script_flow_e2e.py"
+  TIMEOUT 900
+  RESULT state.lgwf_wf_post_fix.run_script_flow_e2e_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/post_fix_target.json";
+    READ workspace file ".lgwf/post_fix_decisions/script_flow_e2e.json";
+    WRITE state.lgwf_wf_post_fix.run_script_flow_e2e_result;
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
+    WRITE workspace file ".lgwf/post_fix_stage_results.json";
+  };
+
+PY set_script_flow_e2e_auto
+  SCRIPT "scripts/set_script_flow_e2e_auto.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_post_fix.set_script_flow_e2e_auto_result
+  UPDATES_STATE;
+
+PY skip_script_flow_e2e
+  SCRIPT "scripts/finish_script_flow_e2e_stage.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_post_fix.skip_script_flow_e2e_result
+  UPDATES_STATE;

@@ -194,6 +194,45 @@ class StateHandoffContractTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             summary.build_summary({"runtime_artifacts": [".lgwf/../bad.json"]})
 
+    def test_post_fix_handoff_payload_targets_created_workflow(self) -> None:
+        module = load_module(ROOT / "scripts/prepare_post_fix_handoff.py", "prepare_post_fix_handoff")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            payload = module.build_handoff_payload(
+                {
+                    "target_package_root": "skills/example-workflow",
+                    "workflow_name": "example-workflow",
+                    "report_path": "reports/create-workflow/create_result_report.md",
+                },
+                root,
+            )
+
+        self.assertEqual(payload["workflow_id"], "wf-post-fix")
+        self.assertEqual(payload["next_workflow_id"], "wf-post-fix")
+        self.assertFalse(payload["auto_execute"])
+        self.assertTrue(payload["requires_user_confirmation"])
+        self.assertEqual(payload["workflow_lgwf"], "skills/lgwf-wf-tools/workflows/wf-post-fix/wf/workflow.lgwf")
+        self.assertEqual(payload["work_dir"], "skills/lgwf-wf-tools/workflows/wf-post-fix/ws")
+        self.assertEqual(
+            payload["payload"]["post_fix_target"]["target_workflow_lgwf"],
+            "skills/example-workflow/wf/workflow.lgwf",
+        )
+        self.assertEqual(payload["payload"]["post_fix_target"]["target_package_root"], "skills/example-workflow")
+        self.assertEqual(payload["payload"]["post_fix_target"]["target_dirs"], ["skills/example-workflow"])
+        self.assertIn("wf-post-fix", payload["suggested_command"])
+
+    def test_root_workflow_ends_with_post_fix_handoff(self) -> None:
+        workflow_text = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("PY prepare_post_fix_handoff", workflow_text)
+        self.assertIn('SCRIPT "scripts/prepare_post_fix_handoff.py"', workflow_text)
+        self.assertIn("INPUT state.lgwf_wf_create.summary_result", workflow_text)
+        self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff_payload", workflow_text)
+        self.assertIn("HANDOFF handoff_wf_post_fix", workflow_text)
+        self.assertIn("CONTEXT state.lgwf_wf_create.post_fix_handoff_payload", workflow_text)
+        self.assertIn('PROMPT "handoff_wf_post_fix.md"', workflow_text)
+        self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff", workflow_text)
+        self.assertIn("THEN prepare_post_fix_handoff\n  THEN handoff_wf_post_fix", workflow_text)
+
     def test_scaffold_plan_lists_confirmation_context_scripts(self) -> None:
         scaffold = load_module(
             ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",

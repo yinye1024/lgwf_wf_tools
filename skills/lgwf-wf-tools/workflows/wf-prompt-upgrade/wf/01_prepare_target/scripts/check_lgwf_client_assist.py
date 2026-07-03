@@ -16,11 +16,11 @@ ARTIFACT_ROOT = ".lgwf/prompt_upgrade"
 
 def ensure_bundled_client_dir() -> Path:
     current = Path(__file__).resolve()
-    if len(current.parents) > 7 and current.parents[2].name == "workflow" and current.parents[3].name == ".lgwf":
-        facade_root = current.parents[7]
-    else:
-        facade_root = current.parents[5]
-    return facade_root / "vendor" / "lgwf-client-assist"
+    for parent in current.parents:
+        candidate = parent / "vendor" / "lgwf-client-assist"
+        if (candidate / "AGENTS.md").is_file():
+            return candidate
+    return current.parents[5] / "vendor" / "lgwf-client-assist"
 
 
 def candidate_skill_dirs() -> list[Path]:

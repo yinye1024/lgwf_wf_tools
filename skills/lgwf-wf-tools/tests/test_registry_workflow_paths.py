@@ -52,8 +52,14 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertNotIn("workflow_lgwf", workflows["target-run"])
         self.assertNotIn("work_dir", workflows["target-run"])
 
+        self.assertEqual("tool-workflow", workflows["self-improve-seed"]["kind"])
+        self.assertEqual("workflows/self-improve-seed/AGENTS.md", workflows["self-improve-seed"]["agents_md"])
+        self.assertEqual("workflows/self-improve-seed/scripts/seed_self_improve.py", workflows["self-improve-seed"]["entry"])
+        self.assertNotIn("workflow_lgwf", workflows["self-improve-seed"])
+        self.assertNotIn("work_dir", workflows["self-improve-seed"])
+
         for workflow_id, workflow in workflows.items():
-            if workflow_id in {"self-improve", "target-run"}:
+            if workflow_id in {"self-improve", "target-run", "self-improve-seed"}:
                 continue
             self.assertEqual("lgwf", workflow["kind"], workflow_id)
 
@@ -88,6 +94,8 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
                             invalid.append(str(exc))
                             continue
                         target = workflow_file.parent / value
+                        if not target.exists() and value.replace("\\", "/").startswith("workflows/"):
+                            target = FACADE_ROOT / value
                         if not target.exists():
                             missing.append(
                                 f"{workflow['id']}: {workflow_file.relative_to(package_root).as_posix()} "

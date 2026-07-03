@@ -11,6 +11,7 @@
 - `commit_message_rationale`
 - `commit_plan`
 - `commit_action_result`
+- `token_usage_by_node`
 - `run_artifact_index`
 
 ## 待确认项
@@ -30,5 +31,7 @@
 - `execute_commit_action` 是唯一允许执行 `git add` / `git commit` 的节点
 - 默认 `commit_action=none`，不执行 Git 写操作
 - `stage` / `commit` 只能使用 `.lgwf/git_context_snapshot.json` 中的 `repo_path` 和 `relative_scope`
+- 当入口显式提供 `skip_delivery_review=true` 时，`prepare_delivery_review` 可以生成等价 `.lgwf/delivery_decision.json` 并跳过最终人工确认；默认仍必须进入人工确认
+- 第五阶段结束后应写出 `.lgwf/token_usage_by_node.json`，用于复盘 Codex 节点 token 消耗
 - `commit_message_suggestion` 是英文 Conventional Commits 版本，默认用于真实 `git commit -m`
 - `commit_message_suggestion_zh` 是中文展示版本，只用于人工理解和确认

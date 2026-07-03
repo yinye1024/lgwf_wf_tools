@@ -9,7 +9,7 @@ DEFAULTS {
 CODEX identify_change_themes
   PROMPT "agents/synthesize_change_summary.md"
   CONTEXT workflow file "resources/markdown_brief_outline.md"
-  CONTEXT workspace file ".lgwf/git_context_snapshot.json"
+  CONTEXT workspace file ".lgwf/git_context_compact.json"
   OUTPUT_JSON ".lgwf/change_summary_context.json"
   RESULT state.git_diff_brief.change_summary_context_result;
 

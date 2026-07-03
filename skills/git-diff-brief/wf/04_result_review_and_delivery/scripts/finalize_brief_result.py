@@ -128,6 +128,8 @@ def build_commit_plan(decision: dict[str, Any], git_context: dict[str, Any]) -> 
     if not isinstance(log, dict):
         return {"ok": False, "action": action, "executed": False, "commands": [], "error": "缺少 git_collection_log。"}
     repo_path = str(log.get("repo_path", "")).strip()
+    if "relative_scope" not in log:
+        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "缺少 relative_scope。"}
     relative_scope = str(log.get("relative_scope", "")).strip().strip("/")
     if not repo_path:
         return {"ok": False, "action": action, "executed": False, "commands": [], "error": "缺少 repo_path。"}
@@ -194,7 +196,7 @@ def execute_commit_action(plan: dict[str, Any]) -> dict[str, Any]:
                 "stderr": "".join(stderr_parts),
                 "error": "Git 命令执行失败。",
             }
-    return {
+    result = {
         "ok": True,
         "action": plan.get("action", ""),
         "executed": True,
@@ -203,6 +205,31 @@ def execute_commit_action(plan: dict[str, Any]) -> dict[str, Any]:
         "stdout": "".join(stdout_parts),
         "stderr": "".join(stderr_parts),
     }
+    if str(plan.get("action", "")).strip().lower() == "commit":
+        commit_hash = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(plan.get("repo_path", "")),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        commit_subject = subprocess.run(
+            ["git", "log", "-1", "--pretty=%s"],
+            cwd=str(plan.get("repo_path", "")),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        command_records.extend([["git", "rev-parse", "HEAD"], ["git", "log", "-1", "--pretty=%s"]])
+        result["commit_hash"] = commit_hash.stdout.strip() if commit_hash.returncode == 0 else ""
+        result["commit_subject"] = commit_subject.stdout.strip() if commit_subject.returncode == 0 else ""
+        result["stdout"] = str(result["stdout"]) + (commit_hash.stdout or "") + (commit_subject.stdout or "")
+        result["stderr"] = str(result["stderr"]) + (commit_hash.stderr or "") + (commit_subject.stderr or "")
+    return result
 
 
 def build_final_output(

@@ -37,6 +37,10 @@
       "description": "按目标路径直启 LGWF workflow。"
     },
     {
+      "command": "/lgwf-wf-tools seed-self-improve <path>",
+      "description": "给目标 workflow 播种一套自包含 self-improve 结构。"
+    },
+    {
       "command": "/lgwf-wf-tools self-improve",
       "description": "路由到 self-improve tool workflow。"
     },

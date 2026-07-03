@@ -32,6 +32,8 @@
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
+- `prepare_post_fix_handoff` 读取 `state.lgwf_wf_create.summary_result`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
+- `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
 
 ## Approval 边界
 
@@ -55,11 +57,13 @@
 - `.lgwf/step_designs.json`
 - `.lgwf/create_reference_context/dsl-assist/*.md`
 - `.lgwf/implementation_result.json`
+- `.lgwf/post_fix_handoff_input.json`
 - `reports/create-workflow/create_result_report.md`
 
 ## 范围边界
 
 - 不负责自动调用 `lgwf-wf-prompt-fix`。
+- 结束时只通过 `HANDOFF` 引导用户选择是否运行 `wf-post-fix`，不自动执行。
 - 不负责把生成出的目标 workflow 自动接入 facade 路由、registry 或其他治理链路。
 - 不承诺端到端业务 happy path 成功。
 - 不做自动修复、自动重试或后续 agent 化。

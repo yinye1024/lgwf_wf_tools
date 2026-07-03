@@ -1,0 +1,28 @@
+WORKFLOW post_fix_finish;
+ENTRY NODE summarize_post_fix;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_post_fix.instructions.{node}";
+  result_path "lgwf_wf_post_fix.results.{node}";
+}
+
+PY summarize_post_fix
+  SCRIPT "scripts/summarize_post_fix.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_post_fix.summary_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/post_fix_target.json";
+    READ workspace file ".lgwf/post_fix_decisions.json";
+    READ workspace file ".lgwf/post_fix_stage_results.json";
+    READ workspace file ".lgwf/post_fix_generated_tests.json";
+    WRITE state.lgwf_wf_post_fix.post_fix_summary;
+    WRITE state.lgwf_wf_post_fix.summary_result;
+    WRITE workspace file ".lgwf/post_fix_summary.json";
+    WRITE workspace file "reports/wf-post-fix/report.json";
+    WRITE workspace file "reports/wf-post-fix/report.md";
+  };
+
+FLOW summarize_post_fix;

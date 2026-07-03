@@ -43,6 +43,10 @@ class StageScriptsTest(unittest.TestCase):
             "wf/05_git_commit/scripts/execute_commit_action.py",
             "git_diff_brief_execute_commit_action",
         )
+        cls.token_usage_module = load_module(
+            "wf/05_git_commit/scripts/write_token_usage_by_node.py",
+            "git_diff_brief_write_token_usage_by_node",
+        )
 
     def test_normalize_repo_hint_rejects_blank_and_state_dir(self) -> None:
         with self.assertRaises(ValueError):
@@ -107,6 +111,23 @@ class StageScriptsTest(unittest.TestCase):
         self.assertEqual("initial commit", snapshot["latest_commit_context"]["subject"])
         self.assertIn("tracked.txt", snapshot["changed_files_index"]["files"])
         self.assertIn("new.txt", snapshot["changed_files_index"]["files"])
+
+    def test_build_compact_context_truncates_large_diff_and_keeps_snapshot_full(self) -> None:
+        diff_text = "diff --git a/a.py b/a.py\n" + ("+x\n" * 100)
+        snapshot = self.git_module.build_snapshot(
+            repo_path=".",
+            diff_text=diff_text,
+            diff_stat=" a.py | 100 +++++\n",
+            diff_names=["a.py", "vendor/blob.zip"],
+            status_lines=[" M a.py", "?? vendor/blob.zip"],
+        )
+        compact = self.git_module.build_compact_context(snapshot, max_total_chars=50, max_file_chars=30)
+
+        self.assertEqual(diff_text, snapshot["git_diff_snapshot"]["diff_text"])
+        self.assertEqual(50, compact["context_budget"]["max_total_diff_chars"])
+        self.assertIn("a.py", compact["context_budget"]["truncated_files"])
+        self.assertIn("vendor/blob.zip", compact["context_budget"]["heavy_files"])
+        self.assertLessEqual(compact["git_diff_compact"]["diff_snippets"][0]["retained_chars"], 30)
 
     def test_collect_git_snapshot_scopes_to_requested_subdirectory(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -195,7 +216,7 @@ class StageScriptsTest(unittest.TestCase):
         }
         plan = self.delivery_module.build_commit_plan(decision, git_context)
         completed = subprocess.CompletedProcess(
-            args=["git", "add", "--", "skills/git-diff-brief"],
+            args=["git", "add", "--all", "--", "skills/git-diff-brief"],
             returncode=0,
             stdout="",
             stderr="",
@@ -204,7 +225,7 @@ class StageScriptsTest(unittest.TestCase):
             result = self.commit_action_module.execute_commit_action(plan)
 
         run.assert_called_once()
-        self.assertEqual(["git", "add", "--", "skills/git-diff-brief"], run.call_args.args[0])
+        self.assertEqual(["git", "add", "--all", "--", "skills/git-diff-brief"], run.call_args.args[0])
         self.assertEqual("D:/repo", run.call_args.kwargs["cwd"])
         self.assertTrue(result["ok"])
         self.assertTrue(result["executed"])
@@ -233,8 +254,10 @@ class StageScriptsTest(unittest.TestCase):
         calls = [call.args[0] for call in run.call_args_list]
         self.assertEqual(
             [
-                ["git", "add", "--", "skills/git-diff-brief"],
+                ["git", "add", "--all", "--", "skills/git-diff-brief"],
                 ["git", "commit", "-m", "fix(git-diff-brief): add commit assistance"],
+                ["git", "rev-parse", "HEAD"],
+                ["git", "log", "-1", "--pretty=%s"],
             ],
             calls,
         )
@@ -354,8 +377,35 @@ class StageScriptsTest(unittest.TestCase):
                 text=True,
             ).stdout.splitlines()
             self.assertTrue(commit_result["ok"], commit_result)
+            self.assertRegex(commit_result["commit_hash"], r"^[0-9a-f]{40}$")
+            self.assertEqual("fix(git-diff-brief): add commit assistance", commit_result["commit_subject"])
             self.assertEqual("fix(git-diff-brief): add commit assistance", latest_subject)
             self.assertEqual(["skills/lgwf-wf-tools/tracked.txt"], unstaged)
+
+    def test_token_usage_report_reads_codex_metadata_and_flags_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / ".lgwf" / "codex" / "inspect_repo_state_codex_prompt-run"
+            root.mkdir(parents=True)
+            (root / "metadata.json").write_text(
+                json.dumps(
+                    {
+                        "token_usage": {
+                            "input_tokens": 160000,
+                            "cached_input_tokens": 1000,
+                            "output_tokens": 10,
+                            "reasoning_output_tokens": 5,
+                            "total_tokens": 160010,
+                        }
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            report = self.token_usage_module.collect_token_usage(Path(temp_dir) / ".lgwf" / "codex")
+
+        self.assertEqual("inspect_repo_state", report["nodes"][0]["node_id"])
+        self.assertTrue(report["nodes"][0]["over_budget"])
+        self.assertEqual(["inspect_repo_state"], report["over_budget_nodes"])
 
 
 if __name__ == "__main__":

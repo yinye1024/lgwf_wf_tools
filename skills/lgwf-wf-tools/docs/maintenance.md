@@ -10,17 +10,20 @@
 - `/lgwf-wf-tools doctor`：只运行 `python scripts/doctor_lgwf_wf_tools.py`，输出只读健康检查报告；不修改文件，不派发内部 workflow。需要完整审计时运行 `python scripts/doctor_lgwf_wf_tools.py --deep`。
 - `/lgwf-wf-tools list`：只运行 `python scripts/list_workflows.py`，只读列出 `registry.json` 中可派发的内部 workflow；不派发内部 workflow。
 
-目标 workflow 直启命令见 [target-run.md](target-run.md)。self-improve 场景见 [self-improve.md](self-improve.md)。
+目标 workflow 直启命令见 [target-run.md](target-run.md)。给目标 workflow 播种自包含 self-improve 结构见 [self-improve-seed.md](self-improve-seed.md)。self-improve 场景见 [self-improve.md](self-improve.md)。
 
 ## 脚本级代理入口
 
 - `scripts/run_skill_workflow.py`：供 `git-diff-brief`、`lgwf-wf-thinking` 等外部 skill 调用。该脚本不解析业务参数，只把收到的参数原样透传给本 facade 内置的 `vendor/lgwf-client-assist/scripts/lgwf.py run`，用于避免外部 skill 依赖 bundled `lgwf.py` 的具体路径。
-- 调用方必须显式传入 `lgwf.py run` 所需参数，例如 `--workflow-lgwf`、`--work-dir`、`--input-json`、`--background`、`--rerun-existing`、`--continue-existing` 或 `--resume-existing`。
+- 调用方必须显式传入 `lgwf.py run` 所需参数，例如 `--workflow-lgwf`、`--work-dir`、`--input-json-file`、`--background`、`--rerun-existing`、`--continue-existing` 或 `--resume-existing`。
+- PowerShell 中不要把 JSON 直接塞进 `--input-json`。第一次启动也应先写 UTF-8 no BOM 临时 input JSON 文件，再传 `--input-json-file`；这样可以避免双引号、中文、换行或嵌套 JSON 被 shell 转义破坏。只有纯 ASCII 的空对象 `--input-json "{}"` 可作为临时 smoke 用法。
 
 示例：
 
 ```powershell
-python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-lgwf skills\git-diff-brief\wf\workflow.lgwf --work-dir skills\git-diff-brief\ws --input-json "{}" --background
+$inputPath = "D:/tmp/lgwf-input.json"
+[System.IO.File]::WriteAllText($inputPath, "{}", [System.Text.UTF8Encoding]::new($false))
+python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-lgwf skills\git-diff-brief\wf\workflow.lgwf --work-dir skills\git-diff-brief\ws --input-json-file $inputPath --background
 ```
 
 维护显式命令时，更新本文件、根 `SKILL.md` 以及相关测试，并运行：

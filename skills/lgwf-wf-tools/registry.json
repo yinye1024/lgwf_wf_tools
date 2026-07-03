@@ -49,6 +49,14 @@
       "agents_md": "workflows/e2e-test-generator/AGENTS.md"
     },
     {
+      "id": "wf-post-fix",
+      "kind": "lgwf",
+      "description": "对目标 LGWF workflow 执行 prompt 修复、prompt 升级、E2E 生成和可选验收运行。",
+      "workflow_lgwf": "workflows/wf-post-fix/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-post-fix/ws",
+      "agents_md": "workflows/wf-post-fix/AGENTS.md"
+    },
+    {
       "id": "plan",
       "kind": "lgwf",
       "description": "把复杂任务拆成可确认的计划契约、验收契约，并在用户确认后按 ReAct 闭环执行。",
@@ -69,6 +77,13 @@
       "description": "处理显式目标 workflow 直启、路径解析、已有 run 决策和后续监控。",
       "agents_md": "workflows/target-run/AGENTS.md",
       "entry": "docs/target-run.md"
+    },
+    {
+      "id": "self-improve-seed",
+      "kind": "tool-workflow",
+      "description": "把 self-improve 通用模式播种到目标 workflow，使目标 workflow 获得自包含自我提升结构。",
+      "agents_md": "workflows/self-improve-seed/AGENTS.md",
+      "entry": "workflows/self-improve-seed/scripts/seed_self_improve.py"
     }
   ]
 }

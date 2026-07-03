@@ -1,8 +1,13 @@
 WORKFLOW static_approval_router;
 ENTRY intake_request;
 
+DEFAULTS {
+  ref_root workflow ".";
+}
+
 STEP intake_request
-  PROMPT "agents/intake_request.md";
+  PROMPT "agents/intake_request.md"
+  CONTEXT workspace file "artifacts/request_input.txt";
 
 STEP classify_risk
   PROMPT "agents/classify_risk.md";
@@ -13,4 +18,3 @@ STEP decide_route
 FLOW intake_request
   THEN classify_risk
   THEN decide_route;
-

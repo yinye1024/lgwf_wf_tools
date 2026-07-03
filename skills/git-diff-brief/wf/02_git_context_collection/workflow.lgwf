@@ -15,7 +15,7 @@ PY collect_git_context
 CODEX inspect_repo_state
   PROMPT "agents/inspect_repo_state.md"
   CONTEXT workflow file "resources/git_context_contract.md"
-  CONTEXT workspace file ".lgwf/git_context_snapshot.json"
+  CONTEXT workspace file ".lgwf/git_context_compact.json"
   OUTPUT_JSON ".lgwf/git_context_review.json"
   RESULT state.git_diff_brief.git_context_review_result;
 

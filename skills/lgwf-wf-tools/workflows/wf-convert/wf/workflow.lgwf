@@ -38,10 +38,23 @@ PY capture_wf_create_result
   RESULT state.lgwf_wf_convert.wf_create_result_summary
   UPDATES_STATE;
 
+PY prepare_post_fix_handoff
+  SCRIPT "scripts/prepare_post_fix_handoff.py"
+  INPUT state.lgwf_wf_convert.wf_create_result_summary
+  RESULT state.lgwf_wf_convert.post_fix_handoff_payload
+  UPDATES_STATE;
+
+HANDOFF handoff_wf_post_fix
+  CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload
+  PROMPT "handoff_wf_post_fix.md"
+  RESULT state.lgwf_wf_convert.post_fix_handoff;
+
 FLOW collect_target
   THEN analyze_source
   THEN prepare_payload
   THEN summarize_result
   THEN map_wf_create_input
   THEN wf_create
-  THEN capture_wf_create_result;
+  THEN capture_wf_create_result
+  THEN prepare_post_fix_handoff
+  THEN handoff_wf_post_fix;

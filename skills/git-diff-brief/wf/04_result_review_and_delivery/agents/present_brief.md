@@ -7,7 +7,6 @@
 ## Inputs
 
 - `.lgwf/change_brief_markdown.json`
-- `.lgwf/change_summary_context.json`
 - `resources/output_contract.md`
 
 ## Task
@@ -27,6 +26,7 @@
 ## Constraints
 
 - 不重新解释 Git 事实来源。
+- 只基于 `.lgwf/change_brief_markdown.json` 整理展示对象；commit message、提交动作选项和 open questions 由后续脚本兜底补齐。
 - 默认提交动作必须是 `none`，不得擅自执行或暗示已经执行 `git add` / `git commit`。
 - `commit_action_options` 固定为 `["none", "stage", "commit"]`。
 - 不擅自固定落盘文件名或 revision 策略，只能作为待确认项写出。

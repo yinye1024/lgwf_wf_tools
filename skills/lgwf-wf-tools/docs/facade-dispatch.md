@@ -24,11 +24,20 @@
 
 ```powershell
 $lgwfPy = "vendor/lgwf-client-assist/scripts/lgwf.py"
-python $lgwfPy run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json <json> --background
+$inputPath = "D:/tmp/lgwf-input.json"
+$inputJson = @'
+{
+  "key": "value"
+}
+'@
+[System.IO.File]::WriteAllText($inputPath, $inputJson, [System.Text.UTF8Encoding]::new($false))
+python $lgwfPy run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json-file $inputPath --background
 python $lgwfPy status --work-dir <work_dir> --session-id <session-id>
 python $lgwfPy codex token-status --work-dir <work_dir>
 python $lgwfPy wait
 ```
+
+PowerShell 会处理引号和转义；启动时不要把 inline JSON 直接传给 `--input-json`。即使是第一次启动，也默认使用 UTF-8 no BOM 临时 input JSON 文件。仅当 payload 是纯 ASCII 空对象时，才可把 `--input-json "{}"` 作为临时 smoke 用法。
 
 后台启动后保存同一个 `session_id` / `pid` / `work_dir`，后续 `status`、`wait`、`approval` 和 `runs` 都围绕同一个 run handle。
 
@@ -73,6 +82,16 @@ python $lgwfPy codex token-status --work-dir <work_dir>
 - 如果是 `flow.human_approval`，按 vendor main-agent ask flow 在当前对话确认并提交。
 - 如果是 `AGENT_LOOP` 控制状态但没有 human request，汇报 loop reason、evidence 和 artifact 路径，等待用户决定。
 - 只提交用户明确确认的 approval value。
+- `approval submit --value-json` 当前只支持字符串参数，不支持 `--value-json-file`。PowerShell 中不要手写 inline JSON 或反斜杠转义 JSON；应使用对象生成压缩 JSON，先本地校验，再把变量作为单个参数提交：
+
+```powershell
+$value = [ordered]@{
+  target_workflow_lgwf = "D:/example/workflow.lgwf"
+  max_attempts = 2
+} | ConvertTo-Json -Compress
+$null = $value | ConvertFrom-Json
+python $lgwfPy approval submit --work-dir <work_dir> --request-id <request_id> --decision approve --value-json $value --comment "user approved"
+```
 
 ## 收尾
 

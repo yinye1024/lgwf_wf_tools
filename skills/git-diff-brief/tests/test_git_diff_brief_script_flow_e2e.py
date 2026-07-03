@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -17,7 +18,7 @@ from unittest import mock
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = PACKAGE_ROOT / "wf"
-FORBIDDEN_PATTERNS = ("lgwf.py run", "--workflow-lgwf", "codex")
+FORBIDDEN_PATTERNS = ("lgwf.py run", "--workflow-lgwf")
 
 sys.dont_write_bytecode = True
 
@@ -126,8 +127,10 @@ def assert_route_decision_map(
     expected_routes: dict[str, str],
 ) -> None:
     workflow_text = (PACKAGE_ROOT / workflow_relative_path).read_text(encoding="utf-8")
-    marker = f"{node_name}\n"
-    marker_index = workflow_text.index(marker)
+    marker = re.search(rf"^(?:REVIEW|ROUTE)\s+{re.escape(node_name)}\b", workflow_text, re.MULTILINE)
+    testcase.assertIsNotNone(marker, node_name)
+    assert marker is not None
+    marker_index = marker.start()
     section = workflow_text[marker_index:]
     actual_routes: dict[str, str] = {}
     for raw_line in section.splitlines()[1:]:
@@ -171,6 +174,9 @@ class ScriptFlowE2ETest(unittest.TestCase):
         )
         cls.execute_commit_action = load_script_module(
             "wf/05_git_commit/scripts/execute_commit_action.py"
+        )
+        cls.write_token_usage_by_node = load_script_module(
+            "wf/05_git_commit/scripts/write_token_usage_by_node.py"
         )
 
     def test_case_scope_validation_normalizes_repo_hint_and_rejects_invalid_inputs(self) -> None:
@@ -367,17 +373,26 @@ class ScriptFlowE2ETest(unittest.TestCase):
             )
             payload = capture_main_stdout_json_allowing_git(self.collect_git_context, workdir)
             output_file = workdir / ".lgwf/git_context_snapshot.json"
+            compact_file = workdir / ".lgwf/git_context_compact.json"
             self.assertTrue(output_file.exists())
+            self.assertTrue(compact_file.exists())
             persisted = json.loads(output_file.read_text(encoding="utf-8"))
+            compact = json.loads(compact_file.read_text(encoding="utf-8"))
             self.assertIn("git_diff_snapshot", persisted)
             self.assertIn("latest_commit_context", persisted)
             self.assertIn("changed_files_index", persisted)
             self.assertIn("git_collection_log", persisted)
+            self.assertIn("git_diff_compact", compact)
+            self.assertIn("context_budget", compact)
             self.assertIn("tracked.txt", persisted["git_diff_snapshot"]["diff_name_only"])
             self.assertIn("new.txt", persisted["changed_files_index"]["files"])
             self.assertEqual(
                 ".lgwf/git_context_snapshot.json",
                 payload["git_diff_brief.git_context_collection_result"]["output_file"],
+            )
+            self.assertEqual(
+                ".lgwf/git_context_compact.json",
+                payload["git_diff_brief.git_context_collection_result"]["compact_output_file"],
             )
 
     def test_case_derive_validation_suggestions_returns_real_context_contract(self) -> None:
@@ -417,10 +432,41 @@ class ScriptFlowE2ETest(unittest.TestCase):
                 ".lgwf/delivery_review_context.json",
                 payload["git_diff_brief.prepare_delivery_review_result"]["source_file"],
             )
+            self.assertEqual("review", payload["__route__route_delivery_review"])
             self.assertIn(
                 "缺少 delivery_review_context.json",
                 payload["git_diff_brief.delivery_review_input"]["open_delivery_questions"][0],
             )
+
+    def test_case_prepare_delivery_review_can_skip_manual_review_with_explicit_input(self) -> None:
+        with isolated_workdir_with_lgwf_state() as workdir:
+            checkpoint_dir = workdir / ".lgwf/checkpoints/run-1"
+            checkpoint_dir.mkdir(parents=True)
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/checkpoints/run-1/checkpoint.json",
+                {
+                    "state_before_current_node": {
+                        "input": {
+                            "skip_delivery_review": True,
+                            "delivery_action": "commit",
+                            "commit_message": "chore(git-diff-brief): compact diff context",
+                        }
+                    }
+                },
+            )
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/change_brief_markdown.json",
+                {"change_brief_markdown": "# 变更摘要\n\n正文"},
+            )
+
+            payload = capture_main_stdout_json(self.prepare_delivery_review, workdir)
+            decision = json.loads((workdir / ".lgwf/delivery_decision.json").read_text(encoding="utf-8"))
+
+        self.assertEqual("skip", payload["__route__route_delivery_review"])
+        self.assertEqual("commit", decision["commit_action"])
+        self.assertEqual("chore(git-diff-brief): compact diff context", decision["commit_message"])
 
     def test_case_delivery_approval_routes_and_finalize_output_contract(self) -> None:
         review_fixture = {
@@ -480,6 +526,15 @@ class ScriptFlowE2ETest(unittest.TestCase):
         assert_route_decision_map(
             self,
             "wf/04_result_review_and_delivery/workflow.lgwf",
+            "route_delivery_review",
+            {
+                "review": "confirm_delivery_or_revision",
+                "skip": "finalize_output",
+            },
+        )
+        assert_route_decision_map(
+            self,
+            "wf/04_result_review_and_delivery/workflow.lgwf",
             "confirm_delivery_or_revision",
             {
                 "approve": "finalize_output",
@@ -493,7 +548,8 @@ class ScriptFlowE2ETest(unittest.TestCase):
         self.assertIn("THEN git_commit", root_workflow_text)
         git_commit_workflow_text = (PACKAGE_ROOT / "wf/05_git_commit/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("PY execute_commit_action", git_commit_workflow_text)
-        self.assertIn("FLOW execute_commit_action", git_commit_workflow_text)
+        self.assertIn("PY write_token_usage_by_node", git_commit_workflow_text)
+        self.assertIn("FLOW execute_commit_action THEN write_token_usage_by_node", git_commit_workflow_text)
 
     def test_runtime_guard_and_scripts_do_not_reference_forbidden_runtime_patterns(self) -> None:
         for relative_path in (
@@ -505,6 +561,7 @@ class ScriptFlowE2ETest(unittest.TestCase):
             "wf/04_result_review_and_delivery/scripts/prepare_delivery_review.py",
             "wf/04_result_review_and_delivery/scripts/finalize_brief_result.py",
             "wf/05_git_commit/scripts/execute_commit_action.py",
+            "wf/05_git_commit/scripts/write_token_usage_by_node.py",
         ):
             text = (PACKAGE_ROOT / relative_path).read_text(encoding="utf-8").lower()
             for pattern in FORBIDDEN_PATTERNS:

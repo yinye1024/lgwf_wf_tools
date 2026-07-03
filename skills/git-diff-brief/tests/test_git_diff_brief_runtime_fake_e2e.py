@@ -943,7 +943,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
                 seen_calls = len(calls_path.read_text(encoding="utf-8").splitlines())
 
             phase = str(status_payload.get("phase") or "")
-            if phase == "waiting_human":
+            if phase in {"waiting_human", "waiting_review"}:
                 approval_payload = self._approval_get(
                     session_id=session_id,
                     work_dir=work_dir,

@@ -1,0 +1,47 @@
+WORKFLOW lgwf_wf_post_fix;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_post_fix.instructions.{node}";
+  result_path "lgwf_wf_post_fix.results.{node}";
+}
+
+STEP prepare_target
+  WORKFLOW "01_prepare_target/workflow.lgwf";
+
+STEP prompt_fix_stage
+  WORKFLOW "02_prompt_fix/workflow.lgwf";
+
+STEP prompt_upgrade_stage
+  WORKFLOW "03_prompt_upgrade/workflow.lgwf";
+
+STEP e2e_generate_stage
+  WORKFLOW "04_e2e_generate/workflow.lgwf";
+
+STEP route_script_flow_e2e
+  WORKFLOW "05_run_generated_tests/workflow.lgwf";
+
+STEP route_runtime_fake_e2e
+  WORKFLOW "06_runtime_fake_e2e/workflow.lgwf";
+
+STEP route_real_positive
+  WORKFLOW "07_real_positive_e2e/workflow.lgwf";
+
+STEP route_wf_fix_positive
+  WORKFLOW "08_wf_fix_positive_e2e/workflow.lgwf";
+
+STEP finish
+  WORKFLOW "09_finish/workflow.lgwf";
+
+FLOW main
+  START prepare_target
+  THEN prompt_fix_stage
+  THEN prompt_upgrade_stage
+  THEN e2e_generate_stage
+  THEN route_script_flow_e2e
+  THEN route_runtime_fake_e2e
+  THEN route_real_positive
+  THEN route_wf_fix_positive
+  THEN finish;

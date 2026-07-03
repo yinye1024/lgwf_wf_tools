@@ -101,9 +101,55 @@ class RunWorkflowTests(unittest.TestCase):
         self.assertIn('SCRIPT "scripts/capture_wf_create_result.py"', workflow_text)
         self.assertIn("INPUT state.lgwf_wf_convert.wf_create_result", workflow_text)
         self.assertIn("RESULT state.lgwf_wf_convert.wf_create_result_summary", workflow_text)
+        self.assertIn("PY prepare_post_fix_handoff", workflow_text)
+        self.assertIn('SCRIPT "scripts/prepare_post_fix_handoff.py"', workflow_text)
+        self.assertIn("INPUT state.lgwf_wf_convert.wf_create_result_summary", workflow_text)
+        self.assertIn("RESULT state.lgwf_wf_convert.post_fix_handoff_payload", workflow_text)
+        self.assertIn("HANDOFF handoff_wf_post_fix", workflow_text)
+        self.assertIn("CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload", workflow_text)
+        self.assertIn('PROMPT "handoff_wf_post_fix.md"', workflow_text)
+        self.assertIn("RESULT state.lgwf_wf_convert.post_fix_handoff", workflow_text)
         self.assertNotIn("INPUT state.lgwf_wf_convert.wf_create_payload.wf_create_payload", workflow_text)
         self.assertNotIn("HANDOFF handoff_wf_create", workflow_text)
         self.assertNotIn("SCRIPT \"10_handoff_wf_create/scripts/handoff_wf_create.py\"", workflow_text)
+        self.assertIn("THEN capture_wf_create_result\n  THEN prepare_post_fix_handoff\n  THEN handoff_wf_post_fix", workflow_text)
+
+    def test_capture_summary_preserves_child_created_workflow(self):
+        module = load_module("wf/scripts/capture_wf_create_result.py", "capture_wf_create_result_contract")
+        child_result = {
+            "status": "completed",
+            "final_state": {
+                "lgwf_wf_create": {
+                    "summary_result": {
+                        "workflow_name": "example-workflow",
+                        "target_package_root": "skills/example-workflow",
+                    }
+                }
+            },
+        }
+        summary = module.build_summary(child_result)
+        self.assertEqual(summary["created_workflow"]["target_package_root"], "skills/example-workflow")
+
+    def test_post_fix_handoff_payload_uses_child_created_workflow(self):
+        module = load_module("wf/scripts/prepare_post_fix_handoff.py", "prepare_convert_post_fix_handoff")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            payload = module.build_handoff_payload(
+                {
+                    "created_workflow": {
+                        "workflow_name": "example-workflow",
+                        "target_package_root": "skills/example-workflow",
+                    }
+                },
+                root,
+            )
+
+        self.assertEqual(payload["workflow_id"], "wf-post-fix")
+        self.assertEqual(
+            payload["payload"]["post_fix_target"]["target_workflow_lgwf"],
+            "skills/example-workflow/wf/workflow.lgwf",
+        )
+        self.assertEqual(payload["payload"]["post_fix_target"]["target_dirs"], ["skills/example-workflow"])
 
 
 if __name__ == "__main__":

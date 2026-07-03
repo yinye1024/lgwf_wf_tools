@@ -20,7 +20,20 @@ STEP implement_draft
 STEP summarize_create_result
   WORKFLOW "09_summarize_create_result/workflow.lgwf";
 
+PY prepare_post_fix_handoff
+  SCRIPT "scripts/prepare_post_fix_handoff.py"
+  INPUT state.lgwf_wf_create.summary_result
+  RESULT state.lgwf_wf_create.post_fix_handoff_payload
+  UPDATES_STATE;
+
+HANDOFF handoff_wf_post_fix
+  CONTEXT state.lgwf_wf_create.post_fix_handoff_payload
+  PROMPT "handoff_wf_post_fix.md"
+  RESULT state.lgwf_wf_create.post_fix_handoff;
+
 FLOW define_requirements
   THEN design_structure
   THEN implement_draft
-  THEN summarize_create_result;
+  THEN summarize_create_result
+  THEN prepare_post_fix_handoff
+  THEN handoff_wf_post_fix;

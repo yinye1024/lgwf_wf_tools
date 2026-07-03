@@ -4,7 +4,7 @@
 
 ## PowerShell 输入建议
 
-在 PowerShell 中不要把复杂 JSON 直接塞进 `--input-json`，否则双引号容易被 shell 处理掉。推荐先把 JSON 写入 UTF-8 文件，再使用 `--input-json-file`：
+在 PowerShell 中不要把 JSON 直接塞进 `--input-json`，否则双引号容易被 shell 处理掉，中文和换行也可能在命令参数层损坏。第一次启动也默认先把 JSON 写入 UTF-8 no BOM 文件，再使用 `--input-json-file`：
 
 ```powershell
 $inputPath = "D:/tmp/lgwf-input.json"
@@ -18,7 +18,7 @@ $inputJson = @'
 python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py run --workflow-lgwf <workflow.lgwf> --work-dir <ws> --input-json-file $inputPath --background
 ```
 
-也可以使用 `--input-json @D:/tmp/lgwf-input.json`。新脚本仍兼容原有 `--input-json '{"key":"value"}'`，但不建议在 PowerShell 中用于复杂 JSON。
+也可以使用 `--input-json @D:/tmp/lgwf-input.json`。新脚本仍兼容原有 `--input-json '{"key":"value"}'`，但不建议在 PowerShell 中使用；只有纯 ASCII 的空对象 `--input-json "{}"` 可作为临时 smoke 用法。
 
 ## wf-fix
 
