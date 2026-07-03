@@ -10,7 +10,7 @@
 - 使用 ReAct 生成 `wf-create` 创建输入 proposal。
 - 人工确认 proposal 后固化为 `.lgwf/wf_create_payload.json`。
 - 输出转换报告。
-- 通过原生 `RUN_WORKFLOW` 节点把 `wf_create_payload.wf_create_payload` 作为输入启动后续 `wf-create`。
+- 通过映射节点提取 `wf-create` 输入，再用原生 `RUN_WORKFLOW` 节点启动后续 `wf-create`。
 
 ## 不做的事
 

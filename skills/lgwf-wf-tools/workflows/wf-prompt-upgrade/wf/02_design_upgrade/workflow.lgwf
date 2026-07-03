@@ -14,28 +14,28 @@ PY prepare_prompt_upgrade_design_feedback
   RESULT state.lgwf_wf_prompt_upgrade.design_feedback_prepare_result
   UPDATES_STATE;
 
+CONTEXT_SET design_prompt_upgrade_shared_context {
+  workspace file ".lgwf/prompt_upgrade_target.json";
+  workspace file ".lgwf/prompt_upgrade/inventory.json";
+  workspace file ".lgwf/prompt_upgrade/analysis.json";
+}
+
 REACT design_prompt_upgrade MAX 3
   SPEC "agents/spec.md"
+  CONTEXT design_prompt_upgrade_shared_context
   REASON CODEX
     PROMPT "agents/reason.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal_review.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
   ACT CODEX
     PROMPT "agents/act.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade_target.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/proposal.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_act_result
   OBSERVE CODEX
     PROMPT "agents/observe.md"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/inventory.json"
-    CONTEXT workspace file ".lgwf/prompt_upgrade/analysis.json"
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/proposal_review.json"

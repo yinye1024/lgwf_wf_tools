@@ -6,6 +6,15 @@ DEFAULTS {
   timeout_seconds 900;
 }
 
+CONTEXT_SET inspect_prompt_workflow_shared_context {
+  workspace file ".lgwf/prompt_file_index.json";
+}
+
+CONTEXT_SET propose_create_input_shared_context {
+  workspace file ".lgwf/prompt_convert_target.json";
+  workspace file ".lgwf/prompt_workflow_inspection.json";
+}
+
 PY index_prompt_files
   SCRIPT "scripts/index_prompt_files.py"
   TIMEOUT 60
@@ -14,15 +23,14 @@ PY index_prompt_files
 
 REACT inspect_prompt_workflow_react MAX 3
   SPEC "agents/inspect_prompt_workflow_react.md"
+  CONTEXT inspect_prompt_workflow_shared_context
   REASON CODEX
     PROMPT "agents/inspect_reason.md"
-    CONTEXT workspace file ".lgwf/prompt_file_index.json"
     CONTEXT workspace file ".lgwf/prompt_workflow_inspection_observe.json"
     OUTPUT_JSON ".lgwf/prompt_workflow_inspection_reason.json"
     RESULT state.lgwf_wf_convert.inspect_reason_result
   ACT CODEX
     PROMPT "agents/inspect_act.md"
-    CONTEXT workspace file ".lgwf/prompt_file_index.json"
     CONTEXT workspace file ".lgwf/prompt_workflow_inspection_reason.json"
     OUTPUT_JSON ".lgwf/prompt_workflow_inspection.json" AS_FILE
     RESULT state.lgwf_wf_convert.prompt_workflow_inspection
@@ -38,17 +46,14 @@ REACT inspect_prompt_workflow_react MAX 3
 
 REACT propose_create_input_react MAX 3
   SPEC "agents/propose_create_input_react.md"
+  CONTEXT propose_create_input_shared_context
   REASON CODEX
     PROMPT "agents/propose_reason.md"
-    CONTEXT workspace file ".lgwf/prompt_convert_target.json"
-    CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
     CONTEXT workspace file ".lgwf/wf_create_input_observe.json"
     OUTPUT_JSON ".lgwf/wf_create_input_reason.json"
     RESULT state.lgwf_wf_convert.propose_reason_result
   ACT CODEX
     PROMPT "agents/propose_act.md"
-    CONTEXT workspace file ".lgwf/prompt_convert_target.json"
-    CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
     CONTEXT workspace file ".lgwf/wf_create_input_reason.json"
     OUTPUT_JSON ".lgwf/wf_create_input_proposal.json" AS_FILE
     RESULT state.lgwf_wf_convert.wf_create_input_proposal

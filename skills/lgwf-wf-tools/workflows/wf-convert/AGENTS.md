@@ -8,7 +8,7 @@
 
 第一版不直接生成最终目标 LGWF workflow，但会在转换输入通过人工确认后，通过 `RUN_WORKFLOW` 启动 `wf-create`。不自动调用 `wf-prompt-fix`、`wf-prompt-upgrade` 或 `wf-fix`。
 
-`wf-convert` 完成转换报告后通过原生 `RUN_WORKFLOW wf_create` 节点读取 `state.lgwf_wf_convert.wf_create_payload.wf_create_payload`，作为 `wf-create` 的输入启动下游 workflow，并把运行结果写入 `state.lgwf_wf_convert.wf_create_result`。
+`wf-convert` 完成转换报告后先通过 `map_wf_create_input` 把 `state.lgwf_wf_convert.wf_create_payload` 映射为 `state.lgwf_wf_convert.wf_create_input`，再通过原生 `RUN_WORKFLOW wf_create` 节点启动下游 `wf-create`，并由 `capture_wf_create_result` 消费运行结果。
 
 ## 目录边界
 
@@ -43,7 +43,9 @@
 - `.lgwf/wf_create_payload.json`
 - `.lgwf/wf_create_input_for_wf_create.json`
 - `reports/convert-workflow/convert_result_report.md`
+- `state.lgwf_wf_convert.wf_create_input`
 - `state.lgwf_wf_convert.wf_create_result`
+- `state.lgwf_wf_convert.wf_create_result_summary`
 
 ## 下游 `wf-create`
 
@@ -51,7 +53,7 @@
 
 - `WORKFLOW "workflows/wf-create/wf/workflow.lgwf"`
 - `WORK_DIR "workflows/wf-create/ws"`
-- `INPUT state.lgwf_wf_convert.wf_create_payload.wf_create_payload`
+- `INPUT state.lgwf_wf_convert.wf_create_input`
 - `RESULT state.lgwf_wf_convert.wf_create_result`
 
 `wf-create` 自身仍保留需求、业务流和步骤设计的人工确认边界。

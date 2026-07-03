@@ -14,12 +14,16 @@ PY validate_acceptance_codex_inputs
   RESULT state.lgwf_plan.acceptance_input_validation_result
   UPDATES_STATE;
 
+CONTEXT_SET generate_acceptance_proposal_shared_context {
+  workspace file ".lgwf/react_task_request.json";
+  workspace file ".lgwf/react_task_plan_proposal.json";
+}
+
 REACT generate_acceptance_proposal MAX 3
   SPEC "00_generate_acceptance_proposal/agents/spec.md"
+  CONTEXT generate_acceptance_proposal_shared_context
   REASON CODEX
     PROMPT "00_generate_acceptance_proposal/agents/reason.md"
-    CONTEXT workspace file ".lgwf/react_task_request.json"
-    CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
     CONTEXT workspace file ".lgwf/react_task_plan_observe.json"
     CONTEXT workspace file ".lgwf/react_acceptance_observe.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
@@ -28,8 +32,6 @@ REACT generate_acceptance_proposal MAX 3
     RESULT state.lgwf_plan.acceptance_reason_result
   ACT CODEX
     PROMPT "00_generate_acceptance_proposal/agents/act.md"
-    CONTEXT workspace file ".lgwf/react_task_request.json"
-    CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
     CONTEXT workspace file ".lgwf/react_acceptance_reason.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
@@ -37,7 +39,6 @@ REACT generate_acceptance_proposal MAX 3
     RESULT state.lgwf_plan.acceptance_act_result
   OBSERVE CODEX
     PROMPT "00_generate_acceptance_proposal/agents/observe.md"
-    CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
     CONTEXT workspace file ".lgwf/react_acceptance_proposal.json"
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
