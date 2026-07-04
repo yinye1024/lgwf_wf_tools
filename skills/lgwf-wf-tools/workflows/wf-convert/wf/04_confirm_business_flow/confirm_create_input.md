@@ -21,12 +21,14 @@
 1. proposal 明确目标 workflow 名称和目标 package root。
 2. `raw_intent` 足以被 `wf-create` 消费，包含目标、阶段、输入输出、确认点和范围边界；即使脱离其它结构化字段，也应仍可指导后续 `RUN_WORKFLOW wf_create` 的创建方向。标题式、口号式或只含路径的 `raw_intent` 不得 `approve`。
 3. `stages` 与 `prompt_contracts` 能反映源 prompt workflow 的主要业务结构，并保留足够的证据强度提示或来源摘要，支持审批者判断是否可原样 confirmed。
-4. `assumptions` 和 `out_of_scope` 明确列出，不把未知信息伪装成事实；若高置信事实与 assumptions 分流不清，或这种分流不足以支撑原样 `confirmed`，不得 `approve`。
-5. proposal 没有要求本 workflow 直接生成最终 LGWF package 或自动调用其他 workflow。
-6. `target_package_root` 可被后续 payload 固化逻辑接受；若为空值、`.`、绝对路径、带盘符路径、包含 `..` 或 `.lgwf`，不得 `approve`。
-7. approval 默认应原样复用 proposal 作为 `confirmed`；若 `confirmed` 与 proposal 存在差异，必须能追踪到字段级原因。
-8. 若 `raw_intent` 过于空泛、事实与 assumptions 分流模糊，或 notes 藏有阻塞 payload 的问题，应返回 `revise` 而不是勉强 `approve`。
-9. 对高置信事实、低证据推断与 `assumptions` 的分流，应显式判断其是否足以支撑 proposal 原样 `confirmed`；若仍需审批者自行补全关键语义，不得 `approve`。
+4. `source_business_contract`、`conversion_mapping` 和 `parity_requirements` 能覆盖源业务目标、输入输出、决策规则、审批点、错误路径和业务不变量。
+5. `prompt_execution_mechanics` 与 `discarded_prompt_techniques` 已明确记录执行矩阵、预填充、few-shot、角色强化和格式诱导等不迁移项，且这些内容没有混入业务规则。
+6. `assumptions` 和 `out_of_scope` 明确列出，不把未知信息伪装成事实；若高置信事实与 assumptions 分流不清，或这种分流不足以支撑原样 `confirmed`，不得 `approve`。
+7. proposal 没有要求本 workflow 直接生成最终 LGWF package 或自动调用其他 workflow。
+8. `target_package_root` 可被后续 payload 固化逻辑接受；若为空值、`.`、绝对路径、带盘符路径、包含 `..` 或 `.lgwf`，不得 `approve`。
+9. approval 默认应原样复用 proposal 作为 `confirmed`；若 `confirmed` 与 proposal 存在差异，必须能追踪到字段级原因。
+10. 若 `raw_intent` 过于空泛、事实与 assumptions 分流模糊，或 notes 藏有阻塞 payload 的问题，应返回 `revise` 而不是勉强 `approve`。
+11. 对高置信事实、低证据推断与 `assumptions` 的分流，应显式判断其是否足以支撑 proposal 原样 `confirmed`；若仍需审批者自行补全关键语义，不得 `approve`。
 
 ## 输出
 
@@ -42,6 +44,12 @@
     "source_root": "skills/example-prompt-workflow",
     "stages": [],
     "prompt_contracts": [],
+    "source_business_contract": {},
+    "prompt_execution_mechanics": [],
+    "presentation_constraints": [],
+    "discarded_prompt_techniques": [],
+    "conversion_mapping": [],
+    "parity_requirements": [],
     "human_approval_points": [],
     "assumptions": [],
     "out_of_scope": [],

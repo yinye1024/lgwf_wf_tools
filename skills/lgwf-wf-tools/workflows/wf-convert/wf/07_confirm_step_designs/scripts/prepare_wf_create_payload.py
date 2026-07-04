@@ -44,14 +44,30 @@ def build_payload(
         "source_root": str(confirmed_input.get("source_root", "")),
         "package_profile": package_profile,
         "raw_intent": raw_intent,
+        "source_business_contract": confirmed_input.get("source_business_contract", {}),
+        "conversion_mapping": confirmed_input.get("conversion_mapping", []),
         "prompt_workflow_context": {
             "stages": confirmed_input.get("stages", []),
             "prompt_contracts": confirmed_input.get("prompt_contracts", []),
+            "prompt_execution_mechanics": confirmed_input.get("prompt_execution_mechanics", []),
+            "presentation_constraints": confirmed_input.get("presentation_constraints", []),
+            "discarded_prompt_techniques": confirmed_input.get("discarded_prompt_techniques", []),
+            "parity_requirements": confirmed_input.get("parity_requirements", []),
             "assumptions": confirmed_input.get("assumptions", []),
             "out_of_scope": confirmed_input.get("out_of_scope", []),
         },
     }
     return payload
+
+
+def build_wf_create_input(payload: dict[str, Any]) -> dict[str, Any]:
+    raw_intent = str(payload.get("raw_intent", "")).strip()
+    child_input: dict[str, Any] = {"raw_intent": raw_intent}
+    for field in ("source_business_contract", "conversion_mapping", "prompt_workflow_context"):
+        value = payload.get(field)
+        if value:
+            child_input[field] = value
+    return child_input
 
 
 def main() -> None:
@@ -72,7 +88,7 @@ def main() -> None:
         package_profile=str(confirmed_input.get("package_profile", "internal_workflow_package")),
     )
     wf_create_input_path = lgwf_dir / "wf_create_input_for_wf_create.json"
-    wf_create_input = {"raw_intent": payload["raw_intent"]}
+    wf_create_input = build_wf_create_input(payload)
     wf_create_input_path.write_text(json.dumps(wf_create_input, ensure_ascii=False, indent=2), encoding="utf-8")
     output = {"prompt_convert_payload": payload, "wf_create_payload": wf_create_input}
     output_path = lgwf_dir / "wf_create_payload.json"

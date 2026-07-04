@@ -49,6 +49,12 @@
       "constraints": ["约束"]
     }
   ],
+  "source_business_contract": {},
+  "prompt_execution_mechanics": [],
+  "presentation_constraints": [],
+  "discarded_prompt_techniques": [],
+  "conversion_mapping": [],
+  "parity_requirements": [],
   "human_approval_points": [],
   "assumptions": [],
   "out_of_scope": [],
@@ -60,6 +66,8 @@
 
 - proposal 面向 `wf-create` 输入包，不直接生成最终 workflow。
 - 保留源 prompt workflow 的职责和输入输出契约。
+- `source_business_contract` 只保留必须迁移的业务逻辑；执行矩阵、预填充、few-shot、角色强化、格式诱导等 prompt 技巧必须进入 `prompt_execution_mechanics` 或 `discarded_prompt_techniques`。
+- `conversion_mapping` 逐条说明源业务规则如何映射为目标 LGWF 设计，`parity_requirements` 记录后续业务一致性审查必须覆盖的规则、审批点、错误路径和不变量。
 - 不自动调用 `wf-create` 或修复类 workflow。
 - `target_package_root` 必须是工作区相对路径，不得包含盘符、绝对路径、`..` 或 `.lgwf`。
 - `raw_intent` 应是完整自然语言创建意图，能作为 `wf-create --input-json {"raw_intent": ...}` 的来源。

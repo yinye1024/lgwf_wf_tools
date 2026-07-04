@@ -139,7 +139,6 @@ def build_runtime_authoring_package(root: Path) -> Path:
     root_workflow_path = package_root / "wf" / "workflow.lgwf"
     root_workflow_text = root_workflow_path.read_text(encoding="utf-8")
     root_workflow_marker = (
-        'STEP summarize_result\n  WORKFLOW "09_summarize_create_result/workflow.lgwf";\n\n'
         'PY map_wf_create_input\n'
         '  SCRIPT "scripts/map_wf_create_input.py"\n'
         '  INPUT state.lgwf_wf_convert.wf_create_payload\n'
@@ -155,19 +154,39 @@ def build_runtime_authoring_package(root: Path) -> Path:
         '  INPUT state.lgwf_wf_convert.wf_create_result\n'
         '  RESULT state.lgwf_wf_convert.wf_create_result_summary\n'
         '  UPDATES_STATE;\n\n'
+        'PY verify_business_parity\n'
+        '  SCRIPT "scripts/verify_business_parity.py"\n'
+        '  INPUT state.lgwf_wf_convert.wf_create_result_summary\n'
+        '  RESULT state.lgwf_wf_convert.business_parity_report\n'
+        '  UPDATES_STATE;\n\n'
+        'STEP summarize_result\n'
+        '  WORKFLOW "09_summarize_create_result/workflow.lgwf";\n\n'
+        'PY prepare_post_fix_handoff\n'
+        '  SCRIPT "scripts/prepare_post_fix_handoff.py"\n'
+        '  INPUT state.lgwf_wf_convert.wf_create_result_summary\n'
+        '  RESULT state.lgwf_wf_convert.post_fix_handoff_payload\n'
+        '  UPDATES_STATE;\n\n'
+        'HANDOFF handoff_wf_post_fix\n'
+        '  CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload\n'
+        '  PROMPT "handoff_wf_post_fix.md"\n'
+        '  RESULT state.lgwf_wf_convert.post_fix_handoff;\n\n'
         'FLOW collect_target\n'
         '  THEN analyze_source\n'
         '  THEN prepare_payload\n'
-        '  THEN summarize_result\n'
         '  THEN map_wf_create_input\n'
         '  THEN wf_create\n'
-        '  THEN capture_wf_create_result;\n'
+        '  THEN capture_wf_create_result\n'
+        '  THEN verify_business_parity\n'
+        '  THEN summarize_result\n'
+        '  THEN prepare_post_fix_handoff\n'
+        '  THEN handoff_wf_post_fix;\n'
     )
     if root_workflow_marker not in root_workflow_text:
         raise AssertionError("runtime fake 根 workflow 镜像补丁锚点失效")
     root_workflow_text = root_workflow_text.replace(
         root_workflow_marker,
-        'STEP summarize_result\n  WORKFLOW "09_summarize_create_result/workflow.lgwf";\n\n'
+        'STEP summarize_result\n'
+        '  WORKFLOW "09_summarize_create_result/workflow.lgwf";\n\n'
         'PY runtime_fake_map_wf_create_input\n'
         '  SCRIPT "scripts/runtime_fake_map_wf_create_input.py"\n'
         '  INPUT state.lgwf_wf_convert.wf_create_payload\n'
@@ -186,10 +205,10 @@ def build_runtime_authoring_package(root: Path) -> Path:
         'FLOW collect_target\n'
         '  THEN analyze_source\n'
         '  THEN prepare_payload\n'
-        '  THEN summarize_result\n'
         '  THEN runtime_fake_map_wf_create_input\n'
         '  THEN wf_create\n'
-        '  THEN runtime_fake_capture_wf_create_result;\n',
+        '  THEN runtime_fake_capture_wf_create_result\n'
+        '  THEN summarize_result;\n',
     )
     root_workflow_path.write_text(root_workflow_text, encoding="utf-8")
     return package_root / "wf" / "workflow.lgwf"

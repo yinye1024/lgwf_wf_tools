@@ -71,7 +71,9 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         )
         for relative, approval, revise_node, prepare_revision, apply_node, persist, revision_persist in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("ROUTE_ON_DECISION", text)
+            self.assertIn(f"REVIEW {approval}", text)
+            self.assertIn(f"REVIEW {revise_node}", text)
+            self.assertIn('OPTIONS ["approve", "revise", "reject"]', text)
             self.assertIn(f'PERSIST "{persist}"', text)
             self.assertIn(f'PERSIST "{revision_persist}"', text)
             self.assertIn("FLOW {", text)

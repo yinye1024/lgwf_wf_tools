@@ -38,6 +38,22 @@ class PromptContractTest(unittest.TestCase):
         self.assertNotIn("workflow control", prompt.lower())
         self.assertIn("只写入 `.lgwf/raw_intent_request.json`", prompt)
 
+    def test_structured_prompt_convert_context_is_supported_without_replacing_raw_intent(self) -> None:
+        raw_prompt = read("02_confirm_requirements/confirm_raw_intent.md")
+        raw_contract = read("02_confirm_requirements/resources/raw_intent_contract.md")
+        requirements_prompt = read("02_confirm_requirements/agents/propose_requirements_react.md")
+        business_prompt = read("04_confirm_business_flow/agents/propose_business_flow_react.md")
+
+        for text in (raw_prompt, raw_contract, requirements_prompt, business_prompt):
+            self.assertIn("source_business_contract", text)
+            self.assertIn("conversion_mapping", text)
+            self.assertIn("prompt_workflow_context", text)
+
+        self.assertIn("raw_intent", raw_prompt)
+        self.assertIn("兼容", raw_contract)
+        self.assertIn("优先使用 `source_business_contract`", requirements_prompt)
+        self.assertIn("优先使用 `conversion_mapping`", business_prompt)
+
     def test_revision_prompts_are_revision_approval_prompts(self) -> None:
         for relative in (
             "02_confirm_requirements/revise_requirements.md",

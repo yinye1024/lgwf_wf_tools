@@ -150,9 +150,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                 "apply_confirmed_step_designs",
             ),
         ):
-            self.assertIn(f"APPROVAL {node}", child_workflows)
-            self.assertIn(f"APPROVAL {revise_node}", child_workflows)
-            self.assertIn("ROUTE_ON_DECISION", child_workflows)
+            self.assertIn(f"REVIEW {node}", child_workflows)
+            self.assertIn(f"REVIEW {revise_node}", child_workflows)
+            self.assertIn('OPTIONS ["approve", "revise", "reject"]', child_workflows)
             self.assertIn("FLOW {", child_workflows)
             self.assertIn(node, child_workflows)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', child_workflows)

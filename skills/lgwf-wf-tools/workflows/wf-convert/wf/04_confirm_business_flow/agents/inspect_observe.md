@@ -14,7 +14,7 @@
 
 ## Audit Criteria
 
-1. 顶层字段包含 `source_summary`、`detected_stages`、`prompt_contracts`、`human_approval_points`、`gaps`、`risks` 和 `assumptions`。
+1. 顶层字段包含 `source_summary`、`detected_stages`、`prompt_contracts`、`source_business_contract`、`prompt_execution_mechanics`、`presentation_constraints`、`discarded_prompt_techniques`、`human_approval_points`、`gaps`、`risks` 和 `assumptions`。
 2. 至少能说明源目录的入口线索、主要 prompt 职责和后续创建目标的关键缺口。
 3. `detected_stages` 和 `prompt_contracts` 中的事实应能追溯到源文件路径。
 4. `detected_stages` 和 `prompt_contracts` 必须显式体现证据强度或等价表达、proposal 消费用途，以及证据不足时的降级规则；缺少这些内容不得判 `pass`。
@@ -23,7 +23,9 @@
 7. 信息不足时应进入 `issues`，不能因为数组为空而误判通过。
 8. 对“缺少证据强度”“未执行降级”“事实与 assumptions 混写”这类问题，应优先给出 `high` 或等价高优先级 issue，并在文案中指出对 approval、payload 或 `raw_intent`/`stages`/`prompt_contracts` 的影响链路。
 9. 如果 inspection 让下游无法判断某条事实是否足以进入 proposal 原样 confirmed，或无法看出其应改写为 `assumptions` / 人工确认点，也必须返回 `revise`。
-10. 输出结果应帮助 `decide_inspection.py` 判断是否需要下一轮 ReAct。
+10. `source_business_contract` 中的业务规则不得混入执行矩阵、预填充、few-shot、角色强化或格式诱导；这类内容必须进入 `prompt_execution_mechanics` 或 `discarded_prompt_techniques`。
+11. inspection 必须能支撑后续 proposal 生成 `conversion_mapping` 和 `parity_requirements`；如果缺少业务规则到目标设计的映射证据，应返回 `revise`。
+12. 输出结果应帮助 `decide_inspection.py` 判断是否需要下一轮 ReAct。
 
 ## 输出
 

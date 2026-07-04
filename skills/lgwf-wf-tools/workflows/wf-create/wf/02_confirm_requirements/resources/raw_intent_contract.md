@@ -5,6 +5,7 @@
 ## 设计原则
 
 - 允许用户直接提交原始意图，不要求完整结构化 JSON。
+- 兼容 `wf-convert` 传入的 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`，但这些字段是增强上下文，不替代 `raw_intent`。
 - 只整理需求阶段必需信息，不越权扩展到业务流转设计。
 - 保留不确定项，交由需求 proposal 阶段显式处理。
 
@@ -16,12 +17,17 @@
   "goal": "拟创建 workflow 的目标",
   "constraints": ["已知约束"],
   "target_package_hint": "目录、命名或包位置线索",
-  "open_questions": ["后续需求方案仍需澄清的问题"]
+  "open_questions": ["后续需求方案仍需澄清的问题"],
+  "source_business_contract": {},
+  "conversion_mapping": [],
+  "prompt_workflow_context": {}
 }
 ```
 
 ## 下游衔接
 
 - 上述结构是 `create_requirements_proposal` 的输入上下文，不是最终需求确认结果。
+- `propose_requirements_react` 应优先使用 `source_business_contract` 提炼目标、输入输出、人工确认点和业务不变量；字段缺失时回退到 `raw_intent`。
+- `propose_business_flow_react` 应优先使用 `conversion_mapping` 和 `prompt_workflow_context` 衔接业务阶段与下游步骤。
 - 当前 run 只要求存在从 `raw_intent` 进入 `create_requirements_proposal` 的接口说明。
 - 当前阶段只固化 `.lgwf/raw_intent_request.json`；`.lgwf/create_requirements.json` 由后续需求确认 approve 后生成。

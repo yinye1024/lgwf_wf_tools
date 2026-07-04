@@ -33,6 +33,16 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
             "mode": "manual",
         }
     }
+    parity_report = summary.get("business_parity_report")
+    if not isinstance(parity_report, dict):
+        parity_path = work_dir / ".lgwf" / "business_parity_report.json"
+        if parity_path.exists():
+            parity_data = json.loads(parity_path.read_text(encoding="utf-8-sig"))
+            parity_report = parity_data if isinstance(parity_data, dict) else {}
+        else:
+            parity_report = {}
+    if parity_report:
+        input_payload["business_parity_report"] = parity_report
     input_json_file = work_dir / ".lgwf" / "post_fix_handoff_input.json"
     input_json_file.parent.mkdir(parents=True, exist_ok=True)
     input_json_file.write_text(json.dumps(input_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -40,6 +50,9 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
     report_path = str(created_workflow.get("report_path", "")).strip()
     if report_path:
         source_artifacts.append(report_path)
+    parity_report_path = str(parity_report.get("report_path", "")).strip() if parity_report else ""
+    if parity_report_path:
+        source_artifacts.append(parity_report_path)
     suggested_command = (
         "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py run "
         f"--workflow-lgwf {WF_POST_FIX_LGWF} "
