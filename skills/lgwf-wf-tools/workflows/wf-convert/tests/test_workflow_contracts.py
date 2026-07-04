@@ -160,6 +160,32 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(report["discarded_prompt_techniques_checked"][0]["technique"], "prefill")
 
 
+class SelfImproveContractTests(unittest.TestCase):
+    def test_wf_convert_has_self_contained_self_improve_structure(self):
+        expected_files = [
+            "self-improve/AGENTS.md",
+            "self-improve/README.md",
+            "self-improve/manifest.json",
+            "self-improve/scripts/self_improve.py",
+            "self-improve/scripts/run_trace_eval.py",
+            "self-improve/scripts/check_self_improve.py",
+            "self-improve/evals/baseline-cases.json",
+            "self-improve/templates/proposal.template.md",
+            "self-improve/trace-eval/workflow.json",
+            "self-improve/trace-eval/golden_cases/runtime_trace_contract/spec.json",
+        ]
+        for relative_path in expected_files:
+            with self.subTest(relative_path=relative_path):
+                self.assertTrue((PACKAGE_ROOT / relative_path).is_file(), relative_path)
+
+        manifest = json.loads((PACKAGE_ROOT / "self-improve/manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual("wf-convert-self-improve", manifest["name"])
+        self.assertEqual(2, manifest["version"])
+        self.assertEqual(".local/self-improve", manifest["local_state_root"])
+        self.assertIn("trace-eval", manifest["commands"])
+        self.assertIn("check", manifest["commands"])
+
+
 class RunWorkflowTests(unittest.TestCase):
     def test_convert_prompts_require_business_contract_and_prompt_technique_separation(self):
         prompt_paths = [
