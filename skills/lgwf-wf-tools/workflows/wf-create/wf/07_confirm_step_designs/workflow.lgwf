@@ -30,26 +30,13 @@ REVIEW confirm_step_designs
   CONTEXT state.lgwf_wf_create.step_design_confirmation_context
   RESULT state.lgwf_wf_create.step_design_decision_result
   PERSIST ".lgwf/step_design_confirmation_record.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "reject"];
 
 PY apply_confirmed_step_designs
   SCRIPT "scripts/apply_confirmed_step_designs.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_create.apply_step_designs_result
   UPDATES_STATE;
-
-PY prepare_step_design_revision_confirmation
-  SCRIPT "scripts/prepare_step_design_revision_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_step_design_revision_confirmation_result
-  UPDATES_STATE;
-
-REVIEW revise_step_designs
-  PROMPT_REF "revise_step_designs.md"
-  CONTEXT state.lgwf_wf_create.step_design_revision_context
-  RESULT state.lgwf_wf_create.step_design_revision_decision_result
-  PERSIST ".lgwf/step_design_revision_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
 
 PY prepare_implementation_context
   SCRIPT "scripts/prepare_implementation_context.py"
@@ -70,14 +57,6 @@ FLOW {
 
   confirm_step_designs
     WHEN "approve" THEN apply_confirmed_step_designs
-    WHEN "revise" THEN prepare_step_design_revision_confirmation
-    WHEN "reject" THEN FAIL_ALL;
-
-  prepare_step_design_revision_confirmation THEN revise_step_designs;
-
-  revise_step_designs
-    WHEN "approve" THEN apply_confirmed_step_designs
-    WHEN "revise" THEN prepare_step_design_revision_confirmation
     WHEN "reject" THEN FAIL_ALL;
 
   apply_confirmed_step_designs THEN prepare_implementation_context THEN implement_steps_react;

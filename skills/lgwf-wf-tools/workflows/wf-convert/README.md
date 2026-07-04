@@ -24,3 +24,12 @@
 ## 运行状态
 
 运行状态只写入 `ws/.lgwf`。目标 package 根目录不得写入 `.lgwf`。
+
+## ReAct 反馈闭环
+
+`propose_create_input_react` 的 `observe` 必须输出结构化 `issues`。每个 issue 包含 `blocking`：
+
+- `blocking=true`：会阻塞人工确认、confirmed 原样复用或 payload 固化，`decide_create_input.py` 会继续下一轮 ReAct。
+- `blocking=false`：只影响人工关注或后续运行质量，`decide_create_input.py` 会退出到 `confirm_create_input`，由人工确认处理。
+
+下一轮 `reason` 同时读取 `.lgwf/wf_create_input_observe.json` 和 `.lgwf/wf_create_input_proposal.json`，必须生成 `issue_resolution_plan`。`act` 按该计划最小修复上一轮 proposal，避免无关重写。第一轮由 `index_prompt_files.py` 创建空的 `.lgwf/wf_create_input_proposal.json` 占位文件，确保 context 文件存在。

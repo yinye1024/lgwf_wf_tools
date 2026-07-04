@@ -13,6 +13,7 @@ CONTEXT_SET inspect_prompt_workflow_shared_context {
 CONTEXT_SET propose_create_input_shared_context {
   workspace file ".lgwf/prompt_convert_target.json";
   workspace file ".lgwf/prompt_workflow_inspection.json";
+  workspace file ".lgwf/wf_create_input_proposal.json";
 }
 
 PY index_prompt_files
@@ -59,7 +60,6 @@ REACT propose_create_input_react MAX 3
     RESULT state.lgwf_wf_convert.wf_create_input_proposal
   OBSERVE CODEX
     PROMPT "agents/propose_observe.md"
-    CONTEXT workspace file ".lgwf/wf_create_input_proposal.json"
     OUTPUT_JSON ".lgwf/wf_create_input_observe.json"
     RESULT state.lgwf_wf_convert.propose_observe_result
   DECIDE PY

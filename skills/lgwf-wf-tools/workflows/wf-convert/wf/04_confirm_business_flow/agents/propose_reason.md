@@ -9,6 +9,7 @@
 - `.lgwf/prompt_convert_target.json`：已确认转换目标。
 - `.lgwf/prompt_workflow_inspection.json`：源 prompt workflow 分析结果。
 - `.lgwf/wf_create_input_observe.json`：上一轮 proposal 审查结果。
+- `.lgwf/wf_create_input_proposal.json`：上一轮 proposal；第一轮可能不存在或为空。
 
 ## 任务
 
@@ -22,6 +23,8 @@
 8. 如果 observe 指出 proposal 缺口，优先规划这些修复。
 9. 基于当前已注入的目标信息、inspection 结果和既有 proposal 边界，明确 proposal 字段哪些会进入后续固化链路，哪些只用于人工理解或后续 `RUN_WORKFLOW wf_create` 备注；至少对 `target_package_root`、`raw_intent`、`stages`、`prompt_contracts`、`source_business_contract`、`conversion_mapping`、`parity_requirements`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create` 逐字段说明主要消费方。
 10. 把 `raw_intent` 作为独立关键字段规划，明确其最小业务语义清单，确保脱离结构化字段后仍可指导 `wf-create` 创建方向。
+11. 如果上一轮 observe 包含 `blocking=true` 的 issues，本轮必须逐条生成 `issue_resolution_plan`，说明对应字段、修复动作、是否修改 proposal、无法确认时降级到 `assumptions`、`out_of_scope` 或 `run_workflow_notes_for_wf_create` 的规则。
+12. 如果上一轮 proposal 已存在，本轮优先做最小定向修复，不重新设计无关字段。
 
 ## Success Criteria
 
@@ -46,6 +49,14 @@
       "field": "raw_intent",
       "source": "prompt_convert_target + prompt_workflow_inspection",
       "construction_rule": "如何组织成 wf-create 可消费的自然语言意图"
+    }
+  ],
+  "issue_resolution_plan": [
+    {
+      "field": "stages",
+      "blocking": true,
+      "required_change": "为每个 stage 补充 source_files 和 evidence_strength",
+      "resolution": "从 prompt_workflow_inspection.detected_stages 提取来源；证据不足的 stage 降级到 assumptions"
     }
   ],
   "fields_to_include": [
@@ -74,7 +85,8 @@
 ## Output Format
 
 - 只输出一个 UTF-8 JSON object，并写入 `.lgwf/wf_create_input_reason.json`。
-- JSON 顶层字段固定为 `proposal_plan`、`fields_to_include`、`assumption_policy` 和 `known_limits`。
+- JSON 顶层字段固定为 `proposal_plan`、`issue_resolution_plan`、`fields_to_include`、`assumption_policy` 和 `known_limits`。
+- `issue_resolution_plan` 必须覆盖上一轮所有 `blocking=true` issues；第一轮没有上一轮 proposal 或没有 blocking issue 时输出空数组。
 - `fields_to_include` 至少覆盖示例中的必需字段，不删除后续 proposal 所需字段。
 - `proposal_plan` 中每个关键字段都应说明来源、构造规则、在后续固化或人工确认链路中的用途，以及当证据不足时的降级去向。
 - `proposal_plan` 中至少要对 `target_package_root`、`raw_intent`、`stages`、`prompt_contracts`、`source_business_contract`、`conversion_mapping`、`parity_requirements`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create` 分别给出主要消费方，避免把多个字段合并成“后续使用”的笼统描述。

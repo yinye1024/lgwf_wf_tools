@@ -256,7 +256,7 @@ def _run_compile(
 
 
 def _workflow_workspace_cwd(workflow_lgwf: str) -> pathlib.Path:
-    workflow_path = pathlib.Path(workflow_lgwf).expanduser().resolve()
+    workflow_path = _resolve_workflow_path(workflow_lgwf)
     parts = workflow_path.parts
     if "workflows" in parts:
         index = parts.index("workflows")
@@ -268,7 +268,32 @@ def _workflow_workspace_cwd(workflow_lgwf: str) -> pathlib.Path:
 def _normalize_workflow_arg(argv: list[str]) -> list[str]:
     if not argv:
         return []
-    return [str(pathlib.Path(argv[0]).expanduser().resolve()), *argv[1:]]
+    return [str(_resolve_workflow_path(argv[0])), *argv[1:]]
+
+
+def _resolve_workflow_path(workflow_lgwf: str) -> pathlib.Path:
+    workflow_path = pathlib.Path(workflow_lgwf).expanduser()
+    if workflow_path.is_absolute():
+        return workflow_path.resolve()
+    cwd_candidate = (pathlib.Path.cwd() / workflow_path).resolve()
+    if cwd_candidate.exists():
+        return cwd_candidate
+    fallback_candidate = (_workflow_fallback_root() / workflow_path).resolve()
+    if fallback_candidate.exists() or workflow_path.parts[:1] == ("workflows",):
+        return fallback_candidate
+    return cwd_candidate
+
+
+def _workflow_fallback_root() -> pathlib.Path:
+    candidates = [
+        SCRIPT_DIR.parents[2] if len(SCRIPT_DIR.parents) > 2 else None,
+        SCRIPT_DIR.parents[1] if len(SCRIPT_DIR.parents) > 1 else None,
+        SCRIPT_DIR.parent,
+    ]
+    for candidate in candidates:
+        if candidate is not None and (candidate / "workflows").is_dir():
+            return candidate.resolve()
+    return SCRIPT_DIR.parent.resolve()
 
 
 def _resolve_runtime_skill_root(root: pathlib.Path) -> pathlib.Path:

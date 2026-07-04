@@ -19,8 +19,9 @@ class RunSkillWorkflowTests(unittest.TestCase):
     def test_proxies_arguments_to_bundled_lgwf_run(self) -> None:
         calls: list[list[str]] = []
 
-        def fake_run(args: list[str]) -> subprocess.CompletedProcess[str]:
+        def fake_run(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
             calls.append(args)
+            self.assertEqual(kwargs.get("cwd"), str(FACADE_ROOT))
             return subprocess.CompletedProcess(args=args, returncode=7)
 
         argv = [
@@ -44,8 +45,9 @@ class RunSkillWorkflowTests(unittest.TestCase):
     def test_proxies_input_json_file_argument(self) -> None:
         calls: list[list[str]] = []
 
-        def fake_run(args: list[str]) -> subprocess.CompletedProcess[str]:
+        def fake_run(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
             calls.append(args)
+            self.assertEqual(kwargs.get("cwd"), str(FACADE_ROOT))
             return subprocess.CompletedProcess(args=args, returncode=0)
 
         argv = [

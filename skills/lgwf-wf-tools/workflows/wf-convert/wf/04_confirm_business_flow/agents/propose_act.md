@@ -9,6 +9,7 @@
 - `.lgwf/prompt_convert_target.json`
 - `.lgwf/prompt_workflow_inspection.json`
 - `.lgwf/wf_create_input_reason.json`
+- `.lgwf/wf_create_input_proposal.json`：上一轮 proposal；第一轮可能不存在或为空。
 
 ## 任务
 
@@ -71,6 +72,9 @@
 - `human_approval_points` 应保留源 workflow 中已有或后续创建时必须人工拍板的确认点。
 - inspection 中证据较弱、但对创建方案重要的内容，应显式降级到 `assumptions` 或 `run_workflow_notes_for_wf_create`，不要伪装成已确认阶段或契约。
 - `run_workflow_notes_for_wf_create` 要记录非阻塞剩余风险、人工关注点和未固化为 confirmed 事实的上下文，避免与 `assumptions` 或 `out_of_scope` 混用；阻塞 approval 或 payload 的问题不得隐藏在 notes 中，也不得借 notes 掩盖 `raw_intent`、`stages` 或 `prompt_contracts` 的关键缺口。
+- 如果 `wf_create_input_reason.json` 包含非空 `issue_resolution_plan`，本轮必须优先按该计划修复上一轮 proposal；未被 issue 指向且仍然有效的字段应保持语义稳定，避免无关重写。
+- 对 `blocking=true` issue，必须在对应字段、`assumptions`、`out_of_scope` 或 `run_workflow_notes_for_wf_create` 中体现修复结果；不能只在自然语言里解释。
+- 如果某个 `required_change` 无法从 inspection 证据中确认，必须把该项降级到 `assumptions` 或 `run_workflow_notes_for_wf_create`，并避免写入确定事实字段。
 - 生成前按本 prompt 内联的路径合法性规则自检 `target_package_root`：不得为空字符串、`.`、绝对路径、带盘符路径、包含 `..`，也不得写入 `.lgwf`。
 - `out_of_scope` 至少声明：本 workflow 不直接生成最终 LGWF package、不跳过人工确认、不自动调用修复或升级 workflow。
 

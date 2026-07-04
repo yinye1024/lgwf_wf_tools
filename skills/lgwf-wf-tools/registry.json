@@ -9,6 +9,14 @@
       "agents_md": "workflows/wf-fix/AGENTS.md"
     },
     {
+      "id": "wf-audit-fix",
+      "kind": "lgwf",
+      "description": "只运行静态 audit 并在 candidate 中修复目标 LGWF DSL 问题，candidate 通过后 promote 并复审真实目标。",
+      "workflow_lgwf": "workflows/wf-audit-fix/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-audit-fix/ws",
+      "agents_md": "workflows/wf-audit-fix/AGENTS.md"
+    },
+    {
       "id": "wf-create",
       "kind": "lgwf",
       "description": "根据用户原始意图创建新的 LGWF workflow 初稿，按需求、业务流、步骤设计和实现初稿分阶段确认。",

@@ -53,6 +53,15 @@ def require_approve(approval: dict[str, Any]) -> None:
         raise ValueError("只有 approval=approve 才能固化 confirmed artifact")
 
 
+def confirmed_from_proposal(lgwf_dir: Path, approval: dict[str, Any], proposal_file: str) -> dict[str, Any]:
+    """按固定 proposal 产物固化，不让 review value 承担业务结构生成职责。"""
+    require_approve(approval)
+    proposal = load_json(lgwf_dir / proposal_file)
+    if not proposal:
+        raise ValueError(f"{proposal_file} 不存在或为空，无法固化 confirmed artifact")
+    return proposal
+
+
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

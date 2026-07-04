@@ -83,8 +83,12 @@ class RunWorkflowRuntimeTest(unittest.TestCase):
                 )
             finally:
                 os.chdir(previous_cwd)
-            child_record_exists = (parent_ws / ".lgwf" / "child-runs" / "child.json").is_file()
-            child_runs_exists = (root / "child_ws" / ".lgwf" / "runs").is_dir()
+            child_record_path = parent_ws / ".lgwf" / "child-runs" / "child.json"
+            child_record_exists = child_record_path.is_file()
+            child_record = json.loads(child_record_path.read_text(encoding="utf-8"))
+            declared_child_work_dir = Path(child_record["declared_work_dir"])
+            actual_child_work_dir = Path(child_record["work_dir"])
+            child_runs_exists = (actual_child_work_dir / ".lgwf" / "runs").is_dir()
 
         child_result = final_state["pipeline"]["child_result"]
         self.assertEqual(child_result["status"], "completed")
@@ -92,6 +96,8 @@ class RunWorkflowRuntimeTest(unittest.TestCase):
         self.assertNotEqual(child_result["final_state"]["child"]["done"]["pid"], os.getpid())
         self.assertIn("run_id", child_result)
         self.assertTrue(child_record_exists)
+        self.assertEqual(declared_child_work_dir, (root / "child_ws").resolve())
+        self.assertEqual(Path(child_result["work_dir"]), actual_child_work_dir)
         self.assertTrue(child_runs_exists)
 
     def test_run_workflow_failure_records_child_summary(self) -> None:

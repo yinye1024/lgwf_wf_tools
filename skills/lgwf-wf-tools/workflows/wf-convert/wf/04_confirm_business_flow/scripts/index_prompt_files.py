@@ -68,6 +68,9 @@ def main() -> None:
                 json.dumps({"verdict": "initial", "issues": []}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+    proposal_path = output_path.parent / "wf_create_input_proposal.json"
+    if not proposal_path.exists():
+        proposal_path.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"lgwf_wf_convert.prompt_file_index": inventory}, ensure_ascii=False, indent=2))
 
 

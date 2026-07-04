@@ -130,42 +130,31 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                 (ROOT / "07_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8"),
             )
         )
-        for node, prepare_revision, revise_node, apply_node in (
+        for node, apply_node in (
             (
                 "confirm_requirements",
-                "prepare_requirements_revision_confirmation",
-                "revise_requirements",
                 "apply_confirmed_requirements",
             ),
             (
                 "confirm_business_flow",
-                "prepare_business_flow_revision_confirmation",
-                "revise_business_flow",
                 "apply_confirmed_business_flow",
             ),
             (
                 "confirm_step_designs",
-                "prepare_step_design_revision_confirmation",
-                "revise_step_designs",
                 "apply_confirmed_step_designs",
             ),
         ):
             self.assertIn(f"REVIEW {node}", child_workflows)
-            self.assertIn(f"REVIEW {revise_node}", child_workflows)
-            self.assertIn('OPTIONS ["approve", "revise", "reject"]', child_workflows)
+            self.assertIn('OPTIONS ["approve", "reject"]', child_workflows)
             self.assertIn("FLOW {", child_workflows)
             self.assertIn(node, child_workflows)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', child_workflows)
-            self.assertIn(f'WHEN "revise" THEN {prepare_revision}', child_workflows)
+            self.assertNotIn('WHEN "revise"', child_workflows)
             self.assertIn('WHEN "reject" THEN FAIL_ALL', child_workflows)
-            self.assertIn(revise_node, child_workflows)
         for persisted in (
             ".lgwf/create_requirements_approval.json",
-            ".lgwf/create_requirements_revision_approval.json",
             ".lgwf/business_flow_approval.json",
-            ".lgwf/business_flow_revision_approval.json",
             ".lgwf/step_design_confirmation_record.json",
-            ".lgwf/step_design_revision_approval.json",
         ):
             self.assertIn(f'PERSIST "{persisted}"', child_workflows)
 
@@ -238,23 +227,29 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             (
                 "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "create_requirements_approval.json",
+                "create_requirements_proposal.json",
                 "create_requirements.json",
                 "apply_requirements",
+                {"workflow_name": "demo", "target_package_root": "skills/demo"},
             ),
             (
                 "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "business_flow_approval.json",
+                "business_flow_proposal.json",
                 "business_flow.json",
                 "apply_business_flow",
+                {"workflow_name": "demo", "stages": []},
             ),
             (
                 "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
+                "step_designs_proposal.json",
                 "step_designs.json",
                 "apply_step_designs",
+                {"step_designs": []},
             ),
         )
-        for relative, approval_name, output_name, module_name in cases:
+        for relative, approval_name, proposal_name, output_name, module_name, proposal in cases:
             module = load_module(ROOT / relative, module_name)
             with self.subTest(relative=relative):
                 with self.assertRaises(ValueError):
@@ -266,6 +261,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                     root = Path(temp)
                     lgwf_dir = root / ".lgwf"
                     lgwf_dir.mkdir()
+                    (lgwf_dir / proposal_name).write_text(json.dumps(proposal), encoding="utf-8")
                     (lgwf_dir / approval_name).write_text(
                         '{"decision": "approve", "target_package_root": "skills/demo"}',
                         encoding="utf-8",

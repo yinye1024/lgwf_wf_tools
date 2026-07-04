@@ -557,6 +557,12 @@ class WorkflowRuntimeHarness:
             "source_root": source_root,
             "stages": [{"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}],
             "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
+            "source_business_contract": {},
+            "prompt_execution_mechanics": [],
+            "presentation_constraints": [],
+            "discarded_prompt_techniques": [],
+            "conversion_mapping": [],
+            "parity_requirements": [],
             "human_approval_points": ["confirm_create_input"],
             "assumptions": ["源目录文本文件均可按 UTF-8 读取"],
             "out_of_scope": ["不直接生成最终 workflow package"],
@@ -572,6 +578,12 @@ class WorkflowRuntimeHarness:
                 {"id": "analyze", "summary": "分析业务结构并整理给 wf-create 的创建输入"},
             ],
             "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
+            "source_business_contract": {},
+            "prompt_execution_mechanics": [],
+            "presentation_constraints": [],
+            "discarded_prompt_techniques": [],
+            "conversion_mapping": [],
+            "parity_requirements": [],
             "human_approval_points": ["confirm_create_input"],
             "assumptions": ["样例源目录只覆盖文本文件索引与转换输入整理，不覆盖真实业务 happy path"],
             "out_of_scope": ["不直接生成最终 workflow package"],
@@ -599,6 +611,12 @@ class WorkflowRuntimeHarness:
             "source_root": source_root,
             "stages": [{"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}],
             "prompt_contracts": happy_confirmed["prompt_contracts"],
+            "source_business_contract": happy_confirmed["source_business_contract"],
+            "prompt_execution_mechanics": happy_confirmed["prompt_execution_mechanics"],
+            "presentation_constraints": happy_confirmed["presentation_constraints"],
+            "discarded_prompt_techniques": happy_confirmed["discarded_prompt_techniques"],
+            "conversion_mapping": happy_confirmed["conversion_mapping"],
+            "parity_requirements": happy_confirmed["parity_requirements"],
             "human_approval_points": ["confirm_create_input"],
             "assumptions": ["源目录文本文件均可按 UTF-8 读取"],
             "out_of_scope": ["不直接生成最终 workflow package"],
@@ -611,22 +629,58 @@ class WorkflowRuntimeHarness:
             "source_root": source_root,
             "stages": revise_confirmed["stages"],
             "prompt_contracts": revise_confirmed["prompt_contracts"],
+            "source_business_contract": revise_confirmed["source_business_contract"],
+            "prompt_execution_mechanics": revise_confirmed["prompt_execution_mechanics"],
+            "presentation_constraints": revise_confirmed["presentation_constraints"],
+            "discarded_prompt_techniques": revise_confirmed["discarded_prompt_techniques"],
+            "conversion_mapping": revise_confirmed["conversion_mapping"],
+            "parity_requirements": revise_confirmed["parity_requirements"],
             "human_approval_points": ["confirm_create_input"],
             "assumptions": revise_confirmed["assumptions"],
             "out_of_scope": revise_confirmed["out_of_scope"],
             "run_workflow_notes_for_wf_create": revise_confirmed["run_workflow_notes_for_wf_create"],
         }
+        proposal_with_evidence = dict(proposal_second)
+        proposal_with_evidence["stages"] = [
+            {
+                "name": "分析源 prompt workflow",
+                "responsibility": "索引 prompt 文件并整理可交给 wf-create 的输入方案",
+                "inputs": ["prompt_convert_target", "prompt_file_index"],
+                "outputs": ["wf_create_input_proposal"],
+                "source_files": ["README.md", "flow/workflow.lgwf"],
+                "source_summary": "来自源 README 和 workflow.lgwf 的阶段职责",
+                "evidence_strength": "high",
+            }
+        ]
         propose_reason_first = {
+            "proposal_plan": [{"field": "raw_intent", "source": "inspection + target approval"}],
+            "issue_resolution_plan": [],
             "fields_to_include": list(proposal_first.keys()),
             "field_sources": {"raw_intent": "inspection + target approval"},
             "assumption_policy": "缺失值只做最小补全，不扩展 scope",
             "known_limits": ["确认前不启动 wf-create"],
         }
         propose_reason_second = {
+            "proposal_plan": [{"field": "raw_intent", "source": "approval revise changes"}],
+            "issue_resolution_plan": [],
             "fields_to_include": list(proposal_second.keys()),
             "field_sources": {"raw_intent": "approval revise changes"},
             "assumption_policy": "修订优先覆盖 approval changes",
             "known_limits": ["仍只生成 RUN_WORKFLOW 输入描述"],
+        }
+        propose_reason_observe_fix = {
+            "proposal_plan": [{"field": "stages", "source": "previous proposal + observe issue"}],
+            "issue_resolution_plan": [
+                {
+                    "field": "stages",
+                    "blocking": True,
+                    "required_change": "为每个 stage 补充 evidence_strength",
+                    "resolution": "已在 stage 条目中补充 high confidence 证据说明",
+                }
+            ],
+            "fields_to_include": list(proposal_with_evidence.keys()),
+            "assumption_policy": "证据不足时降级到 assumptions",
+            "known_limits": [],
         }
         mapping = {
             "wf/04_confirm_business_flow/agents/inspect_reason.md": [
@@ -653,6 +707,42 @@ class WorkflowRuntimeHarness:
                             "call_index": 1,
                             "payload": {"verdict": "pass", "issues": []},
                             "summary": "proposal observe 1",
+                        },
+                    ],
+                }
+            )
+        elif self.scenario["scenario_id"] == "observe_revise_then_pass":
+            mapping.update(
+                {
+                    "wf/04_confirm_business_flow/agents/propose_reason.md": [
+                        {"call_index": 1, "payload": propose_reason_first, "summary": "proposal reason 1"},
+                        {"call_index": 2, "payload": propose_reason_observe_fix, "summary": "proposal reason 2"},
+                    ],
+                    "wf/04_confirm_business_flow/agents/propose_act.md": [
+                        {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
+                        {"call_index": 2, "payload": proposal_with_evidence, "summary": "proposal act 2"},
+                    ],
+                    "wf/04_confirm_business_flow/agents/propose_observe.md": [
+                        {
+                            "call_index": 1,
+                            "payload": {
+                                "verdict": "revise",
+                                "issues": [
+                                    {
+                                        "field": "stages",
+                                        "blocking": True,
+                                        "severity": "high",
+                                        "issue": "stage 缺少 evidence_strength，approval 无法原样确认",
+                                        "required_change": "为每个 stage 补充 evidence_strength",
+                                    }
+                                ],
+                            },
+                            "summary": "proposal observe 1",
+                        },
+                        {
+                            "call_index": 2,
+                            "payload": {"verdict": "pass", "issues": []},
+                            "summary": "proposal observe 2",
                         },
                     ],
                 }
@@ -1313,6 +1403,52 @@ class RuntimeFakeE2ETests(unittest.TestCase):
             if item["prompt_key"] == "wf/04_confirm_business_flow/agents/propose_act.md"
         ]
         self.assertEqual(propose_call_indexes, [1, 2])
+
+    def test_observe_revise_then_pass(self) -> None:
+        scenario = {
+            "scenario_id": "observe_revise_then_pass",
+            "approval_steps": [
+                {
+                    "approval_node": "collect_prompt_workflow_target",
+                    "submit_value": {
+                        "target_dir": "<temp_fixture_root>/sample_prompt_workflow",
+                        "entry_files": ["README.md", "flow/workflow.lgwf"],
+                        "target_workflow_name": "demo-converted-workflow",
+                        "target_package_root": "skills/lgwf-wf-tools/workflows/generated/demo-converted-workflow",
+                        "constraints": ["不直接生成最终 LGWF workflow", "不自动调用 wf-create"],
+                    },
+                },
+                {
+                    "approval_node": "confirm_create_input",
+                    "submit_value": {
+                        "approval": "approve",
+                        "comment": "observe revise 后第二轮已修复",
+                    },
+                },
+            ],
+        }
+        work_dir, phase_history, call_log, approval_events = self.run_scenario(scenario)
+        self.assertEqual(phase_history[-1]["phase"], "completed")
+        self.assert_approval_sequence(
+            approval_events,
+            ["collect_prompt_workflow_target", "confirm_create_input"],
+            scenario_id=scenario["scenario_id"],
+        )
+        self.assert_start_command_contract(work_dir)
+        self.assert_artifacts(work_dir, scenario["scenario_id"])
+        self.assert_prompt_call_counts(
+            call_log,
+            {
+                "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
+                "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
+                "wf/04_confirm_business_flow/agents/inspect_observe.md": 1,
+                "wf/04_confirm_business_flow/agents/propose_reason.md": 2,
+                "wf/04_confirm_business_flow/agents/propose_act.md": 2,
+                "wf/04_confirm_business_flow/agents/propose_observe.md": 2,
+            },
+        )
+        proposal = read_utf8_json(work_dir / ".lgwf" / "wf_create_input_proposal.json")
+        self.assertEqual(proposal["stages"][0]["evidence_strength"], "high")
 
 
 if __name__ == "__main__":

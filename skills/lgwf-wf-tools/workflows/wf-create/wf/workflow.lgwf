@@ -20,6 +20,12 @@ STEP implement_draft
 STEP summarize_create_result
   WORKFLOW "09_summarize_create_result/workflow.lgwf";
 
+PY validate_created_package
+  SCRIPT "scripts/validate_created_package.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_create.created_package_validation
+  UPDATES_STATE;
+
 PY prepare_post_fix_handoff
   SCRIPT "scripts/prepare_post_fix_handoff.py"
   INPUT state.lgwf_wf_create.summary_result
@@ -34,6 +40,7 @@ HANDOFF handoff_wf_post_fix
 FLOW define_requirements
   THEN design_structure
   THEN implement_draft
+  THEN validate_created_package
   THEN summarize_create_result
   THEN prepare_post_fix_handoff
   THEN handoff_wf_post_fix;

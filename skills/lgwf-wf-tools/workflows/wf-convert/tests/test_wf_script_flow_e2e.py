@@ -102,6 +102,12 @@ def make_full_proposal(*, target_package_root: str = "skills/lgwf-wf-tools/workf
         "source_root": "samples/source-flow",
         "stages": [{"id": "discover", "summary": "解析输入"}],
         "prompt_contracts": [{"file": "agents/inspect.md", "purpose": "分析源流程"}],
+        "source_business_contract": {},
+        "prompt_execution_mechanics": [],
+        "presentation_constraints": [],
+        "discarded_prompt_techniques": [],
+        "conversion_mapping": [],
+        "parity_requirements": [],
         "human_approval_points": ["confirm_create_input"],
         "assumptions": ["源目录可读"],
         "out_of_scope": ["真实 runtime 验证"],
@@ -151,6 +157,10 @@ class ScriptFlowE2ETests(unittest.TestCase):
             for name in ("prompt_workflow_inspection_observe.json", "wf_create_input_observe.json"):
                 placeholder = json.loads((workdir / ".lgwf" / name).read_text(encoding="utf-8"))
                 self.assertEqual(placeholder, {"verdict": "initial", "issues": []})
+            proposal_placeholder = json.loads(
+                (workdir / ".lgwf" / "wf_create_input_proposal.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(proposal_placeholder, {})
 
     def test_case_decide_inspection_continue_on_gap(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
@@ -198,16 +208,81 @@ class ScriptFlowE2ETests(unittest.TestCase):
 
             self.assertEqual(result, {"next": "continue"})
 
+    def test_case_decide_create_input_continue_on_blocking_issue(self):
+        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        with isolated_workdir() as workdir:
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_input_proposal.json",
+                make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
+            )
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_input_observe.json",
+                {
+                    "verdict": "revise",
+                    "issues": [
+                        {
+                            "field": "stages",
+                            "blocking": True,
+                            "issue": "缺少 evidence_strength，approval 无法原样确认",
+                            "required_change": "为每个 stage 补充 evidence_strength",
+                            "severity": "high",
+                        }
+                    ],
+                },
+            )
+
+            result = runtime_guard_and_capture_stdout_json(module.main)
+
+            self.assertEqual(result, {"next": "continue"})
+
+    def test_case_decide_create_input_exit_on_non_blocking_issue(self):
+        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        with isolated_workdir() as workdir:
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_input_proposal.json",
+                make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
+            )
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_input_observe.json",
+                {
+                    "verdict": "revise",
+                    "issues": [
+                        {
+                            "field": "run_workflow_notes_for_wf_create",
+                            "blocking": False,
+                            "issue": "建议在人工确认时关注剩余上下文",
+                            "required_change": "交给 confirm_create_input 人工确认",
+                            "severity": "low",
+                        }
+                    ],
+                },
+            )
+
+            result = runtime_guard_and_capture_stdout_json(module.main)
+
+            self.assertEqual(result, {"next": "exit"})
+
+    def test_case_decide_create_input_allows_absolute_source_root(self):
+        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        with isolated_workdir() as workdir:
+            proposal = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated")
+            proposal["source_root"] = str((workdir / "source_prompt_workflow").resolve())
+            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", proposal)
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_input_observe.json",
+                {"verdict": "pass", "issues": []},
+            )
+
+            result = runtime_guard_and_capture_stdout_json(module.main)
+
+            self.assertEqual(result, {"next": "exit"})
+
     def test_case_decide_create_input_exit_on_pass(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_input_proposal.json",
-                {
-                    "workflow_name": "wf",
-                    "target_package_root": "skills/lgwf-wf-tools/workflows/generated",
-                    "raw_intent": "intent",
-                },
+                make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
             )
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_input_observe.json",

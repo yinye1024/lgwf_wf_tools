@@ -18,6 +18,7 @@
 | 用户场景 | 选择 workflow |
 | --- | --- |
 | 目标是运行失败、卡住、产物不对、需要自动诊断修复 | 选择 `wf-fix`。 |
+| 目标是只修复旧 LGWF workflow 的 DSL 静态 audit 失败，不运行目标 workflow | 选择 `wf-audit-fix`。 |
 | 目标是从原始意图创建新的 LGWF workflow 初稿 | 选择 `wf-create`。 |
 | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告 | 选择 `wf-convert`。 |
 | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足 | 选择 `wf-prompt-fix`。 |

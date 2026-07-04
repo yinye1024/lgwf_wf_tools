@@ -22,26 +22,13 @@ REVIEW confirm_business_flow
   CONTEXT state.lgwf_wf_create.business_flow_confirmation_context
   RESULT state.lgwf_wf_create.business_flow_decision_result
   PERSIST ".lgwf/business_flow_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "reject"];
 
 PY apply_confirmed_business_flow
   SCRIPT "scripts/apply_confirmed_business_flow.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_create.apply_business_flow_result
   UPDATES_STATE;
-
-PY prepare_business_flow_revision_confirmation
-  SCRIPT "scripts/prepare_business_flow_revision_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
-  UPDATES_STATE;
-
-REVIEW revise_business_flow
-  PROMPT_REF "revise_business_flow.md"
-  CONTEXT state.lgwf_wf_create.business_flow_revision_context
-  RESULT state.lgwf_wf_create.business_flow_revision_decision_result
-  PERSIST ".lgwf/business_flow_revision_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
 
 PY scaffold_package
   SCRIPT "scripts/scaffold_package.py"
@@ -54,14 +41,6 @@ FLOW {
 
   confirm_business_flow
     WHEN "approve" THEN apply_confirmed_business_flow
-    WHEN "revise" THEN prepare_business_flow_revision_confirmation
-    WHEN "reject" THEN FAIL_ALL;
-
-  prepare_business_flow_revision_confirmation THEN revise_business_flow;
-
-  revise_business_flow
-    WHEN "approve" THEN apply_confirmed_business_flow
-    WHEN "revise" THEN prepare_business_flow_revision_confirmation
     WHEN "reject" THEN FAIL_ALL;
 
   apply_confirmed_business_flow THEN scaffold_package;

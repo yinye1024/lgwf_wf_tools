@@ -18,7 +18,7 @@ def build_context(root: Path) -> dict:
     return {
         "proposal": proposal,
         "approval_target": "business_flow_proposal",
-        "allowed_decisions": ["approve", "revise", "reject"],
+        "allowed_decisions": ["approve", "reject"],
         "approve_writes": ".lgwf/business_flow.json",
         "revise_or_reject_route": "summarize_create_result",
     }

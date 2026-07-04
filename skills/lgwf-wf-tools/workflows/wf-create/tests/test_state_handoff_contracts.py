@@ -8,6 +8,7 @@ import sys
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -221,6 +222,44 @@ class StateHandoffContractTest(unittest.TestCase):
         self.assertEqual(payload["payload"]["post_fix_target"]["target_dirs"], ["skills/example-workflow"])
         self.assertIn("wf-post-fix", payload["suggested_command"])
 
+    def test_post_fix_handoff_unwraps_summary_state_payload(self) -> None:
+        module = load_module(ROOT / "scripts/prepare_post_fix_handoff.py", "prepare_post_fix_handoff_state_wrapper")
+        summary = {
+            "workflow_name": "example-workflow",
+            "target_package_root": "skills/example-workflow",
+        }
+        self.assertEqual(module.unwrap_summary_payload({"lgwf_wf_create.summary_result": summary}), summary)
+        self.assertEqual(module.unwrap_summary_payload({"summary_result": summary}), summary)
+
+    def test_post_fix_handoff_falls_back_to_summary_file_when_stdin_state_is_empty(self) -> None:
+        module = load_module(ROOT / "scripts/prepare_post_fix_handoff.py", "prepare_post_fix_handoff_file_fallback")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            lgwf_dir.mkdir()
+            (lgwf_dir / "create_result_summary.json").write_text(
+                json.dumps(
+                    {
+                        "workflow_name": "example-workflow",
+                        "target_package_root": "skills/example-workflow",
+                        "report_path": "reports/create-workflow/create_result_report.md",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            output = StringIO()
+            with pushd(root), patch("sys.stdin", StringIO("{}")), redirect_stdout(output):
+                module.main()
+
+            data = json.loads(output.getvalue())
+            payload = data["lgwf_wf_create.post_fix_handoff_payload"]
+            self.assertEqual(
+                payload["payload"]["post_fix_target"]["target_workflow_lgwf"],
+                "skills/example-workflow/wf/workflow.lgwf",
+            )
+            self.assertEqual(payload["payload"]["post_fix_target"]["target_package_root"], "skills/example-workflow")
+            self.assertTrue((lgwf_dir / "post_fix_handoff_input.json").is_file())
+
     def test_root_workflow_ends_with_post_fix_handoff(self) -> None:
         workflow_text = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("PY prepare_post_fix_handoff", workflow_text)
@@ -266,21 +305,27 @@ class StateHandoffContractTest(unittest.TestCase):
             self.assertIn(state_key, text)
 
     def test_apply_scripts_return_output_artifact_path(self) -> None:
-        for relative, approval_name, output_name in (
+        for relative, approval_name, proposal_name, output_name, proposal in (
             (
                 "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "create_requirements_approval.json",
+                "create_requirements_proposal.json",
                 "create_requirements.json",
+                {"workflow_name": "demo", "target_package_root": "skills/demo"},
             ),
             (
                 "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "business_flow_approval.json",
+                "business_flow_proposal.json",
                 "business_flow.json",
+                {"workflow_name": "demo", "stages": []},
             ),
             (
                 "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
+                "step_designs_proposal.json",
                 "step_designs.json",
+                {"step_designs": []},
             ),
         ):
             module = load_module(ROOT / relative, relative.replace("/", "_return_path"))
@@ -288,6 +333,7 @@ class StateHandoffContractTest(unittest.TestCase):
                 root = Path(temp)
                 lgwf_dir = root / ".lgwf"
                 lgwf_dir.mkdir()
+                (lgwf_dir / proposal_name).write_text(json.dumps(proposal), encoding="utf-8")
                 (lgwf_dir / approval_name).write_text(json.dumps({"decision": "approve"}), encoding="utf-8")
                 result = module.write_confirmed_artifact(root)
                 artifacts = [value for value in result.values() if isinstance(value, dict) and "artifact_path" in value]
@@ -308,6 +354,12 @@ class StateHandoffContractTest(unittest.TestCase):
                 "business_flow_proposal.json",
                 "stages",
             ),
+            (
+                "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "step_design_confirmation_record.json",
+                "step_designs_proposal.json",
+                "step_designs",
+            ),
         ):
             module = load_module(ROOT / relative, relative.replace("/", "_proposal_fallback"))
             with tempfile.TemporaryDirectory() as temp:
@@ -317,14 +369,25 @@ class StateHandoffContractTest(unittest.TestCase):
                 proposal = {"workflow_name": "demo", "target_package_root": "skills/demo"}
                 if expected_key == "stages":
                     proposal["stages"] = [{"stage_id": "collect"}]
+                if expected_key == "step_designs":
+                    proposal["step_designs"] = [{"stage_id": "collect", "steps": []}]
                 (lgwf_dir / proposal_name).write_text(json.dumps(proposal), encoding="utf-8")
                 (lgwf_dir / approval_name).write_text(
-                    json.dumps({"decision": "approve", "changes": [], "comment": "确认通过"}),
+                    json.dumps(
+                        {
+                            "approval": "approve",
+                            "decision": "approve",
+                            "route": "approve",
+                            "changes": [],
+                            "comment": "确认通过",
+                        }
+                    ),
                     encoding="utf-8",
                 )
                 result = module.write_confirmed_artifact(root)
                 artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
                 self.assertEqual(artifact["confirmed"][expected_key], proposal[expected_key])
+                self.assertNotIn("approval", artifact)
 
     def test_summary_report_path_is_relative(self) -> None:
         summary = load_module(ROOT / "09_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")

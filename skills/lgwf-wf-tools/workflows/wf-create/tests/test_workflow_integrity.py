@@ -44,46 +44,32 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             (
                 "02_confirm_requirements/workflow.lgwf",
                 "confirm_requirements",
-                "revise_requirements",
-                "prepare_requirements_revision_confirmation",
                 "apply_confirmed_requirements",
                 ".lgwf/create_requirements_approval.json",
-                ".lgwf/create_requirements_revision_approval.json",
             ),
             (
                 "04_confirm_business_flow/workflow.lgwf",
                 "confirm_business_flow",
-                "revise_business_flow",
-                "prepare_business_flow_revision_confirmation",
                 "apply_confirmed_business_flow",
                 ".lgwf/business_flow_approval.json",
-                ".lgwf/business_flow_revision_approval.json",
             ),
             (
                 "07_confirm_step_designs/workflow.lgwf",
                 "confirm_step_designs",
-                "revise_step_designs",
-                "prepare_step_design_revision_confirmation",
                 "apply_confirmed_step_designs",
                 ".lgwf/step_design_confirmation_record.json",
-                ".lgwf/step_design_revision_approval.json",
             ),
         )
-        for relative, approval, revise_node, prepare_revision, apply_node, persist, revision_persist in expectations:
+        for relative, approval, apply_node, persist in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn(f"REVIEW {approval}", text)
-            self.assertIn(f"REVIEW {revise_node}", text)
-            self.assertIn('OPTIONS ["approve", "revise", "reject"]', text)
+            self.assertIn('OPTIONS ["approve", "reject"]', text)
             self.assertIn(f'PERSIST "{persist}"', text)
-            self.assertIn(f'PERSIST "{revision_persist}"', text)
             self.assertIn("FLOW {", text)
             self.assertIn(approval, text)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
-            self.assertIn(f'WHEN "revise" THEN {prepare_revision}', text)
+            self.assertNotIn('WHEN "revise"', text)
             self.assertIn('WHEN "reject" THEN FAIL_ALL', text)
-            self.assertIn(revise_node, text)
-            self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
-            self.assertIn(f'WHEN "revise" THEN {prepare_revision}', text)
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:
         text = (ROOT / "02_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8")
@@ -112,12 +98,13 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                     module.write_confirmed_artifact(root)
                 self.assertFalse((lgwf_dir / output_name).exists())
 
-    def test_apply_scripts_accept_approved_revision_after_initial_revise(self) -> None:
+    def test_apply_scripts_use_fixed_proposal_after_approved_revision(self) -> None:
         cases = (
             (
                 "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "create_requirements_approval.json",
                 "create_requirements_revision_approval.json",
+                "create_requirements_proposal.json",
                 "create_requirements.json",
                 {"workflow_name": "demo", "target_package_root": "skills/demo"},
             ),
@@ -125,6 +112,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "business_flow_approval.json",
                 "business_flow_revision_approval.json",
+                "business_flow_proposal.json",
                 "business_flow.json",
                 {"workflow_name": "demo", "stages": [{"stage_id": "scaffold"}]},
             ),
@@ -132,22 +120,29 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
                 "step_design_revision_approval.json",
+                "step_designs_proposal.json",
                 "step_designs.json",
                 {"step_designs": [{"step_slug": "scaffold"}]},
             ),
         )
-        for relative, approval_name, revision_name, output_name, confirmed in cases:
+        for relative, approval_name, revision_name, proposal_name, output_name, confirmed in cases:
             module = load_module(ROOT / relative, relative.replace("/", "_revision"))
             with tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
                 lgwf_dir = root / ".lgwf"
                 lgwf_dir.mkdir()
+                (lgwf_dir / proposal_name).write_text(json.dumps(confirmed), encoding="utf-8")
                 (lgwf_dir / approval_name).write_text(
                     json.dumps({"decision": "revise", "changes": ["local change"]}),
                     encoding="utf-8",
                 )
                 (lgwf_dir / revision_name).write_text(
-                    json.dumps({"decision": "approve", "confirmed": confirmed}),
+                    json.dumps(
+                        {
+                            "decision": "approve",
+                            "confirmed": {"approval": "approve", "route": "approve"},
+                        }
+                    ),
                     encoding="utf-8",
                 )
                 result = module.write_confirmed_artifact(root)
@@ -155,32 +150,30 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 self.assertEqual(artifact["artifact_path"], f".lgwf/{output_name}")
                 self.assertEqual(artifact["source_approval_file"], f".lgwf/{revision_name}")
                 self.assertEqual(artifact["confirmed"], confirmed)
+                self.assertNotIn("approval", artifact)
 
-    def test_apply_scripts_accept_approval_field_for_approved_revision(self) -> None:
+    def test_apply_scripts_reject_missing_fixed_proposal(self) -> None:
         cases = (
             (
                 "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "create_requirements_approval.json",
                 "create_requirements_revision_approval.json",
                 "create_requirements.json",
-                {"workflow_name": "demo", "target_package_root": "skills/demo"},
             ),
             (
                 "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "business_flow_approval.json",
                 "business_flow_revision_approval.json",
                 "business_flow.json",
-                {"workflow_name": "demo", "stages": [{"stage_id": "scaffold"}]},
             ),
             (
                 "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
                 "step_design_revision_approval.json",
                 "step_designs.json",
-                {"step_designs": [{"step_slug": "scaffold"}]},
             ),
         )
-        for relative, approval_name, revision_name, output_name, confirmed in cases:
+        for relative, approval_name, revision_name, output_name in cases:
             module = load_module(ROOT / relative, relative.replace("/", "_approval_field"))
             with tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
@@ -191,14 +184,12 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                     encoding="utf-8",
                 )
                 (lgwf_dir / revision_name).write_text(
-                    json.dumps({"approval": "approve", "confirmed": confirmed}),
+                    json.dumps({"approval": "approve"}),
                     encoding="utf-8",
                 )
-                result = module.write_confirmed_artifact(root)
-                artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
-                self.assertEqual(artifact["artifact_path"], f".lgwf/{output_name}")
-                self.assertEqual(artifact["source_approval_file"], f".lgwf/{revision_name}")
-                self.assertEqual(artifact["confirmed"], confirmed)
+                with self.assertRaises(ValueError):
+                    module.write_confirmed_artifact(root)
+                self.assertFalse((lgwf_dir / output_name).exists())
 
     def test_confirmed_runtime_artifacts_are_reported_separately_from_source_files(self) -> None:
         summary_module = load_module(
@@ -277,6 +268,12 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertNotIn("OUTPUT_JSON", workflow)
         self.assertIn("RESULT state.lgwf_wf_create.summary_result", workflow)
         self.assertIn("create_result_summary.json", script)
+
+    def test_created_package_validation_runs_before_summary_and_handoff(self) -> None:
+        workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("PY validate_created_package", workflow)
+        self.assertIn("THEN implement_draft\n  THEN validate_created_package\n  THEN summarize_create_result", workflow)
+        self.assertIn('SCRIPT "scripts/validate_created_package.py"', workflow)
 
     def test_agents_doc_names_route_back_to_facade_when_out_of_scope(self) -> None:
         text = (PACKAGE_ROOT / "AGENTS.md").read_text(encoding="utf-8")

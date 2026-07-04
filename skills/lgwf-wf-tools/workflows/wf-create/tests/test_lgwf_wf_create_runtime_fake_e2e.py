@@ -48,7 +48,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def test_workflow_route_matrix_covers_approve_revise_and_reject_branches(self) -> None:
+    def test_workflow_route_matrix_covers_approve_and_reject_branches(self) -> None:
         workflow_text = (WF_ROOT / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("FLOW define_requirements", workflow_text)
         self.assertIn("THEN design_structure", workflow_text)
@@ -60,32 +60,14 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
         expected_routes = {
             "confirm_requirements": {
                 "approve": "apply_confirmed_requirements",
-                "revise": "prepare_requirements_revision_confirmation",
-                "reject": "FAIL_ALL",
-            },
-            "revise_requirements": {
-                "approve": "apply_confirmed_requirements",
-                "revise": "prepare_requirements_revision_confirmation",
                 "reject": "FAIL_ALL",
             },
             "confirm_business_flow": {
                 "approve": "apply_confirmed_business_flow",
-                "revise": "prepare_business_flow_revision_confirmation",
-                "reject": "FAIL_ALL",
-            },
-            "revise_business_flow": {
-                "approve": "apply_confirmed_business_flow",
-                "revise": "prepare_business_flow_revision_confirmation",
                 "reject": "FAIL_ALL",
             },
             "confirm_step_designs": {
                 "approve": "apply_confirmed_step_designs",
-                "revise": "prepare_step_design_revision_confirmation",
-                "reject": "FAIL_ALL",
-            },
-            "revise_step_designs": {
-                "approve": "apply_confirmed_step_designs",
-                "revise": "prepare_step_design_revision_confirmation",
                 "reject": "FAIL_ALL",
             },
         }
@@ -104,16 +86,13 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
 
         for node_name, persist_path in {
             "confirm_requirements": ".lgwf/create_requirements_approval.json",
-            "revise_requirements": ".lgwf/create_requirements_revision_approval.json",
             "confirm_business_flow": ".lgwf/business_flow_approval.json",
-            "revise_business_flow": ".lgwf/business_flow_revision_approval.json",
             "confirm_step_designs": ".lgwf/step_design_confirmation_record.json",
-            "revise_step_designs": ".lgwf/step_design_revision_approval.json",
         }.items():
             node_start = child_workflow_text.index(f"REVIEW {node_name}")
             next_node = child_workflow_text.find("\n\n", node_start)
             node_block = child_workflow_text[node_start: next_node if next_node != -1 else len(child_workflow_text)]
-            self.assertIn('OPTIONS ["approve", "revise", "reject"]', node_block)
+            self.assertIn('OPTIONS ["approve", "reject"]', node_block)
             self.assertIn(f'PERSIST "{persist_path}"', node_block)
 
     def test_fake_runtime_approval_path_produces_expected_state_and_summary(self) -> None:
@@ -149,7 +128,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             )
             self.assertIn("lgwf_wf_create.requirements_confirmation_context", prepare_requirements)
             (lgwf_dir / "create_requirements_approval.json").write_text(
-                json.dumps({"decision": "approve", "confirmed": fake_codex_outputs["create_requirements_proposal.json"]}),
+                json.dumps({"decision": "approve", "route": "approve", "comment": "确认通过"}),
                 encoding="utf-8",
             )
             apply_requirements = run_script(
@@ -167,7 +146,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             )
             self.assertIn("lgwf_wf_create.business_flow_confirmation_context", prepare_business)
             (lgwf_dir / "business_flow_approval.json").write_text(
-                json.dumps({"decision": "approve", "confirmed": fake_codex_outputs["business_flow_proposal.json"]}),
+                json.dumps({"decision": "approve", "route": "approve", "comment": "确认通过"}),
                 encoding="utf-8",
             )
             run_script(work_dir, "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
@@ -183,7 +162,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             )
             self.assertIn("lgwf_wf_create.step_design_confirmation_context", prepare_steps)
             (lgwf_dir / "step_design_confirmation_record.json").write_text(
-                json.dumps({"decision": "approve", "confirmed": fake_codex_outputs["step_designs_proposal.json"]}),
+                json.dumps({"decision": "approve", "route": "approve", "comment": "确认通过"}),
                 encoding="utf-8",
             )
             run_script(work_dir, "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
@@ -281,7 +260,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
 
                     self.write_json_file(
                         lgwf_dir / stage["approval_file"],
-                        {"decision": "approve", "confirmed": stage["confirmed_payload"]},
+                        {"decision": "approve", "route": "approve", "comment": "确认通过"},
                     )
                     apply_state = run_script(work_dir, stage["apply_script"])
                     result = apply_state[stage["apply_state_key"]]
@@ -290,35 +269,14 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
                     self.assertEqual(artifact["artifact_kind"], stage["artifact_kind"])
                     self.assertEqual(artifact["artifact_path"], f".lgwf/{stage['output_file']}")
                     self.assertEqual(artifact["source_approval_file"], f".lgwf/{stage['approval_file']}")
+                    self.assertEqual(artifact["source_proposal_file"], f".lgwf/{stage['proposal_file']}")
                     self.assertEqual(artifact["decision"], "approve")
-                    self.assertEqual(artifact["confirmed"], stage["confirmed_payload"])
+                    self.assertEqual(artifact["confirmed"], stage["proposal_payload"])
+                    self.assertNotIn("approval", artifact)
+                    for control_key in ("approval", "decision", "route", "changes", "comment", "request_id"):
+                        self.assertNotIn(control_key, artifact["confirmed"])
 
-            with self.subTest(stage=stage["name"], branch="revise_then_approve"):
-                with tempfile.TemporaryDirectory() as temp:
-                    work_dir = Path(temp)
-                    lgwf_dir = work_dir / ".lgwf"
-                    self.write_json_file(lgwf_dir / stage["proposal_file"], stage["proposal_payload"])
-                    self.write_json_file(
-                        lgwf_dir / stage["approval_file"],
-                        {"decision": "revise", "changes": ["补充局部调整"]},
-                    )
-
-                    revision_state = run_script(work_dir, stage["revision_prepare_script"])
-                    revision_context = revision_state[stage["revision_state_key"]]
-                    self.assertEqual(revision_context["proposal"], stage["proposal_payload"])
-                    self.assertEqual(revision_context["revision_request"]["decision"], "revise")
-                    self.assertEqual(revision_context["revision_persist"], f".lgwf/{stage['revision_approval_file']}")
-
-                    self.write_json_file(
-                        lgwf_dir / stage["revision_approval_file"],
-                        {"decision": "approve", "confirmed": stage["revised_confirmed_payload"]},
-                    )
-                    run_script(work_dir, stage["apply_script"])
-                    artifact = self.assert_json_file(lgwf_dir / stage["output_file"])
-                    self.assertEqual(artifact["source_approval_file"], f".lgwf/{stage['revision_approval_file']}")
-                    self.assertEqual(artifact["confirmed"], stage["revised_confirmed_payload"])
-
-            for decision in ("revise", "reject"):
+            for decision in ("reject",):
                 with self.subTest(stage=stage["name"], branch=f"{decision}_does_not_write_confirmed_artifact"):
                     with tempfile.TemporaryDirectory() as temp:
                         work_dir = Path(temp)

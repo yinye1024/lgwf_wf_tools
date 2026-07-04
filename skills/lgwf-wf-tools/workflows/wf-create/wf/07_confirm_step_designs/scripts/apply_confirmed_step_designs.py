@@ -11,16 +11,21 @@ SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
 if str(SHARED_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SHARED_SCRIPTS))
 
-from confirmation_io import load_json, normalize_relative_path, require_approve, unwrap_approval, write_json
+from confirmation_io import confirmed_from_proposal, load_json, normalize_relative_path, unwrap_approval, write_json
 
 
 APPROVAL_FILE = "step_design_confirmation_record.json"
 REVISION_APPROVAL_FILE = "step_design_revision_approval.json"
+PROPOSAL_FILE = "step_designs_proposal.json"
 OUTPUT_FILE = "step_designs.json"
 
 
 def output_artifact_name() -> str:
     return OUTPUT_FILE
+
+
+def resolve_confirmed_payload(lgwf_dir: Path, approval: dict[str, Any]) -> dict[str, Any]:
+    return confirmed_from_proposal(lgwf_dir, approval, PROPOSAL_FILE)
 
 
 def write_confirmed_artifact(root: Path) -> dict[str, Any]:
@@ -33,21 +38,17 @@ def write_confirmed_artifact(root: Path) -> dict[str, Any]:
         source_file = REVISION_APPROVAL_FILE
     else:
         approval = unwrap_approval(load_json(lgwf_dir / APPROVAL_FILE), "step_design_confirmation_record")
-    require_approve(approval)
-    confirmed_value = approval.get("confirmed")
-    confirmed_payload = confirmed_value if isinstance(confirmed_value, dict) else {
-        key: value for key, value in approval.items() if key != "decision"
-    }
+    confirmed_payload = resolve_confirmed_payload(lgwf_dir, approval)
     for key in ("approved_step_designs_path", "step_designs_path"):
         if isinstance(confirmed_payload.get(key), str) and confirmed_payload[key].strip():
             confirmed_payload[key] = normalize_relative_path(confirmed_payload[key], key)
     confirmed = {
         "artifact_kind": "step_designs",
         "artifact_path": f".lgwf/{OUTPUT_FILE}",
+        "source_proposal_file": f".lgwf/{PROPOSAL_FILE}",
         "source_approval_file": f".lgwf/{source_file}",
         "decision": "approve",
         "confirmed": confirmed_payload,
-        "approval": approval,
     }
     write_json(lgwf_dir / OUTPUT_FILE, confirmed)
     return {

@@ -76,22 +76,31 @@ class ArtifactIOContractsTest(unittest.TestCase):
 
     def test_apply_confirmed_scripts_write_confirmed_runtime_artifacts(self) -> None:
         write_json(
-            self.work_dir / ".lgwf" / "create_requirements_approval.json",
+            self.work_dir / ".lgwf" / "create_requirements_proposal.json",
             {
-                "decision": "approve",
-                "confirmed": {
-                    "workflow_name": "git-diff-brief",
-                    "target_package_root": "skills/git-diff-brief",
-                },
+                "workflow_name": "git-diff-brief",
+                "target_package_root": "skills/git-diff-brief",
             },
         )
         write_json(
+            self.work_dir / ".lgwf" / "business_flow_proposal.json",
+            {"workflow_name": "git-diff-brief", "stages": []},
+        )
+        write_json(
+            self.work_dir / ".lgwf" / "step_designs_proposal.json",
+            {"approved_step_slugs": ["collect-git-context"]},
+        )
+        write_json(
+            self.work_dir / ".lgwf" / "create_requirements_approval.json",
+            {"decision": "approve", "confirmed": {"approval": "approve"}},
+        )
+        write_json(
             self.work_dir / ".lgwf" / "business_flow_approval.json",
-            {"decision": "approve", "confirmed": {"workflow_name": "git-diff-brief", "stages": []}},
+            {"decision": "approve", "confirmed": {"approval": "approve"}},
         )
         write_json(
             self.work_dir / ".lgwf" / "step_design_confirmation_record.json",
-            {"decision": "approve", "confirmed": {"approved_step_slugs": ["collect-git-context"]}},
+            {"decision": "approve", "confirmed": {"approval": "approve"}},
         )
 
         self.run_script("02_confirm_requirements/scripts/apply_confirmed_requirements.py")

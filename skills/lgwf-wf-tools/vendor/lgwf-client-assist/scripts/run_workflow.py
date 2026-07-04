@@ -104,6 +104,8 @@ def main(
     if args.resume_existing and (args.rerun_existing or args.continue_existing):
         print("--resume-existing cannot be combined with --rerun-existing or --continue-existing", file=error_output)
         return 2
+    if args.workflow_lgwf:
+        args.workflow_lgwf = str(_resolve_workflow_path(args.workflow_lgwf))
     input_json_exit_code = _resolve_input_json_arg(args, error_output)
     if input_json_exit_code is not None:
         return input_json_exit_code
@@ -157,13 +159,38 @@ def main(
 
 
 def _workflow_workspace_cwd(workflow_lgwf: str) -> pathlib.Path:
-    workflow_path = pathlib.Path(workflow_lgwf).expanduser().resolve()
+    workflow_path = _resolve_workflow_path(workflow_lgwf)
     parts = workflow_path.parts
     if "workflows" in parts:
         index = parts.index("workflows")
         if index > 0:
             return pathlib.Path(*parts[:index])
     return workflow_path.parent
+
+
+def _resolve_workflow_path(workflow_lgwf: str) -> pathlib.Path:
+    workflow_path = pathlib.Path(workflow_lgwf).expanduser()
+    if workflow_path.is_absolute():
+        return workflow_path.resolve()
+    cwd_candidate = (pathlib.Path.cwd() / workflow_path).resolve()
+    if cwd_candidate.exists():
+        return cwd_candidate
+    fallback_candidate = (_workflow_fallback_root() / workflow_path).resolve()
+    if fallback_candidate.exists() or workflow_path.parts[:1] == ("workflows",):
+        return fallback_candidate
+    return cwd_candidate
+
+
+def _workflow_fallback_root() -> pathlib.Path:
+    candidates = [
+        SCRIPT_DIR.parents[2] if len(SCRIPT_DIR.parents) > 2 else None,
+        SCRIPT_DIR.parents[1] if len(SCRIPT_DIR.parents) > 1 else None,
+        SCRIPT_DIR.parent,
+    ]
+    for candidate in candidates:
+        if candidate is not None and (candidate / "workflows").is_dir():
+            return candidate.resolve()
+    return SCRIPT_DIR.parent.resolve()
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -310,11 +337,11 @@ def _ensure_lgwf_installed(
     support = bootstrap_module.RuntimeSupport(
         wheel=wheel,
         python=python_module or _python_execution_module(wheel),
-        file_ops=bootstrap_module._import_module_from_wheel("lgwf_tools.file_ops", wheel, "lgwf_tools"),
+        file_ops=bootstrap_module._import_module_from_wheel("lgwf_client.file_ops", wheel, "lgwf_client"),
         process_execution=bootstrap_module._import_module_from_wheel("lgwf_client.process_execution", wheel, "lgwf_client"),
-        timing=bootstrap_module._import_module_from_wheel("lgwf_tools.timing", wheel, "lgwf_tools"),
-        json_io=bootstrap_module._import_module_from_wheel("lgwf_tools.json_io", wheel, "lgwf_tools"),
-        workspace_layout=bootstrap_module._import_module_from_wheel("lgwf_tools.workspace_layout", wheel, "lgwf_tools"),
+        timing=bootstrap_module._import_module_from_wheel("lgwf_client.timing", wheel, "lgwf_client"),
+        json_io=bootstrap_module._import_module_from_wheel("lgwf_client.json_io", wheel, "lgwf_client"),
+        workspace_layout=bootstrap_module._import_module_from_wheel("lgwf_client.workspace_layout", wheel, "lgwf_client"),
     )
     return install_module.ensure_bundled_lgwf(
         support,

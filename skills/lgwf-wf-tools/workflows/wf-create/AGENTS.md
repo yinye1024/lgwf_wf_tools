@@ -32,7 +32,8 @@
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
-- `prepare_post_fix_handoff` 读取 `state.lgwf_wf_create.summary_result`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
+- `validate_created_package` 在实现阶段之后确定性校验目标 package：目标目录必须存在，`wf/workflow.lgwf` 必须存在，已批准 stage 必须有 `wf/<stage>/workflow.lgwf` 以及 `agents/`、`scripts/`、`resources/`，且 `lgwf.py audit` 必须通过；失败时终止，不进入 summary 或 handoff。
+- `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
 - `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
 
 ## Approval 边界
@@ -40,7 +41,8 @@
 - `confirm_requirements` 只确认需求方案；`approve` 后才能写 `.lgwf/create_requirements.json`。
 - `confirm_business_flow` 只确认业务流转；`approve` 后才能写 `.lgwf/business_flow.json`。
 - `confirm_step_designs` 只确认步骤设计；`approve` 后才能写 `.lgwf/step_designs.json`。
-- `revise` 表示局部调整：先进入对应 `revise_*` 人工确认点，由主 agent 根据 `changes` 提交修订后的 `approve` 结果，再固化产物并继续下游。
+- 当前确认节点只支持 `approve` 和 `reject`；用户反馈只作为控制面决策记录，不直接生成 confirmed 业务结构。
+- `approve` 后由固定 proposal 文件固化 confirmed artifact，禁止把 human decision record 当作业务对象写入 `confirmed`。
 - `reject` 表示整体不通过，通过 DSL `FAIL_ALL` 终止整个 run，不继续进入下游阶段。
 - 当前第一版不自动 approve 任何业务决策，也不接入自动修复链路。
 
@@ -57,6 +59,7 @@
 - `.lgwf/step_designs.json`
 - `.lgwf/create_reference_context/dsl-assist/*.md`
 - `.lgwf/implementation_result.json`
+- `.lgwf/created_package_validation.json`
 - `.lgwf/post_fix_handoff_input.json`
 - `reports/create-workflow/create_result_report.md`
 

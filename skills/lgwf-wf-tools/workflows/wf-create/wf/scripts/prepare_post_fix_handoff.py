@@ -66,8 +66,34 @@ def read_stdin_payload() -> dict[str, Any]:
     return data
 
 
+def unwrap_summary_payload(data: dict[str, Any]) -> dict[str, Any]:
+    wrapped = data.get("lgwf_wf_create.summary_result")
+    if isinstance(wrapped, dict):
+        return wrapped
+    wrapped = data.get("summary_result")
+    if isinstance(wrapped, dict):
+        return wrapped
+    return data
+
+
+def load_summary_fallback(work_dir: Path) -> dict[str, Any]:
+    path = work_dir / ".lgwf" / "create_result_summary.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(data, dict):
+        raise TypeError(".lgwf/create_result_summary.json 必须是 JSON object")
+    return data
+
+
 def main() -> None:
-    summary = read_stdin_payload()
+    summary = unwrap_summary_payload(read_stdin_payload())
+    if not str(summary.get("target_package_root", "")).strip():
+        summary = load_summary_fallback(Path.cwd())
+    if not str(summary.get("target_package_root", "")).strip():
+        raise ValueError(
+            "summary_result 缺少 target_package_root，且 .lgwf/create_result_summary.json 不存在或不包含该字段"
+        )
     payload = build_handoff_payload(summary, Path.cwd())
     print(json.dumps({"lgwf_wf_create.post_fix_handoff_payload": payload}, ensure_ascii=False, indent=2))
 

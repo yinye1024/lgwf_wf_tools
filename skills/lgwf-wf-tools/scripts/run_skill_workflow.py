@@ -12,7 +12,7 @@ LGWF_PY = FACADE_ROOT / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     command = [sys.executable, str(LGWF_PY), "run", *args]
-    completed = subprocess.run(command)
+    completed = subprocess.run(command, cwd=str(FACADE_ROOT))
     return completed.returncode
 
 
