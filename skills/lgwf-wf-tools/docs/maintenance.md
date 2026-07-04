@@ -6,7 +6,7 @@
 
 - `/lgwf-wf-tools`：执行入口预检；如果 doctor 通过，继续理解用户目标；如果 doctor 失败且存在 `assets/lgwf-client-assist.zip`，自动运行 init 后再次 doctor；如果仍失败，停止并报告。
 - `/lgwf-wf-tools help` 或 `/lgwf-wf-tools 帮助`：只展示帮助，不修改文件，不派发内部 workflow，不启动 LGWF run，不运行会写 `.local/` 的 self-improve 命令；帮助内容必须包含“可用指令”。
-- `/lgwf-wf-tools init`：运行 `python scripts/init_lgwf_wf_tools.py`，同步临时 zip 到 vendor，安装 vendor 内 bundled LGWF wheel，输出初始化报告；不派发内部 workflow。
+- `/lgwf-wf-tools init`：运行 `python scripts/init_lgwf_wf_tools.py`，同步临时 zip 到 vendor，安装 vendor 内 bundled LGWF wheel，同时检查 Codex 是否已通过 link 方式安装 `lgwf-wf-tools` 并指向当前 skill 根目录；未安装、普通目录安装或 link 指向错误时会自动调整，输出初始化报告；不派发内部 workflow。
 - `/lgwf-wf-tools doctor`：只运行 `python scripts/doctor_lgwf_wf_tools.py`，输出只读健康检查报告；不修改文件，不派发内部 workflow。需要完整审计时运行 `python scripts/doctor_lgwf_wf_tools.py --deep`。
 - `/lgwf-wf-tools list`：只运行 `python scripts/list_workflows.py`，只读列出 `registry.json` 中可派发的内部 workflow；不派发内部 workflow。
 
@@ -44,7 +44,8 @@ python scripts/complete_commands.py "/lgwf-wf-tools d"
 2. 执行 `python scripts/init_lgwf_wf_tools.py`。
 3. 确认 `vendor/lgwf-client-assist/.lgwf-client-assist-vendor.json` 记录了新的 `zip_sha256`，且 `skills\lgwf-wf-tools\assets\lgwf-client-assist.zip` 已被删除。
 4. 确认 `.local/init/last-init.json` 中 `install.passed=true`，并记录了 bundled wheel 的 `wheel_sha256`、`bundled_version` 和 `installed_version`。
-5. 提交 `vendor/lgwf-client-assist/` 的实际内容变更；不要提交 zip 包。
+5. 确认 `.local/init/last-init.json` 中 `codex_skill.passed=true`，且 `codex_skill.after.target` 指向当前 `skills\lgwf-wf-tools` 目录。
+6. 提交 `vendor/lgwf-client-assist/` 的实际内容变更；不要提交 zip 包。
 
 ## 发布保护
 

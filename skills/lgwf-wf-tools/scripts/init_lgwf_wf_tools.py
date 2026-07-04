@@ -3,7 +3,10 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import shutil
+import stat
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -19,6 +22,7 @@ STATE_PATH = VENDOR_ROOT / ".lgwf-client-assist-vendor.json"
 TEXT_SUFFIXES = {".json", ".md", ".py", ".txt", ".yaml", ".yml"}
 LAST_INIT_PATH = FACADE_ROOT / ".local" / "init" / "last-init.json"
 INSTALL_OUTPUT_TAIL_LIMIT = 4000
+SKILL_NAME = "lgwf-wf-tools"
 
 
 def sha256_file(path: Path) -> str:
@@ -83,6 +87,128 @@ def sanitize_vendor() -> list[str]:
     if VENDOR_ROOT.exists():
         trim_trailing_blank_lines(VENDOR_ROOT)
     return actions
+
+
+def default_codex_home() -> Path:
+    configured = os.environ.get("CODEX_HOME")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".codex"
+
+
+def is_directory_link(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    if callable(is_junction):
+        return bool(is_junction())
+    attrs = getattr(path.stat(), "st_file_attributes", 0) if path.exists() else 0
+    return bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+
+
+def create_directory_link(link_path: Path, target: Path) -> None:
+    link_path.parent.mkdir(parents=True, exist_ok=True)
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", str(link_path), str(target)],
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError((completed.stderr or completed.stdout).strip())
+    else:
+        link_path.symlink_to(target, target_is_directory=True)
+
+
+def remove_directory_link(link_path: Path) -> None:
+    if link_path.is_symlink():
+        link_path.unlink()
+        return
+    link_path.rmdir()
+
+
+def backup_existing_skill_directory(install_path: Path) -> Path:
+    stamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    backup_path = install_path.with_name(f"{install_path.name}.backup-{stamp}")
+    counter = 1
+    while backup_path.exists():
+        backup_path = install_path.with_name(f"{install_path.name}.backup-{stamp}-{counter}")
+        counter += 1
+    shutil.move(str(install_path), str(backup_path))
+    return backup_path
+
+
+def ensure_codex_skill_installation(*, facade_root: Path = FACADE_ROOT, codex_home: Path | None = None) -> dict[str, Any]:
+    expected_target = facade_root.resolve()
+    codex_home = (codex_home or default_codex_home()).expanduser()
+    install_path = codex_home / "skills" / SKILL_NAME
+    actions: list[str] = []
+    backup_path = ""
+    before_exists = install_path.exists()
+    before_is_link = False
+    before_target = ""
+
+    try:
+        if before_exists:
+            before_is_link = is_directory_link(install_path)
+            before_target = str(install_path.resolve())
+
+        if before_exists and install_path.resolve() == expected_target and before_is_link:
+            actions.append("validated_skill_link")
+        else:
+            if before_exists:
+                if before_is_link:
+                    remove_directory_link(install_path)
+                    actions.append("removed_wrong_skill_link")
+                else:
+                    backup = backup_existing_skill_directory(install_path)
+                    backup_path = str(backup)
+                    actions.append("backed_up_existing_skill_directory")
+            create_directory_link(install_path, expected_target)
+            actions.append("created_skill_link")
+
+        after_is_link = is_directory_link(install_path)
+        after_target = str(install_path.resolve()) if install_path.exists() else ""
+        passed = install_path.exists() and after_is_link and Path(after_target) == expected_target
+        return {
+            "passed": passed,
+            "codex_home": str(codex_home),
+            "install_path": str(install_path),
+            "expected_target": str(expected_target),
+            "before": {
+                "exists": before_exists,
+                "is_link": before_is_link,
+                "target": before_target,
+            },
+            "after": {
+                "exists": install_path.exists(),
+                "is_link": after_is_link,
+                "target": after_target,
+            },
+            "backup_path": backup_path,
+            "actions": actions,
+        }
+    except Exception as exc:
+        return {
+            "passed": False,
+            "codex_home": str(codex_home),
+            "install_path": str(install_path),
+            "expected_target": str(expected_target),
+            "before": {
+                "exists": before_exists,
+                "is_link": before_is_link,
+                "target": before_target,
+            },
+            "after": {
+                "exists": install_path.exists(),
+                "is_link": is_directory_link(install_path) if install_path.exists() else False,
+                "target": str(install_path.resolve()) if install_path.exists() else "",
+            },
+            "backup_path": backup_path,
+            "actions": actions,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
 
 
 def refresh_vendor(zip_hash: str) -> list[str]:
@@ -228,9 +354,12 @@ def init_facade() -> dict[str, Any]:
     if install.get("passed"):
         actions.append("installed_bundled_lgwf")
 
+    codex_skill = ensure_codex_skill_installation()
+    actions.extend(f"codex_skill:{action}" for action in codex_skill["actions"])
+
     doctor = run_doctor()
     return {
-        "passed": bool(install["passed"]) and bool(doctor["passed"]),
+        "passed": bool(install["passed"]) and bool(codex_skill["passed"]) and bool(doctor["passed"]),
         "action": action,
         "actions": actions,
         "facade_root": str(FACADE_ROOT),
@@ -239,6 +368,7 @@ def init_facade() -> dict[str, Any]:
         "zip_sha256": zip_hash,
         "zip_deleted": zip_deleted,
         "install": install,
+        "codex_skill": codex_skill,
         "doctor": doctor,
         "timestamp": datetime.now(UTC).isoformat(),
     }
