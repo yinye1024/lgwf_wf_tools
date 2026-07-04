@@ -6,12 +6,14 @@
 ## Inputs
 - `state.lgwf_wf_create.raw_intent_context`：当前 run 提供的用户原始意图、补充说明、约束条件和已有目录信息。
 - `resources/raw_intent_contract.md`：原始意图整理契约和推荐输出结构。
+- 若上游来自 `wf-convert`，可能额外包含 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`；这些字段是结构化上下文，不能替代 `raw_intent`，但应原样保留给后续需求 proposal 使用。
 
 ## Task
 1. 读取 `state.lgwf_wf_create.raw_intent_context` 中可用的用户信息。
 2. 仅整理创建需求 proposal 所必需的原始意图，不要求用户预先提供完整结构化 JSON。
 3. 若关键信息缺失，只在 `open_questions` 中记录后续需求阶段仍需澄清的问题，不提前扩展到业务流转、步骤设计或实现细节。
-4. 生成一个可被 `propose_requirements_react` 直接消费的原始意图请求对象。
+4. 若存在 `source_business_contract`、`conversion_mapping` 或 `prompt_workflow_context`，将其作为同名字段原样写入请求对象；不要在本阶段重写其业务含义。
+5. 生成一个可被 `propose_requirements_react` 直接消费的原始意图请求对象。
 
 ## Success Criteria
 - 输出对象完整覆盖 `raw_intent`、`goal`、`constraints`、`target_package_hint` 和 `open_questions`。
@@ -30,7 +32,10 @@
   "goal": "要创建的 workflow 目标",
   "constraints": ["已知约束"],
   "target_package_hint": "用户给出的目标目录或命名线索",
-  "open_questions": ["仍需在需求方案阶段澄清的问题"]
+  "open_questions": ["仍需在需求方案阶段澄清的问题"],
+  "source_business_contract": {},
+  "conversion_mapping": [],
+  "prompt_workflow_context": {}
 }
 ```
 
@@ -39,3 +44,4 @@
 - 不产出 `.lgwf/create_requirements_proposal.json`、`.lgwf/create_requirements.json` 或任何业务流转、步骤设计、实现阶段产物。
 - 不输出验收结论、review JSON 或路由决策字段。
 - 输出应保持对后续需求方案友好，不提前写死业务流转、步骤设计或实现细节。
+- 结构化上下文只做兼容透传；缺失时保持只含 `raw_intent` 等基础字段的旧输入行为。

@@ -27,6 +27,15 @@ def render_report(summary: dict[str, Any]) -> str:
     lines.extend(f"- {item}" for item in as_lines(summary.get("approved_input_summary")))
     lines.extend(["", "## Payload", ""])
     lines.extend(f"- {item}" for item in as_lines(summary.get("payload_summary")))
+    lines.extend(["", "## 业务一致性审查", ""])
+    parity = summary.get("business_parity")
+    if isinstance(parity, dict):
+        lines.append(f"- verdict: `{parity.get('parity_verdict', 'unknown')}`")
+        lines.append(f"- report: `{parity.get('report_path', '.lgwf/business_parity_report.json')}`")
+        missing = as_lines(parity.get("missing_business_rules"))
+        lines.extend(f"- missing_business_rule: {item}" for item in missing)
+    else:
+        lines.append("- 未生成业务一致性审查报告")
     lines.extend(["", "## 未解决风险", ""])
     lines.extend(f"- {item}" for item in as_lines(summary.get("risks")))
     lines.append("")
@@ -45,12 +54,14 @@ def main() -> None:
     lgwf_dir = root / ".lgwf"
     inspection = load_json(lgwf_dir / "prompt_workflow_inspection.json")
     payload = load_json(lgwf_dir / "wf_create_payload.json")
+    parity = load_json(lgwf_dir / "business_parity_report.json")
     report = render_report(
         {
             "workflow_name": payload.get("prompt_convert_payload", {}).get("workflow_name", "wf-convert"),
             "analysis_summary": inspection.get("source_summary", []),
             "approved_input_summary": ["创建输入包已通过人工确认"],
             "payload_summary": [".lgwf/wf_create_payload.json"],
+            "business_parity": parity,
             "risks": inspection.get("risks", []),
         }
     )
@@ -63,4 +74,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

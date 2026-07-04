@@ -18,7 +18,7 @@
 
 ## 任务
 
-基于 `.lgwf/prompt_file_index.json` 和源文件内容，分析现有 prompt workflow 的结构、阶段、prompt 职责、输入输出契约、人工确认点和缺口。
+基于 `.lgwf/prompt_file_index.json` 和源文件内容，分析现有 prompt workflow 的结构、阶段、prompt 职责、输入输出契约、人工确认点和缺口。必须区分 `source_business_contract` 中应迁移的业务逻辑，和 `prompt_execution_mechanics` / `discarded_prompt_techniques` 中不应迁移的 prompt 执行技巧，并为后续 `conversion_mapping` 与 `parity_requirements` 提供证据基础。
 
 ## 输出契约
 
@@ -54,6 +54,30 @@
       "gaps": ["当前 prompt 缺失的信息"]
     }
   ],
+  "source_business_contract": {
+    "goal": "源 prompt workflow 的业务目标",
+    "inputs": ["业务输入"],
+    "outputs": ["业务输出"],
+    "stages": [],
+    "decision_rules": [],
+    "approval_points": [],
+    "error_paths": [],
+    "invariants": []
+  },
+  "prompt_execution_mechanics": [
+    {
+      "technique": "执行矩阵|预填充|few-shot|角色强化|格式诱导",
+      "source_files": ["prompts/example.md"],
+      "reason": "为什么这是 prompt 执行技巧而不是业务规则"
+    }
+  ],
+  "presentation_constraints": [],
+  "discarded_prompt_techniques": [
+    {
+      "technique": "prefill",
+      "reason": "LGWF 中不迁移为业务逻辑"
+    }
+  ],
   "human_approval_points": [
     {
       "name": "confirm_result",
@@ -84,6 +108,9 @@
 
 - 只分析源 prompt workflow，不修改源目录。
 - 区分事实、推断和待确认假设。
+- 只有可追溯、高置信的业务目标、阶段、决策、审批点、错误路径和不变量才能进入 `source_business_contract`。
+- 执行矩阵、预填充、few-shot、角色强化、格式诱导等 prompt 技巧应进入 `prompt_execution_mechanics` 或 `discarded_prompt_techniques`，不得伪装成业务规则。
+- inspection 本阶段不生成最终 `conversion_mapping`，但必须提供足够证据支撑 proposal 阶段生成 `conversion_mapping` 和 `parity_requirements`。
 - 若信息不足，在 `gaps` 中记录，不伪造结论。
 - 不要直接生成 LGWF DSL、脚本或最终 workflow package。
 - 不要自动调用 `wf-create`、`wf-prompt-fix`、`wf-prompt-upgrade` 或 `wf-fix`。

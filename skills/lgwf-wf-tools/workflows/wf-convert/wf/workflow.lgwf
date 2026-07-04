@@ -17,9 +17,6 @@ STEP analyze_source
 STEP prepare_payload
   WORKFLOW "07_confirm_step_designs/workflow.lgwf";
 
-STEP summarize_result
-  WORKFLOW "09_summarize_create_result/workflow.lgwf";
-
 PY map_wf_create_input
   SCRIPT "scripts/map_wf_create_input.py"
   INPUT state.lgwf_wf_convert.wf_create_payload
@@ -38,6 +35,15 @@ PY capture_wf_create_result
   RESULT state.lgwf_wf_convert.wf_create_result_summary
   UPDATES_STATE;
 
+PY verify_business_parity
+  SCRIPT "scripts/verify_business_parity.py"
+  INPUT state.lgwf_wf_convert.wf_create_result_summary
+  RESULT state.lgwf_wf_convert.business_parity_report
+  UPDATES_STATE;
+
+STEP summarize_result
+  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+
 PY prepare_post_fix_handoff
   SCRIPT "scripts/prepare_post_fix_handoff.py"
   INPUT state.lgwf_wf_convert.wf_create_result_summary
@@ -52,9 +58,10 @@ HANDOFF handoff_wf_post_fix
 FLOW collect_target
   THEN analyze_source
   THEN prepare_payload
-  THEN summarize_result
   THEN map_wf_create_input
   THEN wf_create
   THEN capture_wf_create_result
+  THEN verify_business_parity
+  THEN summarize_result
   THEN prepare_post_fix_handoff
   THEN handoff_wf_post_fix;

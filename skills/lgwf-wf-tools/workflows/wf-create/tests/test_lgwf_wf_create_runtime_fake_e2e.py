@@ -110,10 +110,10 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             "confirm_step_designs": ".lgwf/step_design_confirmation_record.json",
             "revise_step_designs": ".lgwf/step_design_revision_approval.json",
         }.items():
-            node_start = child_workflow_text.index(f"APPROVAL {node_name}")
-            next_route = child_workflow_text.find("\nROUTE ", node_start)
-            node_block = child_workflow_text[node_start: next_route if next_route != -1 else len(child_workflow_text)]
-            self.assertIn("ROUTE_ON_DECISION", node_block)
+            node_start = child_workflow_text.index(f"REVIEW {node_name}")
+            next_node = child_workflow_text.find("\n\n", node_start)
+            node_block = child_workflow_text[node_start: next_node if next_node != -1 else len(child_workflow_text)]
+            self.assertIn('OPTIONS ["approve", "revise", "reject"]', node_block)
             self.assertIn(f'PERSIST "{persist_path}"', node_block)
 
     def test_fake_runtime_approval_path_produces_expected_state_and_summary(self) -> None:
@@ -343,7 +343,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
                             check=False,
                         )
                         self.assertNotEqual(completed.returncode, 0)
-                        self.assertIn("只有 decision=approve", completed.stderr)
+                        self.assertIn("只有 approval=approve", completed.stderr)
                         self.assertFalse((lgwf_dir / stage["output_file"]).exists())
 
 

@@ -38,6 +38,12 @@
   "source_root": "skills/example-prompt-workflow",
   "stages": [],
   "prompt_contracts": [],
+  "source_business_contract": {},
+  "prompt_execution_mechanics": [],
+  "presentation_constraints": [],
+  "discarded_prompt_techniques": [],
+  "conversion_mapping": [],
+  "parity_requirements": [],
   "human_approval_points": [],
   "assumptions": [],
   "out_of_scope": [],
@@ -48,7 +54,7 @@
 ## Output Format
 
 - 只输出一个 UTF-8 JSON object，并写入 `.lgwf/wf_create_input_proposal.json`。
-- JSON 顶层字段必须固定为 `workflow_name`、`target_package_root`、`raw_intent`、`source_root`、`stages`、`prompt_contracts`、`human_approval_points`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create`。
+- JSON 顶层字段必须固定为 `workflow_name`、`target_package_root`、`raw_intent`、`source_root`、`stages`、`prompt_contracts`、`source_business_contract`、`prompt_execution_mechanics`、`presentation_constraints`、`discarded_prompt_techniques`、`conversion_mapping`、`parity_requirements`、`human_approval_points`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create`。
 - 不附加 Markdown 说明、自然语言摘要或额外顶层字段。
 
 ## 生成规则
@@ -57,6 +63,10 @@
 - `raw_intent` 至少覆盖五类语义：目标 workflow 目的、核心阶段、关键输入、关键输出、人工确认点与首版非目标；单独抽离该字段时，审批者也应能理解 workflow 的创建方向。如果某项证据不足，应在 `assumptions` 或 `run_workflow_notes_for_wf_create` 中显式降级，而不是在 `raw_intent` 中伪造确定事实。
 - `raw_intent` 不能退化成标题、口号或仅复述目录名；应让后续 `wf_create_input_for_wf_create.json` 的消费者仅凭该字段就能理解创建目标和首版边界。
 - `stages` 和 `prompt_contracts` 应来自 inspection，而不是凭空扩展；只有高置信、可追溯内容才能进入这两个字段。
+- `source_business_contract` 必须来自 inspection 中可追溯的业务逻辑，覆盖业务目标、输入输出、阶段、决策规则、审批点、错误路径和不变量。
+- `prompt_execution_mechanics` 与 `discarded_prompt_techniques` 必须记录执行矩阵、预填充、few-shot、角色强化、格式诱导等不应迁移为 LGWF 业务逻辑的内容。
+- `conversion_mapping` 必须逐条说明源业务规则如何映射到目标 LGWF 设计，`mapping_type` 使用 `preserve_business_logic`、`convert_to_lgwf_node`、`convert_to_script`、`convert_to_schema_constraint`、`discard_prompt_technique` 或 `manual_confirmation_required`。
+- `parity_requirements` 必须列出后续业务一致性审查需要覆盖的业务规则、审批点、错误路径和不变量。
 - `stages` 与 `prompt_contracts` 的每个条目都应保留 inspection 的来源摘要、证据强度提示或等价自然语言，让 approval 能判断其是否支持原样 confirmed；若条目只能部分确认，应把不足之处显式转入 `assumptions` 或 notes，而不是在事实字段里弱化表述。
 - `human_approval_points` 应保留源 workflow 中已有或后续创建时必须人工拍板的确认点。
 - inspection 中证据较弱、但对创建方案重要的内容，应显式降级到 `assumptions` 或 `run_workflow_notes_for_wf_create`，不要伪装成已确认阶段或契约。

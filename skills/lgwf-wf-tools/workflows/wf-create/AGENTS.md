@@ -16,7 +16,7 @@
 
 ## 输入契约
 
-入口允许从原始意图开始，不要求用户先提供完整结构化 JSON。后续阶段会逐步形成：
+入口允许从原始意图开始，不要求用户先提供完整结构化 JSON。为了支持 `wf-convert` 的闭环转换，入口也兼容 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context` 等结构化上下文；这些字段存在时优先作为需求和业务流设计依据，缺失时保持只消费 `raw_intent` 的旧行为。后续阶段会逐步形成：
 
 - `create_requirements_proposal`：需求方案草案。
 - `business_flow_proposal`：业务流转草案。

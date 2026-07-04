@@ -14,7 +14,7 @@
 
 ## Audit Criteria
 
-1. 顶层字段包含 `workflow_name`、`target_package_root`、`raw_intent`、`source_root`、`stages`、`prompt_contracts`、`human_approval_points`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create`。
+1. 顶层字段包含 `workflow_name`、`target_package_root`、`raw_intent`、`source_root`、`stages`、`prompt_contracts`、`source_business_contract`、`prompt_execution_mechanics`、`presentation_constraints`、`discarded_prompt_techniques`、`conversion_mapping`、`parity_requirements`、`human_approval_points`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create`。
 2. `raw_intent` 是完整自然语言，不只是标题或路径；即使脱离其它结构化字段，也应足以表达 workflow 目标、核心阶段、关键输入输出、人工确认点和范围边界。
 3. `target_package_root` 是工作区相对路径，不为空字符串、`.`，且不含盘符、绝对路径、`..` 或 `.lgwf`。
 4. `stages` 和 `prompt_contracts` 能追溯到 inspection 或明确 assumptions，并保留足够的来源摘要、证据强度提示或等价表达，供 approval 判断是否可原样 confirmed。
@@ -24,6 +24,8 @@
 8. 若 `raw_intent` 宽泛到失去实际运行指导价值，即使其余字段结构完整，也必须返回 `revise`。
 9. 若 `stages` 或 `prompt_contracts` 缺少证据可见性、来源摘要或 confirmed 可复用性提示，必须返回阻塞性 issue，明确其会导致 approval 无法原样确认或 payload 固化漂移。
 10. 若 `raw_intent` 只是标题式摘要，或事实字段把低证据内容写成近似确定结论，必须返回 `revise`，并在 issue 中点名受影响的 approval、payload 或 `RUN_WORKFLOW wf_create` 链路。
+11. `source_business_contract`、`conversion_mapping` 和 `parity_requirements` 必须相互一致；关键业务规则若没有映射或一致性检查要求，必须返回 `revise`。
+12. `prompt_execution_mechanics` 与 `discarded_prompt_techniques` 不得被写入 `source_business_contract` 的确定业务规则。
 
 ## 输出
 

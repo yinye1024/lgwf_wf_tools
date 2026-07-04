@@ -7,11 +7,15 @@
 - `.lgwf/create_requirements_proposal.json`：上一阶段生成的需求方案 proposal。
 - `.lgwf/create_requirements.json`：若已存在，可作为已确认需求的参考输入。
 - `state.lgwf_wf_create.create_requirements`：当前 run 中已固化的需求对象（若上游已 approve）。
+- 若需求对象来自 `wf-convert`，可参考其保留的 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。
 
 ## Task
 1. 基于已确认或待确认的需求方案，定义业务阶段、关键节点、阶段依赖和下游步骤设计需要消费的信息。
-2. 生成一个可供 `confirm_business_flow` 审阅的 `business_flow_proposal`。
-3. 在 proposal 中说明阶段划分、依赖顺序和人工确认点为什么适合当前需求。
+2. 优先使用 `conversion_mapping` 还原源业务规则到目标 LGWF 阶段、关键节点和下游步骤输入的映射关系。
+3. 结合 `source_business_contract` 中的阶段、决策规则、审批点、错误路径和业务不变量，避免只按 `raw_intent` 自由扩写业务流。
+4. 参考 `prompt_workflow_context` 中的 `discarded_prompt_techniques` 和 `presentation_constraints`，确保 prompt 执行技巧不被误当作业务阶段。
+5. 生成一个可供 `confirm_business_flow` 审阅的 `business_flow_proposal`。
+6. 在 proposal 中说明阶段划分、依赖顺序和人工确认点为什么适合当前需求。
 
 ## Success Criteria
 - `stages`、`stage_dependencies` 和 `downstream_step_inputs` 足以支撑后续 `docs/steps/*.md` 设计。
@@ -66,6 +70,7 @@
 - `stages` 必须体现业务阶段，而不是只重复需求摘要。
 - `depends_on`、`stage_dependencies` 和 `downstream_step_inputs` 需要写清依赖与交付，不能只写“见上文”。
 - `human_approval` 只标记确实需要人工确认的阶段或节点。
+- 不得把 `prompt_workflow_context.discarded_prompt_techniques` 中的执行矩阵、预填充、few-shot 或格式诱导改写成业务阶段。
 - 不得提前编写 `docs/steps/*.md` 的完整内容或实现初稿文件内容。
 - 不得生成 `.lgwf/business_flow.json`。
 - 若信息不足，可在 `risk_notes` 中记录待确认项，但仍要给出可评审的阶段草案。
