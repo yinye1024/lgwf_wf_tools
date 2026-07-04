@@ -85,6 +85,44 @@ class RunWorkflowInputJsonFileTests(unittest.TestCase):
             self.assertEqual(exit_code, 2)
             self.assertIn("cannot be combined", stderr.getvalue())
 
+    def test_input_json_file_rejects_invalid_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            input_path = Path(tmp) / "input.json"
+            input_path.write_text('{"repo_path":', encoding="utf-8")
+
+            args = run_workflow._build_parser().parse_args(
+                [
+                    "--workflow-json",
+                    "workflow.json",
+                    "--work-dir",
+                    "ws",
+                    "--input-json-file",
+                    str(input_path),
+                ]
+            )
+
+            stderr = io.StringIO()
+            exit_code = run_workflow._resolve_input_json_arg(args, stderr)
+
+            self.assertEqual(2, exit_code)
+            self.assertIn("valid JSON", stderr.getvalue())
+
+    def test_runtime_paths_resolve_work_dir_to_absolute_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            work_dir = Path(tmp) / "ws"
+            args = run_workflow._build_parser().parse_args(
+                [
+                    "--workflow-json",
+                    "workflow.json",
+                    "--work-dir",
+                    str(work_dir),
+                ]
+            )
+
+            run_workflow._resolve_runtime_paths(args)
+
+            self.assertEqual(str(work_dir.resolve()), args.work_dir)
+
 
 if __name__ == "__main__":
     unittest.main()

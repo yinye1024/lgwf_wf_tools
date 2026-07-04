@@ -74,6 +74,20 @@ Get-Content -Raw -Encoding UTF8 skills\git-diff-brief\ws\.lgwf\token_usage_by_no
 - 空 diff、无提交历史和超大 diff 的最终产品语义。
 - 用户要求修订时的精细回流策略与默认落盘策略。
 
+## 自我提升模块
+
+本 workflow 带有自包含 `self-improve/` 模块，可记录 incident、生成 proposal、执行结构 eval、刷新 scorecard，并做静态 trace readiness：
+
+```powershell
+python self-improve/scripts/self_improve.py eval
+python self-improve/scripts/self_improve.py trace-eval
+python self-improve/scripts/self_improve.py check
+python self-improve/scripts/self_improve.py incident --type runtime --summary "..." --evidence-json "[]"
+python self-improve/scripts/self_improve.py proposal --incident <incident.json>
+```
+
+`trace-eval` 默认执行 `audit` + `compile`，不会无人值守启动包含人工 REVIEW 和 Codex 摘要节点的完整 runtime。真实运行 trace 应通过 `lgwf-wf-tools` 正常 rerun 获取，并作为 incident/proposal evidence 关联。
+
 ## 最小验证
 
 从仓库根目录运行：

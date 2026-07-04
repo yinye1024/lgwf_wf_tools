@@ -154,6 +154,9 @@ class ScriptFlowE2ETest(unittest.TestCase):
         cls.validate_repo_hint = load_script_module(
             "wf/01_request_scope_alignment/scripts/validate_repo_hint.py"
         )
+        cls.capture_request_context = load_script_module(
+            "wf/01_request_scope_alignment/scripts/capture_request_context.py"
+        )
         cls.prepare_scope_confirmation = load_script_module(
             "wf/01_request_scope_alignment/scripts/prepare_scope_confirmation.py"
         )
@@ -247,6 +250,76 @@ class ScriptFlowE2ETest(unittest.TestCase):
                 payload["git_diff_brief.scope_confirmation_input"]["recommended_decision"],
             )
 
+    def test_case_capture_request_context_uses_validated_repo_hint_from_state_input(self) -> None:
+        stdin = io.StringIO(
+            json.dumps(
+                {
+                    "repo_path": r"D:\allen\github\lgwf_skills",
+                    "summary_scope": {"baseline": "worktree git diff + latest commit"},
+                    "git_diff_brief": {
+                        "normalized_repo_hint": "D:/allen/github/lgwf_skills",
+                        "request_scope_validation": {
+                            "path_exists": True,
+                            "baseline_scope": "worktree git diff + latest commit",
+                            "requested_extensions": [],
+                            "needs_confirmation": False,
+                        },
+                    },
+                }
+            )
+        )
+
+        with isolated_workdir_with_lgwf_state() as workdir, mock.patch("sys.stdin", stdin):
+            payload = capture_main_stdout_json(self.capture_request_context, workdir)
+            persisted = json.loads((workdir / ".lgwf/request_scope_capture.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            "D:/allen/github/lgwf_skills",
+            payload["git_diff_brief.repository_input_context"]["normalized_repo_hint"],
+        )
+        self.assertFalse(payload["git_diff_brief.scope_confirmation_input"]["needs_confirmation"])
+        self.assertEqual(payload["git_diff_brief.repository_input_context"], persisted["repository_input_context"])
+
+    def test_case_prepare_scope_confirmation_prefers_validated_scope_when_capture_is_empty(self) -> None:
+        stdin = io.StringIO(
+            json.dumps(
+                {
+                    "git_diff_brief": {
+                        "normalized_repo_hint": "D:/allen/github/lgwf_skills",
+                        "request_scope_validation": {
+                            "path_exists": True,
+                            "baseline_scope": "worktree git diff + latest commit",
+                            "requested_extensions": [],
+                            "needs_confirmation": False,
+                        },
+                    }
+                }
+            )
+        )
+        capture_fixture = {
+            "repository_input_context": {
+                "repo_hint": None,
+                "normalized_repo_hint": None,
+                "path_exists": None,
+            },
+            "summary_scope": {"baseline": ["工作区 git diff", "最近一次提交信息"]},
+            "scope_confirmation_input": {
+                "needs_confirmation": True,
+                "open_questions": ["未提供明确的仓库目录提示。"],
+                "recommended_decision": "revise",
+            },
+        }
+
+        with isolated_workdir_with_lgwf_state() as workdir, mock.patch("sys.stdin", stdin):
+            write_utf8_json_fixture(workdir, ".lgwf/request_scope_capture.json", capture_fixture)
+            payload = capture_main_stdout_json(self.prepare_scope_confirmation, workdir)
+
+        self.assertEqual(
+            "D:/allen/github/lgwf_skills",
+            payload["git_diff_brief.repository_input_context"]["normalized_repo_hint"],
+        )
+        self.assertFalse(payload["git_diff_brief.scope_confirmation_input"]["needs_confirmation"])
+
     def test_case_scope_approval_routes_and_finalize_contract(self) -> None:
         capture_fixture = {
             "repository_input_context": {"repo_hint": "wf"},
@@ -302,6 +375,10 @@ class ScriptFlowE2ETest(unittest.TestCase):
                 "reject": "FAIL_ALL",
             },
         )
+        scope_workflow_text = (PACKAGE_ROOT / "wf/01_request_scope_alignment/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("PY capture_request_context", scope_workflow_text)
+        self.assertIn('SCRIPT "scripts/capture_request_context.py"', scope_workflow_text)
+        self.assertNotIn("CODEX capture_request_context", scope_workflow_text)
 
     def test_case_scope_revision_extracts_repo_path_from_approval_changes(self) -> None:
         revision = {
@@ -438,7 +515,36 @@ class ScriptFlowE2ETest(unittest.TestCase):
                 payload["git_diff_brief.delivery_review_input"]["open_delivery_questions"][0],
             )
 
-    def test_case_prepare_delivery_review_can_skip_manual_review_with_explicit_input(self) -> None:
+    def test_case_prepare_delivery_review_only_skips_manual_review_for_none_action(self) -> None:
+        with isolated_workdir_with_lgwf_state() as workdir:
+            checkpoint_dir = workdir / ".lgwf/checkpoints/run-1"
+            checkpoint_dir.mkdir(parents=True)
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/checkpoints/run-1/checkpoint.json",
+                {
+                    "state_before_current_node": {
+                        "input": {
+                            "skip_delivery_review": True,
+                            "delivery_action": "none",
+                        }
+                    }
+                },
+            )
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/change_brief_markdown.json",
+                {"change_brief_markdown": "# 变更摘要\n\n正文"},
+            )
+
+            payload = capture_main_stdout_json(self.prepare_delivery_review, workdir)
+            decision = json.loads((workdir / ".lgwf/delivery_decision.json").read_text(encoding="utf-8"))
+
+        self.assertEqual("skip", payload["__route__route_delivery_review"])
+        self.assertEqual("none", decision["commit_action"])
+        self.assertIn("selection_prompt", payload["git_diff_brief.delivery_review_input"])
+
+    def test_case_prepare_delivery_review_forces_review_for_skip_commit_action(self) -> None:
         with isolated_workdir_with_lgwf_state() as workdir:
             checkpoint_dir = workdir / ".lgwf/checkpoints/run-1"
             checkpoint_dir.mkdir(parents=True)
@@ -462,11 +568,52 @@ class ScriptFlowE2ETest(unittest.TestCase):
             )
 
             payload = capture_main_stdout_json(self.prepare_delivery_review, workdir)
-            decision = json.loads((workdir / ".lgwf/delivery_decision.json").read_text(encoding="utf-8"))
+            delivery_input = payload["git_diff_brief.delivery_review_input"]
+            self.assertFalse((workdir / ".lgwf/delivery_decision.json").exists())
 
-        self.assertEqual("skip", payload["__route__route_delivery_review"])
-        self.assertEqual("commit", decision["commit_action"])
-        self.assertEqual("chore(git-diff-brief): compact diff context", decision["commit_message"])
+        self.assertEqual("review", payload["__route__route_delivery_review"])
+        joined_questions = "\n".join(delivery_input["open_delivery_questions"])
+        self.assertIn("skip_delivery_review=true", joined_questions)
+        self.assertIn("必须进入人工确认", joined_questions)
+        self.assertIn("请选择本次最终交付动作", delivery_input["selection_prompt"])
+        for option in ("1. 接受摘要", "2. 接受摘要，并执行 git add", "3. 接受摘要，执行 git add，并创建 commit", "4. 返回修订摘要", "5. 拒绝并终止 workflow"):
+            self.assertIn(option, delivery_input["selection_prompt"])
+
+    def test_case_prepare_delivery_review_uses_supporting_summary_count_and_validation_commands(self) -> None:
+        with isolated_workdir_with_lgwf_state() as workdir:
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/delivery_review_context.json",
+                {
+                    "delivery_review_input": {
+                        "final_change_brief_markdown": "# 变更摘要\n\n正文",
+                        "summary_supporting_context": {
+                            "changed_files_count": 17,
+                            "changed_files_path_entries": 21,
+                            "suggested_verification_commands": [
+                                "python -m unittest skills/git-diff-brief/tests/test_stage_scripts.py"
+                            ],
+                        },
+                    }
+                },
+            )
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/change_brief_markdown.json",
+                {"change_brief_markdown": "# 变更摘要\n\n正文"},
+            )
+            write_utf8_json_fixture(
+                workdir,
+                ".lgwf/checkpoints/run-1/checkpoint.json",
+                {"state_before_current_node": {"input": {"repo_path": "D:/repo"}}},
+            )
+
+            payload = capture_main_stdout_json(self.prepare_delivery_review, workdir)
+            selection_prompt = payload["git_diff_brief.delivery_review_input"]["selection_prompt"]
+
+        self.assertIn("目标仓库：D:/repo", selection_prompt)
+        self.assertIn("变更文件数：21", selection_prompt)
+        self.assertIn("python -m unittest skills/git-diff-brief/tests/test_stage_scripts.py", selection_prompt)
 
     def test_case_delivery_approval_routes_and_finalize_output_contract(self) -> None:
         review_fixture = {

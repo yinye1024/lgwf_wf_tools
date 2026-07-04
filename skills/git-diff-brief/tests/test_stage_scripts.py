@@ -290,6 +290,43 @@ class StageScriptsTest(unittest.TestCase):
         self.assertFalse(plan_without_scope["ok"])
         self.assertIn("relative_scope", plan_without_scope["error"])
 
+    def test_commit_action_rejects_repo_root_scope_without_explicit_confirmation(self) -> None:
+        git_context = {"git_collection_log": {"repo_path": "D:/repo", "relative_scope": ""}}
+        decision = self.delivery_module.normalize_delivery_decision(
+            {"approval": "approve", "commit_action": "stage"},
+            commit_message_suggestion="chore(git-diff-brief): summarize scoped changes",
+        )
+
+        plan = self.delivery_module.build_commit_plan(decision, git_context)
+        with mock.patch("subprocess.run") as run:
+            result = self.commit_action_module.execute_commit_action(plan)
+
+        run.assert_not_called()
+        self.assertFalse(plan["ok"])
+        self.assertFalse(result["executed"])
+        self.assertTrue(plan["requires_repo_root_confirmation"])
+        self.assertEqual(".", plan["scope_display"])
+        self.assertIn("allow_repo_root_write", plan["error"])
+
+    def test_commit_action_allows_repo_root_scope_with_explicit_confirmation(self) -> None:
+        git_context = {"git_collection_log": {"repo_path": "D:/repo", "relative_scope": ""}}
+        decision = self.delivery_module.normalize_delivery_decision(
+            {
+                "approval": "approve",
+                "commit_action": "stage",
+                "allow_repo_root_write": True,
+            },
+            commit_message_suggestion="chore(git-diff-brief): summarize scoped changes",
+        )
+
+        plan = self.delivery_module.build_commit_plan(decision, git_context)
+
+        self.assertTrue(plan["ok"])
+        self.assertEqual(".", plan["relative_scope"])
+        self.assertEqual(".", plan["scope_display"])
+        self.assertTrue(plan["requires_repo_root_confirmation"])
+        self.assertEqual([["git", "add", "--all", "--", "."]], plan["commands"])
+
     def test_commit_message_suggestion_has_stable_fallback(self) -> None:
         suggestion = self.delivery_module.resolve_commit_message_suggestion(
             review_context={},

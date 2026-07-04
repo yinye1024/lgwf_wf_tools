@@ -25,6 +25,8 @@ def handle_existing_workflow_data(
         if getattr(args, "resume_existing", False):
             print("[lgwf] --resume-existing requires existing .lgwf checkpoint data. Use --rerun-existing to start over.", file=stderr)
             return 2
+        if args.rerun_existing:
+            work_dir.expanduser().resolve().mkdir(parents=True, exist_ok=True)
         return None
 
     if args.rerun_existing:
@@ -209,15 +211,16 @@ def delete_existing_lgwf_data(work_dir: pathlib.Path, stderr: TextIO, support: R
     validation_error = work_dir_guard_module.validate_rerun_work_dir(work_root, support)
     if validation_error:
         raise RuntimeError(validation_error)
-    for child in list(work_root.iterdir()):
-        child_path = child.resolve()
-        if child_path.parent != work_root:
-            raise RuntimeError(f"refusing to delete unexpected work_dir child: {child_path}")
-        if child.is_dir() and not child.is_symlink():
-            shutil.rmtree(child_path, ignore_errors=True)
+    lgwf_dir = support.workspace_layout.lgwf_dir(work_root).expanduser().resolve()
+    if lgwf_dir.parent != work_root or lgwf_dir.name != ".lgwf":
+        raise RuntimeError(f"refusing to delete unexpected .lgwf path: {lgwf_dir}")
+    if lgwf_dir.exists():
+        if lgwf_dir.is_dir() and not lgwf_dir.is_symlink():
+            shutil.rmtree(lgwf_dir, ignore_errors=True)
         else:
-            child.unlink(missing_ok=True)
-    print(f"[lgwf] cleaned old workflow work_dir contents: {work_root}", file=stderr)
+            lgwf_dir.unlink(missing_ok=True)
+    work_root.mkdir(parents=True, exist_ok=True)
+    print(f"[lgwf] cleaned old workflow .lgwf contents: {lgwf_dir}", file=stderr)
 
 
 def validate_work_dir_cleanup_target(work_root: pathlib.Path) -> None:

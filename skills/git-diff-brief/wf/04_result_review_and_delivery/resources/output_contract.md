@@ -31,7 +31,9 @@
 - `execute_commit_action` 是唯一允许执行 `git add` / `git commit` 的节点
 - 默认 `commit_action=none`，不执行 Git 写操作
 - `stage` / `commit` 只能使用 `.lgwf/git_context_snapshot.json` 中的 `repo_path` 和 `relative_scope`
-- 当入口显式提供 `skip_delivery_review=true` 时，`prepare_delivery_review` 可以生成等价 `.lgwf/delivery_decision.json` 并跳过最终人工确认；默认仍必须进入人工确认
+- 当入口显式提供 `skip_delivery_review=true` 时，只有 `delivery_action=none` 可以生成等价 `.lgwf/delivery_decision.json` 并跳过最终人工确认
+- `skip_delivery_review=true` 配合 `stage`、`commit` 或非法 `delivery_action` 时必须进入 `confirm_delivery_or_revision`，不得写入自动交付决策
+- 当 `relative_scope` 为空字符串时表示仓库根目录；除非最终审批显式包含 `allow_repo_root_write=true`，否则 `stage` / `commit` 必须生成失败提交计划且不执行 Git 命令
 - 第五阶段结束后应写出 `.lgwf/token_usage_by_node.json`，用于复盘 Codex 节点 token 消耗
 - `commit_message_suggestion` 是英文 Conventional Commits 版本，默认用于真实 `git commit -m`
 - `commit_message_suggestion_zh` 是中文展示版本，只用于人工理解和确认

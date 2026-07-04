@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import pathlib
 import subprocess
@@ -103,6 +104,10 @@ def main(
     if args.resume_existing and (args.rerun_existing or args.continue_existing):
         print("--resume-existing cannot be combined with --rerun-existing or --continue-existing", file=error_output)
         return 2
+    input_exit_code = _resolve_input_json_arg(args, error_output)
+    if input_exit_code is not None:
+        return input_exit_code
+    _resolve_runtime_paths(args)
 
     existing_exit_code = existing_workflow_module.handle_existing_workflow_data(args, output, error_output, support)
     if existing_exit_code is not None:
@@ -169,7 +174,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workflow-json")
     parser.add_argument("--workflow-lgwf")
     parser.add_argument("--work-dir")
-    parser.add_argument("--input-json", default="{}")
+    parser.add_argument("--input-json")
+    parser.add_argument("--input-json-file")
     parser.add_argument("--record", choices=["true", "false"])
     parser.add_argument("--output-json")
     parser.add_argument("--background", action="store_true", help="Start workflow in the background and print process metadata JSON.")
@@ -220,6 +226,40 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Run the workflow client in a visible console window and keep it open after completion on Windows.",
     )
     return parser
+
+
+def _resolve_input_json_arg(args: argparse.Namespace, stderr: TextIO) -> int | None:
+    input_json = getattr(args, "input_json", None)
+    input_json_file = getattr(args, "input_json_file", None)
+    if input_json and input_json_file:
+        print("--input-json and --input-json-file cannot be combined", file=stderr)
+        return 2
+    if input_json_file:
+        try:
+            input_json = pathlib.Path(input_json_file).expanduser().read_text(encoding="utf-8-sig")
+        except OSError as exc:
+            print(f"--input-json-file could not be read: {exc}", file=stderr)
+            return 2
+    elif isinstance(input_json, str) and input_json.startswith("@") and len(input_json) > 1:
+        try:
+            input_json = pathlib.Path(input_json[1:]).expanduser().read_text(encoding="utf-8-sig")
+        except OSError as exc:
+            print(f"--input-json @file could not be read: {exc}", file=stderr)
+            return 2
+    else:
+        input_json = input_json or "{}"
+    try:
+        json.loads(input_json)
+    except json.JSONDecodeError as exc:
+        print(f"--input-json must be valid JSON: {exc}", file=stderr)
+        return 2
+    args.input_json = input_json
+    return None
+
+
+def _resolve_runtime_paths(args: argparse.Namespace) -> None:
+    if args.work_dir:
+        args.work_dir = str(pathlib.Path(args.work_dir).expanduser().resolve())
 
 
 def _validate_workflow_args(args: argparse.Namespace) -> str | None:

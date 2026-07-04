@@ -102,11 +102,26 @@ def normalize_delivery_decision(
         "commit_action": action,
         "stage_scope": str(decision.get("stage_scope", "target_scope")).strip() or "target_scope",
         "commit_message": str(decision.get("commit_message", "") or commit_message_suggestion).strip(),
+        "allow_repo_root_write": bool(decision.get("allow_repo_root_write")),
     }
 
 
 def build_commit_plan(decision: dict[str, Any], git_context: dict[str, Any]) -> dict[str, Any]:
     action = str(decision.get("commit_action", "none")).strip().lower() or "none"
+    def invalid_plan(error: str) -> dict[str, Any]:
+        return {
+            "ok": False,
+            "action": action,
+            "executed": False,
+            "commands": [],
+            "error": error,
+            "repo_path": "",
+            "relative_scope": "",
+            "scope_display": "",
+            "requires_repo_root_confirmation": False,
+            "commit_message": str(decision.get("commit_message", "")).strip(),
+        }
+
     if action == "none":
         return {
             "ok": True,
@@ -115,26 +130,36 @@ def build_commit_plan(decision: dict[str, Any], git_context: dict[str, Any]) -> 
             "commands": [],
             "repo_path": "",
             "relative_scope": "",
+            "scope_display": "",
+            "requires_repo_root_confirmation": False,
             "commit_message": str(decision.get("commit_message", "")).strip(),
         }
     if action not in {"stage", "commit"}:
-        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "commit_action 不受支持。"}
+        return invalid_plan("commit_action 不受支持。")
     if str(decision.get("stage_scope", "target_scope")).strip() != "target_scope":
-        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "stage_scope 只能是 target_scope。"}
+        return invalid_plan("stage_scope 只能是 target_scope。")
     if action == "commit" and not str(decision.get("commit_message", "")).strip():
-        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "commit_action=commit 需要非空 commit_message。"}
+        return invalid_plan("commit_action=commit 需要非空 commit_message。")
 
     log = git_context.get("git_collection_log", {})
     if not isinstance(log, dict):
-        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "缺少 git_collection_log。"}
+        return invalid_plan("缺少 git_collection_log。")
     repo_path = str(log.get("repo_path", "")).strip()
     if "relative_scope" not in log:
-        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "缺少 relative_scope。"}
+        return invalid_plan("缺少 relative_scope。")
     relative_scope = str(log.get("relative_scope", "")).strip().strip("/")
     if not repo_path:
-        return {"ok": False, "action": action, "executed": False, "commands": [], "error": "缺少 repo_path。"}
+        return invalid_plan("缺少 repo_path。")
 
+    requires_repo_root_confirmation = not relative_scope
     scope_arg = relative_scope or "."
+    if requires_repo_root_confirmation and not bool(decision.get("allow_repo_root_write")):
+        plan = invalid_plan("目标作用域是仓库根目录；执行 stage/commit 必须显式设置 allow_repo_root_write=true。")
+        plan["repo_path"] = repo_path
+        plan["relative_scope"] = "."
+        plan["scope_display"] = "."
+        plan["requires_repo_root_confirmation"] = True
+        return plan
     commands = [["git", "add", "--all", "--", scope_arg]]
     if action == "commit":
         commands.append(["git", "commit", "-m", str(decision.get("commit_message", "")).strip()])
@@ -145,6 +170,8 @@ def build_commit_plan(decision: dict[str, Any], git_context: dict[str, Any]) -> 
         "commands": commands,
         "repo_path": repo_path,
         "relative_scope": scope_arg,
+        "scope_display": scope_arg,
+        "requires_repo_root_confirmation": requires_repo_root_confirmation,
         "commit_message": str(decision.get("commit_message", "")).strip(),
     }
 

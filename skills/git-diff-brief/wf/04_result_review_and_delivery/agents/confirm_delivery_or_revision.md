@@ -4,6 +4,8 @@
 
 主 agent 到达本节点后，必须先用中文向用户展示“摘要预览 + 编号选择模板”，等待用户明确选择后再提交 approval。不要只展示 JSON；JSON 只作为内部提交值或高级用户参考。
 
+如果 `delivery_review_input.selection_prompt` 存在，必须先原样展示该字段内容，再等待用户选择。不得改写、压缩或省略其中的 1-5 编号选项。
+
 展示给用户的内容必须包含：
 
 1. 本次摘要的目标仓库或作用域。
@@ -84,6 +86,8 @@
 - `4` -> `approval=revise`，`changes` 使用用户说明
 - `5` -> `approval=reject`
 
+编号 `1`、`2`、`3`、`4`、`5` 只在本 REVIEW 节点等待用户输入时有效。workflow 已经结束后，用户再单独回复编号时，不得把编号解释成 Git 写操作；应提示用户重新运行 workflow 或明确给出新的命令和作用域。
+
 ## 选项语义
 
 | 选项 | 含义 | 适用场景 |
@@ -99,6 +103,7 @@
 - `commit_action` 只能是 `none`、`stage` 或 `commit`，缺省按 `none` 处理。
 - `stage_scope` 只能写 `target_scope`，表示使用当前 Git 采集结果中的相对作用域；不得写任意路径。
 - 当 `commit_action=commit` 时，`commit_message` 必须是非空字符串。
+- 当当前确认范围是仓库根目录时，只有用户在本 REVIEW 节点明确确认根目录写操作，才允许提交 JSON 带 `allow_repo_root_write=true`；否则保持缺省或 `false`。
 - `comment` 用中文说明原因。
 - 若选择 `revise`，请在 `changes` 数组中列出需要补充的点。
 

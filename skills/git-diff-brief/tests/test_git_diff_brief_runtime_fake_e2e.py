@@ -19,7 +19,6 @@ WORKFLOW_LGWF = PACKAGE_ROOT / "wf" / "workflow.lgwf"
 LGWF = PACKAGE_ROOT.parent / "lgwf-wf-tools" / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
 
 PROMPT_TO_NODE = {
-    "wf/01_request_scope_alignment/agents/capture_request_context.md": "capture_request_context",
     "wf/02_git_context_collection/agents/inspect_repo_state.md": "inspect_repo_state",
     "wf/03_brief_synthesis/agents/synthesize_change_summary.md": "identify_change_themes",
     "wf/03_brief_synthesis/agents/draft_markdown_brief.md": "compose_markdown_brief",
@@ -27,7 +26,6 @@ PROMPT_TO_NODE = {
 }
 
 EXPECTED_CALL_ORDER = [
-    "capture_request_context",
     "inspect_repo_state",
     "identify_change_themes",
     "compose_markdown_brief",
@@ -202,7 +200,6 @@ from typing import Any
 
 
 PROMPT_TO_NODE = {
-    "wf/01_request_scope_alignment/agents/capture_request_context.md": "capture_request_context",
     "wf/02_git_context_collection/agents/inspect_repo_state.md": "inspect_repo_state",
     "wf/03_brief_synthesis/agents/synthesize_change_summary.md": "identify_change_themes",
     "wf/03_brief_synthesis/agents/draft_markdown_brief.md": "compose_markdown_brief",
@@ -405,6 +402,24 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
             "当前风险集中在 fake Codex 响应未覆盖真实语义判断。",
         ]
     )
+    happy_selection_prompt = "\n".join(
+        [
+            "本次变更摘要预览：",
+            "",
+            f"目标仓库：{repo_hint}",
+            "变更文件数：2",
+            "",
+            "请选择本次最终交付动作：",
+            "",
+            "1. 接受摘要",
+            "2. 接受摘要，并执行 git add",
+            "3. 接受摘要，执行 git add，并创建 commit",
+            "4. 返回修订摘要",
+            "5. 拒绝并终止 workflow",
+            "",
+            "请回复 1、2、3、4 或 5。",
+        ]
+    )
     revised_markdown = build_markdown(
         [
             "请求范围已补充仓库边界说明，摘要链路继续执行。",
@@ -416,29 +431,6 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
         "happy_path": {
             "scenario_id": "happy_path",
             "fake_responses": [
-                {
-                    "node_id": "capture_request_context",
-                    "call_index": 1,
-                    "writes": {
-                        ".lgwf/request_scope_capture.json": {
-                            "repository_input_context": {
-                                "repo_hint": repo_hint,
-                                "workspace_root": repo_hint,
-                            },
-                            "summary_scope": {
-                                "baseline": "worktree git diff + latest commit",
-                                "output_location": "chat markdown brief",
-                            },
-                            "scope_confirmation_input": {
-                                "needs_confirmation": False,
-                                "open_questions": [],
-                                "recommended_decision": "approve",
-                            },
-                            "needs_confirmation": False,
-                            "open_questions": [],
-                        }
-                    },
-                },
                 {
                     "node_id": "inspect_repo_state",
                     "call_index": 1,
@@ -503,6 +495,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                                 "commit_message_rationale": "基于 runtime fake E2E 和审批链路相关变更生成。",
                                 "commit_action_options": ["none", "stage", "commit"],
                                 "default_commit_action": "none",
+                                "selection_prompt": happy_selection_prompt,
                                 "open_delivery_questions": [],
                             },
                             "final_change_brief_markdown": happy_markdown,
@@ -545,50 +538,6 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
         "scope_revise_then_approve": {
             "scenario_id": "scope_revise_then_approve",
             "fake_responses": [
-                {
-                    "node_id": "capture_request_context",
-                    "call_index": 1,
-                    "writes": {
-                        ".lgwf/request_scope_capture.json": {
-                            "repository_input_context": {
-                                "repo_hint": repo_hint,
-                            },
-                            "summary_scope": {
-                                "baseline": "worktree git diff + latest commit",
-                            },
-                            "scope_confirmation_input": {
-                                "needs_confirmation": True,
-                                "open_questions": ["请补充并确认仓库范围说明"],
-                                "recommended_decision": "revise",
-                            },
-                            "needs_confirmation": True,
-                            "open_questions": ["请补充并确认仓库范围说明"],
-                        }
-                    },
-                },
-                {
-                    "node_id": "capture_request_context",
-                    "call_index": 2,
-                    "writes": {
-                        ".lgwf/request_scope_capture.json": {
-                            "repository_input_context": {
-                                "repo_hint": repo_hint,
-                                "confirmed_scope": "仅输出 git diff brief 当前包的中文摘要",
-                            },
-                            "summary_scope": {
-                                "baseline": "worktree git diff + latest commit",
-                                "output_location": "chat markdown brief",
-                            },
-                            "scope_confirmation_input": {
-                                "needs_confirmation": False,
-                                "open_questions": [],
-                                "recommended_decision": "approve",
-                            },
-                            "needs_confirmation": False,
-                            "open_questions": [],
-                        }
-                    },
-                },
                 {
                     "node_id": "inspect_repo_state",
                     "call_index": 1,
@@ -649,6 +598,7 @@ def scenario_payloads() -> dict[str, dict[str, Any]]:
                                 "commit_message_rationale": "基于范围修订回路和 fake runtime 编排验证生成。",
                                 "commit_action_options": ["none", "stage", "commit"],
                                 "default_commit_action": "none",
+                                "selection_prompt": happy_selection_prompt,
                                 "open_delivery_questions": [],
                             },
                             "final_change_brief_markdown": revised_markdown,
@@ -873,7 +823,17 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         for attempt in range(1, 4):
             stack = ExitStack()
             env, work_dir, log_file = self._prepare_runtime(stack, scenario_id)
-            case_input_json = json.dumps({"scenario_id": scenario_id}, ensure_ascii=False)
+            case_input: dict[str, Any] = {
+                "scenario_id": scenario_id,
+                "repo_path": str(PACKAGE_ROOT.resolve()),
+                "summary_scope": {
+                    "baseline": "worktree git diff + latest commit",
+                    "output_location": "chat markdown brief",
+                },
+            }
+            if scenario_id == "scope_revise_then_approve":
+                case_input["requested_extensions"] = ["请补充并确认仓库范围说明"]
+            case_input_json = json.dumps(case_input, ensure_ascii=False)
             launch = run_lgwf(
                 [
                     "run",
@@ -1053,6 +1013,17 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
             delivery_context["delivery_review_input"]["final_change_brief_markdown"],
             markdown,
         )
+        selection_prompt = delivery_context["delivery_review_input"]["selection_prompt"]
+        self.assertIn("本次变更摘要预览", selection_prompt)
+        self.assertIn("请选择本次最终交付动作", selection_prompt)
+        for option in (
+            "1. 接受摘要",
+            "2. 接受摘要，并执行 git add",
+            "3. 接受摘要，执行 git add，并创建 commit",
+            "4. 返回修订摘要",
+            "5. 拒绝并终止 workflow",
+        ):
+            self.assertIn(option, selection_prompt)
         commit_plan = read_json(work_dir / ".lgwf/commit_plan.json")
         self.assertEqual("none", commit_plan["action"])
         commit_action_result = read_json(work_dir / ".lgwf/commit_action_result.json")
@@ -1096,7 +1067,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
 
         calls = self._read_calls(work_dir)
         self.assertEqual([item["resolved_node_id"] for item in calls], EXPECTED_CALL_ORDER)
-        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1, 1, 1])
+        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1, 1])
         self._assert_no_unmapped_calls(calls, work_dir)
 
     def test_scope_revise_then_approve(self) -> None:
@@ -1128,9 +1099,9 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         calls = self._read_calls(work_dir)
         self.assertEqual(
             [item["resolved_node_id"] for item in calls],
-            ["capture_request_context", *EXPECTED_CALL_ORDER],
+            EXPECTED_CALL_ORDER,
         )
-        self.assertEqual([item["call_index"] for item in calls], [1, 2, 1, 1, 1, 1])
+        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1, 1])
         self.assertEqual([item["resolved_node_id"] for item in calls].count("present_brief"), 1)
         self._assert_no_unmapped_calls(calls, work_dir)
 

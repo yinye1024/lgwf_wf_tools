@@ -82,15 +82,11 @@ python $lgwfPy codex token-status --work-dir <work_dir>
 - 如果是 `flow.human_approval`，按 vendor main-agent ask flow 在当前对话确认并提交。
 - 如果是 `AGENT_LOOP` 控制状态但没有 human request，汇报 loop reason、evidence 和 artifact 路径，等待用户决定。
 - 只提交用户明确确认的 approval value。
-- `approval submit --value-json` 当前只支持字符串参数，不支持 `--value-json-file`。PowerShell 中不要手写 inline JSON 或反斜杠转义 JSON；应使用对象生成压缩 JSON，先本地校验，再把变量作为单个参数提交：
+- `approval submit --value-json` 和 `review submit --value-json` 当前只支持字符串参数，不支持 value file。包含中文或复杂嵌套时，优先使用 `scripts/safe_approval_submit.py` 的 `--value-file` 或 `--value-json-base64`，由脚本转换成 ASCII-only JSON 参数后提交：
 
 ```powershell
-$value = [ordered]@{
-  target_workflow_lgwf = "D:/example/workflow.lgwf"
-  max_attempts = 2
-} | ConvertTo-Json -Compress
-$null = $value | ConvertFrom-Json
-python $lgwfPy approval submit --work-dir <work_dir> --request-id <request_id> --decision approve --value-json $value --comment "user approved"
+python skills\lgwf-wf-tools\scripts\safe_approval_submit.py --kind approval --work-dir <work_dir> --request-id <request_id> --decision approve --value-file <value.json> --comment "user approved"
+python skills\lgwf-wf-tools\scripts\safe_approval_submit.py --kind review --work-dir <work_dir> --request-id <request_id> --route revise --value-file <value.json> --comment "user requested edits"
 ```
 
 ## 收尾
