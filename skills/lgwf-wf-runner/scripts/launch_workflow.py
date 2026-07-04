@@ -27,6 +27,12 @@ def read_input_json(args: argparse.Namespace) -> str:
     return args.input_json or "{}"
 
 
+def build_input_args(args: argparse.Namespace, input_json: str) -> list[str]:
+    if args.input_json_file:
+        return ["--input-json-file", str(Path(args.input_json_file))]
+    return ["--input-json", input_json]
+
+
 def write_manifest(resolved: dict[str, Any], launch_result: dict[str, Any], input_json: str) -> dict[str, Any]:
     work_dir = Path(resolved["resolved_work_dir"])
     manifest = {
@@ -81,8 +87,7 @@ def main() -> None:
             resolved["workflow_lgwf"],
             "--work-dir",
             resolved["resolved_work_dir"],
-            "--input-json",
-            input_json,
+            *build_input_args(args, input_json),
             "--background",
         ]
         proc = run_command(command, cwd=facade_root, timeout=args.timeout_seconds)

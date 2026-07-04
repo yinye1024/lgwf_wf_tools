@@ -19,6 +19,10 @@ from unittest import mock
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = PACKAGE_ROOT / "wf"
 FORBIDDEN_PATTERNS = ("lgwf.py run", "--workflow-lgwf")
+OLD_REPO_PATH_PATTERNS = (
+    "\\".join(("D:", "allen", "github", "lgwf_" + "skills")),
+    "/".join(("D:", "allen", "github", "lgwf_" + "skills")),
+)
 
 sys.dont_write_bytecode = True
 
@@ -64,7 +68,8 @@ def runtime_guard() -> None:
 
 def capture_main_stdout_json(module: types.ModuleType, workdir: Path) -> dict[str, object]:
     buffer = io.StringIO()
-    with runtime_guard(), mock.patch("sys.stdout", buffer):
+    stdin_context = contextlib.nullcontext() if isinstance(sys.stdin, io.StringIO) else mock.patch("sys.stdin", io.StringIO(""))
+    with runtime_guard(), mock.patch("sys.stdout", buffer), stdin_context:
         previous_cwd = Path.cwd()
         os.chdir(workdir)
         try:
@@ -254,10 +259,10 @@ class ScriptFlowE2ETest(unittest.TestCase):
         stdin = io.StringIO(
             json.dumps(
                 {
-                    "repo_path": r"D:\allen\github\lgwf_skills",
+                    "repo_path": "../../..",
                     "summary_scope": {"baseline": "worktree git diff + latest commit"},
                     "git_diff_brief": {
-                        "normalized_repo_hint": "D:/allen/github/lgwf_skills",
+                        "normalized_repo_hint": "../../..",
                         "request_scope_validation": {
                             "path_exists": True,
                             "baseline_scope": "worktree git diff + latest commit",
@@ -274,7 +279,7 @@ class ScriptFlowE2ETest(unittest.TestCase):
             persisted = json.loads((workdir / ".lgwf/request_scope_capture.json").read_text(encoding="utf-8"))
 
         self.assertEqual(
-            "D:/allen/github/lgwf_skills",
+            "../../..",
             payload["git_diff_brief.repository_input_context"]["normalized_repo_hint"],
         )
         self.assertFalse(payload["git_diff_brief.scope_confirmation_input"]["needs_confirmation"])
@@ -285,7 +290,7 @@ class ScriptFlowE2ETest(unittest.TestCase):
             json.dumps(
                 {
                     "git_diff_brief": {
-                        "normalized_repo_hint": "D:/allen/github/lgwf_skills",
+                        "normalized_repo_hint": "../../..",
                         "request_scope_validation": {
                             "path_exists": True,
                             "baseline_scope": "worktree git diff + latest commit",
@@ -315,7 +320,7 @@ class ScriptFlowE2ETest(unittest.TestCase):
             payload = capture_main_stdout_json(self.prepare_scope_confirmation, workdir)
 
         self.assertEqual(
-            "D:/allen/github/lgwf_skills",
+            "../../..",
             payload["git_diff_brief.repository_input_context"]["normalized_repo_hint"],
         )
         self.assertFalse(payload["git_diff_brief.scope_confirmation_input"]["needs_confirmation"])
@@ -383,14 +388,27 @@ class ScriptFlowE2ETest(unittest.TestCase):
     def test_case_scope_revision_extracts_repo_path_from_approval_changes(self) -> None:
         revision = {
             "approval": "revise",
-            "changes": ["将仓库路径从 . 改为 D:\\allen\\github\\lgwf_skills\\"],
+            "changes": ["将仓库路径从 . 改为 ../../.."],
             "comment": "用户明确要求改用仓库根目录。",
         }
 
         self.assertEqual(
-            "D:/allen/github/lgwf_skills",
+            "../../..",
             self.validate_repo_hint.repo_hint_from_revision(revision),
         )
+
+    def test_case_tracked_fixtures_do_not_depend_on_old_repo_absolute_path(self) -> None:
+        checked_suffixes = {".json", ".md", ".py", ".lgwf"}
+        offenders: list[str] = []
+        for path in PACKAGE_ROOT.rglob("*"):
+            if not path.is_file() or path.suffix not in checked_suffixes:
+                continue
+            if any(part in {".git", ".local", ".lgwf", "__pycache__", ".pytest_cache"} for part in path.parts):
+                continue
+            text = path.read_text(encoding="utf-8")
+            if any(pattern in text for pattern in OLD_REPO_PATH_PATTERNS):
+                offenders.append(path.relative_to(PACKAGE_ROOT).as_posix())
+        self.assertEqual([], offenders)
 
     def test_case_collect_git_context_uses_confirmed_repo_path(self) -> None:
         with temporary_git_repo() as repo, isolated_workdir_with_lgwf_state() as workdir:

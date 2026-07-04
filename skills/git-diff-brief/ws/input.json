@@ -1,6 +1,0 @@
-{
-    "repo_path":  "D:\\allen\\github\\lgwf_skills",
-    "summary_scope":  {
-                          "baseline":  "worktree git diff + latest commit"
-                      }
-}

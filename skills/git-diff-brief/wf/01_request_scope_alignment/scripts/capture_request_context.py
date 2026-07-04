@@ -10,6 +10,7 @@ from typing import Any
 
 WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:[\\/][^\s，,。；;]+")
 POSIX_PATH_RE = re.compile(r"/[^\s，,。；;]+")
+REVISION_TARGET_RE = re.compile(r"(?:改为|to)\s+([^\s，,。；;]+)")
 
 
 def normalize_repo_hint(raw: str) -> str:
@@ -70,10 +71,10 @@ def extract_repo_from_revision(path: Path = Path(".lgwf/request_scope_confirmati
     if comment:
         texts.append(str(comment))
     joined = "\n".join(texts)
-    for pattern in (WINDOWS_PATH_RE, POSIX_PATH_RE):
+    for pattern in (REVISION_TARGET_RE, WINDOWS_PATH_RE, POSIX_PATH_RE):
         match = pattern.search(joined)
         if match:
-            return normalize_repo_hint(match.group(0))
+            return normalize_repo_hint(match.group(1) if match.lastindex else match.group(0))
     return ""
 
 

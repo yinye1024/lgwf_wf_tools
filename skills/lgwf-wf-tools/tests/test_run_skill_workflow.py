@@ -41,6 +41,30 @@ class RunSkillWorkflowTests(unittest.TestCase):
         expected_lgwf = FACADE_ROOT / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
         self.assertEqual(calls[0], [sys.executable, str(expected_lgwf), "run", *argv])
 
+    def test_proxies_input_json_file_argument(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(args: list[str]) -> subprocess.CompletedProcess[str]:
+            calls.append(args)
+            return subprocess.CompletedProcess(args=args, returncode=0)
+
+        argv = [
+            "--workflow-lgwf",
+            "skills/git-diff-brief/wf/workflow.lgwf",
+            "--work-dir",
+            "skills/git-diff-brief/ws",
+            "--input-json-file",
+            "D:/tmp/lgwf-input.json",
+            "--background",
+        ]
+
+        with mock.patch.object(run_skill_workflow.subprocess, "run", fake_run):
+            exit_code = run_skill_workflow.main(argv)
+
+        self.assertEqual(exit_code, 0)
+        expected_lgwf = FACADE_ROOT / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
+        self.assertEqual(calls[0], [sys.executable, str(expected_lgwf), "run", *argv])
+
 
 if __name__ == "__main__":
     unittest.main()

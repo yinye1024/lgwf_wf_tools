@@ -193,6 +193,7 @@ class LaunchWorkflowTests(RunnerTestCase):
         self.assertIn("run", command)
         self.assertIn("--workflow-lgwf", command)
         self.assertIn("--work-dir", command)
+        self.assertIn("--input-json", command)
         self.assertIn("--background", command)
         work_dir = Path(command[command.index("--work-dir") + 1])
         self.assertTrue(str(work_dir).endswith(r"ws\sessions\wf-create\session-1"))
@@ -206,6 +207,53 @@ class LaunchWorkflowTests(RunnerTestCase):
         self.assertEqual(manifest["pid"], 1234)
         self.assertEqual(Path(manifest["resolved_work_dir"]), work_dir)
         self.assertEqual(manifest["input_json"], {"raw_intent": "create thinking"})
+
+    def test_launch_passes_input_json_file_to_runtime(self) -> None:
+        calls: list[tuple[list[str], Path, int | None]] = []
+        input_path = self.root / "input.json"
+        input_path.write_text('{"raw_intent":"创建 workflow"}', encoding="utf-8")
+
+        def fake_run_command(args: list[str], *, cwd: Path, timeout: int | None = None):
+            calls.append((args, cwd, timeout))
+            return subprocess.CompletedProcess(
+                args=args,
+                returncode=0,
+                stdout=json.dumps({"session_id": "runtime-1", "pid": 1234}),
+                stderr="",
+            )
+
+        argv = [
+            "launch_workflow.py",
+            "--facade-root",
+            str(self.facade_root),
+            "--runner-root",
+            str(self.runner_root),
+            "--workflow-id",
+            "wf-create",
+            "--target-slug",
+            "LGWF Thinking",
+            "--facade-session-id",
+            "session-1",
+            "--input-json-file",
+            str(input_path),
+        ]
+        with (
+            mock.patch.object(sys, "argv", argv),
+            mock.patch.object(launch_workflow, "run_command", fake_run_command),
+            mock.patch.object(sys, "stdout", FakeStdout()),
+        ):
+            with self.assertRaises(SystemExit) as exit_context:
+                launch_workflow.main()
+
+        self.assertEqual(exit_context.exception.code, 0)
+        command, _, _ = calls[0]
+        self.assertIn("--input-json-file", command)
+        self.assertNotIn("--input-json", command)
+        self.assertEqual(command[command.index("--input-json-file") + 1], str(input_path))
+        work_dir = Path(command[command.index("--work-dir") + 1])
+        manifest_path = work_dir / ".lgwf" / "main_agent" / "facade_session.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["input_json"], {"raw_intent": "创建 workflow"})
 
 
 class StatusSessionTests(RunnerTestCase):

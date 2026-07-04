@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import pathlib
 import subprocess
@@ -103,6 +104,9 @@ def main(
     if args.resume_existing and (args.rerun_existing or args.continue_existing):
         print("--resume-existing cannot be combined with --rerun-existing or --continue-existing", file=error_output)
         return 2
+    input_json_exit_code = _resolve_input_json_arg(args, error_output)
+    if input_json_exit_code is not None:
+        return input_json_exit_code
 
     existing_exit_code = existing_workflow_module.handle_existing_workflow_data(args, output, error_output, support)
     if existing_exit_code is not None:
@@ -169,7 +173,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workflow-json")
     parser.add_argument("--workflow-lgwf")
     parser.add_argument("--work-dir")
-    parser.add_argument("--input-json", default="{}")
+    parser.add_argument("--input-json")
+    parser.add_argument("--input-json-file")
     parser.add_argument("--record", choices=["true", "false"])
     parser.add_argument("--output-json")
     parser.add_argument("--background", action="store_true", help="Start workflow in the background and print process metadata JSON.")
@@ -221,6 +226,24 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     return parser
 
+
+def _resolve_input_json_arg(args: argparse.Namespace, stderr: TextIO) -> int | None:
+    if args.input_json and args.input_json_file:
+        print("--input-json and --input-json-file cannot be combined", file=stderr)
+        return 2
+    if args.input_json_file:
+        input_json = pathlib.Path(args.input_json_file).read_text(encoding="utf-8-sig")
+    elif args.input_json and args.input_json.startswith("@"):
+        input_json = pathlib.Path(args.input_json[1:]).read_text(encoding="utf-8-sig")
+    else:
+        input_json = args.input_json or "{}"
+    try:
+        json.loads(input_json)
+    except json.JSONDecodeError as exc:
+        print(f"--input-json must be valid JSON: {exc}", file=stderr)
+        return 2
+    args.input_json = input_json
+    return None
 
 def _validate_workflow_args(args: argparse.Namespace) -> str | None:
     if args.stop_pid or args.status_pid:
