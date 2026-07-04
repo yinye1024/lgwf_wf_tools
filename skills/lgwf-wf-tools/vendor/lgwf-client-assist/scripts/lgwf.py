@@ -35,8 +35,14 @@ _REVIEW_COMMANDS = {
 }
 _RUN_COMMANDS = {
     "list": "list-runs",
+    "get": "get-run",
+    "trace": "get-run-trace",
     "summary": "get-run-summary",
-    "changed": "get-changed-files",
+    "changes": "get-run-changes",
+    "eval": "eval-run",
+    "get-eval": "get-run-eval",
+    "eval-suite": "eval-suite",
+    "get-eval-suite": "get-run-eval-suite",
 }
 
 

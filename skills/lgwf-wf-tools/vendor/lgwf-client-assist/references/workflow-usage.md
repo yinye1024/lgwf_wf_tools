@@ -120,6 +120,21 @@ python <skill-dir>\scripts\lgwf.py run --workflow-json <workflow_json> --work-di
 
 `--output-json` 是最终 runtime state。启用 `--record true` 时，`<work_dir>\.lgwf\runs\` 包含 run audit records。
 
+常用 run artifact 查询：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py runs list --work-dir <work_dir> --limit 10
+python <skill-dir>\scripts\lgwf.py runs trace --work-dir <work_dir> --run-id <run_id>
+python <skill-dir>\scripts\lgwf.py runs eval --work-dir <work_dir> --run-id <run_id> --spec-json "{...}"
+python <skill-dir>\scripts\lgwf.py runs eval --work-dir <work_dir> --run-id <run_id> --spec-json "{...}" --golden-trace <trace.json>
+python <skill-dir>\scripts\lgwf.py runs get-eval --work-dir <work_dir> --run-id <run_id>
+python <skill-dir>\scripts\lgwf.py runs eval-suite --work-dir <work_dir> --run-id <run_id> --cases-dir <cases_dir>
+python <skill-dir>\scripts\lgwf.py runs get-eval-suite --work-dir <work_dir> --run-id <run_id>
+```
+
+`runs eval` 只读取 `trace.json`，生成 `.lgwf\runs\<run_id>\eval.json`。它用于 trajectory check、catalog policy check 和 golden trace regression，不重新执行 workflow。
+`runs eval-suite` 读取指定 `--cases-dir` 下的 golden cases，生成 `.lgwf\runs\<run_id>\eval-suite.json`。LGWF runtime 仓库只维护 runtime contract fixtures；业务 regression cases 应由使用方项目维护。失败 check 会带 `evidence`，用于定位相关 node、capability、route、client call 或 catalog metadata。
+
 ## Client Tools
 
 ```powershell

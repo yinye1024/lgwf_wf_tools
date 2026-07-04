@@ -374,11 +374,7 @@ def latest_run_record(work_dir: pathlib.Path, support: RuntimeSupport) -> dict |
     runs_dir = support.workspace_layout.runs_dir(work_dir)
     if not runs_dir.is_dir():
         return None
-    records = [
-        path
-        for path in runs_dir.glob("*.json")
-        if not path.name.endswith(".changed_files.json")
-    ]
+    records = [path for path in runs_dir.glob("*/record.json")]
     if not records:
         return None
     latest = max(records, key=lambda path: path.stat().st_mtime)
@@ -391,7 +387,9 @@ def latest_run_record(work_dir: pathlib.Path, support: RuntimeSupport) -> dict |
         "status": data.get("status"),
         "workflow": data.get("workflow"),
         "change_summary": data.get("change_summary"),
-        "token_summary": data.get("token_summary"),
+        "has_trace": support.workspace_layout.run_trace_path(work_dir, data.get("run_id")).is_file()
+        if isinstance(data.get("run_id"), str)
+        else False,
     }
 
 

@@ -1,0 +1,11 @@
+{
+    "approval":  "approve",
+    "commit_action":  "commit",
+    "stage_scope":  "target_scope",
+    "commit_message":  "feat(lgwf): harden git diff brief delivery review flow",
+    "allow_repo_root_write":  true,
+    "changes":  [
+
+                ],
+    "comment":  "用户已明确确认对 D:\\allen\\github\\lgwf_skills 仓库根目录执行 git add 并使用建议 commit message 创建提交。"
+}

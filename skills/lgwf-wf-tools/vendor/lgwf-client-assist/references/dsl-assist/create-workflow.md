@@ -92,7 +92,7 @@ workflow 可以同时组装普通 step 和子 workflow：
 
 ```text
 WORKFLOW lgwf_plan_style;
-ENTRY generate_plan;
+ENTRY FLOW main;
 
 DEFAULTS {
   ref_root workflow ".";
@@ -114,44 +114,44 @@ REVIEW confirm_plan_and_acceptance
   PROMPT "03_confirm_plan_and_acceptance/review.md"
   RESULT state.confirmation;
 
-REACT execute_react_loop {
-  REASON CODEX reason
+REACT execute_react_loop MAX 3
+  REASON CODEX
     PROMPT_REF "04_execute_react_loop/01_reason/agents/reasoner/prompt.md"
-    RESULT state.react.reason;
-  ACT CODEX act
+    RESULT state.react.reason
+  ACT CODEX
     PROMPT_REF "04_execute_react_loop/02_act/agents/actor/prompt.md"
-    RESULT state.react.act;
-  OBSERVE CODEX observe
+    RESULT state.react.act
+  OBSERVE CODEX
     PROMPT_REF "04_execute_react_loop/03_observe/agents/observer/prompt.md"
-    RESULT state.react.observe;
-  DECIDE PY decide
+    RESULT state.react.observe
+  DECIDE PY
     SCRIPT "04_execute_react_loop/scripts/decide.py"
     RESULT state.react.decision;
-}
 
-FLOW {
-  generate_plan THEN generate_acceptance THEN confirm_plan_and_acceptance THEN execute_react_loop;
-}
+FLOW main
+  START generate_plan
+  THEN generate_acceptance
+  THEN confirm_plan_and_acceptance
+  THEN execute_react_loop;
 ```
 
-推荐用 `FLOW { ... }` 集中描述完整流程；块内 `a THEN b THEN c` 表达无条件顺序边，`a WHEN "route_key" THEN b` 表达 route key 到目标节点的跳转。`THEN FAIL_ALL` 是保留控制流目标，用于失败终止当前 workflow 并向父 workflow 传播；不要创建名为 `FAIL_ALL` 的节点。旧的单条 `FLOW a THEN b;` 和独立 `ROUTE a WHEN ...;` 仍兼容，但新建 workflow 优先使用块语法，避免跳转逻辑和整体流程分离。
+推荐用 `ENTRY FLOW main` 声明 authoring 层入口，用命名 `FLOW main START ... THEN ...` 表达主流程。命名 flow 不需要 `{}`；`FLOW` 本身不是 runtime node，编译后入口会解析到 `START` 节点。`THEN FAIL_ALL` 是保留控制流目标，用于失败终止当前 workflow 并向父 workflow 传播；不要创建名为 `FAIL_ALL` 的节点。
 
 子 workflow 内部的人工确认或修订循环应自洽表达，父 workflow 只串联阶段：
 
 ```text
-FLOW {
-  confirm_design
-    WHEN "approve" THEN apply_design
-    WHEN "revise" THEN revise_design
-    WHEN "reject" THEN FAIL_ALL;
+ROUTE confirm_design
+  WHEN "approve" THEN apply_design
+  WHEN "revise" THEN revise_design
+  WHEN "reject" THEN FAIL_ALL;
 
-  revise_design
-    WHEN "approve" THEN apply_design
-    WHEN "revise" THEN revise_design
-    WHEN "reject" THEN FAIL_ALL;
+ROUTE revise_design
+  WHEN "approve" THEN apply_design
+  WHEN "revise" THEN revise_design
+  WHEN "reject" THEN FAIL_ALL;
 
-  apply_design THEN scaffold_package;
-}
+FLOW apply_design
+  THEN scaffold_package;
 ```
 
 这样父 workflow 不需要出现 `__route__<child>`、`reject` 汇总分支或子流程内部节点名。
@@ -276,7 +276,7 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 - 对于 Codex 真正要分析的用户授权目标目录或文件，使用 `target_dirs` / `target_files`，或 Authoring DSL 的 `TARGET_DIR` / `TARGET_FILE` / `TARGET_DIRS state.*` / `TARGET_FILES state.*`；不要把动态分析目标塞进 `context_refs`。
 - `target_dirs` / `target_files` 可使用绝对路径，由 client runner 校验存在性和文件/目录类型；它们不是 workflow resource refs。
 - 生成 prompt 文件时，不在本文件展开 prompt 规则；读取 `references/prompt-assist/guide.md`，并保持 prompt 的 `Inputs` 与 `context_refs` 对齐。
-- 省略 `cwd`，让执行默认发生在 workspace root；legacy `cwd` 只用于旧 workflow 兼容。
+- 省略 `cwd`，让执行默认发生在 workspace root。
 
 ## 常用 Capability
 

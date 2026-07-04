@@ -24,11 +24,11 @@
 - 子 workflow 通过 `STEP ... WORKFLOW` 引用，且父 workflow 不重复声明其内部节点。
 - 子 workflow 的 `approve` / `revise` / `reject` 等交互细节不得泄露到父 workflow；拒绝、取消或不可继续时，子 workflow 内部 route 到保留目标 `FAIL_ALL`。
 - 单节点、人工确认和输出校验优先作为普通 step，不强制包装成子 workflow。
-- 如果兼容旧 package 时同时存在 `workflow.lgwf` 和 `workflow.json`，snapshot 中的新编译结果覆盖旧 JSON。
 - `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`HANDOFF_FILES`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
 - `APPROVAL` route key 只能是 `approve` / `reject`；如果出现 `revise`、`minor_change` 等非二元 route，audit 应失败，并提示改用 `REVIEW ... OPTIONS [...]`。
 - `REVIEW` 用于 `approve` / `revise` / `reject` 等评审分支，`RESULT` 记录选择结果，`route` 作为后续 `WHEN` 的 route key。标准小改流程让 `revise` 接回同一个 `REVIEW` 节点，由主 agent 提交更新后的 `CONTEXT` 对象后重新等待用户确认。
-- 新建 workflow 优先使用 `FLOW { ... }` 集中表达全局流程；块内 `THEN` lowering 为 `edges`，`WHEN "route_key" THEN` lowering 为 `routes`。旧 `FLOW ...;` 和独立 `ROUTE ...;` 只作为兼容写法保留。
+- 新建 workflow 优先使用 `ENTRY FLOW main` 声明 authoring 层入口，并用命名 `FLOW main START ... THEN ...` 表达全局流程；命名 flow 不需要 `{}`，编译后入口解析到 `START` 节点。
+- 多分支使用独立 `ROUTE <node>` 或 `ROUTE <node> READ state.*`；人机多选使用 `CHOICE ... OPTION key LABEL "..." THEN target`。
 - `FAIL_ALL` 只能作为 route target 使用，不允许作为 node id；命中后当前 workflow failed，并向父 workflow 传播失败，父 workflow 后续 step 不应运行。
 - `READ`、`WRITE`、`RESULT`、`INSTRUCTION` 必须使用 `state.*` runtime state path。
 - `PROMPT`、`SCRIPT`、`CONTEXT file|dir` 必须使用相对文件资源路径。
@@ -43,7 +43,7 @@
 - `RUN_WORKFLOW RESULT` 应被后续 `PY map_*`、汇总节点或下游 workflow 消费；`RUN_WORKFLOW INPUT` 应来自初始 input 或上游 mapper writer。
 - 需要从上游 child 交接业务文件或目录时，优先使用 `HANDOFF_FILES`。`FROM` 指向上游 `RUN_WORKFLOW RESULT`；`COPY_FILE` / `COPY_DIR` 源路径相对上游实际 `work_dir`；`AS` 目标路径相对父 `<work_dir>/.lgwf/handoff/<node_id>/`；`RESULT` 字段值是复制后文件或目录的绝对路径，供下游隔离 child 读取；结果同时包含 `handoff_files` 对象，适合下游 `PY INPUT state.handoff_files`；目录交接默认整体替换目标目录。
 - `.lgwf/child-runs/*.json` 只用于诊断和状态展示，不作为常规业务数据通道；record 中的实际 child `work_dir` 位于 `.lgwf/isolations/run_workflow/<node_id>/work_dir`，child 人工确认由父 status 透传为 `child_human_approval`。
-- 不使用旧 `NODE ... USE ... CONFIG`、`REACT ... MAX_STEPS ... CONFIG` 或 `WATERFALL` authoring 语法。
+- workflow 拓扑只使用当前 Authoring DSL v2 声明和 `STEP ... WORKFLOW` 组合；不要新增未在 schema/catalog 中定义的 authoring 结构。
 - 编译后的 `workflow.json` 只使用 `nodes`、`edges`、`routes`、`entry_point` 顶层字段。
 - node id 唯一，`entry_point` 指向存在的 node。
 - `edges` 只表达无条件连接，不写条件逻辑。
@@ -57,7 +57,7 @@
 - 普通 step 的资源由父 workflow 直接引用。
 - 父 workflow 只表达阶段编排，不写子 workflow 内部确认分支；检查是否存在把子 workflow 的 `reject` route 接到父级汇总节点的耦合写法，必要时改为子 workflow 内部 `THEN FAIL_ALL`。
 - 多个直接子级共用资源放在当前 workflow 的 `shared/`。
-- workflow 引用路径相对当前 `workflow.lgwf`，必须指向 `.lgwf`，且引用链不存在循环。
+- workflow 引用路径相对当前 `workflow.lgwf`，必须指向 `workflow.lgwf`，且引用链不存在循环。
 - `SCRIPT`、`PROMPT`、`CONTEXT workflow` 相对当前 `workflow.lgwf`，编译后成为 package-root 相对路径。
 
 ## Resource Reference Checklist
