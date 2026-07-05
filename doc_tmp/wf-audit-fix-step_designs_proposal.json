@@ -1,0 +1,94 @@
+{
+  "workflow_name": "wf-audit-fix",
+  "target_package_root": "skills/lgwf-wf-tools/workflows/wf-audit-fix",
+  "package_profile": "internal_workflow_package",
+  "proposal_kind": "step_designs_proposal",
+  "step_designs_path": "docs/steps",
+  "scaffold_constraints": {
+    "source": [
+      "04_confirm_business_flow/resources/scaffold_package_template.json",
+      "04_confirm_business_flow/resources/scaffold_template_spec.md",
+      ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
+      ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md"
+    ],
+    "notes": [
+      "当前 work-dir 未发现 .lgwf/scaffold_package_result.json，本 proposal 先按模板默认 profile 与两层 workflow 规范起草，确认时需要核对后续确定性 scaffold_plan。",
+      "根目录禁止生成 workflow.lgwf；真实入口固定为 wf/workflow.lgwf。",
+      "workflow 拓扑只允许两层：wf/workflow.lgwf 负责编排，wf/<stage>/workflow.lgwf 承载阶段内部节点。",
+      "每个第一层子 workflow 目录必须自包含 workflow.lgwf、agents/、scripts/、resources/。",
+      "运行状态边界固定为 ws/.lgwf，不向目标 package 根目录写入 .lgwf。",
+      "默认 package_profile 为 internal_workflow_package，因此根目录不生成 SKILL.md；只有明确切换为 skill_wrapped_workflow 时才允许生成。"
+    ]
+  },
+  "step_designs": [
+    {
+      "step_slug": "resolve-target-package-boundary",
+      "step_name": "目标包解析与范围护栏",
+      "doc_path": "docs/steps/resolve-target-package-boundary.md",
+      "stage_id": "target_resolution_and_scope_guard",
+      "depends_on": [],
+      "confirmation_points": [
+        "target_workflow_lgwf 的解析规则是否唯一且稳定",
+        "允许修改边界是否仅覆盖目标 package",
+        "max_attempts 默认值与终止策略是否满足治理预期"
+      ]
+    },
+    {
+      "step_slug": "prepare-candidate-baseline-audit",
+      "step_name": "Candidate 基线准备与首次审计",
+      "doc_path": "docs/steps/prepare-candidate-baseline-audit.md",
+      "stage_id": "candidate_baseline_preparation",
+      "depends_on": [
+        "resolve-target-package-boundary"
+      ],
+      "confirmation_points": [
+        "candidate 副本是否与真实目录严格隔离",
+        "首次 audit 结果是否已结构化并可供修复循环消费",
+        "本阶段是否保持对真实目标目录只读"
+      ]
+    },
+    {
+      "step_slug": "repair-candidate-from-audit-loop",
+      "step_name": "Candidate 审计修复循环",
+      "doc_path": "docs/steps/repair-candidate-from-audit-loop.md",
+      "stage_id": "iterative_candidate_repair",
+      "depends_on": [
+        "prepare-candidate-baseline-audit"
+      ],
+      "confirmation_points": [
+        "循环预算与退出条件是否明确",
+        "修复动作是否始终限定在 candidate 副本内",
+        "REACT 或 AGENT_LOOP 的验证与决策契约是否可审计"
+      ]
+    },
+    {
+      "step_slug": "promote-passing-candidate-to-target",
+      "step_name": "Promote 通过版本并复核真实目录",
+      "doc_path": "docs/steps/promote-passing-candidate-to-target.md",
+      "stage_id": "promote_and_real_package_verification",
+      "depends_on": [
+        "repair-candidate-from-audit-loop"
+      ],
+      "confirmation_points": [
+        "只有通过 audit 的 candidate 才能 promote",
+        "真实目录 post-promote audit 是否被设计为强制复核",
+        "备份或回滚未明确时是否已保留待确认说明"
+      ]
+    },
+    {
+      "step_slug": "integrate-facade-and-summarize-outcome",
+      "step_name": "Facade 接入与结果摘要",
+      "doc_path": "docs/steps/integrate-facade-and-summarize-outcome.md",
+      "stage_id": "facade_integration_and_result_summary",
+      "depends_on": [
+        "promote-passing-candidate-to-target"
+      ],
+      "confirmation_points": [
+        "facade 接入是否建立在真实目录最终状态之上",
+        "结果摘要是否覆盖 audit 结果、尝试次数和最小可追溯信息",
+        "是否明确排除了 lgwf-wf-tools 集成实现、自动修复和端到端运行保证"
+      ]
+    }
+  ],
+  "design_rationale": "步骤拆分直接沿用已确认业务流的五个阶段，并把每个 downstream_step_inputs 对应为一份可单独审阅的 docs/steps 文档。这样实现阶段可以按 step_slug 精确消费输入、输出、依赖和建议文件落位，同时继续遵守 scaffold 模板要求的两层 workflow 拓扑、wf/ 唯一 workflow root 与 ws/.lgwf 运行状态边界。"
+}

@@ -1,0 +1,235 @@
+{
+  "artifact_kind": "business_flow",
+  "artifact_path": ".lgwf/business_flow.json",
+  "source_proposal_file": ".lgwf/business_flow_proposal.json",
+  "source_approval_file": ".lgwf/business_flow_approval.json",
+  "decision": "approve",
+  "confirmed": {
+    "workflow_name": "wf-audit-fix",
+    "target_package_root": "skills/lgwf-wf-tools/workflows/wf-audit-fix",
+    "business_goal": "为旧 LGWF workflow package 提供一个仅处理静态 DSL 审计失败的修复流程：先锁定允许修改的目标 package，再在隔离 candidate 副本中执行 audit 与修复循环，candidate 通过后 promote 回真实目录并完成最终审计与 facade 接入摘要。",
+    "stages": [
+      {
+        "stage_id": "target_resolution_and_scope_guard",
+        "stage_name": "目标解析与范围护栏",
+        "objective": "解析 `target_workflow_lgwf` 到唯一目标 package，明确允许修改的目录边界、静态审计问题范围和最大尝试次数策略，避免后续修复越界到非目标目录或演变为运行时诊断。",
+        "depends_on": [],
+        "input_sources": [
+          "已确认需求中的 `target_workflow_lgwf`、`max_attempts` 与静态问题范围约束",
+          "目标 workflow package 当前目录结构与 `workflow.lgwf` 入口"
+        ],
+        "outputs": [
+          "目标 package 解析结果",
+          "允许修改边界与非目标范围声明",
+          "candidate 工作目录规划",
+          "audit 循环控制参数"
+        ],
+        "human_approval": true,
+        "key_nodes": [
+          "resolve_target_workflow_entry",
+          "derive_target_package_root",
+          "confirm_mutation_scope",
+          "freeze_attempt_policy"
+        ]
+      },
+      {
+        "stage_id": "candidate_baseline_preparation",
+        "stage_name": "Candidate 基线准备",
+        "objective": "基于已确认的目标边界创建隔离 candidate 副本，运行首次基线 audit，沉淀用于后续修复循环的静态诊断上下文。",
+        "depends_on": [
+          "target_resolution_and_scope_guard"
+        ],
+        "input_sources": [
+          "目标 package 解析结果",
+          "candidate 工作目录规划",
+          "真实目标 package 当前文件内容"
+        ],
+        "outputs": [
+          "candidate 隔离副本",
+          "首次 audit stdout/stderr 诊断结果",
+          "candidate 与真实目录的映射关系"
+        ],
+        "human_approval": false,
+        "key_nodes": [
+          "copy_package_to_candidate",
+          "run_initial_candidate_audit",
+          "capture_audit_diagnostics",
+          "map_candidate_to_real_package"
+        ]
+      },
+      {
+        "stage_id": "iterative_candidate_repair",
+        "stage_name": "Candidate 审计修复循环",
+        "objective": "围绕 candidate audit 结果执行有限次数的诊断、修复与再审计，直到 candidate 通过 audit 或达到最大尝试次数。",
+        "depends_on": [
+          "candidate_baseline_preparation"
+        ],
+        "input_sources": [
+          "首次 audit 诊断结果",
+          "candidate 隔离副本",
+          "最大尝试次数与静态问题范围约束"
+        ],
+        "outputs": [
+          "每轮修复后的 candidate 状态",
+          "当前尝试计数与终止原因",
+          "audit 通过的 candidate 版本或失败总结"
+        ],
+        "human_approval": false,
+        "key_nodes": [
+          "evaluate_audit_failure",
+          "apply_candidate_fix",
+          "rerun_candidate_audit",
+          "check_attempt_budget",
+          "decide_repair_loop_exit"
+        ]
+      },
+      {
+        "stage_id": "promote_and_real_package_verification",
+        "stage_name": "Promote 与真实目录复核",
+        "objective": "在 candidate audit 通过时将其 promote 回真实目标 package，并对真实目录重新执行 audit，确保最终通过版本不是只在隔离副本中成立。",
+        "depends_on": [
+          "iterative_candidate_repair"
+        ],
+        "input_sources": [
+          "audit 通过的 candidate 版本",
+          "candidate 与真实目录映射关系",
+          "真实目标 package 原始位置"
+        ],
+        "outputs": [
+          "更新后的真实目标 package",
+          "真实目录最终 audit 结果",
+          "是否成功完成 promote 的结论"
+        ],
+        "human_approval": false,
+        "key_nodes": [
+          "promote_candidate_to_target",
+          "rerun_real_package_audit",
+          "verify_post_promote_consistency",
+          "finalize_package_status"
+        ]
+      },
+      {
+        "stage_id": "facade_integration_and_result_summary",
+        "stage_name": "Facade 接入与结果摘要",
+        "objective": "补齐 `wf-audit-fix` 被 facade 路由所需的接入产物，并输出最小可追溯的运行结果摘要，供人工判断是否继续后续治理。",
+        "depends_on": [
+          "promote_and_real_package_verification"
+        ],
+        "input_sources": [
+          "真实目录最终 audit 结果",
+          "尝试次数与终止原因",
+          "requirements 中对 facade registry 与 AGENTS 路由接入的约束"
+        ],
+        "outputs": [
+          "facade registry/AGENTS 接入变更",
+          "最终 audit 结果摘要",
+          "最小可追溯诊断信息"
+        ],
+        "human_approval": false,
+        "key_nodes": [
+          "update_facade_registry",
+          "update_router_agents",
+          "compose_result_summary",
+          "publish_traceable_outcome"
+        ]
+      }
+    ],
+    "stage_dependencies": [
+      {
+        "from_stage": "target_resolution_and_scope_guard",
+        "to_stage": "candidate_baseline_preparation",
+        "handoff": "已确认的目标 package 根目录、允许修改边界、candidate 目录规划和 audit 尝试策略。"
+      },
+      {
+        "from_stage": "candidate_baseline_preparation",
+        "to_stage": "iterative_candidate_repair",
+        "handoff": "candidate 初始副本、首次 audit 诊断结果以及 candidate 与真实目录的映射信息。"
+      },
+      {
+        "from_stage": "iterative_candidate_repair",
+        "to_stage": "promote_and_real_package_verification",
+        "handoff": "audit 通过的 candidate 版本，或达到最大尝试次数后的失败终止信息。"
+      },
+      {
+        "from_stage": "promote_and_real_package_verification",
+        "to_stage": "facade_integration_and_result_summary",
+        "handoff": "真实目标 package 的最终状态、post-promote audit 结果以及是否成功完成静态修复的结论。"
+      }
+    ],
+    "downstream_step_inputs": [
+      {
+        "step_slug": "resolve-target-package-boundary",
+        "consumes": [
+          "`target_workflow_lgwf` 的解析规则",
+          "允许修改的 package 边界",
+          "`max_attempts` 默认值与可调策略"
+        ],
+        "expected_artifacts": [
+          "目标 package 解析结果",
+          "范围护栏说明",
+          "循环控制参数"
+        ]
+      },
+      {
+        "step_slug": "prepare-candidate-baseline-audit",
+        "consumes": [
+          "真实目标 package 当前文件内容",
+          "candidate 工作目录规划",
+          "静态审计工具调用约束"
+        ],
+        "expected_artifacts": [
+          "candidate 隔离副本",
+          "首次 audit stdout/stderr 记录",
+          "candidate/真实目录映射"
+        ]
+      },
+      {
+        "step_slug": "repair-candidate-from-audit-loop",
+        "consumes": [
+          "每轮 audit 失败诊断结果",
+          "静态问题范围限制",
+          "尝试次数预算与终止条件"
+        ],
+        "expected_artifacts": [
+          "修复后的 candidate 版本",
+          "循环中的尝试计数",
+          "通过或失败的退出结论"
+        ]
+      },
+      {
+        "step_slug": "promote-passing-candidate-to-target",
+        "consumes": [
+          "audit 通过的 candidate 版本",
+          "candidate 到真实目录的映射",
+          "真实目录复核要求"
+        ],
+        "expected_artifacts": [
+          "promote 后的真实目标 package",
+          "真实目录最终 audit 结果",
+          "一致性复核结论"
+        ]
+      },
+      {
+        "step_slug": "integrate-facade-and-summarize-outcome",
+        "consumes": [
+          "facade 路由接入义务",
+          "最终 audit 结果",
+          "最小可追溯信息要求"
+        ],
+        "expected_artifacts": [
+          "registry/AGENTS 接入变更",
+          "运行结果摘要",
+          "可供人工判断的失败或成功说明"
+        ]
+      }
+    ],
+    "risk_notes": [
+      "需求已确认 candidate 通过后应 promote 回真实目录，但尚未明确 promote 需要的原子性、备份或失败回滚策略，后续步骤设计需补齐。",
+      "`target_workflow_lgwf` 允许的解析形式目前仍偏宽泛；若支持多种定位方式，需在步骤设计中先统一解析优先级，避免误判目标 package。",
+      "需求要求只处理静态 DSL/audit 问题，因此修复循环必须严格限制在 audit 失败信号可解释的范围内，不能漂移为运行目标 workflow 或处理业务 input-json。",
+      "facade registry 与 AGENTS 路由接入被列为目标输出之一，但尚未明确是否与 package 修复成功强绑定；该顺序关系需在后续步骤设计中再确认。",
+      "若 candidate 在最大尝试次数内仍无法通过 audit，业务流需要保留足够的失败摘要和中间诊断信息，但不应覆盖真实目标目录。"
+    ],
+    "design_rationale": "该业务流把需求拆为“先控边界、再做隔离修复、通过后再落回真实目录、最后补治理接入”四类核心责任，并把唯一必要的人工确认放在最前面的范围护栏阶段。这样可以先锁定允许修改的 package 与静态问题边界，再把高风险修复动作限制在 candidate 副本中，避免在真实目录上直接试错。将 promote 后的真实目录复核单独成阶段，是为了满足需求里“candidate 通过后仍需重新 audit 真实目录”的业务不变量；把 facade 接入与结果摘要放在尾部，则能把治理接入建立在最终 package 状态之上，避免把尚未稳定的中间版本过早暴露到路由层。整体仍保持 proposal 级别，只定义业务阶段、关键节点和交付关系，不提前展开具体 DSL、脚本实现或步骤文档正文。"
+  }
+}

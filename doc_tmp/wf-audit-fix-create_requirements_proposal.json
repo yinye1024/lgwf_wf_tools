@@ -1,0 +1,36 @@
+{
+  "workflow_name": "wf-audit-fix",
+  "target_package_root": "skills/lgwf-wf-tools/workflows/wf-audit-fix",
+  "purpose": "创建一个用于静态 DSL 审计修复的 LGWF workflow：对用户指定的旧 workflow package 反复执行 `lgwf.py audit`，在 audit 失败时基于 stdout/stderr 于隔离 candidate 目录修复目标 package，candidate audit 通过后再 promote 回真实目标目录并重新 audit，直到 audit 成功或达到最大尝试次数。",
+  "target_users": [
+    "需要批量或反复修复旧 LGWF workflow 静态 DSL/audit 问题的 workflow 维护者",
+    "通过 lgwf-wf-tools facade 管理内部 workflow 包的开发者"
+  ],
+  "expected_inputs": [
+    "必填 `target_workflow_lgwf`：目标旧 workflow 的 `workflow.lgwf` 路径或可解析定位信息，用于反向确定待修复 package",
+    "可选 `max_attempts`：最大 audit/修复循环次数，默认值为 5",
+    "运行时可访问 `lgwf.py audit` 及其 stdout/stderr，用作静态诊断依据",
+    "目标 workflow package 当前文件内容，供 candidate 隔离副本修复与 promote 使用"
+  ],
+  "expected_outputs": [
+    "当 audit 在限制次数内通过时，真实目标 workflow package 已被更新为 audit 通过版本",
+    "一份说明最终 audit 结果、尝试次数与是否成功的运行结果摘要，供后续人工判断是否继续治理",
+    "保留 candidate 隔离修复过程与失败原因所需的最小可追溯信息，便于定位未修复完成的静态问题",
+    "完成对 lgwf-wf-tools facade registry 和 AGENTS 路由的接入产物，使 `wf-audit-fix` 可被路由使用"
+  ],
+  "human_approval_points": [
+    "确认 `target_workflow_lgwf` 的解析范围和允许被修改的目标 package 边界",
+    "确认 `max_attempts` 默认值 5 与可调策略是否满足治理预期",
+    "确认该 workflow 仅处理静态 DSL/audit 问题，不扩展为运行目标 workflow、收集业务 input-json 或处理目标 workflow approval",
+    "确认 facade registry 与 AGENTS 路由接入方式符合仓库治理要求"
+  ],
+  "workflow_shape": "react",
+  "proposal_notes": [
+    "当前可用上游固化文件 `.lgwf/raw_intent_request.json` 只包含 `approved: true`，本 proposal 主要依据 run checkpoint 和进程输入中的原始意图文本提炼。",
+    "原始意图未提供 `source_business_contract`、`conversion_mapping` 或 `prompt_workflow_context`，因此本阶段不引入额外结构化业务上下文。",
+    "本 proposal 将“candidate audit 通过后 promote 回真实目标目录”视为需求边界的一部分，但未提前定义目录命名、promote 原子性实现或回滚机制。",
+    "“运行结果摘要”和“最小可追溯信息”是为后续人工判断与诊断保留的需求层输出，不代表已经确定具体报告格式或日志结构。",
+    "是否保留 candidate 失败中间产物、失败后是否覆盖真实目录、以及路径解析输入是否允许多种定位形式，仍需在后续确认或业务流阶段明确。"
+  ],
+  "design_rationale": "该任务的核心是围绕 audit 结果进行条件分支和有限次数重试修复，而不是单次线性处理，因此采用 `react` 更适合表达“审计 -> 诊断修复 -> 再审计 -> 达到终止条件”的需求形态。需求字段重点固定在目标 package 边界、循环终止条件、静态问题范围限制和 facade 接入义务上，能直接支撑后续业务流设计继续细化 candidate 隔离修复、promote 与最终收尾阶段，同时避免在需求阶段提前写死具体步骤、脚本实现或内部节点结构。"
+}
