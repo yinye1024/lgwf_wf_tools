@@ -2,6 +2,12 @@
 
 本目录是 `lgwf-wf-tools` 内部的计划驱动 workflow package，不是独立 Codex skill。它用于把复杂任务拆成可确认的计划契约、验收契约，并在用户确认后按 ReAct 闭环执行。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 计划中涉及创建、修改或修复 skill/workflow 时，必须把 `module-contract.md` 纳入任务约束。
+
 facade 必须从根目录 `registry.json` 派发本 workflow，使用内置 `vendor/lgwf-client-assist/scripts/lgwf.py` 启动或继续运行；不得要求用户激活外部 `lgwf-plan` 或 `lgwf-client-assist` skill。
 
 ## 适用场景
@@ -47,7 +53,7 @@ facade 应尽量提供结构化 `react_task_request`。最小形态：
 
 - `collect_react_task_request` 用于确认原始任务输入；facade 只能提交用户确认后的目标和约束。
 - `confirm_plan_and_acceptance` 用于确认计划契约和验收契约；用户 approve 前不得执行实现 task。
-- 执行阶段遇到最大轮次人工决策时，facade 必须展示当前 task、失败证据、可选分支和风险，再提交用户明确选择。
+- 执行阶段遇到最大轮次人工决策时，facade 必须按 `workflows/01-share/approval.md` 的人工确认展示模板展示当前 task、失败证据、可选分支和风险，再提交用户明确选择。
 
 ## 固定产物
 

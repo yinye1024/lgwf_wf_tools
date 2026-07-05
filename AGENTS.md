@@ -22,6 +22,14 @@
 - 新增或修改 `README.md`、`SKILL.md`、`AGENTS.md` 以及其他 `.md` 文件时，优先检查是否符合中文表达要求。
 - 若现有文件是英文，可以在修改相关段落时逐步改为中文；不要为了无关任务大规模重写整份文档。
 
+## 模块标准
+
+- 本仓库把 `skills/<skill>/` 和 `lgwf-wf-tools` registry 中的 workflow 都视为模块。
+- 模块类型分为 `codex_skill`、`lgwf_workflow_package` 和 `tool_workflow`。
+- 创建、转换、修复或优化模块时，必须先阅读 `skills/lgwf-wf-tools/workflows/01-share/module-contract.md`。
+- 每个模块都必须在自己的入口文档中说明模块定位、入口、依赖、状态边界、产物、验证和禁止事项。
+- 自包含表示模块文档、运行目录、产物和验证方式自解释；不表示复制 `lgwf-wf-tools/vendor/lgwf-client-assist` 或仓库级共享规则。
+
 ## 变更约束
 
 - 遵循现有目录结构和命名方式。

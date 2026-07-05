@@ -298,48 +298,34 @@ class ScriptFlowE2ETests(unittest.TestCase):
         with isolated_workdir() as workdir:
             proposal = make_full_proposal()
             write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", proposal)
-            write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_approval.json",
-                {"decision": "approve", "confirmed": proposal, "comment": "批准"},
-            )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
 
             assert_workflow_route_text(self, 'WHEN "approve" THEN finalize_create_input')
             finalize_result = result["lgwf_wf_convert.finalize_create_input_result"]
             self.assertEqual(finalize_result["decision"], "approve")
-            self.assertEqual(finalize_result["approval_path"], ".lgwf/wf_create_input_approval.json")
-            stored_approval = json.loads((workdir / ".lgwf" / "wf_create_input_approval.json").read_text(encoding="utf-8"))
-            self.assertEqual(stored_approval["confirmed"]["workflow_name"], proposal["workflow_name"])
-            self.assertEqual(stored_approval["confirmed"]["raw_intent"], proposal["raw_intent"])
+            self.assertEqual(finalize_result["proposal_path"], ".lgwf/wf_create_input_proposal.json")
+            self.assertEqual(finalize_result["confirmed_path"], ".lgwf/wf_create_input.json")
+            confirmed = json.loads((workdir / ".lgwf" / "wf_create_input.json").read_text(encoding="utf-8"))
+            self.assertEqual(confirmed["workflow_name"], proposal["workflow_name"])
+            self.assertEqual(confirmed["raw_intent"], proposal["raw_intent"])
             self.assertFalse((workdir / ".lgwf" / "wf_create_payload.json").exists())
 
     def test_case_confirm_create_input_revise_reject_route_contract(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/finalize_create_input.py")
         assert_workflow_route_text(self, 'WHEN "revise" THEN propose_create_input_react')
         assert_workflow_route_text(self, 'WHEN "reject" THEN FAIL_ALL')
-        for decision in ("revise", "reject"):
-            with self.subTest(decision=decision):
-                with isolated_workdir() as workdir:
-                    write_utf8_json(
-                        workdir / ".lgwf" / "wf_create_input_approval.json",
-                        {"decision": decision, "comment": f"{decision} reason"},
-                    )
-                    with self.assertRaisesRegex(ValueError, "只有 approve 决策可以 finalize create input"):
-                        module.main()
+        with isolated_workdir():
+            with self.assertRaisesRegex(FileNotFoundError, "wf_create_input_proposal"):
+                module.main()
 
     def test_case_prepare_wf_create_payload_confirmed_and_fallback(self):
         module = load_script_module("wf/07_confirm_step_designs/scripts/prepare_wf_create_payload.py")
         with isolated_workdir() as workdir:
-            proposal = make_full_proposal()
             confirmed = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/confirmed")
             confirmed["workflow_name"] = "confirmed-workflow"
             confirmed["raw_intent"] = "使用 confirmed 输入"
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", proposal)
-            write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_approval.json",
-                {"value": {"decision": "approve", "confirmed": confirmed}},
-            )
+            write_utf8_json(workdir / ".lgwf" / "wf_create_input.json", confirmed)
 
             confirmed_result = runtime_guard_and_capture_stdout_json(module.main)
             confirmed_payload = json.loads((workdir / ".lgwf" / "wf_create_payload.json").read_text(encoding="utf-8"))
@@ -356,23 +342,6 @@ class ScriptFlowE2ETests(unittest.TestCase):
             )
             self.assertEqual(confirmed_payload["wf_create_payload"]["raw_intent"], "使用 confirmed 输入")
             self.assertEqual(confirmed_input_for_wf_create["raw_intent"], "使用 confirmed 输入")
-
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_approval.json", {"decision": "approve"})
-            fallback_result = runtime_guard_and_capture_stdout_json(module.main)
-            fallback_payload = json.loads((workdir / ".lgwf" / "wf_create_payload.json").read_text(encoding="utf-8"))
-            fallback_input_for_wf_create = json.loads(
-                (workdir / ".lgwf" / "wf_create_input_for_wf_create.json").read_text(encoding="utf-8")
-            )
-            self.assertEqual(
-                fallback_result["lgwf_wf_convert.wf_create_payload"]["prompt_convert_payload"]["workflow_name"],
-                proposal["workflow_name"],
-            )
-            self.assertEqual(
-                fallback_payload["prompt_convert_payload"]["target_package_root"],
-                proposal["target_package_root"],
-            )
-            self.assertEqual(fallback_payload["wf_create_payload"]["raw_intent"], proposal["raw_intent"])
-            self.assertEqual(fallback_input_for_wf_create["raw_intent"], proposal["raw_intent"])
             self.assertTrue((workdir / ".lgwf" / "wf_create_payload.json").exists())
             self.assertTrue((workdir / ".lgwf" / "wf_create_input_for_wf_create.json").exists())
 
@@ -385,8 +354,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
 
         with isolated_workdir() as workdir:
             proposal = make_full_proposal(target_package_root="../outside")
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", proposal)
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_approval.json", {"decision": "approve"})
+            write_utf8_json(workdir / ".lgwf" / "wf_create_input.json", proposal)
             with self.assertRaises(ValueError):
                 module.main()
             self.assertFalse((workdir / ".lgwf" / "wf_create_payload.json").exists())

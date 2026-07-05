@@ -24,12 +24,8 @@ def normalize_package_path(raw_path: str, field_name: str) -> str:
 def build_payload(
     *,
     confirmed_input: dict[str, Any],
-    approval: dict[str, Any],
     package_profile: str = "internal_workflow_package",
 ) -> dict[str, Any]:
-    decision = str(approval.get("decision", approval.get("approval", ""))).lower()
-    if decision and decision != "approve":
-        raise ValueError("只有 approve 后才能生成 wf-create payload")
     target_package_root = normalize_package_path(
         str(confirmed_input.get("target_package_root", "")),
         "target_package_root",
@@ -75,16 +71,10 @@ def main() -> None:
 
     root = Path.cwd()
     lgwf_dir = root / ".lgwf"
-    approval_path = lgwf_dir / "wf_create_input_approval.json"
-    proposal_path = lgwf_dir / "wf_create_input_proposal.json"
-    approval = json.loads(approval_path.read_text(encoding="utf-8-sig"))
-    value = approval.get("value", approval)
-    confirmed_input = value.get("confirmed") if isinstance(value, dict) else None
-    if not isinstance(confirmed_input, dict):
-        confirmed_input = json.loads(proposal_path.read_text(encoding="utf-8-sig"))
+    confirmed_input_path = lgwf_dir / "wf_create_input.json"
+    confirmed_input = json.loads(confirmed_input_path.read_text(encoding="utf-8-sig"))
     payload = build_payload(
         confirmed_input=confirmed_input,
-        approval=value if isinstance(value, dict) else approval,
         package_profile=str(confirmed_input.get("package_profile", "internal_workflow_package")),
     )
     wf_create_input_path = lgwf_dir / "wf_create_input_for_wf_create.json"

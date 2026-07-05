@@ -7,9 +7,12 @@
 执行本 workflow 前必须读取：
 
 - `../01-share/AGENTS.md`
+- `../01-share/module-contract.md`
 - `../01-share/registry-contract.md`
 - `../01-share/tool-workflow.md`
 - `../01-share/artifacts.md`
+
+模块类型：`tool_workflow`。本模块的入口、依赖、状态边界、产物、验证和禁止事项以本文件后续章节为准。
 
 ## 触发规则
 

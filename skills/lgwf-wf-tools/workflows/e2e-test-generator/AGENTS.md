@@ -2,6 +2,12 @@
 
 本目录是 `lgwf-wf-tools` facade 下的内部 workflow package，职责是为一个已有 LGWF workflow 生成端到端测试骨架和验收入口。它不是独立 Codex skill，不得单独注册；外部只能通过 `lgwf-wf-tools` 根目录 `SKILL.md` 和 `registry.json` 派发到本目录的 `workflow.lgwf`。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 生成测试时必须保留目标模块的入口、状态边界和验证契约。
+
 ## 业务职责
 
 - 读取用户指定的目标 `workflow.lgwf`，分析目标 workflow package 的 DSL、prompt、script、上下文文件和节点拓扑。

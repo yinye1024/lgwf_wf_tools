@@ -11,8 +11,11 @@ from validate_registry import run_validation
 
 
 FACADE_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = FACADE_ROOT.parents[1]
+SKILLS_ROOT = REPO_ROOT / "skills"
 REGISTRY_PATH = FACADE_ROOT / "registry.json"
 ROOT_SKILL_MD = FACADE_ROOT / "SKILL.md"
+MODULE_CONTRACT_PATH = FACADE_ROOT / "workflows" / "01-share" / "module-contract.md"
 VENDOR_ROOT = FACADE_ROOT / "vendor" / "lgwf-client-assist"
 VENDOR_AGENTS_MD = VENDOR_ROOT / "AGENTS.md"
 VENDOR_SKILL_MD = VENDOR_ROOT / "SKILL.md"
@@ -52,6 +55,68 @@ def check_path(label: str, path: Path, *, should_exist: bool = True) -> dict[str
     }
 
 
+def run_module_contract_validation() -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+
+    if not MODULE_CONTRACT_PATH.is_file():
+        failures.append({"label": "module_contract.exists", "path": str(MODULE_CONTRACT_PATH)})
+    else:
+        contract_text = MODULE_CONTRACT_PATH.read_text(encoding="utf-8")
+        for token in ("codex_skill", "lgwf_workflow_package", "tool_workflow"):
+            if token not in contract_text:
+                failures.append({"label": "module_contract.type_declared", "token": token})
+        for topic in ("模块定位", "入口", "依赖", "状态", "产物", "验证", "禁止"):
+            if topic not in contract_text:
+                failures.append({"label": "module_contract.topic_declared", "topic": topic})
+
+    if SKILLS_ROOT.is_dir():
+        for skill_root in sorted(path for path in SKILLS_ROOT.iterdir() if path.is_dir()):
+            skill_name = skill_root.name
+            for filename in ("SKILL.md", "AGENTS.md", "README.md"):
+                if not (skill_root / filename).is_file():
+                    failures.append({"label": "skill.entry_doc.exists", "skill": skill_name, "file": filename})
+            agents_path = skill_root / "AGENTS.md"
+            if agents_path.is_file():
+                agents_text = agents_path.read_text(encoding="utf-8")
+                for topic in ("模块类型", "模块定位", "入口", "依赖", "状态边界", "验证", "禁止事项"):
+                    if topic not in agents_text:
+                        failures.append({"label": "skill.agents.topic_declared", "skill": skill_name, "topic": topic})
+            if (skill_root / "wf").is_dir():
+                if not (skill_root / "wf" / "workflow.lgwf").is_file():
+                    failures.append({"label": "skill.workflow.entry_exists", "skill": skill_name})
+                if not (skill_root / "ws").is_dir():
+                    failures.append({"label": "skill.workflow.work_dir_exists", "skill": skill_name})
+
+    if REGISTRY_PATH.is_file():
+        registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8-sig"))
+        for workflow in registry.get("workflows", []):
+            workflow_id = workflow.get("id")
+            kind = workflow.get("kind")
+            agents_md = workflow.get("agents_md")
+            agents_path = FACADE_ROOT / str(agents_md)
+            if not agents_path.is_file():
+                failures.append({"label": "workflow.agents.exists", "workflow": workflow_id, "path": str(agents_md)})
+                continue
+            agents_text = agents_path.read_text(encoding="utf-8")
+            if "module-contract.md" not in agents_text:
+                failures.append({"label": "workflow.agents.module_contract_ref", "workflow": workflow_id})
+            expected_type = "lgwf_workflow_package" if kind == "lgwf" else "tool_workflow"
+            if expected_type not in agents_text:
+                failures.append(
+                    {
+                        "label": "workflow.agents.module_type_declared",
+                        "workflow": workflow_id,
+                        "expected": expected_type,
+                    }
+                )
+
+    return {
+        "label": "module_contracts",
+        "passed": not failures,
+        "failures": failures,
+    }
+
+
 def run_doctor(*, deep: bool = False) -> dict[str, Any]:
     checks = [
         check_path("root_skill_md", ROOT_SKILL_MD),
@@ -83,6 +148,7 @@ def run_doctor(*, deep: bool = False) -> dict[str, Any]:
 
     deep_checks: list[dict[str, Any]] = []
     if deep and LGWF_PY.is_file():
+        deep_checks.append(run_module_contract_validation())
         deep_checks.append({"label": "bundled_client_doctor", **run_command([sys.executable, str(LGWF_PY), "doctor"], cwd=FACADE_ROOT)})
         if registry.get("passed"):
             registry_data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8-sig"))

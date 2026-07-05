@@ -2,6 +2,12 @@
 
 本目录是 `lgwf-wf-tools/workflows/wf-convert` 下的内部 workflow package，由 facade 根目录 `registry.json` 派发，不作为独立 Codex skill 注册。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 转换输出交给 `wf-create` 时，目标模块必须继续满足 `module-contract.md` 的自包含契约。
+
 ## 目标
 
 `wf-convert` 面向 prompt workflow 转换场景：读取现有 prompt workflow 目录，分析 prompt、agent、resource 和说明文件，产出可交给 `wf-create` 的创建输入包、源业务契约、转换映射、业务一致性报告与转换报告。
@@ -40,6 +46,7 @@
 - `.lgwf/prompt_workflow_inspection.json`
 - `.lgwf/wf_create_input_proposal.json`
 - `.lgwf/wf_create_input_approval.json`
+- `.lgwf/wf_create_input.json`
 - `.lgwf/wf_create_payload.json`
 - `.lgwf/wf_create_input_for_wf_create.json`
 - `.lgwf/business_parity_report.json`

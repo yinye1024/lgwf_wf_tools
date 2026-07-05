@@ -72,9 +72,6 @@ class PreparePayloadTests(unittest.TestCase):
                 "parity_requirements": [{"requirement_id": "audit", "description": "必须保留审计摘要"}],
                 "discarded_prompt_techniques": [{"technique": "prefill", "reason": "prompt 执行技巧"}],
             },
-            approval={
-                "decision": "approve",
-            },
             package_profile="internal_workflow_package",
         )
         self.assertEqual(payload["workflow_name"], "wf-convert")
@@ -98,7 +95,6 @@ class PreparePayloadTests(unittest.TestCase):
                 "source_business_contract": {"goal": "审批路由"},
                 "conversion_mapping": [{"mapping_type": "preserve_business_logic"}],
             },
-            approval={"decision": "approve"},
         )
         child_input = module.build_wf_create_input(payload)
         self.assertEqual(child_input["raw_intent"], "创建审批路由 workflow")

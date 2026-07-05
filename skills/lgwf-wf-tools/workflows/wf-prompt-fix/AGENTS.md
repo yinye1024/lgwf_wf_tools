@@ -2,6 +2,12 @@
 
 本目录是 `lgwf-wf-tools` facade 下的内部 workflow package，职责是盘点、验收并修复目标 LGWF workflow package 中被 `PROMPT` 或 `PROMPT_REF` 引用的 prompt 文件。它不是独立 Codex skill，不得单独注册；外部只能通过 `lgwf-wf-tools` 根目录 `SKILL.md` 和 `registry.json` 派发到本目录的 `wf/workflow.lgwf`。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 修复目标 prompt 时不得降低目标模块在 `module-contract.md` 中要求的自包含契约。
+
 ## 业务职责
 
 - 读取用户指定的目标 `workflow.lgwf`，确定目标 package root 和允许 Codex 审计、修复的目标目录。
@@ -62,7 +68,7 @@
 
 目录结构遵循两层 workflow 规则：第一层是 `wf/workflow.lgwf` 主编排；第二层是 `wf/<stage>/workflow.lgwf` 子工作流。子工作流目录必须自包含 prompt、spec、resources 和 stage-local scripts；不得在子工作流目录下再放 `*/workflow.lgwf`。
 
-进入 `waiting_human` 时，主 agent 必须展示 workflow 给出的 audit summary、issue 选项、修复风险或 acceptance summary，只提交用户明确确认的结果。不要绕过 approval，也不要直接修改 `.lgwf/` runtime artifacts。
+进入 `waiting_human` 时，主 agent 必须按 `workflows/01-share/approval.md` 的人工确认展示模板展示 workflow 给出的 audit summary、issue 选项、修复风险或 acceptance summary，只提交用户明确确认的结果。不要绕过 approval，也不要直接修改 `.lgwf/` runtime artifacts。
 
 ## 固定输出
 

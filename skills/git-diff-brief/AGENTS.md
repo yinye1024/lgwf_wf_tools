@@ -1,17 +1,37 @@
 # git-diff-brief 协作指引
 
-## 包定位
+## 模块类型
+
+- `codex_skill`
+- 内嵌 `lgwf_workflow_package`，真实 workflow root 为 `wf/`
+
+## 模块定位
 
 - 当前目录是 `internal_workflow_package`，真实 workflow root 仅在 `wf/`。
 - 根目录提供 `SKILL.md` 作为 Codex skill 入口，但不生成可运行的根 `workflow.lgwf`。
 - 本包用于读取 Git 仓库变更上下文，生成中文 Markdown 变更摘要初稿和建议 commit message，并在人工确认后可选执行 stage/commit。
 
-## 路径与状态边界
+## 入口
+
+- Codex 入口：`SKILL.md`。
+- LGWF 入口：`wf/workflow.lgwf`。
+- 启动本包 workflow 时，必须通过已注册的 `lgwf-wf-tools` 调用 `scripts/run_skill_workflow.py`，并显式传入 `--workflow-lgwf skills/git-diff-brief/wf/workflow.lgwf` 与 `--work-dir skills/git-diff-brief/ws`。
+
+## 依赖
+
+- 依赖 `lgwf-wf-tools` facade 的 workflow 启动代理。
+- 依赖目标 Git 仓库的真实 diff/status/log 数据。
+
+## 状态边界
 
 - 所有 workflow 资源路径必须保持包内相对路径。
 - 不得在源码树根目录写入 `.lgwf`、绝对路径或 `..`。
 - 本包运行时默认使用同级 `ws/` 作为 work dir；运行状态只允许写入 `ws/.lgwf`。
-- 启动本包 workflow 时，必须通过已注册的 `lgwf-wf-tools` 调用 `scripts/run_skill_workflow.py`，并显式传入 `--workflow-lgwf skills/git-diff-brief/wf/workflow.lgwf` 与 `--work-dir skills/git-diff-brief/ws`；不要直接调用 `vendor/lgwf-client-assist/scripts/lgwf.py run`。
+
+## 产物
+
+- 变更摘要 Markdown、commit message 建议、delivery decision 和可选 commit plan 写入 `ws/.lgwf/`。
+- `self-improve/` 产物按该子模块自己的 `AGENTS.md` 写入。
 
 ## workflow 结构
 
@@ -31,3 +51,14 @@
 - `1`、`2`、`3`、`4`、`5` 只是在 `confirm_delivery_or_revision` REVIEW 节点等待输入时有效；workflow 已结束后不得把用户单独回复的编号解释成 `git add` 或 `git commit`。
 - 当 `relative_scope` 为空字符串时表示仓库根目录；除非 REVIEW 决策显式带 `allow_repo_root_write=true`，否则 `stage` / `commit` 必须失败并保持不执行 Git 命令。
 - 不包含 `lgwf-wf-prompt-fix`、`lgwf-wf-tools` 集成、自动修复和端到端成功保证。
+
+## 验证
+
+```powershell
+python -m unittest discover skills\git-diff-brief\tests
+```
+
+## 禁止事项
+
+- 不要直接调用 `vendor/lgwf-client-assist/scripts/lgwf.py run` 启动本 workflow。
+- 不要在未获得最终审批时执行 `git add` 或 `git commit`。

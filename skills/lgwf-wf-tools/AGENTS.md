@@ -1,6 +1,44 @@
 # LGWF Workflow Tools 工作流路由表
 
+## 模块类型
+
+- `codex_skill`
+- facade skill，内部 `lgwf_workflow_package` 和 `tool_workflow` 由 `registry.json` 管理
+
+## 模块定位
+
 显式指令由根目录 `SKILL.md` 做 bootstrap 分发。本文件只负责 workflow router：根据用户意图选择 `registry.json` 中的 `workflows/<id>`，再读取目标 workflow 的 `AGENTS.md`。
+
+创建、转换、修复或优化任何 skill/workflow 模块时，必须读取 `workflows/01-share/module-contract.md`，先确认模块类型，再补齐入口、依赖、状态边界、产物、验证和禁止事项。
+
+## 入口
+
+- Codex 入口：`SKILL.md`。
+- 路由入口：本文件和 `registry.json`。
+- 维护入口：`docs/maintenance.md`。
+
+## 依赖
+
+- 依赖内置 `vendor/lgwf-client-assist/` 执行 LGWF workflow。
+- 依赖 `workflows/01-share/` 提供共享规则。
+
+## 状态边界
+
+- facade 本地状态写入 `.local/`。
+- LGWF workflow 状态写入 registry 声明的 `work_dir/.lgwf/`。
+- `tool_workflow` 按自身 `AGENTS.md` 声明写入 `.local/`、目标 package 或约定输出目录。
+
+## 产物
+
+- workflow run records、approval 展示、proposal、报告和 handoff payload 按目标 workflow 约定写入。
+
+## 验证
+
+```powershell
+python skills\lgwf-wf-tools\scripts\doctor_lgwf_wf_tools.py
+python skills\lgwf-wf-tools\scripts\doctor_lgwf_wf_tools.py --deep
+python -m unittest discover skills\lgwf-wf-tools\tests
+```
 
 ## 前置分流
 
@@ -18,7 +56,6 @@
 | 用户场景 | 选择 workflow |
 | --- | --- |
 | 目标是运行失败、卡住、产物不对、需要自动诊断修复 | 选择 `wf-fix`。 |
-| 目标是只修复旧 LGWF workflow 的 DSL 静态 audit 失败，不运行目标 workflow | 选择 `wf-audit-fix`。 |
 | 目标是从原始意图创建新的 LGWF workflow 初稿 | 选择 `wf-create`。 |
 | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告 | 选择 `wf-convert`。 |
 | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足 | 选择 `wf-prompt-fix`。 |
@@ -45,3 +82,9 @@
 - 说明选择的 workflow id 和 `kind`。
 - 说明读取了 `registry.json` 和哪个目标 `AGENTS.md`。
 - 如果没有选择 workflow，说明读取了哪份 facade 文档。
+
+## 禁止事项
+
+- 不要把内部 workflow 注册为独立 Codex skill。
+- 不要绕过 `workflows/01-share/approval.md` 的人工确认展示模板。
+- 不要在 registry 中保留不存在的 workflow entry。

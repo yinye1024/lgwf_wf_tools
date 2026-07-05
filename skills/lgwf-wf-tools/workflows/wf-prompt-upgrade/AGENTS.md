@@ -2,6 +2,12 @@
 
 本目录是 `lgwf-wf-tools` facade 下的内部 workflow package，不是独立 Codex skill。它专门处理“目标 workflow 引用的 prompt 是否具备足够强的设计能力、上下游契约和质量控制”，并在用户确认后把升级方案应用到目标 workflow package。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- prompt 升级不得扩大目标模块边界；入口、状态边界、产物和验证方式仍以目标模块自身契约为准。
+
 本 workflow 不替代 `wf-prompt-fix`。`wf-prompt-fix` 负责基础规范、引用、输出格式和明显契约问题；本 workflow 负责更高一层的 prompt 设计升级，例如职责边界、角色能力、决策标准、失败模式、验收指标和可执行修改计划。默认推荐先运行 `wf-prompt-fix`，再运行 `wf-prompt-upgrade`。
 
 ## 业务目标
@@ -98,7 +104,7 @@ python vendor\lgwf-client-assist\scripts\lgwf.py run --workflow-lgwf workflows\w
 ```
 
 4. 使用同一个 `session_id` / `pid` / `work_dir` 通过 `status`、`wait`、`approval` 和 `runs` 持续推进。
-5. 遇到 `waiting_human` 时展示 workflow 给出的 confirmation context，只提交用户明确确认的 JSON 决策。
+5. 遇到 `waiting_human` 时按 `workflows/01-share/approval.md` 的人工确认展示模板展示 workflow 给出的 confirmation context，只提交用户明确确认的 JSON 决策。
 6. 结束后汇总最终状态、关键产物、实际修改文件、未应用升级、剩余风险和建议下一步。
 
 如果固定 `work_dir` 已有历史 LGWF 数据，按 facade 的 continue/rerun 规则处理，不要直接启动第二个 run。

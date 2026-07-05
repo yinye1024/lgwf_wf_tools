@@ -29,6 +29,17 @@ class DoctorDeepTest(unittest.TestCase):
         self.assertEqual([], failed)
         self.assertTrue(result["passed"])
 
+    def test_deep_doctor_checks_module_contracts(self) -> None:
+        module = load_doctor_module()
+        result = module.run_doctor(deep=True)
+        module_checks = [
+            item
+            for item in result.get("deep_checks", [])
+            if item.get("label") == "module_contracts"
+        ]
+        self.assertEqual(1, len(module_checks))
+        self.assertTrue(module_checks[0]["passed"])
+
 
 if __name__ == "__main__":
     unittest.main()

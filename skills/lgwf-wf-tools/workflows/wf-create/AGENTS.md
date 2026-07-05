@@ -2,6 +2,12 @@
 
 本目录已经是 `lgwf-wf-tools/workflows/wf-create` 下的内部 workflow，由 facade 根目录 `registry.json` 派发，不是独立 Codex skill。真实可运行的 workflow package root 固定为 `wf/`，同级 `ws/` 只作为 work-dir，运行状态只允许写入 `ws/.lgwf`。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 本模块生成的目标 workflow 也必须按 `module-contract.md` 补齐自包含契约。
+
 ## 适用场景
 
 - 用户只有原始意图，需要先生成一个 LGWF workflow 初稿。

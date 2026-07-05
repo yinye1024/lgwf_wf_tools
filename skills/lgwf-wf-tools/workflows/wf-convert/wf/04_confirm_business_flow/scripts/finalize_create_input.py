@@ -6,13 +6,16 @@ from pathlib import Path
 
 def main() -> None:
     root = Path.cwd()
-    approval_path = root / ".lgwf" / "wf_create_input_approval.json"
-    approval = json.loads(approval_path.read_text(encoding="utf-8-sig"))
-    value = approval.get("value", approval)
-    decision = str(value.get("decision", value.get("approval", ""))).lower() if isinstance(value, dict) else ""
-    if decision != "approve":
-        raise ValueError("只有 approve 决策可以 finalize create input")
-    result = {"decision": "approve", "approval_path": ".lgwf/wf_create_input_approval.json"}
+    lgwf_dir = root / ".lgwf"
+    proposal_path = lgwf_dir / "wf_create_input_proposal.json"
+    confirmed_path = lgwf_dir / "wf_create_input.json"
+    proposal = json.loads(proposal_path.read_text(encoding="utf-8-sig"))
+    confirmed_path.write_text(json.dumps(proposal, ensure_ascii=False, indent=2), encoding="utf-8")
+    result = {
+        "decision": "approve",
+        "proposal_path": ".lgwf/wf_create_input_proposal.json",
+        "confirmed_path": ".lgwf/wf_create_input.json",
+    }
     print(json.dumps({"lgwf_wf_convert.finalize_create_input_result": result}, ensure_ascii=False, indent=2))
 
 

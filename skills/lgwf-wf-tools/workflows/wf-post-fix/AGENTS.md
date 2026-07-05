@@ -2,13 +2,19 @@
 
 本目录是 `lgwf-wf-tools` facade 下的内部 workflow package，职责是对一个已有 LGWF workflow 做综合后处理：prompt 基础修复、prompt 设计升级、E2E 测试生成，以及生成后测试入口的可选执行。它不是独立 Codex skill，不得单独注册；外部只能通过 `lgwf-wf-tools` 根目录 `SKILL.md` 和 `registry.json` 派发到本目录的 `wf/workflow.lgwf`。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 组合调用下游 workflow 时，不得绕过下游模块自己的自包含契约和 approval 边界。
+
 ## 业务边界
 
 - 本 workflow 只编排已有 workflow，不替代 `wf-prompt-fix`、`wf-prompt-upgrade`、`e2e-test-generator` 的内部职责。
 - 默认每个阶段运行前都要向用户解释该阶段作用、可能影响和跳过后果，并请求 `run | skip | auto | stop` 决策；用户选择 `stop` 时，由当前子 workflow 直接 `FAIL_ALL` 终止并向父 workflow 传播失败。
 - 用户选择 `auto` 后，只自动进入允许自动的阶段：`wf-prompt-fix`、`wf-prompt-upgrade`、`e2e-test-generator`、`script_flow_e2e`、`runtime_fake_e2e`。
 - `real_positive_e2e` 和 `wf_fix_positive_e2e` 即使处于 `auto` 也必须再次请求用户确认。
-- 子 workflow 自己的 approval 永远不能被 `auto` 绕过；主 agent 必须展示子 workflow 原始确认上下文并等待明确确认。
+- 子 workflow 自己的 approval 永远不能被 `auto` 绕过；主 agent 必须按 `workflows/01-share/approval.md` 的人工确认展示模板展示子 workflow 原始确认上下文并等待明确确认。
 
 ## 输入契约
 

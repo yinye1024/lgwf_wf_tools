@@ -2,6 +2,12 @@
 
 本目录是 `lgwf-wf-tools` facade 下的内部 workflow package，职责是运行一个目标 LGWF workflow，观察失败或阻塞原因，并在候选目录中自动修复目标 workflow package，验证通过后再 promote 回真实目标目录。它不是独立 Codex skill，不得单独注册；外部只能通过 `lgwf-wf-tools` 根目录 `SKILL.md` 和 `registry.json` 派发到本目录的 `wf/workflow.lgwf`。
 
+## 模块契约
+
+- 模块类型：`lgwf_workflow_package`。
+- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 本模块的入口、依赖、状态边界、产物、验证和禁止事项以本文件后续章节为准。
+
 ## 业务职责
 
 - 接收用户指定的目标 `workflow.lgwf`，确认最大修复次数和目标 approval 是否转发到当前主 agent。

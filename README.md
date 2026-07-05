@@ -4,6 +4,16 @@
 
 根 README 只作为仓库入口页使用。具体 workflow 的输入契约、运行产物和维护细节，请继续阅读 `skills/lgwf-wf-tools/` 下的文档和各 workflow 自带说明。
 
+## 模块标准
+
+本仓库把 skill 和 workflow 都作为模块维护。模块分为三类：
+
+- `codex_skill`：`skills/<skill>/` 下的 Codex skill package。
+- `lgwf_workflow_package`：通过 `workflow.lgwf` 由 LGWF runtime 执行的 workflow package。
+- `tool_workflow`：由脚本或文档入口驱动、不走 LGWF runtime 的内部 workflow。
+
+每个模块必须能从自己的 `README.md`、`AGENTS.md` 或 registry entry 理解模块定位、入口、依赖、状态边界、产物、验证和禁止事项。详细规则见 `skills/lgwf-wf-tools/workflows/01-share/module-contract.md`。
+
 ## 什么时候使用
 
 当你需要在 Codex 中处理 LGWF workflow 相关任务时，优先从 `lgwf-wf-tools` 开始：

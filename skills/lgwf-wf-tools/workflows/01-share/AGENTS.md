@@ -4,9 +4,10 @@
 
 ## 引用方式
 
-- LGWF runtime workflow 通常读取 `registry-contract.md`、`lgwf-dispatch.md`、`lgwf-monitor.md`、`approval.md` 和 `artifacts.md`。
-- 非 LGWF 的 `tool-workflow` 通常读取 `registry-contract.md`、`tool-workflow.md` 和 `artifacts.md`。
-- 如果目标 workflow 的 `AGENTS.md` 与共用规则冲突，必须说明冲突原因，并优先遵循目标 workflow 的显式规则。
+- LGWF runtime workflow 通常读取 `module-contract.md`、`registry-contract.md`、`lgwf-dispatch.md`、`lgwf-monitor.md`、`approval.md` 和 `artifacts.md`。
+- 非 LGWF 的 `tool-workflow` 通常读取 `module-contract.md`、`registry-contract.md`、`tool-workflow.md` 和 `artifacts.md`。
+- 创建、转换、修复或优化 skill/workflow 模块时，必须先读取 `module-contract.md`，确认模块类型和自包含契约。
+- 如果目标 workflow 的 `AGENTS.md` 与共用规则冲突，必须说明冲突原因，并优先遵循目标 workflow 的显式规则；但目标规则不得降低 `approval.md` 中的人工确认展示模板要求。
 
 ## 共享边界
 
