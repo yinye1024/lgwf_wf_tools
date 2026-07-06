@@ -4,6 +4,12 @@
 
 根 README 只作为仓库入口页使用。具体 workflow 的输入契约、运行产物和维护细节，请继续阅读 `skills/lgwf-wf-tools/` 下的文档和各 workflow 自带说明。
 
+## 定位
+
+`lgwf-wf-tools` 是基于 DSL 的工作流引擎入口。LGWF runtime 通过 DSL 暴露可调用能力，主 agent 通过 DSL 编排 workflow 来实现用户意图，并在执行过程中监控 workflow 状态、失败、产物和人工确认点。
+
+DSL 是 runtime 和主 agent 之间的协作协议：它把用户意图、runtime 能力、agent 行动、验证结果和确认边界放进同一张可追踪的 workflow graph，让 agent 和工作流的配合更丝滑。
+
 ## 模块标准
 
 本仓库把 skill 和 workflow 都作为模块维护。模块分为三类：
@@ -20,9 +26,9 @@
 
 - 初始化、诊断或列出可用 workflow。
 - 运行已有 LGWF workflow。
-- 创建、修复或转换 LGWF workflow。
+- 通过主 agent 编排创建、修复或转换 LGWF workflow。
 - 为 workflow 生成端到端测试。
-- 对 workflow 执行 prompt 修复、prompt 升级和后续验收。
+- 对 workflow 执行 prompt 修复、prompt 升级、执行监控和后续验收。
 - 做 self-improve、沉淀 case、生成 proposal 或发布前检查。
 
 ## 快速安装
@@ -44,8 +50,8 @@
 1. 安装 `lgwf-wf-tools` 为 Codex skill，并重新打开 Codex thread。
 2. 执行 `/lgwf-wf-tools init`，完成本机初始化。
 3. 用自然语言说明目标，例如“创建一个用于处理发布检查的 LGWF workflow”或“修复这个目标 workflow 的运行失败”。
-4. `lgwf-wf-tools` 根据请求选择合适的内部 workflow，并在需要时要求你确认目标、范围或执行方案。
-5. 你确认后，workflow 继续执行创建、修复、转换、测试生成或自我优化任务。
+4. 主 agent 通过 `lgwf-wf-tools` 选择合适的 DSL workflow，组织上下文，并在需要时要求你确认目标、范围或执行方案。
+5. 你确认后，runtime 按 DSL graph 执行 workflow，主 agent 持续监控状态、失败、产物和等待点。
 6. 执行完成后，查看交付结果、验证建议和后续动作；如果结果需要调整，继续在同一个 thread 中提出修订。
 
 ## 常用入口

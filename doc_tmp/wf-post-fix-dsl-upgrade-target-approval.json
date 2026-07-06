@@ -1,0 +1,8 @@
+{
+    "target_workflow_lgwf":  "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/workflow.lgwf",
+    "target_package_root":  "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade",
+    "target_dirs":  [
+                        "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade"
+                    ],
+    "mode":  "manual"
+}

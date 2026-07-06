@@ -1,0 +1,39 @@
+WORKFLOW wf_audit_fix_input_resolution;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_audit_fix.instructions.{node}";
+  result_path "lgwf_wf_audit_fix.results.{node}";
+}
+
+PY load_inputs
+  SCRIPT "scripts/load_inputs.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.load_inputs_result
+  UPDATES_STATE;
+
+PY validate_target_workflow_path
+  SCRIPT "scripts/validate_target_workflow_path.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.validate_target_workflow_path_result
+  UPDATES_STATE;
+
+PY resolve_attempt_policy
+  SCRIPT "scripts/resolve_attempt_policy.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.resolve_attempt_policy_result
+  UPDATES_STATE;
+
+PY derive_candidate_workspace_plan
+  SCRIPT "scripts/derive_candidate_workspace_plan.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.derive_candidate_workspace_plan_result
+  UPDATES_STATE;
+
+FLOW main
+  START load_inputs
+  THEN validate_target_workflow_path
+  THEN resolve_attempt_policy
+  THEN derive_candidate_workspace_plan;

@@ -1,0 +1,9 @@
+{
+    "test_output_dir":  "tests",
+    "workflow_root":  "D:\\allen\\github\\lgwf_wf_tools\\skills\\lgwf-wf-tools\\workflows\\wf-dsl-upgrade",
+    "test_name_prefix":  "wf",
+    "test_types":  [
+                       "real_positive"
+                   ],
+    "workflow_lgwf":  "D:\\allen\\github\\lgwf_wf_tools\\skills\\lgwf-wf-tools\\workflows\\wf-dsl-upgrade\\wf\\workflow.lgwf"
+}

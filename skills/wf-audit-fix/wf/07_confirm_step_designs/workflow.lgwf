@@ -1,0 +1,73 @@
+WORKFLOW wf_audit_fix_candidate_repair_loop;
+ENTRY route_candidate_loop_entry;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_audit_fix.instructions.{node}";
+  result_path "lgwf_wf_audit_fix.results.{node}";
+}
+
+PY route_candidate_loop_entry
+  SCRIPT "scripts/route_candidate_loop_entry.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.route_candidate_loop_entry_result
+  UPDATES_STATE;
+
+PY finish_candidate_loop_skip
+  SCRIPT "scripts/finish_candidate_loop_skip.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.finish_candidate_loop_skip_result
+  UPDATES_STATE;
+
+PY materialize_candidate_copy
+  SCRIPT "scripts/materialize_candidate_copy.py"
+  TIMEOUT 120
+  RESULT state.lgwf_wf_audit_fix.materialize_candidate_copy_result
+  UPDATES_STATE;
+
+AGENT_LOOP candidate_repair_loop MAX_ITERATIONS 20 ARTIFACTS ".lgwf/loops/candidate_repair_loop" STATUS state.lgwf_wf_audit_fix.candidate_repair_loop_status REPORT state.lgwf_wf_audit_fix.candidate_repair_loop_report TOKEN_MAX 1000000 ON_MAX block ON_ERROR block {
+  GOAL "只在 candidate 副本中修复静态 DSL 或 audit 问题，直到 candidate audit 通过或达到最大尝试次数。"
+  CONTEXT workspace file ".lgwf/wf_audit_fix/runtime_context.json"
+  CONTEXT workspace file ".lgwf/wf_audit_fix/initial_audit_diagnostics.json"
+  CONTEXT workspace file ".lgwf/wf_audit_fix/latest_candidate_audit_result.json"
+
+  OBSERVE PY observe_candidate_state
+    SCRIPT "scripts/run_candidate_audit.py"
+    TIMEOUT 300
+    RESULT state.lgwf_wf_audit_fix.candidate_verify_result
+    UPDATES_STATE;
+  DIAGNOSE CODEX diagnose_candidate_failure
+    PROMPT_REF "agents/diagnose_candidate_failure.md"
+    CONTEXT workspace file ".lgwf/wf_audit_fix/latest_candidate_audit_result.json"
+    OUTPUT_JSON ".lgwf/wf_audit_fix/candidate_diagnosis.json" AS_FILE
+    RESULT state.lgwf_wf_audit_fix.candidate_diagnosis_result;
+  PLAN CODEX plan_candidate_fix
+    PROMPT_REF "agents/plan_candidate_fix.md"
+    CONTEXT workspace file ".lgwf/wf_audit_fix/latest_candidate_audit_result.json"
+    CONTEXT workspace file ".lgwf/wf_audit_fix/candidate_diagnosis.json"
+    OUTPUT_JSON ".lgwf/wf_audit_fix/candidate_repair_plan.json" AS_FILE
+    RESULT state.lgwf_wf_audit_fix.candidate_repair_plan_result;
+  ACT CODEX apply_candidate_fix
+    PROMPT_REF "agents/apply_candidate_fix.md"
+    CONTEXT workspace file ".lgwf/wf_audit_fix/candidate_diagnosis.json"
+    CONTEXT workspace file ".lgwf/wf_audit_fix/candidate_repair_plan.json"
+    RESULT state.lgwf_wf_audit_fix.candidate_repair_act_result;
+  VERIFY PY verify_candidate_audit
+    SCRIPT "scripts/run_candidate_audit.py"
+    TIMEOUT 300
+    RESULT state.lgwf_wf_audit_fix.candidate_verify_result
+    UPDATES_STATE;
+  DECIDE PY decide_retry_or_promote
+    SCRIPT "scripts/decide_retry_or_promote.py"
+    TIMEOUT 60
+    RESULT state.lgwf_wf_audit_fix.candidate_repair_loop_decision
+    UPDATES_STATE;
+};
+
+ROUTE route_candidate_loop_entry
+  WHEN "run" THEN materialize_candidate_copy
+  WHEN "skip" THEN finish_candidate_loop_skip;
+
+FLOW materialize_candidate_copy
+  THEN candidate_repair_loop;

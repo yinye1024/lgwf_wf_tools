@@ -1,0 +1,4 @@
+{
+    "decision":  "run",
+    "reason":  "运行 e2e-test-generator 生成目标 workflow 的 E2E 测试入口"
+}
