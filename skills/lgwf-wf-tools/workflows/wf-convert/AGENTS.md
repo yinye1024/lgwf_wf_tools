@@ -6,6 +6,7 @@
 
 - 模块类型：`lgwf_workflow_package`。
 - 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
 - 转换输出交给 `wf-create` 时，目标模块必须继续满足 `module-contract.md` 的自包含契约。
 
 ## 目标

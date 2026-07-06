@@ -102,7 +102,7 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertIn("FLOW init_prompt_fix_target", prepare_source)
         self.assertIn("THEN check_lgwf_client_assist", prepare_source)
         self.assertIn("THEN build_prompt_inventory", prepare_source)
-        self.assertIn("CONTEXT workspace file \".lgwf/prompt_fix_target.json\"", "\n".join([source, prepare_source, repair_source]))
+        self.assertIn("workspace file \".lgwf/prompt_fix_target.json\"", "\n".join([source, prepare_source, repair_source]))
         self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE', (ROOT / "wf" / "02_audit_prompts" / "workflow.lgwf").read_text(encoding="utf-8"))
         self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE', repair_source)
         self.assertIn('OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"', repair_source)

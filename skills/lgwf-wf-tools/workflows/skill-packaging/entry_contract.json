@@ -1,0 +1,31 @@
+{
+  "id": "skill-packaging",
+  "kind": "tool-workflow",
+  "version": 1,
+  "entry": "scripts/package_lgwf_skill.py",
+  "input_mode": "tool_args",
+  "input_schema": {
+    "type": "object",
+    "required": ["skill_path"],
+    "properties": {
+      "skill_path": {"type": "string"}
+    },
+    "example": {"skill_path": "D:/example/skills/example-workflow-skill"}
+  },
+  "input_file_policy": "Tool workflow; pass the skill/package path as a CLI arg.",
+  "auto_human_policy": "not_applicable",
+  "target_scope": {
+    "fields": ["skill_path"],
+    "write_scope": "Packaging output directory declared by the script."
+  },
+  "state_boundary": {
+    "target_writes": "packaged skill output",
+    "local_state": ""
+  },
+  "outputs": {
+    "summary": "script JSON output",
+    "handoff": "",
+    "reports": []
+  },
+  "resume_policy": "Tool workflow; no LGWF work_dir resume."
+}

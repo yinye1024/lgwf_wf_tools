@@ -1,4 +1,4 @@
-# wf-convert Self Improve
+# wf-convert 自我提升模块
 
 本目录为目标 workflow 的自包含自我提升模块。它依赖当前 workflow package、Python 标准库，以及当前 Python 环境可用的 `lgwf_dsl` / `lgwf_client`。
 

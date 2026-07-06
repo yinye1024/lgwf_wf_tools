@@ -10,22 +10,33 @@
         {
           "id": "non_goal_boundary",
           "description": "说明不负责的范围。",
-          "any_contains": ["不负责"]
+          "any_contains": [
+            "不负责"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明 approval 处理边界。",
-          "any_contains": ["approval", "APPROVAL"]
+          "any_contains": [
+            "approval",
+            "APPROVAL"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明固定输出或最终报告。",
-          "any_contains": ["固定输出", "最终报告"]
+          "any_contains": [
+            "固定输出",
+            "最终报告"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明由 facade 派发或失败后路由边界。",
-          "any_contains": ["facade", "路由"]
+          "any_contains": [
+            "facade",
+            "路由"
+          ]
         }
       ],
       "known_blockers": []
@@ -39,22 +50,35 @@
         {
           "id": "non_goal_boundary",
           "description": "说明不负责的范围。",
-          "any_contains": ["不负责", "不接入"]
+          "any_contains": [
+            "不负责",
+            "不接入"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明需求、业务流和步骤设计的 approval 边界。",
-          "any_contains": ["approval", "确认"]
+          "any_contains": [
+            "approval",
+            "确认"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明固定产物或结果汇总。",
-          "any_contains": ["固定产物", "结果汇总"]
+          "any_contains": [
+            "固定产物",
+            "结果汇总"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明作为 facade 内部 workflow 由 registry 派发。",
-          "any_contains": ["facade", "registry", "内部 workflow"]
+          "any_contains": [
+            "facade",
+            "registry",
+            "内部 workflow"
+          ]
         }
       ],
       "known_blockers": []
@@ -68,22 +92,33 @@
         {
           "id": "non_goal_boundary",
           "description": "说明不负责的范围。",
-          "any_contains": ["不负责"]
+          "any_contains": [
+            "不负责"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明 approval 处理边界。",
-          "any_contains": ["approval", "waiting_human"]
+          "any_contains": [
+            "approval",
+            "waiting_human"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明固定输出或 summary。",
-          "any_contains": ["固定输出", "summary"]
+          "any_contains": [
+            "固定输出",
+            "summary"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明由 facade 派发或失败后路由边界。",
-          "any_contains": ["facade", "路由"]
+          "any_contains": [
+            "facade",
+            "路由"
+          ]
         }
       ],
       "known_blockers": []
@@ -97,22 +132,34 @@
         {
           "id": "non_goal_boundary",
           "description": "说明不替代或不负责的范围。",
-          "any_contains": ["不替代", "不负责"]
+          "any_contains": [
+            "不替代",
+            "不负责"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明用户确认后才应用。",
-          "any_contains": ["用户确认", "approval"]
+          "any_contains": [
+            "用户确认",
+            "approval"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明输出产物或 summary。",
-          "any_contains": ["输出产物", "summary"]
+          "any_contains": [
+            "输出产物",
+            "summary"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明由 facade 派发或路由。",
-          "any_contains": ["facade", "路由"]
+          "any_contains": [
+            "facade",
+            "路由"
+          ]
         }
       ],
       "known_blockers": []
@@ -126,22 +173,33 @@
         {
           "id": "non_goal_boundary",
           "description": "说明不负责修复目标 workflow。",
-          "any_contains": ["不负责"]
+          "any_contains": [
+            "不负责"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明 approval 或 waiting_human 边界。",
-          "any_contains": ["approval", "waiting_human"]
+          "any_contains": [
+            "approval",
+            "waiting_human"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明固定输出或测试产物。",
-          "any_contains": ["固定输出", "测试产物"]
+          "any_contains": [
+            "固定输出",
+            "测试产物"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明由 facade 派发或问题路由回其他 workflow。",
-          "any_contains": ["facade", "路由"]
+          "any_contains": [
+            "facade",
+            "路由"
+          ]
         }
       ],
       "known_blockers": []
@@ -155,22 +213,33 @@
         {
           "id": "non_goal_boundary",
           "description": "说明不适用或不负责的范围。",
-          "any_contains": ["不适用场景", "不负责"]
+          "any_contains": [
+            "不适用场景",
+            "不负责"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明用户确认和 approval 边界。",
-          "any_contains": ["Approval", "approve"]
+          "any_contains": [
+            "Approval",
+            "approve"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明固定产物。",
-          "any_contains": ["固定产物"]
+          "any_contains": [
+            "固定产物"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明由 facade 派发或回到 facade 路由。",
-          "any_contains": ["facade", "路由"]
+          "any_contains": [
+            "facade",
+            "路由"
+          ]
         }
       ],
       "known_blockers": []
@@ -184,22 +253,34 @@
         {
           "id": "tool_workflow_boundary",
           "description": "说明不是 LGWF runtime workflow。",
-          "any_contains": ["tool-workflow", "不是 LGWF runtime workflow"]
+          "any_contains": [
+            "tool-workflow",
+            "不是 LGWF runtime workflow"
+          ]
         },
         {
           "id": "approval_boundary",
           "description": "说明记录类和发布包变更需要人工确认。",
-          "any_contains": ["用户确认", "人工批准"]
+          "any_contains": [
+            "用户确认",
+            "人工批准"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明运行期产物写入 .local。",
-          "any_contains": [".local/self-improve", "运行期"]
+          "any_contains": [
+            ".local/self-improve",
+            "运行期"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明由 facade registry 派发。",
-          "any_contains": ["registry", "facade"]
+          "any_contains": [
+            "registry",
+            "facade"
+          ]
         }
       ],
       "known_blockers": []
@@ -213,22 +294,159 @@
         {
           "id": "tool_workflow_boundary",
           "description": "说明不是 LGWF runtime workflow。",
-          "any_contains": ["tool-workflow", "不是 LGWF runtime workflow"]
+          "any_contains": [
+            "tool-workflow",
+            "不是 LGWF runtime workflow"
+          ]
         },
         {
           "id": "trigger_boundary",
           "description": "说明只处理显式直启命令。",
-          "any_contains": ["只有用户明确使用", "/lgwf-wf-tools run <path>"]
+          "any_contains": [
+            "只有用户明确使用",
+            "/lgwf-wf-tools run <path>"
+          ]
         },
         {
           "id": "output_contract",
           "description": "说明解析失败和已有 run 的处理边界。",
-          "any_contains": ["解析失败", "continue", "resume", "rerun"]
+          "any_contains": [
+            "解析失败",
+            "continue",
+            "resume",
+            "rerun"
+          ]
         },
         {
           "id": "facade_route_back",
           "description": "说明自然语言请求回到根路由。",
-          "any_contains": ["回到根 `AGENTS.md`", "重新路由"]
+          "any_contains": [
+            "回到根 `AGENTS.md`",
+            "重新路由"
+          ]
+        }
+      ],
+      "known_blockers": []
+    },
+    {
+      "id": "wf-convert",
+      "expected_role": "把现有 prompt workflow 转换为 wf-create 可消费的创建输入包和转换报告，并通过 RUN_WORKFLOW 启动 wf-create。",
+      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-convert/wf/workflow.lgwf",
+      "test_command": "python -m unittest discover workflows/wf-convert/tests",
+      "semantic_requirements": [
+        {
+          "id": "non_goal_boundary",
+          "description": "说明不直接生成最终目标 LGWF workflow。",
+          "any_contains": [
+            "第一版不直接生成最终目标 LGWF workflow",
+            "不自动调用"
+          ]
+        },
+        {
+          "id": "approval_boundary",
+          "description": "说明转换输入或下游 wf-create 仍有人工确认边界。",
+          "any_contains": [
+            "人工确认",
+            "wf-create 自身仍保留需求"
+          ]
+        },
+        {
+          "id": "output_contract",
+          "description": "说明固定产物。",
+          "any_contains": [
+            "固定产物",
+            ".lgwf/wf_create_input.json"
+          ]
+        },
+        {
+          "id": "facade_route_back",
+          "description": "说明由 facade/registry 派发。",
+          "any_contains": [
+            "facade",
+            "registry"
+          ]
+        }
+      ],
+      "known_blockers": []
+    },
+    {
+      "id": "wf-post-fix",
+      "expected_role": "对已有 LGWF workflow 做综合后处理，按阶段编排 prompt 修复、prompt 升级、E2E 生成和可选测试执行。",
+      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-post-fix/wf/workflow.lgwf",
+      "test_command": "python -m unittest discover workflows/wf-post-fix/tests",
+      "semantic_requirements": [
+        {
+          "id": "non_goal_boundary",
+          "description": "说明只编排已有 workflow，不替代下游职责。",
+          "any_contains": [
+            "只编排已有 workflow",
+            "不替代"
+          ]
+        },
+        {
+          "id": "approval_boundary",
+          "description": "说明阶段和子 workflow approval 不能被绕过。",
+          "any_contains": [
+            "子 workflow 自己的 approval 永远不能被 `auto` 绕过",
+            "请求 `run | skip | auto | stop` 决策"
+          ]
+        },
+        {
+          "id": "output_contract",
+          "description": "说明固定输出。",
+          "any_contains": [
+            "固定输出",
+            ".lgwf/post_fix_summary.json"
+          ]
+        },
+        {
+          "id": "facade_route_back",
+          "description": "说明由 facade/registry 派发。",
+          "any_contains": [
+            "facade",
+            "registry"
+          ]
+        }
+      ],
+      "known_blockers": []
+    },
+    {
+      "id": "self-improve-seed",
+      "expected_role": "把 self-improve 的通用模式安装到目标 workflow package，使目标 workflow 获得自包含自我提升结构。",
+      "audit_command": "python workflows/self-improve-seed/scripts/seed_self_improve.py --help",
+      "test_command": "python -m unittest discover workflows/self-improve-seed/tests",
+      "semantic_requirements": [
+        {
+          "id": "tool_workflow_boundary",
+          "description": "说明不是 LGWF runtime workflow。",
+          "any_contains": [
+            "tool-workflow",
+            "不是 LGWF runtime workflow"
+          ]
+        },
+        {
+          "id": "trigger_boundary",
+          "description": "说明触发规则。",
+          "any_contains": [
+            "触发规则",
+            "把 self-improve 功能加到某个 workflow"
+          ]
+        },
+        {
+          "id": "output_contract",
+          "description": "说明产物边界。",
+          "any_contains": [
+            "产物边界",
+            "只写目标 workflow package 下的 `self-improve/`"
+          ]
+        },
+        {
+          "id": "facade_route_back",
+          "description": "说明由 facade/registry 派发。",
+          "any_contains": [
+            "facade",
+            "registry"
+          ]
         }
       ],
       "known_blockers": []

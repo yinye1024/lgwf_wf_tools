@@ -17,6 +17,9 @@ CONTEXT_SET script_flow_e2e_shared_context {
   workspace file ".lgwf/e2e_target_request.normalized.json";
   workspace file ".lgwf/e2e_workflow_graph.json";
   workspace file ".lgwf/e2e_coverage_matrix.json";
+}
+
+CONTEXT_SET script_flow_e2e_design_context {
   workspace file ".lgwf/e2e_script_flow_design.json";
 }
 
@@ -32,12 +35,14 @@ REACT script_flow_e2e_react MAX 3
     RESULT state.lgwf_e2e.script_flow_reason_result
   ACT CODEX
     PROMPT "02_generate/agents/act.md"
+    CONTEXT script_flow_e2e_design_context
     TARGET_DIRS state.lgwf_e2e.target_dirs
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_script_flow_generation.json"
     RESULT state.lgwf_e2e.script_flow_act_result
   OBSERVE CODEX
     PROMPT "03_validate/agents/observe.md"
+    CONTEXT script_flow_e2e_design_context
     CONTEXT workspace file ".lgwf/e2e_script_flow_generation.json"
     TARGET_DIRS state.lgwf_e2e.target_dirs
     TARGET_FILES state.lgwf_e2e.target_files

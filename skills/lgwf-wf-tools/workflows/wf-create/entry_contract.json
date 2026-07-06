@@ -1,0 +1,34 @@
+{
+  "id": "wf-create",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-create/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-create/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["raw_intent"],
+    "properties": {
+      "raw_intent": {"type": "string"},
+      "request": {"type": "object"}
+    },
+    "example": {"raw_intent": "要创建的新 LGWF workflow 原始意图"}
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file when raw_intent contains Chinese or nested JSON.",
+  "auto_human_policy": "conditional",
+  "target_scope": {
+    "fields": ["raw_intent", "request"],
+    "write_scope": "Creates or updates only the package path approved by the workflow confirmations."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-create/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "approved generated workflow package"
+  },
+  "outputs": {
+    "summary": ".lgwf/create_result_summary.json",
+    "handoff": ".lgwf/post_fix_handoff_input.json",
+    "reports": []
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

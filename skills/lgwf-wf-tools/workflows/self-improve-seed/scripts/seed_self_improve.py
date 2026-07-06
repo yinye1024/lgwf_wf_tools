@@ -617,13 +617,34 @@ from typing import Any
 from _paths import LOCAL_SELF_IMPROVE, SELF_IMPROVE_ROOT, WORKFLOW_ROOT
 
 
+DEFAULT_STEP_TIMEOUT_SECONDS = 60
+
+
 def stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
-def run_script(name: str) -> dict[str, Any]:
+def run_script(name: str, *, timeout_seconds: int = DEFAULT_STEP_TIMEOUT_SECONDS) -> dict[str, Any]:
     script = SELF_IMPROVE_ROOT / "scripts" / name
-    completed = subprocess.run([sys.executable, str(script)], cwd=WORKFLOW_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=WORKFLOW_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "script": name,
+            "returncode": 124,
+            "stdout": (exc.stdout or "").strip() if isinstance(exc.stdout, str) else "",
+            "stderr": f"timeout after {timeout_seconds} seconds",
+            "payload": {},
+            "timeout_seconds": timeout_seconds,
+        }
     payload: dict[str, Any] = {}
     stdout = completed.stdout.strip()
     if stdout:
@@ -633,7 +654,14 @@ def run_script(name: str) -> dict[str, Any]:
                 payload = data
         except json.JSONDecodeError:
             payload = {}
-    return {"script": name, "returncode": completed.returncode, "stdout": stdout, "stderr": completed.stderr.strip(), "payload": payload}
+    return {
+        "script": name,
+        "returncode": completed.returncode,
+        "stdout": stdout,
+        "stderr": completed.stderr.strip(),
+        "payload": payload,
+        "timeout_seconds": timeout_seconds,
+    }
 
 
 def write_json(path: Path, data: dict[str, Any]) -> None:
@@ -760,7 +788,7 @@ def seed_self_improve(target: Path, *, force: bool = False) -> dict[str, Any]:
     write_text(module_root / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
     write_text(
         module_root / "AGENTS.md",
-        f"""# {workflow_name} Self Improve
+        f"""# {workflow_name} 自我提升模块
 
 本目录为目标 workflow 的自包含自我提升模块。它依赖当前 workflow package、Python 标准库，以及当前 Python 环境可用的 `lgwf_dsl` / `lgwf_client`。
 
@@ -788,6 +816,8 @@ python self-improve/scripts/self_improve.py scorecard
 ```
 
 `eval` 检查自我提升结构；`trace-eval` 运行目标 workflow 并生成 `trace.json` / `eval-suite.json` evidence；`check` 串联二者并刷新 scorecard。
+
+复杂 workflow 如果需要业务输入、人工确认或子 workflow，默认 `trace-eval` 可能失败或超时；这表示需要为本模块补充专门的 trace-eval 输入或 golden case，不表示可以绕过 `eval` 和结构检查。
 """,
     )
     write_text(

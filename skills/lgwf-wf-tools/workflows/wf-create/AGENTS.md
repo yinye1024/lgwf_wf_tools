@@ -6,6 +6,7 @@
 
 - 模块类型：`lgwf_workflow_package`。
 - 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
 - 本模块生成的目标 workflow 也必须按 `module-contract.md` 补齐自包含契约。
 
 ## 适用场景
@@ -19,6 +20,12 @@
 - 已有 workflow 真实运行失败或卡住，应回到 facade 路由 `wf-fix`。
 - 只需要 prompt 基础修复或 prompt 质量升级，应回到 facade 路由 `wf-prompt-fix` 或 `wf-prompt-upgrade`。
 - 只需要为已有 workflow 生成 E2E 测试，应回到 facade 路由 `e2e-test-generator`。
+
+## 执行纪律
+
+facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agent 不能直接手工创建目标 workflow package、直接写目标 `workflow.lgwf`、直接注册 registry，或用 `apply_patch` 脚手架替代本 workflow 的需求、业务流和步骤设计确认。
+
+如果 `wf-create` 已经启动或继续，但 runtime 或子 Codex 进程出现 stale、异常退出、无产物等可复核问题，主 agent 必须先展示 run id、状态文件或进程证据、已完成阶段、未完成阶段和恢复选项。只有用户明确确认后，才允许人工恢复、停止 run 后转入其他 workflow，或按用户确认的范围补救。
 
 ## 输入契约
 
@@ -47,7 +54,7 @@
 - `confirm_requirements` 只确认需求方案；`approve` 后才能写 `.lgwf/create_requirements.json`。
 - `confirm_business_flow` 只确认业务流转；`approve` 后才能写 `.lgwf/business_flow.json`。
 - `confirm_step_designs` 只确认步骤设计；`approve` 后才能写 `.lgwf/step_designs.json`。
-- 当前确认节点只支持 `approve` 和 `reject`；用户反馈只作为控制面决策记录，不直接生成 confirmed 业务结构。
+- 当前确认节点以 `approve` 和 `reject` 驱动运行分支；若人工 review 记录出现 `revise` 反馈，只作为控制面反馈留存，不直接生成 confirmed 业务结构。
 - `approve` 后由固定 proposal 文件固化 confirmed artifact，禁止把 human decision record 当作业务对象写入 `confirmed`。
 - `reject` 表示整体不通过，通过 DSL `FAIL_ALL` 终止整个 run，不继续进入下游阶段。
 - 当前第一版不自动 approve 任何业务决策，也不接入自动修复链路。

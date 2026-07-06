@@ -1,0 +1,18 @@
+WORKFLOW batch_audit;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+PY run_batch_audit
+  SCRIPT "scripts/run_batch_audit.py"
+  TIMEOUT 300
+  RESULT state.lgwf_wf_dsl_upgrade.run_batch_audit_result
+  UPDATES_STATE;
+
+FLOW main
+  START run_batch_audit;

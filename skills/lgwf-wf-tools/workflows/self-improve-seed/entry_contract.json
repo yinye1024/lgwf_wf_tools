@@ -1,0 +1,31 @@
+{
+  "id": "self-improve-seed",
+  "kind": "tool-workflow",
+  "version": 1,
+  "entry": "workflows/self-improve-seed/scripts/seed_self_improve.py",
+  "input_mode": "tool_args",
+  "input_schema": {
+    "type": "object",
+    "required": ["target"],
+    "properties": {
+      "target": {"type": "string"}
+    },
+    "example": {"target": "D:/example/workflow-package"}
+  },
+  "input_file_policy": "Tool workflow; pass --target as a CLI arg.",
+  "auto_human_policy": "not_applicable",
+  "target_scope": {
+    "fields": ["target"],
+    "write_scope": "Target workflow self-improve directory; do not delete existing .local/self-improve history."
+  },
+  "state_boundary": {
+    "target_writes": "target workflow self-improve module",
+    "local_state": ""
+  },
+  "outputs": {
+    "summary": "script JSON output",
+    "handoff": "",
+    "reports": []
+  },
+  "resume_policy": "Tool workflow; no LGWF work_dir resume."
+}

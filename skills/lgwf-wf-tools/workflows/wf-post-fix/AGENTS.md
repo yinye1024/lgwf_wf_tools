@@ -6,6 +6,7 @@
 
 - 模块类型：`lgwf_workflow_package`。
 - 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
 - 组合调用下游 workflow 时，不得绕过下游模块自己的自包含契约和 approval 边界。
 
 ## 业务边界
@@ -14,7 +15,7 @@
 - 默认每个阶段运行前都要向用户解释该阶段作用、可能影响和跳过后果，并请求 `run | skip | auto | stop` 决策；用户选择 `stop` 时，由当前子 workflow 直接 `FAIL_ALL` 终止并向父 workflow 传播失败。
 - 用户选择 `auto` 后，只自动进入允许自动的阶段：`wf-prompt-fix`、`wf-prompt-upgrade`、`e2e-test-generator`、`script_flow_e2e`、`runtime_fake_e2e`。
 - `real_positive_e2e` 和 `wf_fix_positive_e2e` 即使处于 `auto` 也必须再次请求用户确认。
-- 子 workflow 自己的 approval 永远不能被 `auto` 绕过；主 agent 必须按 `workflows/01-share/approval.md` 的人工确认展示模板展示子 workflow 原始确认上下文并等待明确确认。
+- 默认不自动绕过子 workflow 自己的 approval；只有目标 workflow 的 `entry_contract.json` 允许、且本 run 显式启用 `--auto-human` 时，`RUN_WORKFLOW` 才继承 run-level auto-human。handoff、`agent_loop waiting_human` 和 `subgraph.react on_max` 不受 auto-human 覆盖；需要人工确认时，主 agent 必须按 `workflows/01-share/approval.md` 的人工确认展示模板展示子 workflow 原始确认上下文并等待明确确认。
 
 ## 输入契约
 

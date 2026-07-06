@@ -1,0 +1,50 @@
+{
+  "id": "wf-post-fix",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-post-fix/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-post-fix/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["post_fix_target"],
+    "properties": {
+      "post_fix_target": {
+        "type": "object",
+        "required": ["target_workflow_lgwf"],
+        "properties": {
+          "target_workflow_lgwf": {"type": "string"},
+          "target_package_root": {"type": "string"},
+          "target_dirs": {"type": "array"},
+          "run_acceptance": {"type": "boolean"}
+        }
+      },
+      "request": {"type": "object"}
+    },
+    "example": {
+      "post_fix_target": {
+        "target_workflow_lgwf": "D:/example/workflow.lgwf",
+        "target_package_root": "D:/example",
+        "target_dirs": ["D:/example"],
+        "run_acceptance": false
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for post_fix_target.",
+  "auto_human_policy": "conditional",
+  "target_scope": {
+    "fields": ["post_fix_target.target_workflow_lgwf", "post_fix_target.target_dirs"],
+    "write_scope": "Only target directories confirmed by post_fix_target and downstream contracts."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-post-fix/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "confirmed target package scope"
+  },
+  "outputs": {
+    "summary": ".lgwf/post_fix_summary.json",
+    "handoff": "",
+    "reports": [".lgwf/post_fix_target.json"]
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

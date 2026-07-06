@@ -98,6 +98,17 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
         self.assertIn("THEN confirm_upgrade\n  THEN apply_upgrade\n  THEN summary;", source)
         self.assertNotIn("THEN confirm_prompt_upgrade_summary", source)
 
+    def test_react_shared_context_only_references_preexisting_files(self) -> None:
+        design_source = (ROOT / "wf" / "02_design_upgrade" / "workflow.lgwf").read_text(encoding="utf-8")
+        apply_source = (ROOT / "wf" / "04_apply_upgrade" / "workflow.lgwf").read_text(encoding="utf-8")
+        design_context = design_source.split("CONTEXT_SET design_prompt_upgrade_shared_context {", 1)[1].split("}", 1)[0]
+        apply_context = apply_source.split("CONTEXT_SET apply_prompt_upgrade_shared_context {", 1)[1].split("}", 1)[0]
+
+        self.assertNotIn(".lgwf/prompt_upgrade/analysis.json", design_context)
+        self.assertIn("CONTEXT design_prompt_upgrade_analysis_context", design_source)
+        self.assertNotIn(".lgwf/prompt_upgrade/apply_plan.json", apply_context)
+        self.assertIn("CONTEXT apply_prompt_upgrade_plan_context", apply_source)
+
     def test_environment_check_detects_missing_and_present_skill(self) -> None:
         check_mod = load_module(
             "01_prepare_target/scripts/check_lgwf_client_assist.py",

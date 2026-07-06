@@ -1,0 +1,49 @@
+{
+  "id": "plan",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/plan/wf/workflow.lgwf",
+  "work_dir": "workflows/plan/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["react_task_request"],
+    "properties": {
+      "react_task_request": {
+        "type": "object",
+        "required": ["objective"],
+        "properties": {
+          "objective": {"type": "string"},
+          "target_type": {"type": "string"},
+          "analysis_target_files": {"type": "array"},
+          "constraints": {"type": "array"}
+        }
+      }
+    },
+    "example": {
+      "react_task_request": {
+        "objective": "要完成的复杂任务目标",
+        "target_type": "modify_artifact",
+        "analysis_target_files": ["D:/example/path/to/file.md"],
+        "constraints": ["先生成计划和验收契约，用户确认后再修改目标文件"]
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for react_task_request.",
+  "auto_human_policy": "forbidden",
+  "target_scope": {
+    "fields": ["react_task_request.analysis_target_files"],
+    "write_scope": "Only after explicit plan and acceptance confirmation."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/plan/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "confirmed execution scope only"
+  },
+  "outputs": {
+    "summary": ".lgwf/plan_result_summary.json",
+    "handoff": "",
+    "reports": []
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

@@ -4,10 +4,13 @@
 
 - `tool_workflow`
 - registry id：`skill-packaging`
+- 共享契约：见 `../01-share/module-contract.md` 与本目录 `entry_contract.json`
 
 ## 模块定位
 
 本 tool workflow 负责把已有 LGWF workflow Codex skill 打包成自包含 skill。产物内置 `vendor/lgwf-client-assist`，通过产物自己的 `scripts/run_local_lgwf_workflow.py` 启动 `wf/workflow.lgwf`，不依赖 `lgwf-wf-tools` facade、registry 或外部 skill。
+
+入口参数、输入示例和 auto-human 适用性以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
 
 ## 入口
 

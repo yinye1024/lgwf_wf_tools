@@ -106,6 +106,41 @@
       }
     },
     {
+      "id": "route-new-workflow-creation-must-start-wf-create",
+      "category": "routing",
+      "input": {
+        "user_request": "[$lgwf-wf-tools] 用 wf-create 创建工作流，根据 doc_tmp 下的设计文档创建新的工作流并注册",
+        "context": ["用户明确点名 wf-create", "目标是创建新的 LGWF workflow", "不得由主 agent 手工替代 workflow"]
+      },
+      "expected": {
+        "workflow_id": "wf-create",
+        "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create/AGENTS.md"],
+        "must_not_start": ["apply_patch", "manual_scaffold", "wf-fix", "wf-post-fix"],
+        "required_text": [
+          {
+            "path": "AGENTS.md",
+            "contains": "命中 `wf-create` 后必须启动或继续同一个 `wf-create` run"
+          },
+          {
+            "path": "docs/workflow-routing.md",
+            "contains": "禁止主 agent 直接手工创建目标 workflow package"
+          },
+          {
+            "path": "docs/workflow-routing.md",
+            "contains": "用户基于证据明确确认恢复方案"
+          },
+          {
+            "path": "workflows/wf-create/AGENTS.md",
+            "contains": "必须启动或继续 `wf-create` run"
+          },
+          {
+            "path": "workflows/wf-create/AGENTS.md",
+            "contains": "用 `apply_patch` 脚手架替代本 workflow"
+          }
+        ]
+      }
+    },
+    {
       "id": "route-workflow-authoring-preflight-lists-workflows",
       "category": "routing",
       "input": {

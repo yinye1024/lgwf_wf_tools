@@ -29,7 +29,6 @@ CONTEXT_SET repair_target_prompts_shared_context {
   workspace file ".lgwf/prompt_acceptance/repair_review.json";
   workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
   workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist";
-  workspace file ".lgwf/prompt_acceptance/repair_plan.json";
 }
 
 REACT repair_target_prompts MAX 3
@@ -43,6 +42,7 @@ REACT repair_target_prompts MAX 3
     RESULT state.lgwf_wf_prompt_fix.prompt_repair_reason_result
   ACT CODEX
     PROMPT "agents/apply_prompt_fix.md"
+    CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan.json"
     TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
     RESULT state.lgwf_wf_prompt_fix.prompt_repair_act_result
   OBSERVE CODEX

@@ -22,14 +22,16 @@
 4. 按 `scaffold_template_spec.md` 和 `scaffold_plan.package_profile` 决定是否生成根 `SKILL.md`，并保持 `wf/` 为唯一 workflow root。
 5. 按 `dsl-assist` 与 `scaffold_template_spec.md` 的 workflow 创建规范生成根 workflow 和第一层子 workflow：根 workflow 只编排业务阶段，阶段内节点放在对应子 workflow。
 6. 保持子 workflow 目录自包含：每个 `wf/<stage>/` 目录拥有本阶段的 `workflow.lgwf`、`agents/`、`scripts/`、`resources/`；不得生成 `wf/<stage>/<substage>/workflow.lgwf`。
-7. 记录本轮实际生成的文件、目录、占位内容和剩余风险。
-8. 若某些步骤只能生成占位内容，明确说明原因和后续补齐点。
+7. 必须把当前 run 已批准的 `docs/steps/*.md` 复制到目标 package 的 `wf/docs/steps/`，保留原文件名；这些文件是目标 workflow 的自包含设计依据，不是运行态临时产物。
+8. 记录本轮实际生成的文件、目录、步骤设计文档副本、占位内容和剩余风险。
+9. 若某些步骤只能生成占位内容，明确说明原因和后续补齐点。
 
 ## Success Criteria
 - 仅实现已批准步骤覆盖的文件与目录，不擅自扩展到未批准步骤。
 - 生成结果遵循 `scaffold_template_spec.md`：根目录不生成 `workflow.lgwf`，`internal_workflow_package` 不生成根 `SKILL.md`，`skill_wrapped_workflow` 才生成根 `SKILL.md`。
 - 生成的 workflow 拓扑遵循 `dsl-assist`：根 workflow 保持薄编排，只引用第一层子 workflow；子 workflow 目录自包含，REACT 的 `ACT WORKFLOW` 只引用包内相对路径。
 - 生成的初稿文件可继续验收，且所有资源路径都保持 target package 内相对路径。
+- 每个已批准步骤设计文档都存在于目标 package 的 `wf/docs/steps/<step-slug>.md`，并在 `implementation_result.generated_files` 中记录。
 - 输出结果清楚记录生成范围、占位内容和剩余风险。
 
 ## Output
@@ -48,6 +50,8 @@
 - 如 `target_package_abs` 不存在，应直接创建该目录；不要先尝试 `work_dir/target_package_root`。
 - 只消费已确认的步骤设计文档；如果某个步骤未获批准，不得擅自实现。
 - 优先生成 `workflow.lgwf` 片段、阶段目录、`agents/*.md`、`scripts/*.py`、`resources/`、`tests/` 或设计文档中明确约定的文件。
+- 必须先创建目标 package 内的 `wf/docs/steps/`，再复制当前 run 的已批准步骤设计文档；不得只在 `work_dir/docs/steps/` 保留文档。
+- `implementation_result.generated_files` 必须列出每个复制后的 `wf/docs/steps/*.md` 文件，便于 `validate_created_package` 做确定性验收。
 - `workflow.lgwf` 只能生成在 `wf/workflow.lgwf` 或 `wf/<stage>/workflow.lgwf`，不得生成在目标 package 根目录或 `wf/<stage>/<substage>/workflow.lgwf`。
 - 根 `wf/workflow.lgwf` 只负责编排阶段；多个节点、人工确认、循环或修复逻辑必须下沉到 `wf/<stage>/workflow.lgwf`。
 - `wf/<stage>/workflow.lgwf` 内部不得再通过 `STEP ... WORKFLOW` 引用孙级 workflow；阶段内复杂逻辑应在本文件内用 `PY`、`CODEX`、`REACT`、`APPROVAL`、`ROUTE` 编排。

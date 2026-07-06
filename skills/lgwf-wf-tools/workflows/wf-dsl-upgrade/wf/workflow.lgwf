@@ -1,0 +1,43 @@
+WORKFLOW lgwf_wf_dsl_upgrade;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+STEP collect_targets_stage
+  WORKFLOW "01_collect_targets/workflow.lgwf";
+
+STEP batch_audit_stage
+  WORKFLOW "02_batch_audit/workflow.lgwf";
+
+STEP classify_findings_stage
+  WORKFLOW "03_classify_findings/workflow.lgwf";
+
+STEP build_upgrade_plan_stage
+  WORKFLOW "04_build_upgrade_plan/workflow.lgwf";
+
+STEP confirm_upgrade_plan_stage
+  WORKFLOW "05_confirm_upgrade_plan/workflow.lgwf";
+
+STEP apply_upgrade_rules_stage
+  WORKFLOW "06_apply_upgrade_rules/workflow.lgwf";
+
+STEP batch_verify_stage
+  WORKFLOW "07_batch_verify/workflow.lgwf";
+
+STEP summarize_upgrade_result_stage
+  WORKFLOW "08_summarize_upgrade_result/workflow.lgwf";
+
+FLOW main
+  START collect_targets_stage
+  THEN batch_audit_stage
+  THEN classify_findings_stage
+  THEN build_upgrade_plan_stage
+  THEN confirm_upgrade_plan_stage
+  THEN apply_upgrade_rules_stage
+  THEN batch_verify_stage
+  THEN summarize_upgrade_result_stage;

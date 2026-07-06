@@ -113,6 +113,16 @@ class SeedSelfImproveTest(unittest.TestCase):
             self.assertTrue(Path(check_payload["json"]).is_file())
             self.assertTrue((target / ".local" / "self-improve" / "scorecards").is_dir())
 
+    def test_generated_check_uses_timeout_for_each_step(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            target = create_demo_workflow(Path(raw_dir))
+            seed_self_improve.seed_self_improve(target)
+
+            script = (target / "self-improve" / "scripts" / "check_self_improve.py").read_text(encoding="utf-8")
+            self.assertIn("DEFAULT_STEP_TIMEOUT_SECONDS", script)
+            self.assertIn("timeout=timeout_seconds", script)
+            self.assertIn("subprocess.TimeoutExpired", script)
+
     def test_scorecard_and_proposal_render_trace_eval_failures(self) -> None:
         with tempfile.TemporaryDirectory() as raw_dir:
             target = create_demo_workflow(Path(raw_dir))

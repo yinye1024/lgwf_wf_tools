@@ -326,7 +326,7 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
         self.assertIn("manual_approval_required", observe)
         self.assertIn("issue_code", observe)
         self.assertIn("prepare_runtime_fake_repair_context", workflow)
-        self.assertIn('CONTEXT workspace file ".lgwf/e2e_runtime_fake_repair_context.json"', workflow)
+        self.assertIn('workspace file ".lgwf/e2e_runtime_fake_repair_context.json"', workflow)
         self.assertIn('CONTEXT workspace file ".lgwf/e2e_runtime_fake_observe.json"', workflow)
 
     def test_react_reason_prompts_receive_observe_feedback(self) -> None:

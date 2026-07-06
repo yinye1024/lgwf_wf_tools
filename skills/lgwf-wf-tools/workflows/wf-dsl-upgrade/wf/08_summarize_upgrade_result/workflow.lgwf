@@ -1,0 +1,18 @@
+WORKFLOW summarize_upgrade_result;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+PY render_upgrade_summary
+  SCRIPT "scripts/render_upgrade_summary.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_dsl_upgrade.render_upgrade_summary_result
+  UPDATES_STATE;
+
+FLOW main
+  START render_upgrade_summary;
