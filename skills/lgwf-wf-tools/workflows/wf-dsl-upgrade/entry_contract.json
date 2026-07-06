@@ -1,0 +1,49 @@
+{
+  "id": "wf-dsl-upgrade",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-dsl-upgrade/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-dsl-upgrade/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["dsl_upgrade_target"],
+    "properties": {
+      "dsl_upgrade_target": {
+        "type": "object",
+        "required": ["target_paths"],
+        "properties": {
+          "target_paths": {"type": "array"},
+          "mode": {"type": "string"},
+          "allowed_dirs": {"type": "array"}
+        }
+      },
+      "request": {"type": "object"}
+    },
+    "example": {
+      "dsl_upgrade_target": {
+        "target_paths": ["D:/example/workflow.lgwf"],
+        "mode": "dry_run",
+        "allowed_dirs": ["D:/example"]
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for dsl_upgrade_target.",
+  "auto_human_policy": "conditional",
+  "target_scope": {
+    "fields": ["dsl_upgrade_target.target_paths", "dsl_upgrade_target.allowed_dirs"],
+    "write_scope": "Must stay within target_manifest.json authorization."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-dsl-upgrade/ws",
+    "runtime_state": ".lgwf/",
+    "reports": "reports/",
+    "target_writes": "only authorized manifest paths and never in dry_run"
+  },
+  "outputs": {
+    "summary": ".lgwf/result_summary.json",
+    "handoff": "",
+    "reports": ["reports/wf-dsl-upgrade/report.md"]
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

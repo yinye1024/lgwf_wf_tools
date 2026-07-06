@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "name": "wf-dsl-upgrade-self-improve",
+  "entrypoint": "scripts/self_improve.py",
+  "local_state_root": ".local/self-improve",
+  "commands": {
+    "check": "scripts/check_self_improve.py"
+  },
+  "release_policy": {
+    "must_preserve": [
+      ".local"
+    ]
+  }
+}

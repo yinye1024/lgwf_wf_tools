@@ -1,11 +1,12 @@
 # lgwf-wf-tools 自我提升工作台
 
-本目录保存 `lgwf-wf-tools` 的自我提升基线、评测定义、模板和只读工具。它不是自动修改自身的 workflow，也不是运行期状态目录。
+本目录保存 `lgwf-wf-tools` 的跨模块自我提升基线、评测定义、模板和只读工具。它不是自动修改自身的 workflow，也不是运行期状态目录。
 
 ## 目标
 
 - 把真实失败、用户纠正和发布前检查沉淀为可回归的评测样例。
 - 让每次改动 `SKILL.md`、`AGENTS.md`、`registry.json` 或内部 workflow 指引后，都能做确定性回归。
+- 检查 registry 中已注册 LGWF workflow 是否具备自包含 `self-improve/`，并报告未注册 workflow 目录等跨模块 drift 候选。
 - 生成可审查的改进 proposal，而不是无证据地自动修改 facade。
 
 ## 触发方式
@@ -21,7 +22,7 @@
 | --- | --- | --- |
 | 使用 `/lgwf-wf-tools` 前 | `python scripts\doctor_lgwf_wf_tools.py` | 只读检查安装状态，不修改文件。 |
 | vendor zip 更新 | `python scripts\init_lgwf_wf_tools.py` 后运行 `python scripts\doctor_lgwf_wf_tools.py` | `init` 有副作用，只用于同步 bundled client。 |
-| 开发期修改 facade 或内部 workflow | `python workflows\self-improve\scripts\self_improve.py workflow-health` 或 `python workflows\self-improve\scripts\self_improve.py eval --check-overrides` | 检查结构、语义、路由、approval 和 override 风险。 |
+| 开发期修改 facade 或内部 workflow | `python workflows\self-improve\scripts\self_improve.py workflow-health` 或 `python workflows\self-improve\scripts\self_improve.py eval --check-overrides` | 检查结构、语义、路由、目标级 self-improve 覆盖率、baseline audit、approval 和 override 风险。 |
 | 开发期验证 runtime trace contract | `python workflows\self-improve\scripts\self_improve.py trace-eval` | 运行固定 LGWF runtime workflow，生成 `trace.json` 和 `eval-suite.json`，检查真实运行轨迹。 |
 | 发布前默认 gate | `python workflows\self-improve\scripts\self_improve.py pre-release --version <version> --source package` | 自动包含 doctor、workflow health 和 trace eval；不自动 init。 |
 | 发布前严格 gate | `python workflows\self-improve\scripts\self_improve.py pre-release --version <version> --source package --run-workflow-tests` | 额外执行内部 workflow tests，可能更慢。 |
@@ -99,6 +100,12 @@
 
 Static self eval 和 trace eval 的分工不同：前者检查 facade 规则、baseline、override 风险；后者检查 LGWF runtime 实际运行轨迹、catalog policy 和 client call contract。两者都只生成 evidence，不自动修复。
 
+## 第九版能力
+
+- `workflow-health` 检查 registry 中所有 workflow 的 baseline `audit_command`，并检查 `kind=lgwf` workflow 的目标级 `self-improve/` 覆盖率，要求存在 `manifest.json`、统一入口和 `.local/self-improve` 状态边界。
+- `workflow-health` 会把 `workflows/` 下存在 `workflow.lgwf` 和 `AGENTS.md`、但未出现在 registry 的目录写入 `unregistered_workflow_candidates`，作为 drift 候选；候选不直接导致失败。
+- facade self-improve 只做跨模块治理和报告；目标 workflow 的 incident、proposal、eval、trace-eval、check、scorecard 由各自 `self-improve/` 模块负责。
+
 ## 常用命令
 
 ```powershell
@@ -117,7 +124,10 @@ python workflows\self-improve\scripts\validate_manifest.py
 
 ## Workflow Health 边界
 
-- 只检查 facade 内部 workflow package 的确定性结构问题，不运行目标业务 workflow。
+- 检查 facade 内部 workflow package 的确定性结构问题，并执行 `workflow-health/baseline.json` 声明的 `audit_command`；不启动目标 workflow 的业务 runtime。
+- audit 失败会使 workflow-health 失败；报告中保留每个 workflow 的 audit returncode 和截断后的 stdout/stderr。
+- 已注册的内部 LGWF workflow 必须具备目标级 `self-improve/` 核心入口；缺失时 health 失败。
+- 未注册但看起来像 workflow package 的目录只报告为 drift 候选，不自动注册、不自动补模块。
 - 语义检查只检查 `AGENTS.md` 中是否存在必要说明，不判断文案质量；需要进一步修改时生成 proposal。
 - 发现问题只生成 report 或 proposal；是否修改对应 workflow 由用户另行批准。
 - 内部 workflow 目录不得包含 `SKILL.md`；对外入口仍然只允许根目录 `SKILL.md`。

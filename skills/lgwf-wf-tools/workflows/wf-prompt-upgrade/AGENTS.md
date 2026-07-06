@@ -6,6 +6,7 @@
 
 - 模块类型：`lgwf_workflow_package`。
 - 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
 - prompt 升级不得扩大目标模块边界；入口、状态边界、产物和验证方式仍以目标模块自身契约为准。
 
 本 workflow 不替代 `wf-prompt-fix`。`wf-prompt-fix` 负责基础规范、引用、输出格式和明显契约问题；本 workflow 负责更高一层的 prompt 设计升级，例如职责边界、角色能力、决策标准、失败模式、验收指标和可执行修改计划。默认推荐先运行 `wf-prompt-fix`，再运行 `wf-prompt-upgrade`。

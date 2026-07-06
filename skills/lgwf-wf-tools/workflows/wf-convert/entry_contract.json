@@ -1,0 +1,50 @@
+{
+  "id": "wf-convert",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-convert/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-convert/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["prompt_convert_target"],
+    "properties": {
+      "prompt_convert_target": {
+        "type": "object",
+        "required": ["target_dir"],
+        "properties": {
+          "target_dir": {"type": "string"},
+          "entry_files": {"type": "array"},
+          "target_workflow_name": {"type": "string"},
+          "target_package_root": {"type": "string"}
+        }
+      },
+      "request": {"type": "object"}
+    },
+    "example": {
+      "prompt_convert_target": {
+        "target_dir": "D:/example/prompt-workflow",
+        "entry_files": ["README.md"],
+        "target_workflow_name": "example-workflow",
+        "target_package_root": "skills/example-workflow"
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for prompt_convert_target.",
+  "auto_human_policy": "conditional",
+  "target_scope": {
+    "fields": ["prompt_convert_target.target_dir", "prompt_convert_target.target_package_root"],
+    "write_scope": "Writes the converted target package only after workflow confirmation."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-convert/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "target_package_root approved by conversion plan"
+  },
+  "outputs": {
+    "summary": ".lgwf/conversion_report.json",
+    "handoff": ".lgwf/post_fix_handoff_input.json",
+    "reports": [".lgwf/business_parity_report.json"]
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

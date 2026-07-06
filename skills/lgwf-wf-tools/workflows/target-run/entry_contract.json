@@ -1,0 +1,32 @@
+{
+  "id": "target-run",
+  "kind": "tool-workflow",
+  "version": 1,
+  "entry": "docs/target-run.md",
+  "input_mode": "tool_args",
+  "input_schema": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "target_workflow": {"type": "string"},
+      "args": {"type": "array"}
+    },
+    "example": {"target_workflow": "D:/example/workflow.lgwf", "args": ["--background"]}
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file when launching the target workflow with JSON input.",
+  "auto_human_policy": "not_applicable",
+  "target_scope": {
+    "fields": ["target_workflow"],
+    "write_scope": "Resolved target work_dir only after continue/resume/rerun decision."
+  },
+  "state_boundary": {
+    "target_work_dir": "resolved by target-run rules",
+    "target_writes": "target workflow runtime only"
+  },
+  "outputs": {
+    "summary": "target run status output",
+    "handoff": "",
+    "reports": []
+  },
+  "resume_policy": "Must ask for continue/resume/rerun when target work_dir contains existing runtime data."
+}

@@ -70,6 +70,54 @@ def required_stage_ids(step_designs: dict[str, Any]) -> list[str]:
     return result
 
 
+def confirmed_step_design_items(step_designs: dict[str, Any]) -> list[dict[str, Any]]:
+    confirmed = confirmed_step_designs(step_designs)
+    for key in ("step_designs", "step_designs_proposal"):
+        items = confirmed.get(key, [])
+        if isinstance(items, list) and items:
+            return [item for item in items if isinstance(item, dict)]
+    return []
+
+
+def package_relative_path(raw_path: str, field_name: str) -> str:
+    normalized = normalize_relative_path(raw_path, field_name)
+    if normalized.startswith("docs/steps/"):
+        return f"wf/{normalized}"
+    return normalized
+
+
+def implementation_generated_files(implementation: dict[str, Any]) -> list[str]:
+    raw_items = implementation.get("generated_files", [])
+    if not isinstance(raw_items, list):
+        return []
+    result: list[str] = []
+    for index, item in enumerate(raw_items):
+        if isinstance(item, str):
+            raw_path = item
+        elif isinstance(item, dict):
+            raw_path = str(item.get("path", "")).strip()
+        else:
+            continue
+        if raw_path:
+            result.append(package_relative_path(raw_path, f"implementation.generated_files[{index}].path"))
+    return result
+
+
+def implementation_validation_failures(implementation: dict[str, Any]) -> list[str]:
+    raw_items = implementation.get("validation", [])
+    if not isinstance(raw_items, list):
+        return []
+    failures: list[str] = []
+    for index, item in enumerate(raw_items):
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status", "")).strip().lower()
+        if status and not status.startswith("passed"):
+            command = str(item.get("command", f"validation[{index}]"))
+            failures.append(f"implementation_result 自报验证未通过: {command} status={status}")
+    return failures
+
+
 def is_stage_exempt(step_designs: dict[str, Any], stage_id: str, directory_name: str) -> bool:
     confirmed = confirmed_step_designs(step_designs)
     exemptions = confirmed.get("stage_directory_exemptions", {})
@@ -77,6 +125,39 @@ def is_stage_exempt(step_designs: dict[str, Any], stage_id: str, directory_name:
         return False
     stage_exemptions = exemptions.get(stage_id, [])
     return isinstance(stage_exemptions, list) and directory_name in stage_exemptions
+
+
+def markdown_mentions_target_dirs(path: Path) -> bool:
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeError:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    return "TARGET_DIRS" in text or "TARGET_FILES" in text
+
+
+def check_agent_loop_prompt_contracts(target_abs: Path, checks: list[dict[str, Any]], failures: list[str]) -> None:
+    for workflow_lgwf in (target_abs / "wf").glob("*/workflow.lgwf"):
+        text = workflow_lgwf.read_text(encoding="utf-8-sig")
+        if "AGENT_LOOP" not in text:
+            continue
+        stage_root = workflow_lgwf.parent
+        for directory_name in ("agents", "resources"):
+            directory = stage_root / directory_name
+            if not directory.exists():
+                continue
+            for md_path in sorted(directory.glob("*.md")):
+                ok = not markdown_mentions_target_dirs(md_path)
+                checks.append(
+                    {
+                        "check": "agent_loop_prompt_no_target_dirs_contract",
+                        "path": str(md_path),
+                        "ok": ok,
+                    }
+                )
+                if not ok:
+                    failures.append(
+                        f"AGENT_LOOP 阶段文档不得承诺 TARGET_DIRS/TARGET_FILES: {md_path}"
+                    )
 
 
 def run_authoring_audit(workflow_lgwf: Path, workspace_root: Path) -> dict[str, Any]:
@@ -146,6 +227,21 @@ def validate_created_package(work_dir: Path) -> dict[str, Any]:
                 )
                 continue
             require_path(stage_root / directory_name, f"stage {stage_id} {directory_name}/")
+
+    for item in confirmed_step_design_items(step_designs):
+        raw_path = str(item.get("doc_path") or item.get("path") or "").strip()
+        if not raw_path:
+            continue
+        rel_path = package_relative_path(raw_path, "step_design.path")
+        require_path(target_abs / rel_path, f"approved step design {rel_path}")
+
+    for rel_path in implementation_generated_files(implementation):
+        require_path(target_abs / rel_path, f"implementation_result generated file {rel_path}")
+
+    for failure in implementation_validation_failures(implementation):
+        failures.append(failure)
+
+    check_agent_loop_prompt_contracts(target_abs, checks, failures)
 
     audit_result: dict[str, Any] = {"ok": False, "skipped": True}
     if workflow_lgwf.exists():

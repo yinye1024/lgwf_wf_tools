@@ -1,0 +1,31 @@
+{
+  "id": "self-improve",
+  "kind": "tool-workflow",
+  "version": 1,
+  "entry": "workflows/self-improve/scripts/self_improve.py",
+  "input_mode": "tool_args",
+  "input_schema": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "args": {"type": "array"}
+    },
+    "example": {"args": ["check"]}
+  },
+  "input_file_policy": "Tool workflow; pass CLI args directly.",
+  "auto_human_policy": "not_applicable",
+  "target_scope": {
+    "fields": ["args"],
+    "write_scope": ".local/self-improve only unless a proposal is explicitly approved."
+  },
+  "state_boundary": {
+    "local_state": ".local/self-improve",
+    "target_writes": "proposal execution requires explicit approval"
+  },
+  "outputs": {
+    "summary": ".local/self-improve/reports/",
+    "handoff": "",
+    "reports": [".local/self-improve/proposals", ".local/self-improve/incidents"]
+  },
+  "resume_policy": "Tool workflow; no LGWF work_dir resume."
+}

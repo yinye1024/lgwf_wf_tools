@@ -1,6 +1,8 @@
 # Self Improve Workflow
 
-本目录是 `lgwf-wf-tools` facade 下的内部 `tool-workflow`，职责是对 facade 自身进行自我评估、真实问题沉淀、proposal 生成、eval case 草稿和发布前检查。它不是 LGWF runtime workflow，不包含 `workflow.lgwf`，不得作为独立 Codex skill 注册。
+本目录是 `lgwf-wf-tools` facade 下的内部 `tool-workflow`，职责是对 facade 和已注册内部 workflow 做跨模块治理：registry 路由一致性、共享契约漂移、目标级 self-improve 覆盖率、真实问题沉淀、proposal 生成、eval case 草稿和发布前检查。它不是 LGWF runtime workflow，不包含 `workflow.lgwf`，不得作为独立 Codex skill 注册。
+
+目标 workflow 自己的改进闭环必须由目标目录下的 `self-improve/` 负责；本 workflow 可以报告缺失、汇总 health 或生成跨模块 proposal，但不替代目标模块的局部 self-improve，也不自动修改目标 workflow。
 
 ## 共用规则
 
@@ -14,6 +16,8 @@
 
 模块类型：`tool_workflow`。本模块的入口、依赖、状态边界、产物、验证和禁止事项以本文件后续章节为准。
 
+入口参数、输入示例和 auto-human 适用性以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
+
 ## 触发规则
 
 - 用户显式输入 `/lgwf-wf-tools self-improve`、`/lgwf-wf-tools 自我优化`，或自然语言要求复盘、自我优化、优化交互体验、沉淀 case、生成 proposal、生成 eval case 时，选择本 workflow；先归类问题、列出可执行的 self-improve 路径，再说明哪些操作需要用户确认。
@@ -22,6 +26,8 @@
 - 记录类命令需要确认：`incident`、`proposal`、`eval-case`。如果用户已经明确要求“记录这次问题”“生成 proposal”或“生成 eval 草稿”，可以把当前对话作为证据直接执行。
 - proposal 后续处理必须是两段式：先提醒用户是否查看或执行 proposal，再通过 `/lgwf-wf-tools 优化方案` 展示 review 计划；不直接执行 proposal，执行前必须先展示 review 计划并等待明确批准。
 - 发布包变更类操作必须人工批准：`promote-eval`、修改 `SKILL.md`、`AGENTS.md`、`registry.json`、baseline eval 或 workflow 文件。
+- `workflow-health` 必须检查 registry 中 `kind=lgwf` 的目标级 self-improve 覆盖率，并执行 `workflow-health/baseline.json` 中每个 workflow 的 `audit_command`；audit 失败时 health 必须失败。
+- `workflow-health` 必须把存在 `workflow.lgwf` 但未注册的目录报告为 drift 候选；drift 候选不直接导致失败。
 
 ## 执行入口
 

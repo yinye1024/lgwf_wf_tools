@@ -16,6 +16,7 @@ SKILLS_ROOT = REPO_ROOT / "skills"
 REGISTRY_PATH = FACADE_ROOT / "registry.json"
 ROOT_SKILL_MD = FACADE_ROOT / "SKILL.md"
 MODULE_CONTRACT_PATH = FACADE_ROOT / "workflows" / "01-share" / "module-contract.md"
+ENTRY_CONTRACT_PATH = FACADE_ROOT / "workflows" / "01-share" / "entry-contract.md"
 VENDOR_ROOT = FACADE_ROOT / "vendor" / "lgwf-client-assist"
 VENDOR_AGENTS_MD = VENDOR_ROOT / "AGENTS.md"
 VENDOR_SKILL_MD = VENDOR_ROOT / "SKILL.md"
@@ -68,6 +69,14 @@ def run_module_contract_validation() -> dict[str, Any]:
         for topic in ("模块定位", "入口", "依赖", "状态", "产物", "验证", "禁止"):
             if topic not in contract_text:
                 failures.append({"label": "module_contract.topic_declared", "topic": topic})
+
+    if not ENTRY_CONTRACT_PATH.is_file():
+        failures.append({"label": "entry_contract.exists", "path": str(ENTRY_CONTRACT_PATH)})
+    else:
+        entry_contract_text = ENTRY_CONTRACT_PATH.read_text(encoding="utf-8")
+        for token in ("input_mode", "auto_human_policy", "entry_contract.json"):
+            if token not in entry_contract_text:
+                failures.append({"label": "entry_contract.token_declared", "token": token})
 
     if SKILLS_ROOT.is_dir():
         for skill_root in sorted(path for path in SKILLS_ROOT.iterdir() if path.is_dir()):

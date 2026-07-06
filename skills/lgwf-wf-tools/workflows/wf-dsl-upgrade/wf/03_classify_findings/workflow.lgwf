@@ -1,0 +1,18 @@
+WORKFLOW classify_findings;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+PY classify_findings
+  SCRIPT "scripts/classify_findings.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_dsl_upgrade.classify_findings_result
+  UPDATES_STATE;
+
+FLOW main
+  START classify_findings;

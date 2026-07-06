@@ -1,0 +1,18 @@
+WORKFLOW batch_verify;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+PY verify_upgraded_workflows
+  SCRIPT "scripts/verify_upgraded_workflows.py"
+  TIMEOUT 300
+  RESULT state.lgwf_wf_dsl_upgrade.verify_upgraded_workflows_result
+  UPDATES_STATE;
+
+FLOW main
+  START verify_upgraded_workflows;

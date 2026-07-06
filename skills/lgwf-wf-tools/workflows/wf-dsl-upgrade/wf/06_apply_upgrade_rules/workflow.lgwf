@@ -1,0 +1,18 @@
+WORKFLOW apply_upgrade_rules;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+PY apply_upgrade_rules
+  SCRIPT "scripts/apply_upgrade_rules.py"
+  TIMEOUT 300
+  RESULT state.lgwf_wf_dsl_upgrade.apply_upgrade_rules_result
+  UPDATES_STATE;
+
+FLOW main
+  START apply_upgrade_rules;

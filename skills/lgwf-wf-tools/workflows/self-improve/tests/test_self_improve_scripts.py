@@ -863,13 +863,41 @@ class SelfImproveScriptsTest(unittest.TestCase):
         self.assertIn("修复优化", case["input"]["user_request"])
         self.assertIn("apply_patch", case["expected"]["must_not_start"])
 
+    def test_wf_create_route_must_start_workflow_not_manual_scaffold(self) -> None:
+        routing = (ROOT / "docs" / "workflow-routing.md").read_text(encoding="utf-8")
+        wf_create_agents = (ROOT / "workflows" / "wf-create" / "AGENTS.md").read_text(encoding="utf-8")
+        routing_cases = json.loads(
+            (WORKFLOW_SELF_IMPROVE / "evals" / "baseline-routing-cases.json").read_text(encoding="utf-8")
+        )
+        cases_by_id = {item["id"]: item for item in routing_cases["cases"]}
+        self.assertIn("route-new-workflow-creation-must-start-wf-create", cases_by_id)
+        case = cases_by_id["route-new-workflow-creation-must-start-wf-create"]
+
+        self.assertEqual(case["expected"]["workflow_id"], "wf-create")
+        self.assertIn("apply_patch", case["expected"]["must_not_start"])
+        self.assertIn("manual_scaffold", case["expected"]["must_not_start"])
+        self.assertIn("禁止主 agent 直接手工创建目标 workflow package", routing)
+        self.assertIn("必须启动或继续 `wf-create` run", wf_create_agents)
+
     def test_workflow_health_baseline_schema_exists(self) -> None:
         schema = json.loads((WORKFLOW_SELF_IMPROVE / "workflow-health" / "schema.json").read_text(encoding="utf-8"))
         baseline = json.loads((WORKFLOW_SELF_IMPROVE / "workflow-health" / "baseline.json").read_text(encoding="utf-8"))
         self.assertEqual(schema["title"], "lgwf-wf-tools workflow health inventory")
         self.assertEqual(
             {item["id"] for item in baseline["workflows"]},
-            {"wf-fix", "wf-create", "wf-prompt-fix", "wf-prompt-upgrade", "e2e-test-generator", "plan", "self-improve", "target-run"},
+            {
+                "wf-fix",
+                "wf-create",
+                "wf-convert",
+                "wf-prompt-fix",
+                "wf-prompt-upgrade",
+                "e2e-test-generator",
+                "wf-post-fix",
+                "plan",
+                "self-improve",
+                "target-run",
+                "self-improve-seed",
+            },
         )
 
     def test_check_workflow_health_all_and_single(self) -> None:
@@ -1047,6 +1075,185 @@ class SelfImproveScriptsTest(unittest.TestCase):
             report = json.loads(Path(payload["json"]).read_text(encoding="utf-8"))
             self.assertIn("semantic requirement missing: approval_boundary", report["workflow_results"][0]["issues"])
 
+    def test_check_workflow_health_runs_audit_command_and_fails_on_audit_error(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            fixture = Path(raw_dir)
+            workflow_root = fixture / "workflows" / "audit_fail"
+            (workflow_root / "tests").mkdir(parents=True)
+            (workflow_root / "self-improve" / "scripts").mkdir(parents=True)
+            (workflow_root / "workflow.lgwf").write_text("WORKFLOW audit_fail;\n", encoding="utf-8")
+            (workflow_root / "AGENTS.md").write_text("# Audit Fail\n", encoding="utf-8")
+            (workflow_root / "self-improve" / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "entrypoint": "scripts/self_improve.py",
+                        "local_state_root": ".local/self-improve",
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (workflow_root / "self-improve" / "scripts" / "self_improve.py").write_text("", encoding="utf-8")
+            (workflow_root / "self-improve" / "scripts" / "check_self_improve.py").write_text("", encoding="utf-8")
+            registry = fixture / "registry.json"
+            baseline = fixture / "baseline.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "audit_fail",
+                                "kind": "lgwf",
+                                "workflow_lgwf": "workflows/audit_fail/workflow.lgwf",
+                                "work_dir": "workflows/audit_fail/ws",
+                                "agents_md": "workflows/audit_fail/AGENTS.md",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            baseline.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "audit_fail",
+                                "expected_role": "test",
+                                "audit_command": "python -c \"import sys; print('bad audit'); sys.exit(7)\"",
+                                "test_command": "python -c \"print('workflow-test')\"",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "check_workflow_health.py"),
+                    "--facade-root",
+                    str(fixture),
+                    "--registry",
+                    str(registry),
+                    "--baseline",
+                    str(baseline),
+                    "--output-dir",
+                    str(fixture / "out"),
+                    "--audit-timeout-seconds",
+                    "5",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            self.assertEqual(result.returncode, 1)
+            payload = json.loads(result.stdout)
+            report = json.loads(Path(payload["json"]).read_text(encoding="utf-8"))
+            workflow = report["workflow_results"][0]
+            self.assertFalse(workflow["audit"]["passed"])
+            self.assertEqual(7, workflow["audit"]["returncode"])
+            self.assertIn("audit command failed", workflow["issues"])
+
+    def test_check_workflow_health_reports_unregistered_workflow_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            fixture = Path(raw_dir)
+            registered = fixture / "workflows" / "registered"
+            unregistered = fixture / "workflows" / "wf-dsl-upgrade"
+            (registered / "tests").mkdir(parents=True)
+            (registered / "self-improve" / "scripts").mkdir(parents=True)
+            (unregistered / "wf").mkdir(parents=True)
+            (registered / "workflow.lgwf").write_text("WORKFLOW registered;\n", encoding="utf-8")
+            (registered / "AGENTS.md").write_text("# Registered\n", encoding="utf-8")
+            (registered / "self-improve" / "manifest.json").write_text(
+                json.dumps(
+                    {
+                        "entrypoint": "scripts/self_improve.py",
+                        "local_state_root": ".local/self-improve",
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (registered / "self-improve" / "scripts" / "self_improve.py").write_text("", encoding="utf-8")
+            (registered / "self-improve" / "scripts" / "check_self_improve.py").write_text("", encoding="utf-8")
+            (unregistered / "wf" / "workflow.lgwf").write_text("WORKFLOW upgrade;\n", encoding="utf-8")
+            (unregistered / "AGENTS.md").write_text("# DSL Upgrade\n", encoding="utf-8")
+            registry = fixture / "registry.json"
+            baseline = fixture / "baseline.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "registered",
+                                "kind": "lgwf",
+                                "workflow_lgwf": "workflows/registered/workflow.lgwf",
+                                "work_dir": "workflows/registered/ws",
+                                "agents_md": "workflows/registered/AGENTS.md",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            baseline.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "registered",
+                                "expected_role": "test",
+                                "audit_command": "python -c \"print('audit')\"",
+                                "test_command": "python -c \"print('workflow-test')\"",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "check_workflow_health.py"),
+                    "--facade-root",
+                    str(fixture),
+                    "--registry",
+                    str(registry),
+                    "--baseline",
+                    str(baseline),
+                    "--output-dir",
+                    str(fixture / "out"),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            payload = json.loads(result.stdout)
+            report = json.loads(Path(payload["json"]).read_text(encoding="utf-8"))
+            self.assertTrue(report["passed"])
+            self.assertEqual(
+                [
+                    {
+                        "id": "wf-dsl-upgrade",
+                        "workflow_lgwf": "workflows/wf-dsl-upgrade/wf/workflow.lgwf",
+                        "agents_md": "workflows/wf-dsl-upgrade/AGENTS.md",
+                    }
+                ],
+                report["unregistered_workflow_candidates"],
+            )
+
     def test_run_workflow_tests_executes_baseline_test_commands(self) -> None:
         with tempfile.TemporaryDirectory() as raw_dir:
             temp_root = Path(raw_dir)
@@ -1104,8 +1311,8 @@ class SelfImproveScriptsTest(unittest.TestCase):
                                 "issues": ["workflow tests directory missing"],
                                 "baseline": {
                                     "expected_role": "运行目标 workflow",
-                                    "audit_command": "python audit",
-                                    "test_command": "python test",
+                                "audit_command": "python -c \"print('audit')\"",
+                                "test_command": "python -c \"print('workflow-test')\"",
                                 },
                             }
                         ]
@@ -1157,8 +1364,8 @@ class SelfImproveScriptsTest(unittest.TestCase):
                                 "workflow_root": "workflows/wf-fix",
                                 "baseline": {
                                     "expected_role": "运行目标 workflow",
-                                    "audit_command": "python audit",
-                                    "test_command": "python test",
+                                "audit_command": "python -c \"print('audit')\"",
+                                "test_command": "python -c \"print('workflow-test')\"",
                                 },
                             }
                         ]

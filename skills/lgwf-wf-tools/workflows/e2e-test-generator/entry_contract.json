@@ -1,0 +1,32 @@
+{
+  "id": "e2e-test-generator",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/e2e-test-generator/workflow.lgwf",
+  "work_dir": "workflows/e2e-test-generator/ws",
+  "input_mode": "empty_then_approval",
+  "input_schema": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "example": {}
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for non-empty input; this workflow collects target info by approval.",
+  "auto_human_policy": "forbidden",
+  "target_scope": {
+    "fields": ["workflow_lgwf", "workflow_root", "test_output_dir", "test_name_prefix"],
+    "collection": "Collected by the entry approval gate.",
+    "write_scope": "Only the confirmed test output directory."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/e2e-test-generator/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "confirmed test output directory"
+  },
+  "outputs": {
+    "summary": ".lgwf/e2e_generation_summary.json",
+    "handoff": "",
+    "reports": [".lgwf/e2e_target_request.normalized.json"]
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

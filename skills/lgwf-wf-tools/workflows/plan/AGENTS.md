@@ -6,6 +6,7 @@
 
 - 模块类型：`lgwf_workflow_package`。
 - 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
 - 计划中涉及创建、修改或修复 skill/workflow 时，必须把 `module-contract.md` 纳入任务约束。
 
 facade 必须从根目录 `registry.json` 派发本 workflow，使用内置 `vendor/lgwf-client-assist/scripts/lgwf.py` 启动或继续运行；不得要求用户激活外部 `lgwf-plan` 或 `lgwf-client-assist` skill。

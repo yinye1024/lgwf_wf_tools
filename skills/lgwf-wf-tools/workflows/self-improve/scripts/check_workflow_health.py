@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,7 @@ DEFAULT_OUTPUT_DIR = FACADE_ROOT / ".local" / "self-improve" / "reports"
 REGISTRY_PATH = FACADE_ROOT / "registry.json"
 BASELINE_PATH = SELF_IMPROVE_ROOT / "workflow-health" / "baseline.json"
 IGNORED_SKILL_SCAN_PARTS = {".git", ".hg", ".local", ".lgwf", "__pycache__"}
+OUTPUT_TAIL_LIMIT = 2000
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -41,6 +44,23 @@ def path_for(root: Path, relative: str) -> Path:
     return root / relative
 
 
+def normalize_python_command(command: str) -> str:
+    stripped = command.strip()
+    if stripped == "python":
+        return f'"{sys.executable}"'
+    if stripped.startswith("python "):
+        return f'"{sys.executable}" {stripped[len("python "):]}'
+    return command
+
+
+def output_tail(value: str) -> dict[str, Any]:
+    return {
+        "length": len(value),
+        "truncated": len(value) > OUTPUT_TAIL_LIMIT,
+        "tail": value[-OUTPUT_TAIL_LIMIT:],
+    }
+
+
 def workflow_root_from_registry(root: Path, workflow_lgwf: Any, agents_md: Any) -> Path:
     if isinstance(agents_md, str) and agents_md:
         return path_for(root, agents_md).parent
@@ -49,7 +69,50 @@ def workflow_root_from_registry(root: Path, workflow_lgwf: Any, agents_md: Any) 
     return root
 
 
-def check_workflow(item: dict[str, Any], baseline: dict[str, dict[str, Any]], *, facade_root: Path) -> dict[str, Any]:
+def registered_workflow_roots(workflows: list[dict[str, Any]], *, facade_root: Path) -> set[Path]:
+    roots: set[Path] = set()
+    for item in workflows:
+        if item.get("kind", "lgwf") != "lgwf":
+            continue
+        root = workflow_root_from_registry(facade_root, item.get("workflow_lgwf"), item.get("agents_md"))
+        roots.add(root.resolve())
+    return roots
+
+
+def discover_unregistered_workflow_candidates(
+    workflows: list[dict[str, Any]],
+    *,
+    facade_root: Path,
+) -> list[dict[str, str]]:
+    workflows_root = facade_root / "workflows"
+    if not workflows_root.is_dir():
+        return []
+    registered_roots = registered_workflow_roots(workflows, facade_root=facade_root)
+    candidates: list[dict[str, str]] = []
+    for workflow_file in sorted(workflows_root.glob("*/workflow.lgwf")) + sorted(workflows_root.glob("*/wf/workflow.lgwf")):
+        package_root = workflow_file.parent if workflow_file.parent.name != "wf" else workflow_file.parent.parent
+        if package_root.resolve() in registered_roots:
+            continue
+        agents_md = package_root / "AGENTS.md"
+        if not agents_md.is_file():
+            continue
+        candidates.append(
+            {
+                "id": package_root.name,
+                "workflow_lgwf": workflow_file.relative_to(facade_root).as_posix(),
+                "agents_md": agents_md.relative_to(facade_root).as_posix(),
+            }
+        )
+    return candidates
+
+
+def check_workflow(
+    item: dict[str, Any],
+    baseline: dict[str, dict[str, Any]],
+    *,
+    facade_root: Path,
+    audit_timeout_seconds: int,
+) -> dict[str, Any]:
     workflow_id = str(item.get("id") or "<missing>")
     issues: list[str] = []
     kind = item.get("kind", "lgwf")
@@ -119,10 +182,39 @@ def check_workflow(item: dict[str, Any], baseline: dict[str, dict[str, Any]], *,
     if not tests_dir.is_dir():
         issues.append("workflow tests directory missing")
 
+    if kind == "lgwf":
+        required_self_improve = [
+            "self-improve/manifest.json",
+            "self-improve/scripts/self_improve.py",
+            "self-improve/scripts/check_self_improve.py",
+        ]
+        for relative in required_self_improve:
+            if not (workflow_root / relative).is_file():
+                issues.append(f"self-improve module missing: {relative}")
+        manifest_path = workflow_root / "self-improve" / "manifest.json"
+        if manifest_path.is_file():
+            manifest = read_json(manifest_path)
+            if manifest.get("entrypoint") != "scripts/self_improve.py":
+                issues.append("self-improve manifest entrypoint must be scripts/self_improve.py")
+            if manifest.get("local_state_root") != ".local/self-improve":
+                issues.append("self-improve manifest local_state_root must be .local/self-improve")
+
     baseline_item = baseline.get(workflow_id, {})
+    audit_result: dict[str, Any] = {
+        "passed": False,
+        "returncode": 2,
+        "command": "",
+        "stdout": output_tail(""),
+        "stderr": output_tail("missing audit_command"),
+    }
     for key in ("audit_command", "test_command", "expected_role"):
         if not baseline_item.get(key):
             issues.append(f"baseline missing {key}")
+    audit_command = baseline_item.get("audit_command")
+    if isinstance(audit_command, str) and audit_command.strip():
+        audit_result = run_audit_command(audit_command, facade_root=facade_root, timeout_seconds=audit_timeout_seconds)
+        if not audit_result["passed"]:
+            issues.append("audit command failed")
     semantic_requirements = baseline_item.get("semantic_requirements", [])
     if semantic_requirements is not None and not isinstance(semantic_requirements, list):
         issues.append("baseline semantic_requirements must be list")
@@ -145,15 +237,47 @@ def check_workflow(item: dict[str, Any], baseline: dict[str, dict[str, Any]], *,
         "issues": issues,
         "workflow_root": workflow_root.relative_to(facade_root).as_posix() if workflow_root.exists() else str(workflow_root),
         "baseline": baseline_item,
+        "audit": audit_result,
     }
 
 
+def run_audit_command(command: str, *, facade_root: Path, timeout_seconds: int) -> dict[str, Any]:
+    normalized = normalize_python_command(command)
+    try:
+        completed = subprocess.run(
+            normalized,
+            cwd=facade_root,
+            shell=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout_seconds,
+        )
+        return {
+            "passed": completed.returncode == 0,
+            "returncode": completed.returncode,
+            "command": command,
+            "stdout": output_tail(completed.stdout.strip()),
+            "stderr": output_tail(completed.stderr.strip()),
+        }
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+        stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+        return {
+            "passed": False,
+            "returncode": 124,
+            "command": command,
+            "stdout": output_tail(stdout.strip()),
+            "stderr": output_tail((stderr.strip() + f"\naudit command timed out after {timeout_seconds}s").strip()),
+        }
 def build_report(
     workflow_id: str | None = None,
     *,
     facade_root: Path = FACADE_ROOT,
     registry_path: Path = REGISTRY_PATH,
     baseline_path: Path = BASELINE_PATH,
+    audit_timeout_seconds: int = 120,
 ) -> dict[str, Any]:
     baseline = baseline_by_id(baseline_path)
     workflows = registry_workflows(registry_path)
@@ -161,13 +285,18 @@ def build_report(
         workflows = [item for item in workflows if item.get("id") == workflow_id]
         if not workflows:
             raise ValueError(f"workflow id not found in registry: {workflow_id}")
-    results = [check_workflow(item, baseline, facade_root=facade_root) for item in workflows]
+    results = [
+        check_workflow(item, baseline, facade_root=facade_root, audit_timeout_seconds=audit_timeout_seconds)
+        for item in workflows
+    ]
+    unregistered_candidates = [] if workflow_id else discover_unregistered_workflow_candidates(workflows, facade_root=facade_root)
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "workflow_id": workflow_id or "",
         "passed": all(item["passed"] for item in results),
         "workflow_count": len(results),
         "workflow_results": results,
+        "unregistered_workflow_candidates": unregistered_candidates,
     }
 
 
@@ -188,8 +317,17 @@ def write_markdown(path: Path, report: dict[str, Any]) -> None:
     for item in report["workflow_results"]:
         marker = "PASS" if item["passed"] else "FAIL"
         lines.append(f"- `{marker}` `{item['id']}`")
+        audit = item.get("audit", {})
+        if audit:
+            audit_marker = "PASS" if audit.get("passed") else "FAIL"
+            lines.append(f"  - audit: `{audit_marker}` returncode `{audit.get('returncode')}`")
         for issue in item["issues"]:
             lines.append(f"  - {issue}")
+    candidates = report.get("unregistered_workflow_candidates", [])
+    if candidates:
+        lines.extend(["", "## Unregistered Workflow Candidates", ""])
+        for item in candidates:
+            lines.append(f"- `{item['id']}`: `{item['workflow_lgwf']}`")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -201,6 +339,7 @@ def main() -> int:
     parser.add_argument("--facade-root", default=str(FACADE_ROOT), help="Facade root. Intended for tests and local diagnostics.")
     parser.add_argument("--registry", default=str(REGISTRY_PATH), help="registry.json path. Intended for tests and local diagnostics.")
     parser.add_argument("--baseline", default=str(BASELINE_PATH), help="workflow-health baseline path. Intended for tests and local diagnostics.")
+    parser.add_argument("--audit-timeout-seconds", type=int, default=120)
     args = parser.parse_args()
 
     report = build_report(
@@ -208,6 +347,7 @@ def main() -> int:
         facade_root=Path(args.facade_root),
         registry_path=Path(args.registry),
         baseline_path=Path(args.baseline),
+        audit_timeout_seconds=args.audit_timeout_seconds,
     )
     suffix = f"-{args.workflow_id}" if args.workflow_id else ""
     base = Path(args.output_dir) / f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-workflow-health{suffix}"

@@ -1,0 +1,18 @@
+WORKFLOW build_upgrade_plan;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
+  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+}
+
+PY build_upgrade_plan
+  SCRIPT "scripts/build_upgrade_plan.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_dsl_upgrade.build_upgrade_plan_result
+  UPDATES_STATE;
+
+FLOW main
+  START build_upgrade_plan;

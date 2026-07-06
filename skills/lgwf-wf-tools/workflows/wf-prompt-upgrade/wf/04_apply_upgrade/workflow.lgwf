@@ -26,6 +26,9 @@ CONTEXT_SET apply_prompt_upgrade_shared_context {
   workspace file ".lgwf/prompt_upgrade/proposal.json";
   workspace file ".lgwf/prompt_upgrade/decision.json";
   workspace file ".lgwf/prompt_upgrade/react_history.json";
+}
+
+CONTEXT_SET apply_prompt_upgrade_plan_context {
   workspace file ".lgwf/prompt_upgrade/apply_plan.json";
 }
 
@@ -42,11 +45,13 @@ REACT apply_prompt_upgrade MAX 3
 
   ACT CODEX
     PROMPT "agents/act.md"
+    CONTEXT apply_prompt_upgrade_plan_context
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     RESULT state.lgwf_wf_prompt_upgrade.apply_act_result
 
   OBSERVE CODEX
     PROMPT "agents/observe.md"
+    CONTEXT apply_prompt_upgrade_plan_context
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/apply_review.json"
     RESULT state.lgwf_wf_prompt_upgrade.apply_observe_result

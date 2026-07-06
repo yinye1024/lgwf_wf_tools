@@ -1,0 +1,32 @@
+{
+  "id": "wf-fix",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-fix/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-fix/ws",
+  "input_mode": "empty_then_approval",
+  "input_schema": {
+    "type": "object",
+    "required": [],
+    "properties": {},
+    "example": {}
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for non-empty or non-ASCII input; this workflow starts with {}.",
+  "auto_human_policy": "forbidden",
+  "target_scope": {
+    "fields": ["target_workflow_lgwf", "max_attempts", "ask_main_agent_for_target_approvals"],
+    "collection": "Collected by the first approval gate and persisted under .lgwf/self_fix_request*.json.",
+    "write_scope": "Candidate repairs are limited to .lgwf/target_repair/current/workspace/candidate until promoted by the workflow."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-fix/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "candidate workspace only before promote"
+  },
+  "outputs": {
+    "summary": ".lgwf/target_repair/report.json",
+    "handoff": "",
+    "reports": [".lgwf/target_runs/attempt-*", ".lgwf/target_repair/iterations/*"]
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

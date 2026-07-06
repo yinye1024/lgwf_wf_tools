@@ -1,0 +1,48 @@
+{
+  "id": "wf-prompt-fix",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-prompt-fix/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-prompt-fix/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["prompt_fix_target"],
+    "properties": {
+      "prompt_fix_target": {
+        "type": "object",
+        "required": ["target_workflow_lgwf"],
+        "properties": {
+          "target_workflow_lgwf": {"type": "string"},
+          "target_package_root": {"type": "string"},
+          "target_dirs": {"type": "array"}
+        }
+      },
+      "request": {"type": "object"}
+    },
+    "example": {
+      "prompt_fix_target": {
+        "target_workflow_lgwf": "D:/example/workflow.lgwf",
+        "target_package_root": "D:/example",
+        "target_dirs": ["D:/example"]
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for prompt_fix_target.",
+  "auto_human_policy": "conditional",
+  "target_scope": {
+    "fields": ["prompt_fix_target.target_workflow_lgwf", "prompt_fix_target.target_dirs"],
+    "write_scope": "Only prompt files and declared target directories confirmed by the workflow."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-prompt-fix/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "confirmed prompt repair scope"
+  },
+  "outputs": {
+    "summary": ".lgwf/target_prompt_fix_summary.json",
+    "handoff": "",
+    "reports": [".lgwf/prompt_acceptance/audit.json", ".lgwf/prompt_acceptance/repair_review.json"]
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

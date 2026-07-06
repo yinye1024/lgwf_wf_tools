@@ -18,6 +18,8 @@
 
 模块类型：`tool_workflow`。本模块的入口、依赖、状态边界、产物、验证和禁止事项以本文件后续章节和 `../../docs/target-run.md` 为准。
 
+入口参数、输入示例和 auto-human 适用性以本目录 `entry_contract.json` 为准；本文件和 `../../docs/target-run.md` 解释业务纪律和运行边界。
+
 ## 触发规则
 
 只有用户明确使用以下形式时选择本 workflow：
