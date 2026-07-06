@@ -84,6 +84,13 @@
       "description": "把 self-improve 通用模式播种到目标 workflow，使目标 workflow 获得自包含自我提升结构。",
       "agents_md": "workflows/self-improve-seed/AGENTS.md",
       "entry": "workflows/self-improve-seed/scripts/seed_self_improve.py"
+    },
+    {
+      "id": "skill-packaging",
+      "kind": "tool-workflow",
+      "description": "把带 wf/workflow.lgwf 的 LGWF workflow skill 打包成内置 lgwf-client-assist runtime 的自包含 skill。",
+      "agents_md": "workflows/skill-packaging/AGENTS.md",
+      "entry": "scripts/package_lgwf_skill.py"
     }
   ]
 }

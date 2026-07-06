@@ -11,6 +11,7 @@
 - `/lgwf-wf-tools list`：只运行 `python scripts/list_workflows.py`，只读列出 `registry.json` 中可派发的内部 workflow；不派发内部 workflow。
 
 目标 workflow 直启命令见 [target-run.md](target-run.md)。给目标 workflow 播种自包含 self-improve 结构见 [self-improve-seed.md](self-improve-seed.md)。self-improve 场景见 [self-improve.md](self-improve.md)。
+把带 `wf/workflow.lgwf` 的 Codex skill 打包成自包含 skill 时，路由到 `skill-packaging`，并读取 `workflows/skill-packaging/AGENTS.md`。
 
 ## 脚本级代理入口
 

@@ -58,8 +58,14 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertNotIn("workflow_lgwf", workflows["self-improve-seed"])
         self.assertNotIn("work_dir", workflows["self-improve-seed"])
 
+
+        self.assertEqual("tool-workflow", workflows["skill-packaging"]["kind"])
+        self.assertEqual("workflows/skill-packaging/AGENTS.md", workflows["skill-packaging"]["agents_md"])
+        self.assertEqual("scripts/package_lgwf_skill.py", workflows["skill-packaging"]["entry"])
+        self.assertNotIn("workflow_lgwf", workflows["skill-packaging"])
+        self.assertNotIn("work_dir", workflows["skill-packaging"])
         for workflow_id, workflow in workflows.items():
-            if workflow_id in {"self-improve", "target-run", "self-improve-seed"}:
+            if workflow_id in {"self-improve", "target-run", "self-improve-seed", "skill-packaging"}:
                 continue
             self.assertEqual("lgwf", workflow["kind"], workflow_id)
 
