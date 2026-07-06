@@ -24,6 +24,8 @@ def handle_existing_workflow_data(
         if validation_error:
             print(f"[lgwf] {validation_error}", file=stderr)
             return 2
+    if args.continue_existing:
+        return write_existing_workflow_status(work_dir, stdout, support)
     if not has_existing_lgwf_data(work_dir, support):
         if getattr(args, "resume_existing", False):
             print("[lgwf] --resume-existing requires existing .lgwf checkpoint data. Use --rerun-existing to start over.", file=stderr)
@@ -64,8 +66,6 @@ def handle_existing_workflow_data(
                     args.resume_orphaned_running = True
             args.resume_run_id = checkpoint["run_id"]
         return None
-    if args.continue_existing:
-        return write_existing_workflow_status(work_dir, stdout, support)
     if args.background:
         return write_existing_workflow_choice_required(work_dir, stdout, stderr, support)
 
@@ -134,13 +134,16 @@ def has_existing_lgwf_data(work_dir: pathlib.Path, support: RuntimeSupport) -> b
     lgwf_dir = support.workspace_layout.lgwf_dir(work_dir)
     if not lgwf_dir.is_dir():
         return False
-    try:
-        next(lgwf_dir.iterdir())
-    except StopIteration:
+    return _has_runtime_data(lgwf_dir / "runs") or _has_runtime_data(lgwf_dir / "checkpoints")
+
+
+def _has_runtime_data(path: pathlib.Path) -> bool:
+    if not path.is_dir():
         return False
+    try:
+        return any(item.is_file() for item in path.rglob("*"))
     except OSError:
         return True
-    return True
 
 
 def latest_failed_checkpoint(work_dir: pathlib.Path, support: RuntimeSupport) -> dict[str, object] | None:

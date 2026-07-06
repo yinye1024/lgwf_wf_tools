@@ -1,6 +1,7 @@
 import argparse
 import os
 import pathlib
+import shutil
 import subprocess
 import uuid
 from typing import Any
@@ -39,6 +40,8 @@ def runtime_command(workflow_json: str, args: argparse.Namespace, support: Runti
         command.append("--resume-allow-workflow-changed")
     if getattr(args, "resume_orphaned_running", False):
         command.append("--resume-orphaned-running")
+    if getattr(args, "auto_human", False):
+        command.append("--auto-human")
     return command
 
 
@@ -104,6 +107,29 @@ def copy_workflow_package(
             print(f"[lgwf] copy-workflow-package output missing {field}", file=stderr)
             return 2, None
     return 0, payload
+
+
+def existing_workflow_package_snapshot(work_dir: str, support: RuntimeSupport) -> dict[str, Any] | None:
+    workflow_root = support.workspace_layout.lgwf_dir(pathlib.Path(work_dir)) / "workflow"
+    workflow_lgwf = workflow_root / "workflow.lgwf"
+    if not workflow_lgwf.is_file():
+        return None
+    return {
+        "workflow_root": str(workflow_root.resolve()),
+        "workflow_lgwf": str(workflow_lgwf.resolve()),
+        "workflow_json": str((workflow_root / "workflow.json").resolve()),
+    }
+
+
+def delete_workflow_package_snapshot(work_dir: str, support: RuntimeSupport) -> None:
+    lgwf_dir = support.workspace_layout.lgwf_dir(pathlib.Path(work_dir)).resolve()
+    workflow_root = (lgwf_dir / "workflow").resolve()
+    if workflow_root.parent != lgwf_dir:
+        raise RuntimeError(f"refusing to delete unexpected workflow snapshot path: {workflow_root}")
+    if workflow_root.is_dir() and not workflow_root.is_symlink():
+        shutil.rmtree(workflow_root)
+    elif workflow_root.exists():
+        workflow_root.unlink()
 
 
 def audit_lgwf(

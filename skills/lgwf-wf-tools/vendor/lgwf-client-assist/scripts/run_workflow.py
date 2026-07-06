@@ -126,6 +126,8 @@ def main(
 
     if args.workflow_lgwf:
         workspace_cwd = _workflow_workspace_cwd(args.workflow_lgwf)
+        if args.resume_existing:
+            launcher_module.delete_workflow_package_snapshot(args.work_dir, support)
         copy_exit_code, snapshot = launcher_module.copy_workflow_package(
             args.workflow_lgwf,
             args.work_dir,
@@ -235,6 +237,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--resume-orphaned-running",
         action="store_true",
         help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--auto-human",
+        action="store_true",
+        help="Automatically approve human approval and review gates for this run.",
     )
     parser.add_argument(
         "--doctor",

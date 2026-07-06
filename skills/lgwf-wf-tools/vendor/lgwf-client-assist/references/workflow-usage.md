@@ -18,6 +18,12 @@ python <skill-dir>\scripts\lgwf.py run --workflow-json <workflow_json> --work-di
 python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json "{}"
 ```
 
+需要让本次 run 的 `APPROVAL`、`REVIEW` 和 `CHOICE` 全部自动走正向分支时，显式追加 `--auto-human`。该参数是 run-level human gate 策略，会由 `RUN_WORKFLOW` 子 workflow 继承；`CHOICE` 优先选择 `run`，没有 `run` 时选择 `approve`。它不影响 handoff、`subgraph.react on_max` 或 agent loop 的 `waiting_human`：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json "{}" --auto-human
+```
+
 复制按文件字节执行，不转换文本编码或换行。`.git/`、`__pycache__/`、`.lgwf-compiled-*` 和 package 内部的整个 work dir 不进入 snapshot；symlink、junction 或其他 reparse point 会使启动失败。snapshot 会保留到下一次 rerun，由现有 work-dir 清理流程删除。
 
 安装策略由打包时生成的 `assets/package-profile.json` 决定：
@@ -37,7 +43,7 @@ python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-di
 
 ## 旧运行数据处理
 
-如果 `<work_dir>\.lgwf` 已包含上次 workflow 的运行数据，runner 会先在终端提示选择：
+如果 `<work_dir>\.lgwf` 已包含上次 workflow 的运行数据，runner 会先在终端提示选择。只有 `.lgwf/runs/` 或 `.lgwf/checkpoints/` 中存在实际运行记录时，才视为旧运行数据；仅有隐藏 workflow snapshot、child input 或空目录不会阻止新 run 启动。
 
 - 输入 `rerun`：清空 `<work_dir>` 下的旧内容并重新运行 workflow，保留 `<work_dir>` 目录本身。
 - 输入 `continue`：不启动新 workflow，输出现有 workflow 的 status / pending human requests / latest run 信息。
@@ -60,7 +66,9 @@ python <skill-dir>\scripts\lgwf.py run --workflow-json <workflow_json> --work-di
 
 `--continue-existing` 只报告已有进程、pending human request 和 latest run 状态，不从失败节点恢复执行。
 
-`--resume-existing` 会优先查找 `.lgwf/checkpoints/<run_id>/checkpoint.json` 中最新的 failed checkpoint，并从失败节点重新执行；已完成前序节点不会重跑，失败节点本身会重跑一次。指定 `--resume-run-id <run_id>` 可恢复某个 run；调试新版 workflow 时可追加 `--resume-allow-workflow-changed` 跳过 failed checkpoint 的 workflow hash 一致性检查。
+`--resume-existing` 会优先查找 `.lgwf/checkpoints/<run_id>/checkpoint.json` 中最新的 failed checkpoint，并从失败节点重新执行；已完成前序节点不会重跑，失败节点本身会重跑一次。指定 `--resume-run-id <run_id>` 可恢复某个 run；调试新版 workflow 时可追加 `--resume-allow-workflow-changed` 跳过 failed checkpoint 的 workflow hash 一致性检查。运行 `.lgwf` authoring source 时，resume 会删除旧 `<work_dir>/.lgwf/workflow/` snapshot 并重新复制、audit、compile 当前 workflow package，避免使用过期 snapshot。
+
+`RUN_WORKFLOW` 节点 resume 时也会刷新 child 的隔离 workspace，并重建 child `<work_dir>/.lgwf/workflow/` snapshot；child 实际 work_dir 中的业务文件和 checkpoint 会保留，用于从 child checkpoint 继续。
 
 如果没有 failed checkpoint，但存在 `status=running` 的 checkpoint，且 work-dir 中已知 workflow 进程已经停止，`--resume-existing` 会把它视为 orphaned running checkpoint：使用 `current_node` 和 `state_before_current_node` 从当前节点前状态重跑。这个场景默认允许 workflow hash 变化，因为常见用途是修复 workflow 后继续调试；它仍是节点边界重跑，不是节点内部续跑。
 
