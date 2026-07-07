@@ -33,12 +33,23 @@ REACT design_prompt_upgrade MAX 3
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_upgrade/analysis.json";
+      READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+      READ workspace file ".lgwf/prompt_upgrade_target.json";
+    }
   ACT CODEX
     PROMPT "agents/act.md"
     CONTEXT design_prompt_upgrade_analysis_context
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/proposal.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_act_result
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_upgrade/analysis.json";
+      READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+      READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+      READ workspace file ".lgwf/prompt_upgrade_target.json";
+    }
   OBSERVE CODEX
     PROMPT "agents/observe.md"
     CONTEXT design_prompt_upgrade_analysis_context
@@ -46,6 +57,12 @@ REACT design_prompt_upgrade MAX 3
     TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/proposal_review.json"
     RESULT state.lgwf_wf_prompt_upgrade.design_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_upgrade/analysis.json";
+      READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+      READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+      READ workspace file ".lgwf/prompt_upgrade/proposal_review.json";
+    }
   DECIDE PY
     SCRIPT "scripts/decide_prompt_upgrade_design.py"
     RESULT state.lgwf_wf_prompt_upgrade.design_decide_result

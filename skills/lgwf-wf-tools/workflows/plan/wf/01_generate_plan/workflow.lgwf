@@ -48,6 +48,10 @@ REACT generate_plan_proposal MAX 3
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_FILE ".lgwf/react_task_plan_reason.md"
     RESULT state.lgwf_plan.plan_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/react_task_plan_reason.md";
+      READ workspace file ".lgwf/react_task_request.json";
+    }
   ACT CODEX
     PROMPT "02_generate_plan_proposal/agents/act.md"
     CONTEXT workspace file ".lgwf/react_task_plan_reason.md"
@@ -55,6 +59,15 @@ REACT generate_plan_proposal MAX 3
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_task_plan_proposal.json" AS_FILE
     RESULT state.lgwf_plan.plan_act_result
+    CONTRACT {
+      READ workspace file ".lgwf/business_flow.json";
+      READ workspace file ".lgwf/create_requirements.json";
+      READ workspace file ".lgwf/react_task_plan.json";
+      READ workspace file ".lgwf/react_task_plan_proposal.json";
+      READ workspace file ".lgwf/react_task_plan_reason.md";
+      READ workspace file ".lgwf/react_task_request.json";
+      READ workspace file ".lgwf/step_designs.json";
+    }
   OBSERVE CODEX
     PROMPT "02_generate_plan_proposal/agents/observe.md"
     CONTEXT workspace file ".lgwf/react_task_plan_proposal.json"
@@ -62,6 +75,11 @@ REACT generate_plan_proposal MAX 3
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_task_plan_observe.json"
     RESULT state.lgwf_plan.plan_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/react_task_plan_observe.json";
+      READ workspace file ".lgwf/react_task_plan_proposal.json";
+      READ workspace file ".lgwf/react_task_request.json";
+    }
   DECIDE PY
     SCRIPT "02_generate_plan_proposal/scripts/decide.py"
     RESULT state.lgwf_plan.plan_decide_result

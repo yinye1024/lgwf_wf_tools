@@ -3,7 +3,14 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+
+SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
+
+from review_context import build_review_context
 
 
 def load_json(path: Path) -> dict:
@@ -15,13 +22,14 @@ def load_json(path: Path) -> dict:
 
 def build_context(root: Path) -> dict:
     proposal = load_json(root / ".lgwf" / "create_requirements_proposal.json")
-    return {
-        "proposal": proposal,
-        "approval_target": "create_requirements_proposal",
-        "allowed_decisions": ["approve", "reject"],
-        "approve_writes": ".lgwf/create_requirements.json",
-        "revise_or_reject_route": "summarize_create_result",
-    }
+    return build_review_context(
+        review_node="confirm_requirements",
+        title="确认需求方案",
+        approval_target="create_requirements_proposal",
+        proposal=proposal,
+        approve_writes=".lgwf/create_requirements.json",
+        persist_path=".lgwf/create_requirements_approval.json",
+    )
 
 
 def main() -> None:

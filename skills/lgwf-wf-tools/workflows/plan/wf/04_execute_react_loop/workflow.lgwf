@@ -38,6 +38,11 @@ REACT implement_react_task MAX 3
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_FILE ".lgwf/react_task_implementation_reason.md"
     RESULT state.lgwf_plan.implement_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/react_acceptance_plan.json";
+      READ workspace file ".lgwf/react_task_context.json";
+      READ workspace file ".lgwf/react_task_implementation_reason.md";
+    }
   ACT CODEX
     PROMPT "01_implement_task/agents/act.md"
     CONTEXT workspace file ".lgwf/react_task_implementation_reason.md"
@@ -45,6 +50,12 @@ REACT implement_react_task MAX 3
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_task_input.json"
     RESULT state.lgwf_plan.implement_act_result
+    CONTRACT {
+      READ workspace file ".lgwf/react_task_context.json";
+      READ workspace file ".lgwf/react_task_implementation_reason.md";
+      READ workspace file ".lgwf/react_task_input.json";
+      READ workspace file ".lgwf/react_task_result.json";
+    }
   OBSERVE CODEX
     PROMPT "01_implement_task/agents/observe.md"
     CONTEXT workspace file ".lgwf/react_task_input.json"
@@ -52,6 +63,13 @@ REACT implement_react_task MAX 3
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_task_result.json"
     RESULT state.lgwf_plan.implement_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/react_task_context.json";
+      READ workspace file ".lgwf/react_task_input.json";
+      READ workspace file ".lgwf/react_task_result.json";
+      READ workspace file ".lgwf/step_design_confirmation_record.json";
+      READ workspace file ".lgwf/step_designs.json";
+    }
   DECIDE PY
     SCRIPT "01_implement_task/scripts/decide.py"
     RESULT state.lgwf_plan.implement_decide_result

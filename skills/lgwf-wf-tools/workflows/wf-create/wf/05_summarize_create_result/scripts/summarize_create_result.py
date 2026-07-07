@@ -166,7 +166,10 @@ def payload_from_confirmed_artifacts(root: Path) -> dict[str, Any]:
 
 
 def read_stdin_payload() -> dict[str, Any]:
-    raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+    try:
+        raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+    except OSError:
+        raw = ""
     if not raw.strip():
         return {}
     data = json.loads(raw)

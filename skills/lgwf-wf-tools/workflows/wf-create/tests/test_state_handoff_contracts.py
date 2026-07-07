@@ -93,7 +93,15 @@ class StateHandoffContractTest(unittest.TestCase):
                     module.main()
                 data = json.loads(output.getvalue())
                 self.assertIn(state_key, data)
-                self.assertEqual(data[state_key]["proposal"], proposal)
+                context = data[state_key]
+                self.assertEqual(context["proposal"], proposal)
+                self.assertEqual(context["allowed_decisions"], ["approve", "revise", "reject"])
+                self.assertIsInstance(context["review_context_json"], dict)
+                self.assertEqual(context["review_context_json"]["proposal"], proposal)
+                self.assertEqual(context["review_context_json"]["allowed_decisions"], ["approve", "revise", "reject"])
+                self.assertEqual(context["review_reentry_node"], context["review_context_json"]["review_node"])
+                self.assertIn("完整 JSON", context["revise_instruction"])
+                self.assertIn("review_context_json", context["display_template"])
 
     def test_revision_context_scripts_emit_revision_request_and_state_keys(self) -> None:
         cases = (
@@ -135,8 +143,15 @@ class StateHandoffContractTest(unittest.TestCase):
                     module.main()
                 data = json.loads(output.getvalue())
                 self.assertIn(state_key, data)
-                self.assertEqual(data[state_key]["proposal"], proposal)
-                self.assertEqual(data[state_key]["revision_request"]["decision"], "revise")
+                context = data[state_key]
+                self.assertEqual(context["proposal"], proposal)
+                self.assertEqual(context["revision_request"]["decision"], "revise")
+                self.assertEqual(context["allowed_decisions"], ["approve", "revise", "reject"])
+                self.assertIsInstance(context["review_context_json"], dict)
+                self.assertEqual(context["review_context_json"]["proposal"], proposal)
+                self.assertEqual(context["review_context_json"]["revision_request"]["decision"], "revise")
+                self.assertIn("完整 JSON", context["instruction"])
+                self.assertIn("review_context_json", context["display_template"])
 
     def test_scaffold_script_can_build_plan_from_confirmed_runtime_artifacts(self) -> None:
         module = load_module(
@@ -291,6 +306,7 @@ class StateHandoffContractTest(unittest.TestCase):
             "wf/02_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
             "wf/03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
             "wf/03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
+            "wf/shared/scripts/review_context.py",
         ):
             self.assertIn(relative, plan["create_files"])
 
@@ -403,6 +419,9 @@ class StateHandoffContractTest(unittest.TestCase):
             "prepare_business_flow_confirmation",
             "prepare_step_design_confirmation",
             "revise",
+            "approve`、`revise`、`reject",
+            "完整 JSON",
+            "重新进入同一个 REVIEW 节点",
         ):
             self.assertIn(phrase, text)
 

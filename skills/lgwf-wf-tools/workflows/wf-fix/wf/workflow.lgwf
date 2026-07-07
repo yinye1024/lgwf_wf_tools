@@ -36,7 +36,12 @@ CODEX analyze_target_input_contract
   CONTEXT workspace file ".lgwf/self_fix_request.json"
   CONTEXT workspace file ".lgwf/self_fix_target.json"
   TARGET_DIRS state.lgwf_wf_fix.target_dirs
-  RESULT state.lgwf_wf_fix.input_contract_result;
+  RESULT state.lgwf_wf_fix.input_contract_result
+  CONTRACT {
+    READ workspace file ".lgwf/self_fix_request.json";
+    READ workspace file ".lgwf/self_fix_target.json";
+    READ workspace file ".lgwf/target_input_contract.json";
+  };
 
 PY prepare_input_collection_context
   SCRIPT "01_prepare_target/scripts/prepare_input_collection_context.py"

@@ -33,16 +33,31 @@ REACT inspect_prompt_workflow_react MAX 3
     CONTEXT workspace file ".lgwf/prompt_workflow_inspection_observe.json"
     OUTPUT_JSON ".lgwf/prompt_workflow_inspection_reason.json"
     RESULT state.lgwf_wf_convert.inspect_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_file_index.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection_observe.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection_reason.json";
+    }
   ACT CODEX
     PROMPT "agents/inspect_act.md"
     CONTEXT workspace file ".lgwf/prompt_workflow_inspection_reason.json"
     OUTPUT_JSON ".lgwf/prompt_workflow_inspection.json" AS_FILE
     RESULT state.lgwf_wf_convert.prompt_workflow_inspection
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_file_index.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection_reason.json";
+    }
   OBSERVE CODEX
     PROMPT "agents/inspect_observe.md"
     CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
     OUTPUT_JSON ".lgwf/prompt_workflow_inspection_observe.json"
     RESULT state.lgwf_wf_convert.inspect_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection_observe.json";
+    }
   DECIDE PY
     SCRIPT "scripts/decide_inspection.py"
     RESULT state.lgwf_wf_convert.inspect_decide_result
@@ -60,15 +75,33 @@ REACT propose_create_input_react MAX 3
     CONTEXT workspace file ".lgwf/wf_create_input_observe.json"
     OUTPUT_JSON ".lgwf/wf_create_input_reason.json"
     RESULT state.lgwf_wf_convert.propose_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_convert_target.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/wf_create_input_observe.json";
+      READ workspace file ".lgwf/wf_create_input_proposal.json";
+      READ workspace file ".lgwf/wf_create_input_reason.json";
+    }
   ACT CODEX
     PROMPT "agents/propose_act.md"
     CONTEXT workspace file ".lgwf/wf_create_input_reason.json"
     OUTPUT_JSON ".lgwf/wf_create_input_proposal.json" AS_FILE
     RESULT state.lgwf_wf_convert.wf_create_input_proposal
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_convert_target.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/wf_create_input_proposal.json";
+      READ workspace file ".lgwf/wf_create_input_reason.json";
+      READ workspace file ".lgwf/wf_create_payload.json";
+    }
   OBSERVE CODEX
     PROMPT "agents/propose_observe.md"
     OUTPUT_JSON ".lgwf/wf_create_input_observe.json"
     RESULT state.lgwf_wf_convert.propose_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/wf_create_input_observe.json";
+      READ workspace file ".lgwf/wf_create_input_proposal.json";
+    }
   DECIDE PY
     SCRIPT "scripts/decide_create_input.py"
     RESULT state.lgwf_wf_convert.propose_decide_result

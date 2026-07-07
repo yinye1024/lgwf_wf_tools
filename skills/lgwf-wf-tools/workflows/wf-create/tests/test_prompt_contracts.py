@@ -67,6 +67,32 @@ class PromptContractTest(unittest.TestCase):
             self.assertNotIn("根据 revision feedback 调整", prompt)
             self.assertIn("approval decision record", prompt)
 
+    def test_review_prompts_document_three_options_and_full_json_revise(self) -> None:
+        for relative, context_key, review_node in (
+            (
+                "01_confirm_requirements/confirm_requirements.md",
+                "requirements_confirmation_context.review_context_json",
+                "confirm_requirements",
+            ),
+            (
+                "02_confirm_business_flow/confirm_business_flow.md",
+                "business_flow_confirmation_context.review_context_json",
+                "confirm_business_flow",
+            ),
+            (
+                "03_confirm_step_designs/confirm_step_designs.md",
+                "step_design_confirmation_context.review_context_json",
+                "confirm_step_designs",
+            ),
+        ):
+            prompt = read(relative)
+            self.assertIn("approve` / `revise` / `reject", prompt)
+            self.assertIn(context_key, prompt)
+            self.assertIn('"approval": "revise"', prompt)
+            self.assertIn('"review_context_json"', prompt)
+            self.assertIn("完整 JSON", prompt)
+            self.assertIn(f"重新进入 `{review_node}` REVIEW 节点", prompt)
+
     def test_implementation_step_uses_deterministic_path_context(self) -> None:
         root_workflow = read("workflow.lgwf")
         workflow = read("03_confirm_step_designs/workflow.lgwf")

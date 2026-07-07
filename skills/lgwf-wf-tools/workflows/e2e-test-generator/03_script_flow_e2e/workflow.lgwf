@@ -34,6 +34,15 @@ REACT script_flow_e2e_react MAX 3
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_script_flow_design.json"
     RESULT state.lgwf_e2e.script_flow_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/*.json";
+      READ workspace file ".lgwf/e2e_coverage_matrix.json";
+      READ workspace file ".lgwf/e2e_script_flow_design.json";
+      READ workspace file ".lgwf/e2e_script_flow_observe.json";
+      READ workspace file ".lgwf/e2e_target_request.normalized.json";
+      READ workspace file ".lgwf/e2e_workflow_graph.json";
+      READ workspace file ".lgwf/example.json";
+    }
   ACT CODEX
     PROMPT "02_generate/agents/act.md"
     CONTEXT script_flow_e2e_design_context
@@ -41,6 +50,14 @@ REACT script_flow_e2e_react MAX 3
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_script_flow_generation.json"
     RESULT state.lgwf_e2e.script_flow_act_result
+    CONTRACT {
+      READ workspace file ".lgwf/*.json";
+      READ workspace file ".lgwf/e2e_coverage_matrix.json";
+      READ workspace file ".lgwf/e2e_script_flow_design.json";
+      READ workspace file ".lgwf/e2e_script_flow_generation.json";
+      READ workspace file ".lgwf/e2e_target_request.normalized.json";
+      READ workspace file ".lgwf/e2e_workflow_graph.json";
+    }
   OBSERVE CODEX
     PROMPT "03_validate/agents/observe.md"
     CONTEXT script_flow_e2e_design_context
@@ -49,6 +66,13 @@ REACT script_flow_e2e_react MAX 3
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_script_flow_observe.json"
     RESULT state.lgwf_e2e.script_flow_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/e2e_coverage_matrix.json";
+      READ workspace file ".lgwf/e2e_script_flow_design.json";
+      READ workspace file ".lgwf/e2e_script_flow_generation.json";
+      READ workspace file ".lgwf/e2e_script_flow_observe.json";
+      READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    }
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_script_flow.py"
     RESULT state.lgwf_e2e.script_flow_decide_result

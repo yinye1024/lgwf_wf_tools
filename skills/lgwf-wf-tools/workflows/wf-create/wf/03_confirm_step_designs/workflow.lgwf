@@ -20,7 +20,17 @@ CODEX design_steps_react
   CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"
   OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
   TIMEOUT 900
-  RESULT state.lgwf_wf_create.step_design_result;
+  RESULT state.lgwf_wf_create.step_design_result
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    READ workspace file ".lgwf/create_reference_context/dsl-assist/*.md";
+    READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
+    READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
+    READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
+    READ workspace file ".lgwf/step_designs.json";
+    READ workspace file ".lgwf/step_designs_proposal.json";
+  };
 
 PY prepare_step_design_confirmation
   SCRIPT "scripts/prepare_step_design_confirmation.py"

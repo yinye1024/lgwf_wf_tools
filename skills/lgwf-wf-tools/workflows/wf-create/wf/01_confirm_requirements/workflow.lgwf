@@ -31,7 +31,9 @@ CODEX propose_requirements_react
   OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
   RESULT state.lgwf_wf_create.requirements_proposal_result
   CONTRACT {
-    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    READ workspace file ".lgwf/raw_intent_request.json";
   };
 
 PY prepare_requirements_confirmation

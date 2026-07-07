@@ -258,6 +258,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "wf/02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
             "wf/03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
             "wf/shared/scripts/confirmation_io.py",
+            "wf/shared/scripts/review_context.py",
         ):
             self.assertIn(relative, plan["create_files"])
         self.assertNotIn("wf/common/confirmation_io.py", plan["create_files"])

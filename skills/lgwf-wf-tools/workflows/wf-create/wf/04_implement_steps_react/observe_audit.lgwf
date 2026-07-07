@@ -30,7 +30,13 @@ CODEX observe_implementation
   CONTEXT implementation_observe_context
   OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE
   TIMEOUT 180
-  RESULT state.lgwf_wf_create.implementation_observe_result;
+  RESULT state.lgwf_wf_create.implementation_observe_result
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_audit_result.json";
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_observe.json";
+    READ workspace file ".lgwf/implementation_result.json";
+  };
 
 FLOW audit_created_package
   THEN observe_implementation;

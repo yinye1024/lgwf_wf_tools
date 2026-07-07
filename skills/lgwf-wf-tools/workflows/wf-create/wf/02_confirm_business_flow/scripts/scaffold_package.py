@@ -152,6 +152,7 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
             *require_string_list(profile.get("root_files", []), f"template.profiles.{package_profile}.root_files"),
             *[f"wf/{step_dir}/workflow.lgwf" for step_dir in step_dirs],
             *require_string_list(template.get("workflow_files", []), "template.workflow_files"),
+            "wf/shared/scripts/review_context.py",
             *require_string_list(template.get("test_files", []), "template.test_files"),
         ],
         "placeholders": template.get("placeholders", {}),

@@ -75,13 +75,31 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
     PROMPT_REF "05_fix_target/agents/diagnose_target_failure.md"
     CONTEXT workspace file ".lgwf/target_repair/current/observation.json"
     OUTPUT_JSON ".lgwf/target_repair/current/diagnosis.json" AS_FILE
-    RESULT state.lgwf_wf_fix.diagnose_target_result;
+    RESULT state.lgwf_wf_fix.diagnose_target_result
+    CONTRACT {
+      READ workspace file ".lgwf/self_fix_request.json";
+      READ workspace file ".lgwf/self_fix_target.json";
+      READ workspace file ".lgwf/target_repair/current/apply.json";
+      READ workspace file ".lgwf/target_repair/current/diagnosis.json";
+      READ workspace file ".lgwf/target_repair/current/observation.json";
+      READ workspace file ".lgwf/target_repair/current/plan.json";
+      READ workspace file ".lgwf/target_repair/current/workspace.json";
+      READ workspace file ".lgwf/target_workflow_input.json";
+    };
   PLAN CODEX propose_repair_plan
     PROMPT_REF "05_fix_target/agents/propose_repair_plan.md"
     CONTEXT workspace file ".lgwf/target_repair/current/observation.json"
     CONTEXT workspace file ".lgwf/target_repair/current/diagnosis.json"
     OUTPUT_JSON ".lgwf/target_repair/current/plan.json" AS_FILE
-    RESULT state.lgwf_wf_fix.propose_repair_plan_result;
+    RESULT state.lgwf_wf_fix.propose_repair_plan_result
+    CONTRACT {
+      READ workspace file ".lgwf/self_fix_request.json";
+      READ workspace file ".lgwf/self_fix_target.json";
+      READ workspace file ".lgwf/target_repair/current/diagnosis.json";
+      READ workspace file ".lgwf/target_repair/current/observation.json";
+      READ workspace file ".lgwf/target_repair/current/plan.json";
+      READ workspace file ".lgwf/target_repair/current/workspace.json";
+    };
   ACT CODEX apply_repair_plan
     PROMPT_REF "05_fix_target/agents/apply_repair_plan.md"
     CONTEXT workspace file ".lgwf/target_repair/current/observation.json"
@@ -89,7 +107,17 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
     CONTEXT workspace file ".lgwf/target_repair/current/plan.json"
     CONTEXT workspace file ".lgwf/target_repair/current/workspace.json"
     OUTPUT_JSON ".lgwf/target_repair/current/apply.json" AS_FILE
-    RESULT state.lgwf_wf_fix.apply_repair_plan_result;
+    RESULT state.lgwf_wf_fix.apply_repair_plan_result
+    CONTRACT {
+      READ workspace file ".lgwf/self_fix_request.json";
+      READ workspace file ".lgwf/self_fix_target.json";
+      READ workspace file ".lgwf/target_repair/current/apply.json";
+      READ workspace file ".lgwf/target_repair/current/diagnosis.json";
+      READ workspace file ".lgwf/target_repair/current/observation.json";
+      READ workspace file ".lgwf/target_repair/current/plan.json";
+      READ workspace file ".lgwf/target_repair/current/workspace.json";
+      READ workspace file ".lgwf/target_workflow_input.json";
+    };
   VERIFY WORKFLOW verify_repair_candidate_with_review
     WORKFLOW "05_fix_target/verify_repair_candidate_workflow.lgwf"
     RESULT state.lgwf_wf_fix.target_repair_current_verification;

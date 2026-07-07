@@ -56,8 +56,9 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `confirm_requirements` 只确认需求方案；`approve` 后才能写 `.lgwf/create_requirements.json`。
 - `confirm_business_flow` 只确认业务流转；`approve` 后才能写 `.lgwf/business_flow.json`。
 - `confirm_step_designs` 只确认步骤设计；`approve` 后才能写 `.lgwf/step_designs.json`。
-- 当前确认节点以 `approve` 和 `reject` 驱动运行分支；若人工 review 记录出现 `revise` 反馈，只作为控制面反馈留存，不直接生成 confirmed 业务结构。
+- 当前确认节点固定使用 `approve`、`revise`、`reject` 三选项；`revise` 必须携带完整 JSON 决策记录，并重新进入同一个 REVIEW 节点展示修订后的确认上下文。
 - `approve` 后由固定 proposal 文件固化 confirmed artifact，禁止把 human decision record 当作业务对象写入 `confirmed`。
+- `revise` 只触发确认上下文重入，不直接生成 confirmed artifact，也不能绕过主 agent 对用户修改需求的整理。
 - `reject` 表示整体不通过，通过 DSL `FAIL_ALL` 终止整个 run，不继续进入下游阶段。
 - 当前第一版不自动 approve 任何业务决策，也不接入自动修复链路。
 

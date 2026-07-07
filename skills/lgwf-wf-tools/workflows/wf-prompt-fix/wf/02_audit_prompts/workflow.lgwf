@@ -16,4 +16,12 @@ CODEX audit_target_prompts
   CONTEXT workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist"
   TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
   OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE
-  RESULT state.lgwf_wf_prompt_fix.prompt_audit_result;
+  RESULT state.lgwf_wf_prompt_fix.prompt_audit_result
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
+    READ workspace file ".lgwf/prompt_acceptance/environment_check.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/*.md";
+    READ workspace file ".lgwf/prompt_fix_target.json";
+  };

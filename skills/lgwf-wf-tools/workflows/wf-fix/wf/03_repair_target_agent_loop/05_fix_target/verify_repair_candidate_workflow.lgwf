@@ -33,7 +33,16 @@ CODEX review_repair_candidate
   CONTEXT workspace file ".lgwf/target_repair/current/verification.json"
   TARGET_DIRS state.targets.dirs
   TARGET_FILES state.targets.files
-  RESULT state.lgwf_wf_fix.review_repair_candidate_result;
+  RESULT state.lgwf_wf_fix.review_repair_candidate_result
+  CONTRACT {
+    READ workspace file ".lgwf/target_repair/current/apply.json";
+    READ workspace file ".lgwf/target_repair/current/change_audit.json";
+    READ workspace file ".lgwf/target_repair/current/diagnosis.json";
+    READ workspace file ".lgwf/target_repair/current/observation.json";
+    READ workspace file ".lgwf/target_repair/current/plan.json";
+    READ workspace file ".lgwf/target_repair/current/review.json";
+    READ workspace file ".lgwf/target_repair/current/verification.json";
+  };
 
 PY finalize_repair_candidate_review
   SCRIPT "scripts/finalize_repair_candidate_review.py"

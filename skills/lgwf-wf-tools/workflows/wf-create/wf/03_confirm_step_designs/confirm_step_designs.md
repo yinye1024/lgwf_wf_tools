@@ -22,7 +22,7 @@
 将当前节点的 approval record 写入 `.lgwf/step_design_confirmation_record.json`，只作为 route decision。后续固化节点必须从 `.lgwf/step_designs_proposal.json` 读取业务结构。
 
 ## Output Format
-只允许以下两类 UTF-8 JSON 结果之一，节点命名必须保持 `confirm_step_designs`：
+只允许以下三类 UTF-8 JSON 结果之一，节点命名必须保持 `confirm_step_designs`。主 agent 展示时必须完整展示 `step_design_confirmation_context.review_context_json`，不能只摘录摘要：
 
 ```json
 {
@@ -30,6 +30,19 @@
   "approved_step_slugs": ["prepare-package-layout"],
   "changes": [],
   "comment": "确认通过，可进入 implement_steps_react 生成 workflow 初稿"
+}
+```
+
+```json
+{
+  "approval": "revise",
+  "changes": ["需要调整的完整步骤设计、文档路径或实现建议"],
+  "review_context_json": {
+    "review_node": "confirm_step_designs",
+    "approval_target": "step_designs_proposal",
+    "proposal": {}
+  },
+  "comment": "说明用户要求如何修订；提交给 REVIEW 的 JSON 必须是完整对象"
 }
 ```
 
@@ -43,7 +56,8 @@
 
 ## Constraints
 - 只输出 `.lgwf/step_design_confirmation_record.json` 对应的 approval record。
-- approval record 只表达 `approve` / `reject` route，不承载下游业务结构。
+- approval record 只表达 `approve` / `revise` / `reject` route，不承载下游业务结构。
 - 不修改 `.lgwf/step_designs_proposal.json` 或 `docs/steps/*.md`。
 - 不直接生成 `.lgwf/step_designs.json`；`approve` 只表示允许后续固化。
+- `revise` 必须结合用户修改需求返回完整 JSON，并重新进入 `confirm_step_designs` REVIEW 节点。
 - `reject` 表示整体不通过并结束该分支。

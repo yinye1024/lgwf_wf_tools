@@ -39,7 +39,13 @@ CODEX summarize_business_flow
   TARGET_DIRS state.lgwf_e2e.target_dirs
   TARGET_FILES state.lgwf_e2e.target_files
   OUTPUT_JSON ".lgwf/e2e_business_flow_summary.json"
-  RESULT state.lgwf_e2e.business_flow_summary_result;
+  RESULT state.lgwf_e2e.business_flow_summary_result
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_business_flow_summary.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    READ workspace file ".lgwf/e2e_workflow_sources.json";
+  };
 
 FLOW validate_target_request
   THEN scan_workflow_package

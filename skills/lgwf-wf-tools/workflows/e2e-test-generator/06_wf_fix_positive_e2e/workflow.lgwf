@@ -35,6 +35,14 @@ REACT wf_fix_positive_e2e_react MAX 3
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_wf_fix_positive_design.json"
     RESULT state.lgwf_e2e.wf_fix_positive_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/e2e_coverage_matrix.json";
+      READ workspace file ".lgwf/e2e_real_positive_design.json";
+      READ workspace file ".lgwf/e2e_target_request.normalized.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_design.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
+      READ workspace file ".lgwf/e2e_workflow_graph.json";
+    }
   ACT CODEX
     PROMPT "02_generate/agents/act.md"
     CONTEXT wf_fix_positive_e2e_design_context
@@ -42,6 +50,14 @@ REACT wf_fix_positive_e2e_react MAX 3
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_wf_fix_positive_generation.json"
     RESULT state.lgwf_e2e.wf_fix_positive_act_result
+    CONTRACT {
+      READ workspace file ".lgwf/e2e_coverage_matrix.json";
+      READ workspace file ".lgwf/e2e_real_positive_design.json";
+      READ workspace file ".lgwf/e2e_target_request.normalized.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_design.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
+      READ workspace file ".lgwf/e2e_workflow_graph.json";
+    }
   OBSERVE CODEX
     PROMPT "03_validate/agents/observe.md"
     CONTEXT wf_fix_positive_e2e_design_context
@@ -50,6 +66,14 @@ REACT wf_fix_positive_e2e_react MAX 3
     TARGET_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_wf_fix_positive_observe.json"
     RESULT state.lgwf_e2e.wf_fix_positive_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/e2e_coverage_matrix.json";
+      READ workspace file ".lgwf/e2e_real_positive_design.json";
+      READ workspace file ".lgwf/e2e_target_request.normalized.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_design.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
+      READ workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
+    }
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_wf_fix_positive.py"
     RESULT state.lgwf_e2e.wf_fix_positive_decide_result
