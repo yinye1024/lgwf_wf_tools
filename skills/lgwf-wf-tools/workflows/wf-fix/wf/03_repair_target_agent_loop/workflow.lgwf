@@ -80,7 +80,6 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
       READ workspace file ".lgwf/self_fix_request.json";
       READ workspace file ".lgwf/self_fix_target.json";
       READ workspace file ".lgwf/target_repair/current/apply.json";
-      READ workspace file ".lgwf/target_repair/current/diagnosis.json";
       READ workspace file ".lgwf/target_repair/current/observation.json";
       READ workspace file ".lgwf/target_repair/current/plan.json";
       READ workspace file ".lgwf/target_repair/current/workspace.json";
@@ -97,7 +96,6 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
       READ workspace file ".lgwf/self_fix_target.json";
       READ workspace file ".lgwf/target_repair/current/diagnosis.json";
       READ workspace file ".lgwf/target_repair/current/observation.json";
-      READ workspace file ".lgwf/target_repair/current/plan.json";
       READ workspace file ".lgwf/target_repair/current/workspace.json";
     };
   ACT CODEX apply_repair_plan
@@ -111,7 +109,6 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
     CONTRACT {
       READ workspace file ".lgwf/self_fix_request.json";
       READ workspace file ".lgwf/self_fix_target.json";
-      READ workspace file ".lgwf/target_repair/current/apply.json";
       READ workspace file ".lgwf/target_repair/current/diagnosis.json";
       READ workspace file ".lgwf/target_repair/current/observation.json";
       READ workspace file ".lgwf/target_repair/current/plan.json";

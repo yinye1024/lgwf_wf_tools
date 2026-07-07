@@ -39,7 +39,6 @@ REACT wf_fix_positive_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
       READ workspace file ".lgwf/e2e_real_positive_design.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
-      READ workspace file ".lgwf/e2e_wf_fix_positive_design.json";
       READ workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
     }
@@ -55,7 +54,6 @@ REACT wf_fix_positive_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_real_positive_design.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_wf_fix_positive_design.json";
-      READ workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
     }
   OBSERVE CODEX
@@ -72,7 +70,6 @@ REACT wf_fix_positive_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_wf_fix_positive_design.json";
       READ workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
-      READ workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
     }
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_wf_fix_positive.py"

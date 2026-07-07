@@ -32,7 +32,6 @@ CODEX propose_requirements_react
   RESULT state.lgwf_wf_create.requirements_proposal_result
   CONTRACT {
     READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/create_requirements_proposal.json";
     READ workspace file ".lgwf/raw_intent_request.json";
   };
 

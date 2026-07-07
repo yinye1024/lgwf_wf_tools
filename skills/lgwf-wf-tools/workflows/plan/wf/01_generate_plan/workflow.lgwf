@@ -49,7 +49,6 @@ REACT generate_plan_proposal MAX 3
     OUTPUT_FILE ".lgwf/react_task_plan_reason.md"
     RESULT state.lgwf_plan.plan_reason_result
     CONTRACT {
-      READ workspace file ".lgwf/react_task_plan_reason.md";
       READ workspace file ".lgwf/react_task_request.json";
     }
   ACT CODEX
@@ -63,7 +62,6 @@ REACT generate_plan_proposal MAX 3
       READ workspace file ".lgwf/business_flow.json";
       READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/react_task_plan.json";
-      READ workspace file ".lgwf/react_task_plan_proposal.json";
       READ workspace file ".lgwf/react_task_plan_reason.md";
       READ workspace file ".lgwf/react_task_request.json";
       READ workspace file ".lgwf/step_designs.json";
@@ -76,7 +74,6 @@ REACT generate_plan_proposal MAX 3
     OUTPUT_JSON ".lgwf/react_task_plan_observe.json"
     RESULT state.lgwf_plan.plan_observe_result
     CONTRACT {
-      READ workspace file ".lgwf/react_task_plan_observe.json";
       READ workspace file ".lgwf/react_task_plan_proposal.json";
       READ workspace file ".lgwf/react_task_request.json";
     }

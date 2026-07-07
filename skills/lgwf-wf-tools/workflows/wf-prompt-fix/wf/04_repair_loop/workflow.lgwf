@@ -52,7 +52,6 @@ REACT repair_target_prompts MAX 3
       READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
       READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
       READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
-      READ workspace file ".lgwf/prompt_acceptance/repair_plan.json";
       READ workspace file ".lgwf/prompt_fix_target.json";
     }
   ACT CODEX
@@ -86,7 +85,6 @@ REACT repair_target_prompts MAX 3
       READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
       READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
       READ workspace file ".lgwf/prompt_acceptance/repair_plan.json";
-      READ workspace file ".lgwf/prompt_acceptance/repair_review.json";
       READ workspace file ".lgwf/prompt_fix_target.json";
     }
   DECIDE PY

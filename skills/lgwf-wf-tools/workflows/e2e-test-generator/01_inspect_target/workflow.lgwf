@@ -41,7 +41,6 @@ CODEX summarize_business_flow
   OUTPUT_JSON ".lgwf/e2e_business_flow_summary.json"
   RESULT state.lgwf_e2e.business_flow_summary_result
   CONTRACT {
-    READ workspace file ".lgwf/e2e_business_flow_summary.json";
     READ workspace file ".lgwf/e2e_target_request.normalized.json";
     READ workspace file ".lgwf/e2e_workflow_graph.json";
     READ workspace file ".lgwf/e2e_workflow_sources.json";

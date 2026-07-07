@@ -18,7 +18,6 @@ CODEX audit_target_prompts
   OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE
   RESULT state.lgwf_wf_prompt_fix.prompt_audit_result
   CONTRACT {
-    READ workspace file ".lgwf/prompt_acceptance/audit.json";
     READ workspace file ".lgwf/prompt_acceptance/environment_check.json";
     READ workspace file ".lgwf/prompt_acceptance/inventory.json";
     READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";

@@ -38,7 +38,6 @@ REACT real_positive_e2e_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/e2e_business_flow_summary.json";
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
-      READ workspace file ".lgwf/e2e_real_positive_design.json";
       READ workspace file ".lgwf/e2e_real_positive_observe.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
@@ -53,7 +52,6 @@ REACT real_positive_e2e_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
       READ workspace file ".lgwf/e2e_real_positive_design.json";
-      READ workspace file ".lgwf/e2e_real_positive_generation.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
     }
@@ -69,7 +67,6 @@ REACT real_positive_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
       READ workspace file ".lgwf/e2e_real_positive_design.json";
       READ workspace file ".lgwf/e2e_real_positive_generation.json";
-      READ workspace file ".lgwf/e2e_real_positive_observe.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
     }
   DECIDE PY

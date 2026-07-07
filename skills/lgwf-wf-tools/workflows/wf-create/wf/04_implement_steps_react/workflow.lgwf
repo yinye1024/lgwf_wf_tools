@@ -34,7 +34,6 @@ REACT implement_steps_react MAX 3
       READ workspace file ".lgwf/create_reference_context/scaffold/*.md|*.json";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_observe.json";
-      READ workspace file ".lgwf/implementation_reason.md";
       READ workspace file ".lgwf/implementation_result.json";
       READ workspace file ".lgwf/step_designs.json";
     }
@@ -51,7 +50,6 @@ REACT implement_steps_react MAX 3
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_observe.json";
       READ workspace file ".lgwf/implementation_reason.md";
-      READ workspace file ".lgwf/implementation_result.json";
       READ workspace file ".lgwf/step_designs.json";
     }
   OBSERVE WORKFLOW observe_audit

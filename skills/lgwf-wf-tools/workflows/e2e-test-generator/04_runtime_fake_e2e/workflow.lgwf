@@ -39,7 +39,6 @@ REACT runtime_fake_e2e_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/*.json";
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_design.json";
       READ workspace file ".lgwf/e2e_runtime_fake_observe.json";
       READ workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
@@ -56,7 +55,6 @@ REACT runtime_fake_e2e_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
       READ workspace file ".lgwf/e2e_runtime_fake_design.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
       READ workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
@@ -74,7 +72,6 @@ REACT runtime_fake_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_coverage_matrix.json";
       READ workspace file ".lgwf/e2e_runtime_fake_design.json";
       READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_observe.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
     }
   DECIDE PY

@@ -12,7 +12,6 @@ CODEX propose_business_flow_react
   RESULT state.lgwf_wf_create.business_flow_proposal_result
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
-    READ workspace file ".lgwf/business_flow_proposal.json";
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/create_requirements_proposal.json";
   };

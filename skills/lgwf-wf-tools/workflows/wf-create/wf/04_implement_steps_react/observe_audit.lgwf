@@ -34,7 +34,6 @@ CODEX observe_implementation
   CONTRACT {
     READ workspace file ".lgwf/implementation_audit_result.json";
     READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/implementation_observe.json";
     READ workspace file ".lgwf/implementation_result.json";
   };
 

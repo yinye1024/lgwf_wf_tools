@@ -29,7 +29,6 @@ CODEX design_steps_react
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
     READ workspace file ".lgwf/step_designs.json";
-    READ workspace file ".lgwf/step_designs_proposal.json";
   };
 
 PY prepare_step_design_confirmation

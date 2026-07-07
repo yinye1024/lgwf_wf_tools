@@ -41,7 +41,6 @@ REACT implement_react_task MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_acceptance_plan.json";
       READ workspace file ".lgwf/react_task_context.json";
-      READ workspace file ".lgwf/react_task_implementation_reason.md";
     }
   ACT CODEX
     PROMPT "01_implement_task/agents/act.md"
@@ -53,7 +52,6 @@ REACT implement_react_task MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_task_context.json";
       READ workspace file ".lgwf/react_task_implementation_reason.md";
-      READ workspace file ".lgwf/react_task_input.json";
       READ workspace file ".lgwf/react_task_result.json";
     }
   OBSERVE CODEX
@@ -66,7 +64,6 @@ REACT implement_react_task MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_task_context.json";
       READ workspace file ".lgwf/react_task_input.json";
-      READ workspace file ".lgwf/react_task_result.json";
       READ workspace file ".lgwf/step_design_confirmation_record.json";
       READ workspace file ".lgwf/step_designs.json";
     }

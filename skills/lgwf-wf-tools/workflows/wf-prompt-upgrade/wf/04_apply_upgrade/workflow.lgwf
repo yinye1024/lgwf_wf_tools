@@ -46,7 +46,6 @@ REACT apply_prompt_upgrade MAX 3
     OUTPUT_JSON ".lgwf/prompt_upgrade/apply_plan.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.apply_reason_result
     CONTRACT {
-      READ workspace file ".lgwf/prompt_upgrade/apply_plan.json";
       READ workspace file ".lgwf/prompt_upgrade/decision.json";
       READ workspace file ".lgwf/prompt_upgrade/inventory.json";
       READ workspace file ".lgwf/prompt_upgrade/proposal.json";
@@ -71,7 +70,6 @@ REACT apply_prompt_upgrade MAX 3
     RESULT state.lgwf_wf_prompt_upgrade.apply_observe_result
     CONTRACT {
       READ workspace file ".lgwf/prompt_upgrade/apply_plan.json";
-      READ workspace file ".lgwf/prompt_upgrade/apply_review.json";
       READ workspace file ".lgwf/prompt_upgrade/decision.json";
       READ workspace file ".lgwf/prompt_upgrade/inventory.json";
       READ workspace file ".lgwf/prompt_upgrade/proposal.json";
