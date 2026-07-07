@@ -39,8 +39,8 @@
     {
       "type": "approval",
       "title": "确认步骤设计",
-      "approval_artifact": ".lgwf/step_design_confirmation_record.json",
-      "confirmed_artifact": ".lgwf/step_designs.json"
+      "approval_artifact": "step_design_confirmation_record artifact",
+      "confirmed_artifact": "step_designs artifact"
     }
   ]
 }

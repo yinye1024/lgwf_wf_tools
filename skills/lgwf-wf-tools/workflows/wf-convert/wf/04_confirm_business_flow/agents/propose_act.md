@@ -82,5 +82,5 @@
 
 - 不修改源 prompt workflow。
 - 不引入新的顶层字段，也不把未确认内容伪装成已确认 stage 事实。
-- 不写 `.lgwf/wf_create_payload.json`；payload 固化由后续 Python 节点负责。
+- 不写 payload 固化文件；payload 固化由后续 Python 节点负责。
 - 不输出 Markdown 说明，节点产物必须是 JSON 文件。

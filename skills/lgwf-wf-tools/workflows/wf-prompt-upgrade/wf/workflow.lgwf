@@ -14,10 +14,16 @@ STEP design_upgrade
   WORKFLOW "02_design_upgrade/workflow.lgwf";
 
 STEP confirm_upgrade
-  WORKFLOW "03_confirm_upgrade/workflow.lgwf";
+  WORKFLOW "03_confirm_upgrade/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/decision.json";
+  };
 
 STEP apply_upgrade
-  WORKFLOW "04_apply_upgrade/workflow.lgwf";
+  WORKFLOW "04_apply_upgrade/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_upgrade/decision.json";
+  };
 
 STEP summary
   WORKFLOW "05_summary/workflow.lgwf";

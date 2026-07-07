@@ -8,19 +8,49 @@ DEFAULTS {
 }
 
 STEP define_requirements
-  WORKFLOW "01_confirm_requirements/workflow.lgwf";
+  WORKFLOW "01_confirm_requirements/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/create_requirements.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+  };
 
 STEP design_structure
-  WORKFLOW "02_confirm_business_flow/workflow.lgwf";
+  WORKFLOW "02_confirm_business_flow/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/business_flow.json";
+    WRITE workspace file ".lgwf/business_flow_proposal.json";
+    WRITE workspace file ".lgwf/scaffold_package_result.json";
+  };
 
 STEP implement_draft
-  WORKFLOW "03_confirm_step_designs/workflow.lgwf";
+  WORKFLOW "03_confirm_step_designs/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    WRITE workspace file ".lgwf/implementation_context.json";
+    WRITE workspace file ".lgwf/step_designs.json";
+  };
 
 STEP implement_steps_react
-  WORKFLOW "04_implement_steps_react/workflow.lgwf";
+  WORKFLOW "04_implement_steps_react/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_result.json";
+  };
 
 STEP summarize_create_result
-  WORKFLOW "05_summarize_create_result/workflow.lgwf";
+  WORKFLOW "05_summarize_create_result/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    WRITE state.lgwf_wf_create.summary_result;
+  };
 
 PY validate_created_package
   SCRIPT "scripts/validate_created_package.py"

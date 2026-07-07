@@ -50,8 +50,8 @@
   "manual_gate_tasks": [
     {
       "task_id": "confirm_step_designs",
-      "approval_artifact": ".lgwf/step_design_confirmation_record.json",
-      "confirmed_artifact": ".lgwf/step_designs.json",
+      "approval_artifact": "step_design_confirmation_record artifact",
+      "confirmed_artifact": "step_designs artifact",
       "placement_rule": "确认后 artifact 只能由后续 finalize task 验收"
     }
   ],

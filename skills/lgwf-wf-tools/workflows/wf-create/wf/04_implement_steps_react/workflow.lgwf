@@ -56,6 +56,11 @@ REACT implement_steps_react MAX 3
   OBSERVE WORKFLOW observe_audit
     WORKFLOW "observe_audit.lgwf"
     RESULT state.lgwf_wf_create.implementation_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/implementation_context.json";
+      READ workspace file ".lgwf/implementation_result.json";
+      WRITE workspace file ".lgwf/implementation_observe.json";
+    }
   DECIDE PY
     SCRIPT "scripts/decide_implementation.py"
     TIMEOUT 30

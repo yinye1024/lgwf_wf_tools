@@ -29,6 +29,7 @@
 ## 状态与产物
 
 - facade 本地运行记录写入 `.local/`。
+- `doctor --deep` 诊断报告写入 `.local/doctor/latest.md`、`.local/doctor/latest.json` 和 `.local/doctor/runs/<timestamp>/`。
 - 内部 LGWF workflow 的运行状态写入各自 registry `work_dir` 下的 `.lgwf/`。
 - 内部 `tool_workflow` 按自身 `AGENTS.md` 写入 `.local/`、目标 package 或约定输出目录。
 

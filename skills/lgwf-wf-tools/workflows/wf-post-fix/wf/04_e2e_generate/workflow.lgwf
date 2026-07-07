@@ -65,6 +65,7 @@ RUN_WORKFLOW e2e_generate
 
 PY finish_e2e_generate_stage
   SCRIPT "scripts/finish_e2e_generate_stage.py"
+  INPUT state.lgwf_wf_post_fix.e2e_generate_result
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.finish_e2e_generate_stage_result
   UPDATES_STATE

@@ -87,7 +87,6 @@ REACT propose_create_input_react MAX 3
       READ workspace file ".lgwf/prompt_convert_target.json";
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
       READ workspace file ".lgwf/wf_create_input_reason.json";
-      READ workspace file ".lgwf/wf_create_payload.json";
     }
   OBSERVE CODEX
     PROMPT "agents/propose_observe.md"
@@ -118,6 +117,8 @@ PY finalize_create_input
   RESULT state.lgwf_wf_convert.finalize_create_input_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/wf_create_input_proposal.json";
+    WRITE workspace file ".lgwf/wf_create_input.json";
   };
 
 FLOW {

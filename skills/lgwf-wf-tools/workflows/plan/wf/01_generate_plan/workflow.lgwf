@@ -59,12 +59,9 @@ REACT generate_plan_proposal MAX 3
     OUTPUT_JSON ".lgwf/react_task_plan_proposal.json" AS_FILE
     RESULT state.lgwf_plan.plan_act_result
     CONTRACT {
-      READ workspace file ".lgwf/business_flow.json";
-      READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/react_task_plan.json";
       READ workspace file ".lgwf/react_task_plan_reason.md";
       READ workspace file ".lgwf/react_task_request.json";
-      READ workspace file ".lgwf/step_designs.json";
     }
   OBSERVE CODEX
     PROMPT "02_generate_plan_proposal/agents/observe.md"
@@ -102,4 +99,3 @@ FLOW {
 
   validate_plan_analysis_targets THEN generate_plan_proposal THEN route_plan_generation;
 }
-

@@ -65,6 +65,7 @@ RUN_WORKFLOW prompt_upgrade
 
 PY finish_prompt_upgrade_stage
   SCRIPT "scripts/finish_prompt_upgrade_stage.py"
+  INPUT state.lgwf_wf_post_fix.prompt_upgrade_result
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.finish_prompt_upgrade_stage_result
   UPDATES_STATE

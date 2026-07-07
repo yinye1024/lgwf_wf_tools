@@ -8,13 +8,31 @@ DEFAULTS {
 }
 
 STEP collect_target
-  WORKFLOW "02_confirm_requirements/workflow.lgwf";
+  WORKFLOW "02_confirm_requirements/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_convert_target.json";
+  };
 
 STEP analyze_source
-  WORKFLOW "04_confirm_business_flow/workflow.lgwf";
+  WORKFLOW "04_confirm_business_flow/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_convert_target.json";
+    WRITE workspace file ".lgwf/prompt_workflow_inspection.json";
+    WRITE workspace file ".lgwf/wf_create_input.json";
+  };
 
-STEP prepare_payload
-  WORKFLOW "07_confirm_step_designs/workflow.lgwf";
+PY prepare_payload
+  SCRIPT "07_confirm_step_designs/scripts/prepare_wf_create_payload.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.wf_create_payload
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_convert.wf_create_payload;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/wf_create_input.json";
+    WRITE workspace file ".lgwf/wf_create_input_for_wf_create.json";
+    WRITE workspace file ".lgwf/wf_create_payload.json";
+  };
 
 PY map_wf_create_input
   SCRIPT "scripts/map_wf_create_input.py"
@@ -44,10 +62,20 @@ PY verify_business_parity
   RESULT state.lgwf_wf_convert.business_parity_report
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/wf_create_payload.json";
+    WRITE workspace file ".lgwf/business_parity_report.json";
   };
 
-STEP summarize_result
-  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+PY summarize_result
+  SCRIPT "09_summarize_create_result/scripts/summarize_convert_result.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.summary_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_parity_report.json";
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    READ workspace file ".lgwf/wf_create_payload.json";
+  };
 
 PY prepare_post_fix_handoff
   SCRIPT "scripts/prepare_post_fix_handoff.py"

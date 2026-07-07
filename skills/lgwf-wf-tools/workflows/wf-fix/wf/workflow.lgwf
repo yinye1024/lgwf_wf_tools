@@ -11,7 +11,9 @@ PY prepare_self_fix_request_context
   SCRIPT "00_confirm_request/scripts/prepare_self_fix_request_context.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_fix.prepare_self_fix_request_context_result
-  UPDATES_STATE
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_fix.self_fix_request_context;
+  }
   CONTRACT {
   };
 
@@ -27,7 +29,12 @@ PY prepare_target
   SCRIPT "01_prepare_target/scripts/prepare_target.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_fix.prepare_target_result
-  UPDATES_STATE
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_fix.request;
+    WRITE state.lgwf_wf_fix.target;
+    WRITE state.lgwf_wf_fix.target_dirs;
+    WRITE state.lgwf_wf_fix.input_collection_context;
+  }
   CONTRACT {
   };
 
@@ -47,7 +54,9 @@ PY prepare_input_collection_context
   SCRIPT "01_prepare_target/scripts/prepare_input_collection_context.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_fix.prepare_input_collection_context_result
-  UPDATES_STATE
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_fix.input_collection_context;
+  }
   CONTRACT {
   };
 

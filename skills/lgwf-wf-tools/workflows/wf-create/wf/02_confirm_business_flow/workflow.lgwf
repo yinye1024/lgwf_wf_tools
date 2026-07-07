@@ -38,6 +38,7 @@ PY apply_confirmed_business_flow
   RESULT state.lgwf_wf_create.apply_business_flow_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/business_flow.json";
   };
 
 PY scaffold_package
@@ -48,6 +49,7 @@ PY scaffold_package
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
+    WRITE workspace file ".lgwf/scaffold_package_result.json";
   };
 
 FLOW {

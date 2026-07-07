@@ -10,11 +10,27 @@ DEFAULTS {
 STEP collect_targets_stage
   WORKFLOW "01_collect_targets/workflow.lgwf";
 
-STEP batch_audit_stage
-  WORKFLOW "02_batch_audit/workflow.lgwf";
+PY batch_audit_stage
+  SCRIPT "02_batch_audit/scripts/run_batch_audit.py"
+  TIMEOUT 300
+  RESULT state.lgwf_wf_dsl_upgrade.run_batch_audit_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/target_manifest.json";
+    WRITE workspace file ".lgwf/batch_audit_result.json";
+    WRITE workspace file ".lgwf/batch_audit_stats.json";
+  };
 
-STEP classify_findings_stage
-  WORKFLOW "03_classify_findings/workflow.lgwf";
+PY classify_findings_stage
+  SCRIPT "03_classify_findings/scripts/classify_findings.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_dsl_upgrade.classify_findings_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/batch_audit_result.json";
+    WRITE workspace file ".lgwf/classification_summary.json";
+    WRITE workspace file ".lgwf/classified_findings.json";
+  };
 
 STEP build_upgrade_plan_stage
   WORKFLOW "04_build_upgrade_plan/workflow.lgwf";

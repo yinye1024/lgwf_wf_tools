@@ -64,8 +64,6 @@ REACT implement_react_task MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_task_context.json";
       READ workspace file ".lgwf/react_task_input.json";
-      READ workspace file ".lgwf/step_design_confirmation_record.json";
-      READ workspace file ".lgwf/step_designs.json";
     }
   DECIDE PY
     SCRIPT "01_implement_task/scripts/decide.py"

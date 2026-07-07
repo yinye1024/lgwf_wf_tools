@@ -12,6 +12,13 @@ PY prepare_dsl_reference_context
   RESULT state.lgwf_wf_create.dsl_reference_context
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
+    WRITE workspace file ".lgwf/create_reference_context/dsl-assist/dsl_reference_context.json";
+    WRITE workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
+    WRITE workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
+    WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
+    WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
+    WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
   };
 
 CODEX design_steps_react
@@ -53,6 +60,7 @@ PY apply_confirmed_step_designs
   RESULT state.lgwf_wf_create.apply_step_designs_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/step_designs.json";
   };
 
 PY prepare_implementation_context

@@ -194,13 +194,18 @@ def build_scaffold_plan_from_root(root: Path) -> dict[str, Any]:
 
 
 def main() -> None:
+    root = Path.cwd()
     if not sys.stdin.isatty():
         raw = sys.stdin.read().strip()
         request = json.loads(raw) if raw else None
     else:
         request = None
-    scaffold_plan = build_scaffold_plan_from_root(Path.cwd()) if request is None else build_scaffold_plan(request)
-    result = {"lgwf_wf_create.scaffold_package_result": {"scaffold_plan": scaffold_plan}}
+    scaffold_plan = build_scaffold_plan_from_root(root) if request is None else build_scaffold_plan(request)
+    state_value = {"scaffold_plan": scaffold_plan}
+    output_path = root / ".lgwf" / "scaffold_package_result.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(state_value, ensure_ascii=False, indent=2), encoding="utf-8")
+    result = {"lgwf_wf_create.scaffold_package_result": state_value}
     json.dump(result, sys.stdout, ensure_ascii=False, indent=2)
 
 
