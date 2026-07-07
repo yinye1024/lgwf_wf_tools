@@ -25,12 +25,13 @@
 - 子 workflow 的 `approve` / `revise` / `reject` 等交互细节不得泄露到父 workflow；拒绝、取消或不可继续时，子 workflow 内部 route 到保留目标 `FAIL_ALL`。
 - 单节点、人工确认和输出校验优先作为普通 step，不强制包装成子 workflow。
 - `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`HANDOFF_FILES`、`REACT`、`AGENT_LOOP`、`STEP ... WORKFLOW` 是 Authoring DSL v2 的高层声明。
-- `APPROVAL` route key 只能是 `approve` / `reject`；如果出现 `revise`、`minor_change` 等非二元 route，audit 应失败，并提示改用 `REVIEW ... OPTIONS [...]`。
-- `REVIEW` 用于 `approve` / `revise` / `reject` 等评审分支，`RESULT` 记录选择结果，`route` 作为后续 `WHEN` 的 route key。标准小改流程让 `revise` 接回同一个 `REVIEW` 节点，由主 agent 提交更新后的 `CONTEXT` 对象后重新等待用户确认。
+- `APPROVAL` route key 只能是 `approve` / `reject`；如果出现 `revise`、`minor_change` 等非二元 route，audit 应失败，并提示改用固定三选项的 `REVIEW`。
+- `REVIEW` 固定用于 `approve` / `revise` / `reject` 三个评审分支，不允许自定义 options；audit 应检查显式 route 覆盖三分支，`reject` 通常指向 `FAIL_ALL`，`revise` 回到当前 `REVIEW` 或修订节点后回到当前 `REVIEW`，apply/finalize 只从 `approve` 到达。
+- `REVIEW CONTEXT state.*` 必须是业务 JSON object，不应是 `RESULT`、`decision`、`approval`、`review_result` 等 control-plane state；`REVIEW RESULT` 和 `PERSIST` 只能作为控制面审计记录，不能作为 confirmed/final/proposal 等业务 artifact 来源。
 - 新建 workflow 优先使用 `ENTRY FLOW main` 声明 authoring 层入口，并用命名 `FLOW main START ... THEN ...` 表达全局流程；命名 flow 不需要 `{}`，编译后入口解析到 `START` 节点。
 - 多分支使用独立 `ROUTE <node>` 或 `ROUTE <node> READ state.*`；人机多选使用 `CHOICE ... OPTION key LABEL "..." THEN target`。
 - `FAIL_ALL` 只能作为 route target 使用，不允许作为 node id；命中后当前 workflow failed，并向父 workflow 传播失败，父 workflow 后续 step 不应运行。
-- `READ`、`WRITE`、`RESULT`、`INSTRUCTION` 必须使用 `state.*` runtime state path。
+- `READ`、`WRITE`、`RESULT` 必须使用 `state.*` runtime state path；`INSTRUCTION` 不是 authoring DSL 字段，instruction trace path 由 compiler 自动生成。
 - `PROMPT`、`SCRIPT`、`CONTEXT file|dir` 必须使用相对文件资源路径。
 - `REACT` sugar 只表达 `subgraph.react`，必须包含 `REASON`、`ACT`、`OBSERVE`、`DECIDE`；slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`，其中 `WORKFLOW` slot 必须声明 `RESULT state.*`。
 - `REACT SPEC "<path>"` 可选；配置后只约束 `REASON`、`ACT`、`OBSERVE`，冲突时以 spec 为准，不传给 `DECIDE PY`。
@@ -39,6 +40,12 @@
 - `AGENT_LOOP` 默认 `TOKEN_MAX 1000000`，默认 Codex target 授权读取 `state.targets.dirs` 和 `state.targets.files`；slot 内不得覆盖 `TARGET_DIRS` / `TARGET_FILES`。
 - `AGENT_LOOP` 不依赖顶层 `SANDBOX`，每轮自动使用 sandbox；失败、blocked、retry 或验证失败轮次只归档，不 promote。
 - `RUN_WORKFLOW + PY map_*` 用于串联独立 workflow package；mapper 只做 state shape adapter，不默认复制文件。
+- 有可审计文件副作用的 `PY` 必须声明 `CONTRACT`；`CONTRACT` 不用于声明 stdout state patch。
+- `RESULT state.*` 和 `UPDATES_STATE { WRITE state.*; }` 已经各自声明 state 写入，不得在 `CONTRACT WRITE state.*` 中重复声明；重复时 audit 应报 `LGWF_CONTRACT_RESULT_WRITE_REDUNDANT` 或 `LGWF_CONTRACT_UPDATES_STATE_WRITE_REDUNDANT`。
+- `PY` 需要让 workflow 上可见 stdout state patch 写入范围时，使用 `UPDATES_STATE { WRITE state.*; }` 覆盖脚本 stdout 会写入的最终 state path；裸 `UPDATES_STATE` 保持兼容模式，不检查具体 path。
+- `PY SCRIPT` 读取 `.lgwf/`、`reports/` 或 `data/` 下的业务 artifact 时，必须声明 `CONTRACT READ workspace file "..."`。audit 会扫描 `Path("...").read_text(...)`、`Path("...").read_bytes(...)`、`open("...", "r")`、`open("...")`、`load_json(root / ".lgwf" / "file.json")` 和 `read_json(...)`；缺少 contract 时应报 `LGWF_PY_FILE_READ_CONTRACT_MISSING`，读取路径未声明时应报 `LGWF_PY_FILE_READ_CONTRACT_MISMATCH`。
+- `PY SCRIPT` 写入 `.lgwf/`、`reports/` 或 `data/` 下的业务 artifact 时，也必须声明 `CONTRACT WRITE workspace file "..."`。audit 会扫描 `Path("...").write_text(...)`、`Path("...").write_bytes(...)`、`open("...", "w|a|x", ...)` 和 `write_json(lgwf_dir / "out.json", payload)`；缺少 contract 时应报 `LGWF_PY_FILE_WRITE_CONTRACT_MISSING`，写出路径未声明时应报 `LGWF_PY_FILE_WRITE_CONTRACT_MISMATCH`。
+- `PY CONTRACT READ` 在脚本执行前校验，`PY CONTRACT WRITE` 在 `RESULT` 和 `UPDATES_STATE` 应用后的最终 state 上校验；修复 audit 报错时不要只补说明文字，必须让 contract 与脚本真实输入输出一致。
 - `RUN_WORKFLOW WORKFLOW` 和 `WORK_DIR` 使用相对路径，不使用绝对路径或 `..`；运行时默认创建轻量隔离 `workspace/work_dir`，`WORK_DIR` 只作为 `declared_work_dir` 记录。
 - `RUN_WORKFLOW RESULT` 应被后续 `PY map_*`、汇总节点或下游 workflow 消费；`RUN_WORKFLOW INPUT` 应来自初始 input 或上游 mapper writer。
 - 需要从上游 child 交接业务文件或目录时，优先使用 `HANDOFF_FILES`。`FROM` 指向上游 `RUN_WORKFLOW RESULT`；`COPY_FILE` / `COPY_DIR` 源路径相对上游实际 `work_dir`；`AS` 目标路径相对父 `<work_dir>/.lgwf/handoff/<node_id>/`；`RESULT` 字段值是复制后文件或目录的绝对路径，供下游隔离 child 读取；结果同时包含 `handoff_files` 对象，适合下游 `PY INPUT state.handoff_files`；目录交接默认整体替换目标目录。
@@ -90,7 +97,7 @@
 - slot 使用 `WORKFLOW` 时必须声明 `RESULT state.*`，并由子 workflow 写入该 state path。
 - `observe` 输出结构化 review，例如 `passed/issues/summary`。
 - `decide` 读取 review 结果并输出 `next=continue|exit`。
-- 如果 `decide` 使用 `exec.run_python` 更新 state，启用 `state_updates_from_stdout=true`，脚本打印 JSON object。
+- 如果 `decide` 使用 `exec.run_python` 更新 state，新 workflow 优先使用 `UPDATES_STATE { WRITE state.*; }` 显式声明 stdout patch 写入范围；脚本打印 JSON object，key 是 runtime state path。裸 `UPDATES_STATE` 仅作兼容模式。
 
 ## Agent Loop Checklist
 

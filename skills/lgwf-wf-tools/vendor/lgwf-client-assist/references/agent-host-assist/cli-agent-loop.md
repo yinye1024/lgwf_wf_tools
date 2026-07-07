@@ -209,20 +209,20 @@ running workflow
 
 ## Human Review Main-Agent Ask Flow
 
-当 workflow 运行到 `flow.human_review` 节点时，LGWF 复用 `.lgwf/human/<request_id>.request.json` 通道，但 request 会包含 `kind="human_review"` 和 `options`。主 agent status 会返回 `phase=waiting_review`、`pending_action.type="human_review"`、`agent_instruction="ask_user_review_choice"`。
+当 workflow 运行到 `flow.human_review` 节点时，LGWF 复用 `.lgwf/human/<request_id>.request.json` 通道，但 request 会包含 `kind="human_review"`、固定 `options=["approve","revise","reject"]`、完整 `review_context_json`、`display_template.kind="review_json_v1"` 和 `revise_requires_full_json=true`。主 agent status 会返回 `phase=waiting_review`、`pending_action.type="human_review"`、`agent_instruction="ask_user_review_choice"`。
 
 处理要求：
 
-1. 展示 `prompt`、`context` 摘要和 `options`。
-2. 询问用户选择一个 option，例如 `approve`、`revise` 或 `reject`。
-3. 用户选择 `revise` 时，主 agent 先在当前对话中完成小改，再提交 review route 和改完后的 context；不要提交 `decision=reject`。
+1. 按 `display_template` 展示 `prompt`、完整 `review_context_json` 和三个固定选项 `approve`、`revise`、`reject`；不要只展示摘要后让用户凭空修改。
+2. 询问用户选择一个 option。`approve` 表示当前 JSON 可继续，`revise` 表示需要主 agent 先改 JSON 再重新评审，`reject` 表示当前 workflow 不应继续。
+3. 用户选择 `revise` 时，主 agent 必须结合用户修改要求和当前 `review_context_json`，生成完整的更新后 JSON object；不要提交局部 patch、数组或自由文本，也不要提交 `decision=reject`。
 4. 优先使用高层命令：
 
 ```powershell
-python <skill-dir>\scripts\lgwf.py review submit --work-dir <work_dir> --request-id <request_id> --route revise --value-json "{...updated context...}" --comment "user requested edits"
+python <skill-dir>\scripts\lgwf.py review submit --work-dir <work_dir> --request-id <request_id> --route revise --value-json "{...complete updated context object...}" --comment "user requested edits"
 ```
 
-提交后继续轮询同一个 workflow。`REVIEW` 节点会把 route 写入 `RESULT.route`，并用该 route 匹配 `FLOW ... WHEN "<route>" THEN ...`。如果 `revise` route 回到同一个 `REVIEW` 节点，workflow 会再次进入 `waiting_review`，主 agent 必须再次询问用户确认。
+提交后继续轮询同一个 workflow。`REVIEW` 节点会把 route 写入 `RESULT.route`，并用该 route 匹配 `FLOW ... WHEN "<route>" THEN ...`。如果 `revise` route 回到同一个 `REVIEW` 节点，workflow 会再次进入 `waiting_review`，request 会暴露更新后的 `review_context_json`；主 agent 必须再次按同一模板展示完整 JSON，并再次询问用户选择 `approve` / `revise` / `reject`。
 
 ## Agent Handoff Main-Agent Flow
 

@@ -100,3 +100,4 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 - 不要绕过 `workflows/01-share/approval.md` 的人工确认展示模板。
 - 不要在 registry 中保留不存在的 workflow entry。
 - 不要再把静态 audit 修复请求路由到本 facade；这类请求应使用独立 `wf-audit-fix` skill。
+- 不要修改 `vendor/` 下的任何文件；该目录是初始化或发布流程覆盖的内置 `lgwf-client-assist` 依赖，只能在用户明确要求刷新 vendor 或执行正式发布同步时变更。

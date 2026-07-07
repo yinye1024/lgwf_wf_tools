@@ -97,7 +97,6 @@ ENTRY FLOW main;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "{node}_instruction";
   result_path "{node}_result";
 }
 
@@ -171,7 +170,9 @@ PY map_prompt_upgrade_input
   SCRIPT "scripts/map_prompt_upgrade_input.py"
   INPUT state.pipeline.prompt_fix_result
   RESULT state.pipeline.prompt_upgrade_input
-  UPDATES_STATE;
+  UPDATES_STATE {
+    WRITE state.pipeline.prompt_upgrade_input;
+  };
 
 RUN_WORKFLOW prompt_upgrade
   WORKFLOW "workflows/wf-prompt-upgrade/wf/workflow.lgwf"
@@ -182,7 +183,7 @@ RUN_WORKFLOW prompt_upgrade
 FLOW prompt_fix THEN map_prompt_upgrade_input THEN prompt_upgrade;
 ```
 
-`PY map_*` 是业务输入适配器，不是 runtime 内置 mapper，也不默认做文件拷贝。它读取上一个 child result，把字段整理成下一个 child workflow 的 input shape；只有下游 workflow 明确要求固定文件位置时，mapper 才可以额外复制文件。推荐 mapper 从 stdin 读取 `INPUT state.*` 对应的 JSON object，并用 stdout 输出 state path updates：
+`PY map_*` 是业务输入适配器，不是 runtime 内置 mapper，也不默认做文件拷贝。它读取上一个 child result，把字段整理成下一个 child workflow 的 input shape；只有下游 workflow 明确要求固定文件位置时，mapper 才可以额外复制文件。推荐 mapper 从 stdin 读取 `INPUT state.*` 对应的 JSON object，并用 stdout 输出 state path updates；新 workflow 优先使用 `UPDATES_STATE { WRITE state.*; }` 显式列出 stdout 会写入的 state path：
 
 ```python
 import json
@@ -241,7 +242,7 @@ HANDOFF_FILES spec_to_impl
 
 `CODEX` 小型结构化结果可用 `OUTPUT_JSON "path.json"`；大 JSON 使用 `OUTPUT_JSON "path.json" AS_FILE`，由 Codex 写文件，LGWF runner 验证文件存在、UTF-8、JSON 可解析且顶层是 object。通用文本 artifact 使用 `OUTPUT_FILE "path"`，由 Codex 写文件，runner 验证文件存在、UTF-8 可读并记录路径和大小，不解析内容。
 
-`APPROVAL` 只表达二元人工审批，route key 只能是 `approve` / `reject`。需要 `approve` / `revise` / `reject` 或“小改后再确认”时使用 `REVIEW`，并在 `FLOW` 中把 `revise` 接回修订节点或当前评审节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
+`APPROVAL` 只表达二元人工审批，route key 只能是 `approve` / `reject`。需要 `approve` / `revise` / `reject` 或“小改后再确认”时使用固定三选项的 `REVIEW`；`REVIEW CONTEXT state.*` 必须指向 JSON object，并在 `FLOW` 中把 `revise` 接回修订节点或当前评审节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
 
 ## 资源引用
 
@@ -295,7 +296,7 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 
 除非任务明确要求架构工作，否则不要新增 `flow.join`、parallel fan-in 或新的 DSL schema 字段。
 
-对于 ReAct decide slot，如果脚本需要写入 `next=continue` 或 `next=exit`，优先使用带 `state_updates_from_stdout=true` 的 `exec.run_python`。脚本必须打印一个 JSON object，其中 key 是 runtime state path。
+对于 ReAct decide slot，如果脚本需要写入 `next=continue` 或 `next=exit`，优先使用 `UPDATES_STATE { WRITE state.<decision_path>; }`，脚本必须打印一个 JSON object，其中 key 是 runtime state path。旧的裸 `UPDATES_STATE` / `state_updates_from_stdout=true` 仍兼容，但不会检查 stdout patch 具体写入范围。
 
 ## 最小检查
 
