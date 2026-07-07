@@ -4,7 +4,6 @@ ENTRY collect_target;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_convert.instructions.{node}";
   result_path "lgwf_wf_convert.results.{node}";
 }
 
@@ -21,7 +20,9 @@ PY map_wf_create_input
   SCRIPT "scripts/map_wf_create_input.py"
   INPUT state.lgwf_wf_convert.wf_create_payload
   RESULT state.lgwf_wf_convert.wf_create_input
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 RUN_WORKFLOW wf_create
   WORKFLOW "workflows/wf-create/wf/workflow.lgwf"
@@ -33,13 +34,17 @@ PY capture_wf_create_result
   SCRIPT "scripts/capture_wf_create_result.py"
   INPUT state.lgwf_wf_convert.wf_create_result
   RESULT state.lgwf_wf_convert.wf_create_result_summary
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY verify_business_parity
   SCRIPT "scripts/verify_business_parity.py"
   INPUT state.lgwf_wf_convert.wf_create_result_summary
   RESULT state.lgwf_wf_convert.business_parity_report
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 STEP summarize_result
   WORKFLOW "09_summarize_create_result/workflow.lgwf";
@@ -48,7 +53,9 @@ PY prepare_post_fix_handoff
   SCRIPT "scripts/prepare_post_fix_handoff.py"
   INPUT state.lgwf_wf_convert.wf_create_result_summary
   RESULT state.lgwf_wf_convert.post_fix_handoff_payload
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 HANDOFF handoff_wf_post_fix
   CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload

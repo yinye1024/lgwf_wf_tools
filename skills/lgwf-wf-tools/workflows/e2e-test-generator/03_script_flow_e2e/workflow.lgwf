@@ -4,14 +4,15 @@ ENTRY prepare_script_flow_observe_feedback;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_e2e.script_flow.instructions.{node}";
   result_path "lgwf_e2e.script_flow.results.{node}";
 }
 
 PY prepare_script_flow_observe_feedback
   SCRIPT "00_prepare/scripts/prepare_script_flow_observe_feedback.py"
   RESULT state.lgwf_e2e.script_flow_observe_feedback_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET script_flow_e2e_shared_context {
   workspace file ".lgwf/e2e_target_request.normalized.json";
@@ -51,7 +52,9 @@ REACT script_flow_e2e_react MAX 3
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_script_flow.py"
     RESULT state.lgwf_e2e.script_flow_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+    };
 
 FLOW prepare_script_flow_observe_feedback
   THEN script_flow_e2e_react;

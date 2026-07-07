@@ -60,22 +60,25 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
         expected_routes = {
             "confirm_requirements": {
                 "approve": "apply_confirmed_requirements",
+                "revise": "confirm_requirements",
                 "reject": "FAIL_ALL",
             },
             "confirm_business_flow": {
                 "approve": "apply_confirmed_business_flow",
+                "revise": "confirm_business_flow",
                 "reject": "FAIL_ALL",
             },
             "confirm_step_designs": {
                 "approve": "apply_confirmed_step_designs",
+                "revise": "confirm_step_designs",
                 "reject": "FAIL_ALL",
             },
         }
         child_workflow_text = "\n".join(
             (
-                (WF_ROOT / "02_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8"),
-                (WF_ROOT / "04_confirm_business_flow/workflow.lgwf").read_text(encoding="utf-8"),
-                (WF_ROOT / "07_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8"),
+                (WF_ROOT / "01_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8"),
+                (WF_ROOT / "02_confirm_business_flow/workflow.lgwf").read_text(encoding="utf-8"),
+                (WF_ROOT / "03_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8"),
             )
         )
         for route_name, branches in expected_routes.items():
@@ -92,7 +95,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             node_start = child_workflow_text.index(f"REVIEW {node_name}")
             next_node = child_workflow_text.find("\n\n", node_start)
             node_block = child_workflow_text[node_start: next_node if next_node != -1 else len(child_workflow_text)]
-            self.assertIn('OPTIONS ["approve", "reject"]', node_block)
+            self.assertIn('OPTIONS ["approve", "revise", "reject"]', node_block)
             self.assertIn(f'PERSIST "{persist_path}"', node_block)
 
     def test_fake_runtime_approval_path_produces_expected_state_and_summary(self) -> None:
@@ -124,7 +127,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
 
             prepare_requirements = run_script(
                 work_dir,
-                "02_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+                "01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
             )
             self.assertIn("lgwf_wf_create.requirements_confirmation_context", prepare_requirements)
             (lgwf_dir / "create_requirements_approval.json").write_text(
@@ -133,7 +136,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             )
             apply_requirements = run_script(
                 work_dir,
-                "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
             )
             self.assertEqual(
                 apply_requirements["lgwf_wf_create.apply_requirements_result"]["artifact_path"],
@@ -142,32 +145,32 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
 
             prepare_business = run_script(
                 work_dir,
-                "04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+                "02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
             )
             self.assertIn("lgwf_wf_create.business_flow_confirmation_context", prepare_business)
             (lgwf_dir / "business_flow_approval.json").write_text(
                 json.dumps({"decision": "approve", "route": "approve", "comment": "确认通过"}),
                 encoding="utf-8",
             )
-            run_script(work_dir, "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
+            run_script(work_dir, "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
 
-            scaffold = run_script(work_dir, "04_confirm_business_flow/scripts/scaffold_package.py")
+            scaffold = run_script(work_dir, "02_confirm_business_flow/scripts/scaffold_package.py")
             scaffold_plan = scaffold["lgwf_wf_create.scaffold_package_result"]["scaffold_plan"]
             self.assertEqual(scaffold_plan["workflow_name"], "fake_runtime_create")
             self.assertIn("wf/workflow.lgwf", scaffold_plan["create_files"])
 
             prepare_steps = run_script(
                 work_dir,
-                "07_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+                "03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
             )
             self.assertIn("lgwf_wf_create.step_design_confirmation_context", prepare_steps)
             (lgwf_dir / "step_design_confirmation_record.json").write_text(
                 json.dumps({"decision": "approve", "route": "approve", "comment": "确认通过"}),
                 encoding="utf-8",
             )
-            run_script(work_dir, "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
+            run_script(work_dir, "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
 
-            summary_state = run_script(work_dir, "09_summarize_create_result/scripts/summarize_create_result.py")
+            summary_state = run_script(work_dir, "05_summarize_create_result/scripts/summarize_create_result.py")
             summary = json.loads((lgwf_dir / "create_result_summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["status"], "draft_structure_ready")
             self.assertEqual(summary_state["status"], "draft_structure_ready")
@@ -184,13 +187,13 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
                     "target_package_root": "skills/fake-branch-matrix",
                     "requirements": [{"id": "r1", "description": "生成 workflow package"}],
                 },
-                "prepare_script": "02_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+                "prepare_script": "01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
                 "prepare_state_key": "lgwf_wf_create.requirements_confirmation_context",
                 "approval_file": "create_requirements_approval.json",
-                "revision_prepare_script": "02_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
+                "revision_prepare_script": "01_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
                 "revision_state_key": "lgwf_wf_create.requirements_revision_context",
                 "revision_approval_file": "create_requirements_revision_approval.json",
-                "apply_script": "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "apply_script": "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "apply_state_key": "lgwf_wf_create.apply_requirements_result",
                 "output_file": "create_requirements.json",
                 "artifact_kind": "create_requirements",
@@ -210,13 +213,13 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
                     "workflow_name": "fake_branch_matrix",
                     "stages": [{"stage_id": "scaffold_package", "key_nodes": ["scaffold_package"]}],
                 },
-                "prepare_script": "04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+                "prepare_script": "02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
                 "prepare_state_key": "lgwf_wf_create.business_flow_confirmation_context",
                 "approval_file": "business_flow_approval.json",
-                "revision_prepare_script": "04_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
+                "revision_prepare_script": "02_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
                 "revision_state_key": "lgwf_wf_create.business_flow_revision_context",
                 "revision_approval_file": "business_flow_revision_approval.json",
-                "apply_script": "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "apply_script": "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "apply_state_key": "lgwf_wf_create.apply_business_flow_result",
                 "output_file": "business_flow.json",
                 "artifact_kind": "business_flow",
@@ -229,13 +232,13 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
                 "proposal_payload": {
                     "step_designs": [{"step_slug": "scaffold_package", "purpose": "生成 package 骨架"}],
                 },
-                "prepare_script": "07_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+                "prepare_script": "03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
                 "prepare_state_key": "lgwf_wf_create.step_design_confirmation_context",
                 "approval_file": "step_design_confirmation_record.json",
-                "revision_prepare_script": "07_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
+                "revision_prepare_script": "03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
                 "revision_state_key": "lgwf_wf_create.step_design_revision_context",
                 "revision_approval_file": "step_design_revision_approval.json",
-                "apply_script": "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "apply_script": "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "apply_state_key": "lgwf_wf_create.apply_step_designs_result",
                 "output_file": "step_designs.json",
                 "artifact_kind": "step_designs",

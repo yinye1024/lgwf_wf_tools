@@ -4,7 +4,6 @@ ENTRY NODE summarize_post_fix;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_post_fix.instructions.{node}";
   result_path "lgwf_wf_post_fix.results.{node}";
 }
 
@@ -19,7 +18,6 @@ PY summarize_post_fix
     READ workspace file ".lgwf/post_fix_stage_results.json";
     READ workspace file ".lgwf/post_fix_generated_tests.json";
     WRITE state.lgwf_wf_post_fix.post_fix_summary;
-    WRITE state.lgwf_wf_post_fix.summary_result;
     WRITE workspace file ".lgwf/post_fix_summary.json";
     WRITE workspace file "reports/wf-post-fix/report.json";
     WRITE workspace file "reports/wf-post-fix/report.md";

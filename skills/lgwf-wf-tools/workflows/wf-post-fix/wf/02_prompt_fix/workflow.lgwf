@@ -4,7 +4,6 @@ ENTRY NODE prompt_fix_auto_route;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_post_fix.instructions.{node}";
   result_path "lgwf_wf_post_fix.results.{node}";
 }
 
@@ -49,7 +48,6 @@ PY build_prompt_fix_input
     READ workspace file ".lgwf/post_fix_decisions/prompt_fix.json";
     WRITE state.lgwf_wf_post_fix.prompt_fix_input;
     WRITE state.lgwf_wf_post_fix.prompt_fix_stage_decision;
-    WRITE state.lgwf_wf_post_fix.build_prompt_fix_input_result;
     WRITE workspace file ".lgwf/post_fix_decisions.json";
     WRITE workspace file ".lgwf/post_fix_stage_results.json";
   };
@@ -62,7 +60,6 @@ RUN_WORKFLOW prompt_fix
   CONTRACT {
     READ state.lgwf_wf_post_fix.prompt_fix_input;
     READ workspace file "workflows/wf-prompt-fix/wf/workflow.lgwf";
-    WRITE state.lgwf_wf_post_fix.prompt_fix_result;
     WRITE workspace dir "workflows/wf-prompt-fix/ws";
   };
 
@@ -70,16 +67,22 @@ PY finish_prompt_fix_stage
   SCRIPT "scripts/finish_prompt_fix_stage.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.finish_prompt_fix_stage_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY set_prompt_fix_auto
   SCRIPT "scripts/set_prompt_fix_auto.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.set_prompt_fix_auto_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY skip_prompt_fix
   SCRIPT "scripts/finish_prompt_fix_stage.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.skip_prompt_fix_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };

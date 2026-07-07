@@ -4,7 +4,6 @@ ENTRY prepare_runtime_fake_repair_context;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_e2e.runtime_fake.instructions.{node}";
   result_path "lgwf_e2e.runtime_fake.results.{node}";
 }
 
@@ -12,7 +11,9 @@ PY prepare_runtime_fake_repair_context
   SCRIPT "00_prepare/scripts/prepare_runtime_fake_repair_context.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.runtime_fake_prepare_repair_context_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET runtime_fake_e2e_shared_context {
   workspace file ".lgwf/e2e_target_request.normalized.json";
@@ -53,7 +54,9 @@ REACT runtime_fake_e2e_react MAX 3
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_runtime_fake.py"
     RESULT state.lgwf_e2e.runtime_fake_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+    };
 
 FLOW prepare_runtime_fake_repair_context
   THEN runtime_fake_e2e_react;

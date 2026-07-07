@@ -1,0 +1,26 @@
+WORKFLOW skill_packaging;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "{node}_result";
+}
+
+STEP confirm_requirements
+  WORKFLOW "02_confirm_requirements/workflow.lgwf";
+
+STEP confirm_business_flow
+  WORKFLOW "04_confirm_business_flow/workflow.lgwf";
+
+STEP confirm_step_designs
+  WORKFLOW "07_confirm_step_designs/workflow.lgwf";
+
+STEP summarize_create_result
+  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+
+FLOW main
+  START confirm_requirements
+  THEN confirm_business_flow
+  THEN confirm_step_designs
+  THEN summarize_create_result;

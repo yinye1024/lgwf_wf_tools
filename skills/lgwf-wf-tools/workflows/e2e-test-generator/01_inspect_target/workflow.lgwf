@@ -4,7 +4,6 @@ ENTRY validate_target_request;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_e2e.inspect.instructions.{node}";
   result_path "lgwf_e2e.inspect.results.{node}";
 }
 
@@ -12,19 +11,25 @@ PY validate_target_request
   SCRIPT "01_validate_target_request/scripts/validate_target_request.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.validate_target_request_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY scan_workflow_package
   SCRIPT "02_scan_workflow_package/scripts/scan_workflow_package.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.scan_workflow_package_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY parse_workflow_graph
   SCRIPT "03_parse_workflow_graph/scripts/parse_workflow_graph.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.parse_workflow_graph_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CODEX summarize_business_flow
   PROMPT "04_summarize_business_flow/agents/summarize_business_flow.md"

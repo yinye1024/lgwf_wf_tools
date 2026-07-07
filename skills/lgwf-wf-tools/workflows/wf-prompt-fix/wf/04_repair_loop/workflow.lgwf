@@ -4,7 +4,6 @@ ENTRY route_repair_loop_entry;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
   result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
 }
 
@@ -12,13 +11,17 @@ PY route_repair_loop_entry
   SCRIPT "scripts/route_repair_loop_entry.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.route_repair_entry_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY finish_repair_loop_skip
   SCRIPT "scripts/finish_repair_loop_skip.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.finish_repair_skip_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET repair_target_prompts_shared_context {
   workspace file ".lgwf/prompt_fix_target.json";
@@ -53,7 +56,9 @@ REACT repair_target_prompts MAX 3
   DECIDE PY
     SCRIPT "scripts/decide_prompt_fix.py"
     RESULT state.lgwf_wf_prompt_fix.prompt_repair_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+    };
 
 ROUTE route_repair_loop_entry
   WHEN "fix" THEN repair_target_prompts

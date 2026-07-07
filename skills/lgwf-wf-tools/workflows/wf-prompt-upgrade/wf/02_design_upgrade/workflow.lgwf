@@ -4,7 +4,6 @@ ENTRY prepare_prompt_upgrade_design_feedback;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_upgrade.instructions.{node}";
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
 
@@ -12,7 +11,9 @@ PY prepare_prompt_upgrade_design_feedback
   SCRIPT "scripts/prepare_prompt_upgrade_design_feedback.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.design_feedback_prepare_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET design_prompt_upgrade_shared_context {
   workspace file ".lgwf/prompt_upgrade_target.json";
@@ -48,7 +49,9 @@ REACT design_prompt_upgrade MAX 3
   DECIDE PY
     SCRIPT "scripts/decide_prompt_upgrade_design.py"
     RESULT state.lgwf_wf_prompt_upgrade.design_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+    };
 
 FLOW prepare_prompt_upgrade_design_feedback
   THEN design_prompt_upgrade;

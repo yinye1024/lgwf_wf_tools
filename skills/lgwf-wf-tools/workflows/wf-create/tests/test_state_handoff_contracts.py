@@ -43,16 +43,16 @@ class pushd:
 class StateHandoffContractTest(unittest.TestCase):
     def test_confirmation_context_prepare_nodes_are_owned_by_gate_workflows(self) -> None:
         main_workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn('STEP define_requirements\n  WORKFLOW "02_confirm_requirements/workflow.lgwf"', main_workflow)
-        self.assertIn('STEP design_structure\n  WORKFLOW "04_confirm_business_flow/workflow.lgwf"', main_workflow)
-        self.assertIn('STEP implement_draft\n  WORKFLOW "07_confirm_step_designs/workflow.lgwf"', main_workflow)
+        self.assertIn('STEP define_requirements\n  WORKFLOW "01_confirm_requirements/workflow.lgwf"', main_workflow)
+        self.assertIn('STEP design_structure\n  WORKFLOW "02_confirm_business_flow/workflow.lgwf"', main_workflow)
+        self.assertIn('STEP implement_draft\n  WORKFLOW "03_confirm_step_designs/workflow.lgwf"', main_workflow)
         self.assertNotIn("PY prepare_requirements_confirmation", main_workflow)
         self.assertNotIn("APPROVAL confirm_requirements", main_workflow)
 
         for workflow_relative, node in (
-            ("02_confirm_requirements/workflow.lgwf", "prepare_requirements_confirmation"),
-            ("04_confirm_business_flow/workflow.lgwf", "prepare_business_flow_confirmation"),
-            ("07_confirm_step_designs/workflow.lgwf", "prepare_step_design_confirmation"),
+            ("01_confirm_requirements/workflow.lgwf", "prepare_requirements_confirmation"),
+            ("02_confirm_business_flow/workflow.lgwf", "prepare_business_flow_confirmation"),
+            ("03_confirm_step_designs/workflow.lgwf", "prepare_step_design_confirmation"),
         ):
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
             self.assertIn(f"PY {node}", workflow)
@@ -63,19 +63,19 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_confirmation_context_scripts_emit_expected_state_keys(self) -> None:
         cases = (
             (
-                "02_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+                "01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
                 "create_requirements_proposal.json",
                 {"workflow_name": "demo", "target_package_root": "skills/demo"},
                 "lgwf_wf_create.requirements_confirmation_context",
             ),
             (
-                "04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+                "02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
                 "business_flow_proposal.json",
                 {"workflow_name": "demo", "stages": []},
                 "lgwf_wf_create.business_flow_confirmation_context",
             ),
             (
-                "07_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+                "03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
                 "step_designs_proposal.json",
                 {"step_designs": [{"step_slug": "demo"}]},
                 "lgwf_wf_create.step_design_confirmation_context",
@@ -98,21 +98,21 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_revision_context_scripts_emit_revision_request_and_state_keys(self) -> None:
         cases = (
             (
-                "02_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
+                "01_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
                 "create_requirements_proposal.json",
                 "create_requirements_approval.json",
                 {"workflow_name": "demo"},
                 "lgwf_wf_create.requirements_revision_context",
             ),
             (
-                "04_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
+                "02_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
                 "business_flow_proposal.json",
                 "business_flow_approval.json",
                 {"stages": []},
                 "lgwf_wf_create.business_flow_revision_context",
             ),
             (
-                "07_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
+                "03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
                 "step_designs_proposal.json",
                 "step_design_confirmation_record.json",
                 {"step_designs": []},
@@ -140,7 +140,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_script_can_build_plan_from_confirmed_runtime_artifacts(self) -> None:
         module = load_module(
-            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
+            ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_handoff",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -169,7 +169,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_script_has_safe_default_without_confirmed_artifacts(self) -> None:
         module = load_module(
-            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
+            ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_default",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -189,7 +189,7 @@ class StateHandoffContractTest(unittest.TestCase):
             helper.require_approve({"decision": {"value": "revise"}})
 
     def test_summary_rejects_invalid_runtime_artifact_paths(self) -> None:
-        summary = load_module(ROOT / "09_summarize_create_result/scripts/summarize_create_result.py", "summary_handoff")
+        summary = load_module(ROOT / "05_summarize_create_result/scripts/summarize_create_result.py", "summary_handoff")
         with self.assertRaises(ValueError):
             summary.build_summary({"runtime_artifacts": ["workflow.lgwf"]})
         with self.assertRaises(ValueError):
@@ -274,7 +274,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_plan_lists_confirmation_context_scripts(self) -> None:
         scaffold = load_module(
-            ROOT / "04_confirm_business_flow/scripts/scaffold_package.py",
+            ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_files",
         )
         plan = scaffold.build_scaffold_plan(
@@ -285,20 +285,20 @@ class StateHandoffContractTest(unittest.TestCase):
             }
         )
         for relative in (
-            "wf/02_confirm_requirements/scripts/prepare_requirements_confirmation.py",
-            "wf/02_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
-            "wf/04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
-            "wf/04_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
-            "wf/07_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
-            "wf/07_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
+            "wf/01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+            "wf/01_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
+            "wf/02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+            "wf/02_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
+            "wf/03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+            "wf/03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
         ):
             self.assertIn(relative, plan["create_files"])
 
     def test_prompt_docs_mention_confirmation_context_handoff(self) -> None:
         expectations = (
-            ("02_confirm_requirements/agents/propose_requirements_react.md", "requirements_confirmation_context"),
-            ("04_confirm_business_flow/agents/propose_business_flow_react.md", "business_flow_confirmation_context"),
-            ("07_confirm_step_designs/agents/design_steps_react.md", "step_design_confirmation_context"),
+            ("01_confirm_requirements/agents/propose_requirements_react.md", "requirements_confirmation_context"),
+            ("02_confirm_business_flow/agents/propose_business_flow_react.md", "business_flow_confirmation_context"),
+            ("03_confirm_step_designs/agents/design_steps_react.md", "step_design_confirmation_context"),
         )
         for relative, state_key in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
@@ -307,21 +307,21 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_apply_scripts_return_output_artifact_path(self) -> None:
         for relative, approval_name, proposal_name, output_name, proposal in (
             (
-                "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "create_requirements_approval.json",
                 "create_requirements_proposal.json",
                 "create_requirements.json",
                 {"workflow_name": "demo", "target_package_root": "skills/demo"},
             ),
             (
-                "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "business_flow_approval.json",
                 "business_flow_proposal.json",
                 "business_flow.json",
                 {"workflow_name": "demo", "stages": []},
             ),
             (
-                "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
                 "step_designs_proposal.json",
                 "step_designs.json",
@@ -343,19 +343,19 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_apply_scripts_use_proposal_when_approval_only_records_decision(self) -> None:
         for relative, approval_name, proposal_name, expected_key in (
             (
-                "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
                 "create_requirements_approval.json",
                 "create_requirements_proposal.json",
                 "workflow_name",
             ),
             (
-                "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
                 "business_flow_approval.json",
                 "business_flow_proposal.json",
                 "stages",
             ),
             (
-                "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
                 "step_designs_proposal.json",
                 "step_designs",
@@ -390,7 +390,7 @@ class StateHandoffContractTest(unittest.TestCase):
                 self.assertNotIn("approval", artifact)
 
     def test_summary_report_path_is_relative(self) -> None:
-        summary = load_module(ROOT / "09_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")
+        summary = load_module(ROOT / "05_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")
         with tempfile.TemporaryDirectory() as temp:
             report = summary.write_report(Path(temp), summary.build_summary({}))
             self.assertFalse(Path(report.as_posix()).is_absolute())

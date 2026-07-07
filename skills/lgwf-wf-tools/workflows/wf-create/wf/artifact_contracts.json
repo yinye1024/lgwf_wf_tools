@@ -5,7 +5,10 @@
       ".lgwf/create_reference_context/dsl_reference_context.json",
       ".lgwf/create_reference_context/dsl-assist/guide.md",
       ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
-      ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md"
+      ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",
+      ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md",
+      ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md",
+      ".lgwf/create_reference_context/scaffold/scaffold_package_template.json"
     ]
   }
 }

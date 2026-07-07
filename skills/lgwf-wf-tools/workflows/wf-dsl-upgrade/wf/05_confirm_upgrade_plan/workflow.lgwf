@@ -4,7 +4,6 @@ ENTRY FLOW main;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
   result_path "lgwf_wf_dsl_upgrade.results.{node}";
 }
 
@@ -12,7 +11,13 @@ PY prepare_approval_context
   SCRIPT "scripts/prepare_upgrade_plan_approval.py"
   TIMEOUT 120
   RESULT state.lgwf_wf_dsl_upgrade.prepare_upgrade_plan_approval_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/classification_summary.json";
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/upgrade_plan_summary.json";
+    WRITE workspace file ".lgwf/upgrade_plan_confirmation_context.json";
+  };
 
 APPROVAL capture_approval_decision
   PROMPT_REF "resources/confirm_upgrade_plan.md"
@@ -26,7 +31,11 @@ PY finalize_upgrade_plan_approval
   SCRIPT "scripts/finalize_upgrade_plan_approval.py"
   TIMEOUT 120
   RESULT state.lgwf_wf_dsl_upgrade.finalize_upgrade_plan_approval_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/upgrade_plan_approval.json";
+    WRITE workspace file ".lgwf/upgrade_plan_approval.json";
+  };
 
 FLOW main
   START prepare_approval_context

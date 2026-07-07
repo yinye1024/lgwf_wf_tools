@@ -4,7 +4,6 @@ ENTRY FLOW main;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 300;
-  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
   result_path "lgwf_wf_dsl_upgrade.results.{node}";
 }
 
@@ -12,7 +11,11 @@ PY build_target_manifest
   SCRIPT "scripts/build_target_manifest.py"
   TIMEOUT 120
   RESULT state.lgwf_wf_dsl_upgrade.build_target_manifest_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    WRITE workspace file ".lgwf/target_manifest.json";
+    WRITE workspace file ".lgwf/target_scope_validation.json";
+  };
 
 FLOW main
   START build_target_manifest;

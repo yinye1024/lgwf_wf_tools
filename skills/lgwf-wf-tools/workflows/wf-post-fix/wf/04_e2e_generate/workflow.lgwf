@@ -4,7 +4,6 @@ ENTRY NODE e2e_generate_auto_route;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_post_fix.instructions.{node}";
   result_path "lgwf_wf_post_fix.results.{node}";
 }
 
@@ -49,7 +48,6 @@ PY build_e2e_generate_input
     READ workspace file ".lgwf/post_fix_decisions/e2e_generate.json";
     WRITE state.lgwf_wf_post_fix.e2e_input;
     WRITE state.lgwf_wf_post_fix.e2e_generate_stage_decision;
-    WRITE state.lgwf_wf_post_fix.build_e2e_generate_input_result;
     WRITE workspace file ".lgwf/post_fix_decisions.json";
     WRITE workspace file ".lgwf/post_fix_stage_results.json";
   };
@@ -62,7 +60,6 @@ RUN_WORKFLOW e2e_generate
   CONTRACT {
     READ state.lgwf_wf_post_fix.e2e_input;
     READ workspace file "workflows/e2e-test-generator/workflow.lgwf";
-    WRITE state.lgwf_wf_post_fix.e2e_generate_result;
     WRITE workspace dir "workflows/e2e-test-generator/ws";
   };
 
@@ -70,16 +67,22 @@ PY finish_e2e_generate_stage
   SCRIPT "scripts/finish_e2e_generate_stage.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.finish_e2e_generate_stage_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY set_e2e_generate_auto
   SCRIPT "scripts/set_e2e_generate_auto.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.set_e2e_generate_auto_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY skip_e2e_generate
   SCRIPT "scripts/finish_e2e_generate_stage.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.skip_e2e_generate_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };

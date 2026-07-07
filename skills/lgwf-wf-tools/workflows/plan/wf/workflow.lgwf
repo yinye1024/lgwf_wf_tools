@@ -4,7 +4,6 @@ ENTRY generate_plan;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_plan.instructions.{node}";
   result_path "lgwf_plan.results.{node}";
 }
 
@@ -25,13 +24,23 @@ PY apply_confirmed_contracts
   SCRIPT "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/apply_confirmed_contracts.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.apply_contracts_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/react_acceptance_proposal.json";
+    READ workspace file ".lgwf/react_task_contract_approval.json";
+    READ workspace file ".lgwf/react_task_plan_proposal.json";
+    READ workspace file ".lgwf/react_task_request.json";
+  };
 
 PY finish_contract_review
   SCRIPT "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/finish_contract_review.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.contract_review_finish_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/react_task_contract_approval.json";
+    WRITE workspace file ".lgwf/contract_review_finish.json";
+  };
 
 STEP execute_react_loop
   WORKFLOW "04_execute_react_loop/workflow.lgwf";
@@ -41,7 +50,7 @@ FLOW {
 
   confirm_plan_and_acceptance
     WHEN "approve" THEN apply_confirmed_contracts
-    WHEN "revise" THEN finish_contract_review
+    WHEN "revise" THEN confirm_plan_and_acceptance
     WHEN "reject" THEN FAIL_ALL;
 
   apply_confirmed_contracts THEN execute_react_loop;

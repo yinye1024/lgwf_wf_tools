@@ -1,0 +1,80 @@
+WORKFLOW define_requirements;
+ENTRY collect_raw_intent;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+APPROVAL collect_raw_intent
+  PROMPT_REF "confirm_raw_intent.md"
+  READ state.lgwf_wf_create.raw_intent_context
+  WRITE state.lgwf_wf_create.raw_intent_request
+  RESULT state.lgwf_wf_create.raw_intent_result
+  PERSIST ".lgwf/raw_intent_request.json"
+  POLL 1;
+
+PY finish_raw_intent
+  SCRIPT "scripts/finish_raw_intent.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.raw_intent_finish_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.raw_intent_request;
+    WRITE state.lgwf_wf_create.raw_intent_finished;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/raw_intent_request.json";
+  };
+
+CODEX propose_requirements_react
+  PROMPT "agents/propose_requirements_react.md"
+  OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
+  RESULT state.lgwf_wf_create.requirements_proposal_result
+  CONTRACT {
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+  };
+
+PY prepare_requirements_confirmation
+  SCRIPT "scripts/prepare_requirements_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_requirements_confirmation_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.requirements_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+  };
+
+REVIEW confirm_requirements
+  PROMPT_REF "confirm_requirements.md"
+  CONTEXT state.lgwf_wf_create.requirements_confirmation_context
+  RESULT state.lgwf_wf_create.requirements_decision_result
+  PERSIST ".lgwf/create_requirements_approval.json"
+  OPTIONS ["approve", "revise", "reject"];
+
+PY apply_confirmed_requirements
+  SCRIPT "scripts/apply_confirmed_requirements.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.apply_requirements_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.apply_requirements_result;
+    WRITE state.lgwf_wf_create.create_requirements;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_approval.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/create_requirements.json";
+  };
+
+FLOW {
+  collect_raw_intent 
+  THEN finish_raw_intent 
+  THEN propose_requirements_react 
+  THEN prepare_requirements_confirmation 
+  THEN confirm_requirements;
+
+  confirm_requirements
+    WHEN "approve" THEN apply_confirmed_requirements
+    WHEN "revise" THEN confirm_requirements
+    WHEN "reject" THEN FAIL_ALL;
+}

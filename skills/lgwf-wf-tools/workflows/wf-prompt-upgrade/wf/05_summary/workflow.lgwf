@@ -4,7 +4,6 @@ ENTRY summarize_prompt_upgrade;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_upgrade.instructions.{node}";
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
 
@@ -12,4 +11,6 @@ PY summarize_prompt_upgrade
   SCRIPT "scripts/summarize_prompt_upgrade.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.summary_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };

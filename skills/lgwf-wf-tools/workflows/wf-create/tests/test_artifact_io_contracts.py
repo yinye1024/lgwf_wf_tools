@@ -48,7 +48,7 @@ class ArtifactIOContractsTest(unittest.TestCase):
     def test_finish_raw_intent_reads_runtime_request_artifact(self) -> None:
         write_json(self.work_dir / ".lgwf" / "raw_intent_request.json", {"raw_intent": "创建 git-diff-brief"})
 
-        result = self.run_script("02_confirm_requirements/scripts/finish_raw_intent.py")
+        result = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
 
         self.assertEqual(result["lgwf_wf_create.raw_intent_request"]["raw_intent"], "创建 git-diff-brief")
 
@@ -57,9 +57,9 @@ class ArtifactIOContractsTest(unittest.TestCase):
         write_json(self.work_dir / ".lgwf" / "business_flow_proposal.json", {"stages": []})
         write_json(self.work_dir / ".lgwf" / "step_designs_proposal.json", {"step_designs": []})
 
-        requirements = self.run_script("02_confirm_requirements/scripts/prepare_requirements_confirmation.py")
-        business_flow = self.run_script("04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py")
-        step_designs = self.run_script("07_confirm_step_designs/scripts/prepare_step_design_confirmation.py")
+        requirements = self.run_script("01_confirm_requirements/scripts/prepare_requirements_confirmation.py")
+        business_flow = self.run_script("02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py")
+        step_designs = self.run_script("03_confirm_step_designs/scripts/prepare_step_design_confirmation.py")
 
         self.assertEqual(
             requirements["lgwf_wf_create.requirements_confirmation_context"]["approve_writes"],
@@ -103,9 +103,9 @@ class ArtifactIOContractsTest(unittest.TestCase):
             {"decision": "approve", "confirmed": {"approval": "approve"}},
         )
 
-        self.run_script("02_confirm_requirements/scripts/apply_confirmed_requirements.py")
-        self.run_script("04_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
-        self.run_script("07_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
+        self.run_script("01_confirm_requirements/scripts/apply_confirmed_requirements.py")
+        self.run_script("02_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
+        self.run_script("03_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
 
         self.assertTrue((self.work_dir / ".lgwf" / "create_requirements.json").is_file())
         self.assertTrue((self.work_dir / ".lgwf" / "business_flow.json").is_file())

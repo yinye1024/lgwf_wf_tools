@@ -4,7 +4,6 @@ ENTRY NODE collect_post_fix_target;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_post_fix.instructions.{node}";
   result_path "lgwf_wf_post_fix.results.{node}";
 }
 
@@ -18,7 +17,6 @@ APPROVAL collect_post_fix_target
   CONTRACT {
     READ state.post_fix_target;
     WRITE state.lgwf_wf_post_fix.post_fix_target_request;
-    WRITE state.lgwf_wf_post_fix.collect_target_result;
     WRITE workspace file ".lgwf/post_fix_target.request.json";
   };
 
@@ -31,7 +29,6 @@ PY normalize_post_fix_target
     READ workspace file ".lgwf/post_fix_target.request.json";
     WRITE state.lgwf_wf_post_fix.post_fix_target;
     WRITE state.lgwf_wf_post_fix.post_fix_decisions;
-    WRITE state.lgwf_wf_post_fix.normalize_target_result;
     WRITE workspace file ".lgwf/post_fix_target.json";
     WRITE workspace file ".lgwf/post_fix_decisions.json";
     WRITE workspace file ".lgwf/post_fix_stage_results.json";

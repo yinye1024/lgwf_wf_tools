@@ -4,7 +4,6 @@ ENTRY collect_react_task_request;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_plan.generate_plan.instructions.{node}";
   result_path "lgwf_plan.generate_plan.results.{node}";
 }
 
@@ -21,13 +20,19 @@ PY finish_react_task_request
   SCRIPT "00_collect_react_task_request/scripts/finish_react_task_request.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.task_request_finish_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/react_task_request.json";
+    WRITE workspace file ".lgwf/react_task_request_finish.json";
+  };
 
 PY validate_plan_analysis_targets
   SCRIPT "01_validate_plan_analysis_targets/scripts/validate_plan_analysis_targets.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.plan_target_validation_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET generate_plan_proposal_shared_context {
   workspace file ".lgwf/react_task_request.json";
@@ -42,7 +47,6 @@ REACT generate_plan_proposal MAX 3
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_FILE ".lgwf/react_task_plan_reason.md"
-    INSTRUCTION state.lgwf_plan.plan_reason_instruction
     RESULT state.lgwf_plan.plan_reason_result
   ACT CODEX
     PROMPT "02_generate_plan_proposal/agents/act.md"
@@ -50,7 +54,6 @@ REACT generate_plan_proposal MAX 3
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_task_plan_proposal.json" AS_FILE
-    INSTRUCTION state.lgwf_plan.plan_act_instruction
     RESULT state.lgwf_plan.plan_act_result
   OBSERVE CODEX
     PROMPT "02_generate_plan_proposal/agents/observe.md"
@@ -58,18 +61,24 @@ REACT generate_plan_proposal MAX 3
     TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
     TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_task_plan_observe.json"
-    INSTRUCTION state.lgwf_plan.plan_observe_instruction
     RESULT state.lgwf_plan.plan_observe_result
   DECIDE PY
     SCRIPT "02_generate_plan_proposal/scripts/decide.py"
     RESULT state.lgwf_plan.plan_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/react_task_plan_observe.json";
+      READ workspace file ".lgwf/react_task_plan_proposal.json";
+      READ workspace file ".lgwf/react_task_request.json";
+    };
 
 PY route_plan_generation
   SCRIPT "03_route_plan_generation/scripts/route_plan_generation.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.plan_route_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 FLOW {
   collect_react_task_request

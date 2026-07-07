@@ -1,0 +1,51 @@
+WORKFLOW implement_steps_react;
+ENTRY initialize_implementation_observe;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+CONTEXT_SET implementation_shared_context {
+  workspace dir ".lgwf/create_reference_context/dsl-assist";
+  workspace dir ".lgwf/create_reference_context/scaffold";
+  workspace file ".lgwf/implementation_context.json";
+  workspace file ".lgwf/implementation_observe.json";
+}
+
+PY initialize_implementation_observe
+  SCRIPT "scripts/initialize_implementation_observe.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.initialize_implementation_observe_result
+  UPDATES_STATE
+  CONTRACT {
+  };
+
+REACT implement_steps_react MAX 3
+  CONTEXT implementation_shared_context
+  REASON CODEX
+    PROMPT "agents/reason.md"
+    OUTPUT_FILE ".lgwf/implementation_reason.md"
+    TIMEOUT 900
+    RESULT state.lgwf_wf_create.implementation_reason_result
+  ACT CODEX
+    PROMPT "agents/act.md"
+    CONTEXT workspace file ".lgwf/implementation_reason.md"
+    OUTPUT_JSON ".lgwf/implementation_result.json"
+    TIMEOUT 900
+    RESULT state.lgwf_wf_create.implementation_result
+  OBSERVE WORKFLOW observe_audit
+    WORKFLOW "observe_audit.lgwf"
+    RESULT state.lgwf_wf_create.implementation_observe_result
+  DECIDE PY
+    SCRIPT "scripts/decide_implementation.py"
+    TIMEOUT 30
+    RESULT state.lgwf_wf_create.implementation_decide_result
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/implementation_observe.json";
+      WRITE workspace file ".lgwf/implementation_decision.json";
+    };
+
+FLOW initialize_implementation_observe
+  THEN implement_steps_react;

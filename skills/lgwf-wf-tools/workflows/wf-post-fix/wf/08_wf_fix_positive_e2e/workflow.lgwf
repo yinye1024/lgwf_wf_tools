@@ -4,7 +4,6 @@ ENTRY NODE choose_wf_fix_positive_e2e;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_post_fix.instructions.{node}";
   result_path "lgwf_wf_post_fix.results.{node}";
 }
 
@@ -38,7 +37,6 @@ PY run_wf_fix_positive_e2e
   CONTRACT {
     READ workspace file ".lgwf/post_fix_target.json";
     READ workspace file ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json";
-    WRITE state.lgwf_wf_post_fix.run_wf_fix_positive_e2e_result;
     WRITE workspace file ".lgwf/post_fix_decisions.json";
     WRITE workspace file ".lgwf/post_fix_stage_results.json";
   };
@@ -47,10 +45,14 @@ PY set_wf_fix_positive_e2e_auto
   SCRIPT "scripts/set_wf_fix_positive_e2e_auto.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.set_wf_fix_positive_e2e_auto_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY skip_wf_fix_positive_e2e
   SCRIPT "scripts/finish_wf_fix_positive_e2e_stage.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_post_fix.skip_wf_fix_positive_e2e_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };

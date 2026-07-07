@@ -24,6 +24,14 @@ def load_module(relative: str, name: str):
     return module
 
 
+def run_main(module) -> dict:
+    output = StringIO()
+    with redirect_stdout(output):
+        module.main()
+    text = output.getvalue()
+    return json.loads(text or "{}")
+
+
 class pushd:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -43,31 +51,31 @@ class pushd:
 class LgwfWfCreateScriptFlowE2ETest(unittest.TestCase):
     def test_confirmation_scripts_prepare_apply_and_summarize_artifacts(self) -> None:
         prepare_requirements = load_module(
-            "02_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+            "01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
             "e2e_prepare_requirements",
         )
         apply_requirements = load_module(
-            "02_confirm_requirements/scripts/apply_confirmed_requirements.py",
+            "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
             "e2e_apply_requirements",
         )
         prepare_business_flow = load_module(
-            "04_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+            "02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
             "e2e_prepare_business_flow",
         )
         apply_business_flow = load_module(
-            "04_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+            "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
             "e2e_apply_business_flow",
         )
         prepare_steps = load_module(
-            "07_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+            "03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
             "e2e_prepare_steps",
         )
         apply_steps = load_module(
-            "07_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+            "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
             "e2e_apply_steps",
         )
         summarize = load_module(
-            "09_summarize_create_result/scripts/summarize_create_result.py",
+            "05_summarize_create_result/scripts/summarize_create_result.py",
             "e2e_summarize",
         )
 
@@ -105,10 +113,7 @@ class LgwfWfCreateScriptFlowE2ETest(unittest.TestCase):
                     (prepare_business_flow, "lgwf_wf_create.business_flow_confirmation_context"),
                     (prepare_steps, "lgwf_wf_create.step_design_confirmation_context"),
                 ):
-                    output = StringIO()
-                    with redirect_stdout(output):
-                        prepare_module.main()
-                    self.assertIn(state_key, json.loads(output.getvalue()))
+                    self.assertIn(state_key, run_main(prepare_module))
 
                 (lgwf_dir / "create_requirements_approval.json").write_text(
                     json.dumps({"decision": "approve", "confirmed": {"workflow_name": "demo_create"}}),
@@ -123,10 +128,10 @@ class LgwfWfCreateScriptFlowE2ETest(unittest.TestCase):
                     encoding="utf-8",
                 )
 
-                apply_requirements.main()
-                apply_business_flow.main()
-                apply_steps.main()
-                summarize.main()
+                self.assertIn("lgwf_wf_create.apply_requirements_result", run_main(apply_requirements))
+                self.assertIn("lgwf_wf_create.apply_business_flow_result", run_main(apply_business_flow))
+                self.assertIn("lgwf_wf_create.apply_step_designs_result", run_main(apply_steps))
+                self.assertEqual(run_main(summarize)["status"], "draft_structure_ready")
 
             for name in ("create_requirements.json", "business_flow.json", "step_designs.json", "create_result_summary.json"):
                 self.assertTrue((lgwf_dir / name).exists(), name)

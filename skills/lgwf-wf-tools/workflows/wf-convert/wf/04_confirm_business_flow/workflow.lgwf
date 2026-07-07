@@ -20,7 +20,10 @@ PY index_prompt_files
   SCRIPT "scripts/index_prompt_files.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_convert.prompt_file_index
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_convert_target.json";
+  };
 
 REACT inspect_prompt_workflow_react MAX 3
   SPEC "agents/inspect_prompt_workflow_react.md"
@@ -43,7 +46,11 @@ REACT inspect_prompt_workflow_react MAX 3
   DECIDE PY
     SCRIPT "scripts/decide_inspection.py"
     RESULT state.lgwf_wf_convert.inspect_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection_observe.json";
+    };
 
 REACT propose_create_input_react MAX 3
   SPEC "agents/propose_create_input_react.md"
@@ -65,7 +72,11 @@ REACT propose_create_input_react MAX 3
   DECIDE PY
     SCRIPT "scripts/decide_create_input.py"
     RESULT state.lgwf_wf_convert.propose_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/wf_create_input_observe.json";
+      READ workspace file ".lgwf/wf_create_input_proposal.json";
+    };
 
 REVIEW confirm_create_input
   PROMPT_REF "confirm_create_input.md"
@@ -78,7 +89,9 @@ PY finalize_create_input
   SCRIPT "scripts/finalize_create_input.py"
   TIMEOUT 30
   RESULT state.lgwf_wf_convert.finalize_create_input_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 FLOW {
   index_prompt_files THEN inspect_prompt_workflow_react THEN propose_create_input_react THEN confirm_create_input;

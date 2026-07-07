@@ -10,4 +10,9 @@ PY summarize_convert_result
   SCRIPT "scripts/summarize_convert_result.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_convert.summary_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_parity_report.json";
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    READ workspace file ".lgwf/wf_create_payload.json";
+  };

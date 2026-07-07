@@ -1,0 +1,36 @@
+WORKFLOW implementation_observe_audit;
+ENTRY audit_created_package;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 180;
+}
+
+CONTEXT_SET implementation_observe_context {
+  workspace file ".lgwf/implementation_context.json";
+  workspace file ".lgwf/implementation_result.json";
+  workspace file ".lgwf/implementation_audit_result.json";
+  workspace file ".lgwf/implementation_observe.json";
+}
+
+PY audit_created_package
+  SCRIPT "scripts/audit_created_package.py"
+  TIMEOUT 180
+  RESULT state.lgwf_wf_create.implementation_audit_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    WRITE workspace file ".lgwf/implementation_audit_result.json";
+    WRITE workspace file ".lgwf/implementation_observe.json";
+  };
+
+CODEX observe_implementation
+  PROMPT "agents/observe.md"
+  CONTEXT implementation_observe_context
+  OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE
+  TIMEOUT 180
+  RESULT state.lgwf_wf_create.implementation_observe_result;
+
+FLOW audit_created_package
+  THEN observe_implementation;

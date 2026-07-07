@@ -1,0 +1,42 @@
+WORKFLOW skill_packaging_confirm_requirements;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "{node}_result";
+}
+
+PY finish_raw_intent
+  SCRIPT "scripts/finish_raw_intent.py"
+  RESULT state.packaging_request;
+
+CODEX draft_requirements
+  PROMPT "agents/draft_requirements.md"
+  INPUT state.packaging_request
+  RESULT state.requirements_proposal;
+
+PY prepare_requirements_confirmation
+  SCRIPT "scripts/prepare_requirements_confirmation.py"
+  INPUT state.requirements_proposal
+  RESULT state.requirements_confirmation;
+
+APPROVAL confirm_requirements
+  CONTEXT state.requirements_confirmation
+  PROMPT "agents/confirm_requirements.md"
+  RESULT state.requirements_approval;
+
+PY apply_confirmed_requirements
+  SCRIPT "scripts/apply_confirmed_requirements.py"
+  INPUT state.requirements_proposal
+  RESULT state.confirmed_requirements;
+
+ROUTE confirm_requirements
+  WHEN "approve" THEN apply_confirmed_requirements
+  WHEN "reject" THEN FAIL_ALL;
+
+FLOW main
+  START finish_raw_intent
+  THEN draft_requirements
+  THEN prepare_requirements_confirmation
+  THEN confirm_requirements;

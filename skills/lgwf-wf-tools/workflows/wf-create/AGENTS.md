@@ -35,6 +35,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `business_flow_proposal`：业务流转草案。
 - `step_designs_proposal`：步骤设计草案。
 - `implementation_result`：按已确认设计生成的 workflow 初稿说明。
+- `implementation_observe`：实现 ReAct observe 阶段的 authoring audit check 结果，失败时反馈给下一轮实现修复。
 
 所有目标 package 路径和 resource path 只允许使用包内相对路径，禁止绝对路径、盘符路径和 `..`。
 
@@ -46,6 +47,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
 - `validate_created_package` 在实现阶段之后确定性校验目标 package：目标目录必须存在，`wf/workflow.lgwf` 必须存在，已批准 stage 必须有 `wf/<stage>/workflow.lgwf` 以及 `agents/`、`scripts/`、`resources/`，且 `lgwf.py audit` 必须通过；失败时终止，不进入 summary 或 handoff。
+- `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；`observe` 必须执行 authoring audit check，把 `.lgwf/implementation_observe.json` 作为下一轮反馈，不得只依赖 ACT 自报成功。
 - `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
 - `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
 
@@ -72,6 +74,9 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/step_designs.json`
 - `.lgwf/create_reference_context/dsl-assist/*.md`
 - `.lgwf/implementation_result.json`
+- `.lgwf/implementation_reason.md`
+- `.lgwf/implementation_observe.json`
+- `.lgwf/implementation_decision.json`
 - `.lgwf/created_package_validation.json`
 - `.lgwf/post_fix_handoff_input.json`
 - `reports/create-workflow/create_result_report.md`
@@ -82,7 +87,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - 结束时只通过 `HANDOFF` 引导用户选择是否运行 `wf-post-fix`，不自动执行。
 - 不负责把生成出的目标 workflow 自动接入 facade 路由、registry 或其他治理链路。
 - 不承诺端到端业务 happy path 成功。
-- 不做自动修复、自动重试或后续 agent 化。
+- 实现阶段只允许在 `04_implement_steps_react` 的 ReAct 最大轮次内基于 audit 反馈修复初稿；不做跨 workflow 自动修复、自动重试或后续 agent 化。
 - 创建或修改 `workflow.lgwf` 时必须遵守 `dsl-assist`：根 workflow 保持薄编排，阶段细节优先拆到子 workflow，所有引用路径保持包内相对路径。
 
 ## 最小验证

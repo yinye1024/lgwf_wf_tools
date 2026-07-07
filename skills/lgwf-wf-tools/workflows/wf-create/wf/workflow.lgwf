@@ -4,33 +4,43 @@ ENTRY define_requirements;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_create.instructions.{node}";
   result_path "lgwf_wf_create.results.{node}";
 }
 
 STEP define_requirements
-  WORKFLOW "02_confirm_requirements/workflow.lgwf";
+  WORKFLOW "01_confirm_requirements/workflow.lgwf";
 
 STEP design_structure
-  WORKFLOW "04_confirm_business_flow/workflow.lgwf";
+  WORKFLOW "02_confirm_business_flow/workflow.lgwf";
 
 STEP implement_draft
-  WORKFLOW "07_confirm_step_designs/workflow.lgwf";
+  WORKFLOW "03_confirm_step_designs/workflow.lgwf";
+
+STEP implement_steps_react
+  WORKFLOW "04_implement_steps_react/workflow.lgwf";
 
 STEP summarize_create_result
-  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+  WORKFLOW "05_summarize_create_result/workflow.lgwf";
 
 PY validate_created_package
   SCRIPT "scripts/validate_created_package.py"
   TIMEOUT 180
   RESULT state.lgwf_wf_create.created_package_validation
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/created_package_validation.json";
+  };
 
 PY prepare_post_fix_handoff
   SCRIPT "scripts/prepare_post_fix_handoff.py"
   INPUT state.lgwf_wf_create.summary_result
   RESULT state.lgwf_wf_create.post_fix_handoff_payload
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 HANDOFF handoff_wf_post_fix
   CONTEXT state.lgwf_wf_create.post_fix_handoff_payload
@@ -40,6 +50,7 @@ HANDOFF handoff_wf_post_fix
 FLOW define_requirements
   THEN design_structure
   THEN implement_draft
+  THEN implement_steps_react
   THEN validate_created_package
   THEN summarize_create_result
   THEN prepare_post_fix_handoff

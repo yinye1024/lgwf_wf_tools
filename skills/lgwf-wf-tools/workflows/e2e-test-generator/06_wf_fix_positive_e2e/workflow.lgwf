@@ -4,14 +4,15 @@ ENTRY prepare_wf_fix_positive_observe_feedback;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_e2e.wf_fix_positive.instructions.{node}";
   result_path "lgwf_e2e.wf_fix_positive.results.{node}";
 }
 
 PY prepare_wf_fix_positive_observe_feedback
   SCRIPT "00_prepare/scripts/prepare_wf_fix_positive_observe_feedback.py"
   RESULT state.lgwf_e2e.wf_fix_positive_observe_feedback_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET wf_fix_positive_e2e_shared_context {
   workspace file ".lgwf/e2e_target_request.normalized.json";
@@ -52,7 +53,9 @@ REACT wf_fix_positive_e2e_react MAX 3
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_wf_fix_positive.py"
     RESULT state.lgwf_e2e.wf_fix_positive_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+    };
 
 FLOW prepare_wf_fix_positive_observe_feedback
   THEN wf_fix_positive_e2e_react;

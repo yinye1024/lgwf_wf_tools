@@ -75,7 +75,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
     def test_scaffold_package_loads_resources_and_validator_from_runtime_workflow_mirror(self) -> None:
         self.seed_confirmed_requirements_and_business_flow()
 
-        result = self.run_script("04_confirm_business_flow/scripts/scaffold_package.py")
+        result = self.run_script("02_confirm_business_flow/scripts/scaffold_package.py")
 
         plan = result["lgwf_wf_create.scaffold_package_result"]["scaffold_plan"]
         self.assertEqual(plan["target_package_root"], "skills/git-diff-brief")
@@ -84,7 +84,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         self.assertFalse((self.work_dir / ".lgwf" / "scripts" / "validate_two_layer_workflow.py").exists())
 
     def test_prepare_dsl_reference_context_writes_only_runtime_artifacts(self) -> None:
-        result = self.run_script("07_confirm_step_designs/scripts/prepare_dsl_reference_context.py")
+        result = self.run_script("03_confirm_step_designs/scripts/prepare_dsl_reference_context.py")
 
         context = result["lgwf_wf_create.dsl_reference_context"]
         self.assertTrue(context["reference_context_ready"])
@@ -115,7 +115,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         )
         (self.work_dir / ".git").mkdir()
 
-        result = self.run_script("07_confirm_step_designs/scripts/prepare_implementation_context.py")
+        result = self.run_script("03_confirm_step_designs/scripts/prepare_implementation_context.py")
 
         context = result["lgwf_wf_create.implementation_context"]
         self.assertEqual(context["target_package_root"], "skills/git-diff-brief")
@@ -136,7 +136,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
             "produced_files": ["wf/workflow.lgwf", "AGENTS.md"],
         }
 
-        result = self.run_script("09_summarize_create_result/scripts/summarize_create_result.py", payload)
+        result = self.run_script("05_summarize_create_result/scripts/summarize_create_result.py", payload)
 
         self.assertEqual(result["target_package_root"], "skills/git-diff-brief")
         self.assertTrue((self.work_dir / ".lgwf" / "create_result_summary.json").is_file())
@@ -159,7 +159,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
             },
         )
 
-        result = self.run_script("09_summarize_create_result/scripts/summarize_create_result.py")
+        result = self.run_script("05_summarize_create_result/scripts/summarize_create_result.py")
 
         self.assertEqual(result["workflow_name"], "git-diff-brief")
         self.assertEqual(result["target_package_root"], "skills/git-diff-brief")

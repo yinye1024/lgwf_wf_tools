@@ -4,7 +4,6 @@ ENTRY summarize_prompt_acceptance;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
   result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
 }
 
@@ -12,19 +11,25 @@ PY summarize_prompt_acceptance
   SCRIPT "scripts/summarize_prompt_acceptance.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY route_after_prompt_acceptance_summary
   SCRIPT "scripts/route_after_prompt_acceptance_summary.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_route_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY finish_prompt_acceptance
   SCRIPT "scripts/finish_prompt_acceptance.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_finish_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 APPROVAL confirm_prompt_acceptance
   PROMPT_REF "confirm_prompt_acceptance.md"

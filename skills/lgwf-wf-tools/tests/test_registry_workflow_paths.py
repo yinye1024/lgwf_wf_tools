@@ -86,6 +86,25 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
                     validate_relative_path(relative, f"{workflow['id']}.{field}")
                     self.assertTrue((FACADE_ROOT / relative).exists(), f"{workflow['id']}.{field}: {relative}")
 
+    def test_skill_packaging_has_self_contained_operator_docs(self) -> None:
+        workflow_root = FACADE_ROOT / "workflows" / "skill-packaging"
+        readme = workflow_root / "README.md"
+        agents = workflow_root / "AGENTS.md"
+        contract = json.loads((workflow_root / "entry_contract.json").read_text(encoding="utf-8"))
+
+        self.assertTrue(readme.is_file())
+        readme_text = readme.read_text(encoding="utf-8")
+        agents_text = agents.read_text(encoding="utf-8")
+        self.assertIn("tool_workflow", readme_text)
+        self.assertIn("不是 LGWF runtime workflow", readme_text)
+        self.assertIn("scripts/package_lgwf_skill.py", readme_text)
+        self.assertIn("--source-skill", readme_text)
+        self.assertIn("--output-parent", readme_text)
+        self.assertIn("README.md", agents_text)
+        self.assertEqual(["source_skill", "output_parent"], contract["input_schema"]["required"])
+        self.assertIn("runtime_source", contract["input_schema"]["properties"])
+        self.assertIn("force", contract["input_schema"]["properties"])
+
     def test_registry_entry_contracts_exist_and_match_workflows(self) -> None:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
         allowed_input_modes = {"empty_then_approval", "input_json_required", "tool_args", "no_input"}

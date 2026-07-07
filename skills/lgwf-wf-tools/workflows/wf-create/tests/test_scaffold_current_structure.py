@@ -47,7 +47,7 @@ class ScaffoldCurrentStructureTest(unittest.TestCase):
         completed = subprocess.run(
             [
                 sys.executable,
-                str(self.workflow_root / "04_confirm_business_flow" / "scripts" / "scaffold_package.py"),
+                str(self.workflow_root / "02_confirm_business_flow" / "scripts" / "scaffold_package.py"),
             ],
             cwd=self.work_dir,
             text=True,

@@ -4,7 +4,6 @@ ENTRY prepare_target_request_context;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_e2e.instructions.{node}";
   result_path "lgwf_e2e.results.{node}";
 }
 
@@ -12,7 +11,9 @@ PY prepare_target_request_context
   SCRIPT "01_inspect_target/00_collect_target_request/scripts/prepare_target_request_context.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.prepare_target_request_context_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 APPROVAL collect_target_request
   PROMPT_REF "01_inspect_target/00_collect_target_request/confirm_target_request.md"
@@ -32,7 +33,10 @@ PY route_script_flow_selection
   SCRIPT "00_route_selection/scripts/route_script_flow_selection.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.route_script_flow_selection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+  };
 
 STEP script_flow_e2e
   WORKFLOW "03_script_flow_e2e/workflow.lgwf";
@@ -41,7 +45,10 @@ PY route_runtime_fake_selection
   SCRIPT "00_route_selection/scripts/route_runtime_fake_selection.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.route_runtime_fake_selection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+  };
 
 STEP runtime_fake_e2e
   WORKFLOW "04_runtime_fake_e2e/workflow.lgwf";
@@ -50,7 +57,10 @@ PY route_real_positive_selection
   SCRIPT "00_route_selection/scripts/route_real_positive_selection.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.route_real_positive_selection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+  };
 
 STEP real_positive_e2e
   WORKFLOW "05_real_positive_e2e/workflow.lgwf";
@@ -59,7 +69,10 @@ PY route_wf_fix_positive_selection
   SCRIPT "00_route_selection/scripts/route_wf_fix_positive_selection.py"
   TIMEOUT 60
   RESULT state.lgwf_e2e.route_wf_fix_positive_selection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+  };
 
 STEP wf_fix_positive_e2e
   WORKFLOW "06_wf_fix_positive_e2e/workflow.lgwf";

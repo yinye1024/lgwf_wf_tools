@@ -4,7 +4,6 @@ ENTRY prepare_prompt_fix_selection_context;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
   result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
 }
 
@@ -12,7 +11,9 @@ PY prepare_prompt_fix_selection_context
   SCRIPT "scripts/prepare_prompt_fix_selection_context.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.prepare_prompt_selection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 APPROVAL select_prompt_fixes
   PROMPT_REF "select_prompt_fixes.md"
@@ -26,7 +27,9 @@ PY validate_prompt_fix_selection
   SCRIPT "scripts/validate_prompt_fix_selection.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.validate_prompt_selection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 FLOW prepare_prompt_fix_selection_context
   THEN select_prompt_fixes

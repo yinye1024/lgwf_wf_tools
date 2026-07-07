@@ -4,7 +4,6 @@ ENTRY init_prompt_fix_target;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}";
   result_path "lgwf_wf_prompt_fix.prompt_acceptance.results.{node}";
 }
 
@@ -20,13 +19,17 @@ PY check_lgwf_client_assist
   SCRIPT "scripts/check_lgwf_client_assist.py"
   TIMEOUT 30
   RESULT state.lgwf_wf_prompt_fix.environment_check_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY build_prompt_inventory
   SCRIPT "scripts/build_prompt_inventory.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_fix.prompt_inventory_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 FLOW init_prompt_fix_target
   THEN check_lgwf_client_assist

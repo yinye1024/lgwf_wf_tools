@@ -6,26 +6,45 @@
   "input_mode": "tool_args",
   "input_schema": {
     "type": "object",
-    "required": ["skill_path"],
+    "required": ["source_skill", "output_parent"],
     "properties": {
-      "skill_path": {"type": "string"}
+      "source_skill": {
+        "type": "string",
+        "description": "源 Codex skill 目录，必须包含 SKILL.md、AGENTS.md、README.md 和 wf/workflow.lgwf。"
+      },
+      "output_parent": {
+        "type": "string",
+        "description": "打包产物的输出父目录；最终产物写入 output_parent/source_skill_name。"
+      },
+      "runtime_source": {
+        "type": "string",
+        "description": "可选；lgwf-client-assist runtime 目录，默认使用 facade vendor/lgwf-client-assist。"
+      },
+      "force": {
+        "type": "boolean",
+        "description": "可选；只有为 true 时才允许覆盖已存在的输出目录。"
+      }
     },
-    "example": {"skill_path": "D:/example/skills/example-workflow-skill"}
+    "example": {
+      "source_skill": "skills/wf-audit-fix",
+      "output_parent": ".local/packager-smoke",
+      "force": true
+    }
   },
-  "input_file_policy": "Tool workflow; pass the skill/package path as a CLI arg.",
+  "input_file_policy": "Tool workflow; pass values as CLI args: --source-skill, --output-parent, optional --runtime-source and --force.",
   "auto_human_policy": "not_applicable",
   "target_scope": {
-    "fields": ["skill_path"],
-    "write_scope": "Packaging output directory declared by the script."
+    "fields": ["source_skill", "output_parent"],
+    "write_scope": "Only the declared output_parent/source_skill_name directory may be created or overwritten when --force is explicit."
   },
   "state_boundary": {
     "target_writes": "packaged skill output",
-    "local_state": ""
+    "local_state": "none"
   },
   "outputs": {
     "summary": "script JSON output",
-    "handoff": "",
-    "reports": []
+    "handoff": "PACKAGING_MANIFEST.json in the packaged skill",
+    "reports": ["<output_parent>/<source_skill_name>/PACKAGING_MANIFEST.json"]
   },
   "resume_policy": "Tool workflow; no LGWF work_dir resume."
 }

@@ -4,7 +4,6 @@ ENTRY route_apply_upgrade_entry;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_upgrade.instructions.{node}";
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
 
@@ -12,13 +11,17 @@ PY route_apply_upgrade_entry
   SCRIPT "scripts/route_apply_upgrade_entry.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.route_apply_entry_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY finish_apply_upgrade_skip
   SCRIPT "scripts/finish_apply_upgrade_skip.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.finish_apply_skip_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET apply_prompt_upgrade_shared_context {
   workspace file ".lgwf/prompt_upgrade_target.json";
@@ -60,7 +63,9 @@ REACT apply_prompt_upgrade MAX 3
     SCRIPT "scripts/decide_prompt_upgrade_apply.py"
     TIMEOUT 60
     RESULT state.lgwf_wf_prompt_upgrade.apply_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+    };
 
 ROUTE route_apply_upgrade_entry
   WHEN "apply" THEN apply_prompt_upgrade

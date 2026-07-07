@@ -4,7 +4,6 @@ ENTRY FLOW main;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 300;
-  instruction_path "lgwf_wf_dsl_upgrade.instructions.{node}";
   result_path "lgwf_wf_dsl_upgrade.results.{node}";
 }
 
@@ -12,7 +11,12 @@ PY classify_findings
   SCRIPT "scripts/classify_findings.py"
   TIMEOUT 180
   RESULT state.lgwf_wf_dsl_upgrade.classify_findings_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/batch_audit_result.json";
+    WRITE workspace file ".lgwf/classification_summary.json";
+    WRITE workspace file ".lgwf/classified_findings.json";
+  };
 
 FLOW main
   START classify_findings;

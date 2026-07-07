@@ -10,7 +10,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = (
     PACKAGE_ROOT
     / "wf"
-    / "04_confirm_business_flow"
+    / "02_confirm_business_flow"
     / "scripts"
     / "scaffold_package.py"
 )
@@ -76,8 +76,8 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
             }
         )
         all_paths = [*plan["create_dirs"], *plan["create_files"]]
-        self.assertIn("wf/02_confirm_requirements/workflow.lgwf", plan["create_files"])
-        self.assertNotIn("wf/02_confirm_requirements/00_collect_raw_intent/workflow.lgwf", all_paths)
+        self.assertIn("wf/01_confirm_requirements/workflow.lgwf", plan["create_files"])
+        self.assertNotIn("wf/01_confirm_requirements/00_collect_raw_intent/workflow.lgwf", all_paths)
         self.assertFalse(any(path.startswith("wf/tests") for path in all_paths))
         self.assertFalse(
             any(

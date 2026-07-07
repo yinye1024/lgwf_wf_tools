@@ -4,7 +4,6 @@ ENTRY prepare_prompt_upgrade_confirmation;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_wf_prompt_upgrade.instructions.{node}";
   result_path "lgwf_wf_prompt_upgrade.results.{node}";
 }
 
@@ -12,7 +11,9 @@ PY prepare_prompt_upgrade_confirmation
   SCRIPT "scripts/prepare_prompt_upgrade_confirmation.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.prepare_confirmation_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 APPROVAL confirm_prompt_upgrade
   PROMPT_REF "confirm_prompt_upgrade.md"
@@ -26,19 +27,25 @@ PY validate_prompt_upgrade_decision
   SCRIPT "scripts/validate_prompt_upgrade_decision.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.validate_decision_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY route_after_prompt_upgrade_decision
   SCRIPT "scripts/route_after_prompt_upgrade_decision.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.route_decision_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 PY finish_prompt_upgrade_confirmation
   SCRIPT "scripts/finish_prompt_upgrade_confirmation.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_prompt_upgrade.finish_confirmation_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 FLOW prepare_prompt_upgrade_confirmation
   THEN confirm_prompt_upgrade

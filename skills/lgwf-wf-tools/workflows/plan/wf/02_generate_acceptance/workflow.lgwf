@@ -4,7 +4,6 @@ ENTRY validate_acceptance_codex_inputs;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  instruction_path "lgwf_plan.acceptance.instructions.{node}";
   result_path "lgwf_plan.acceptance.results.{node}";
 }
 
@@ -12,7 +11,9 @@ PY validate_acceptance_codex_inputs
   SCRIPT "00_validate_acceptance_targets/scripts/validate_acceptance_codex_inputs.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.acceptance_input_validation_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+  };
 
 CONTEXT_SET generate_acceptance_proposal_shared_context {
   workspace file ".lgwf/react_task_request.json";
@@ -47,13 +48,20 @@ REACT generate_acceptance_proposal MAX 3
   DECIDE PY
     SCRIPT "00_generate_acceptance_proposal/scripts/decide.py"
     RESULT state.lgwf_plan.acceptance_decide_result
-    UPDATES_STATE;
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/react_acceptance_observe.json";
+      READ workspace file ".lgwf/react_acceptance_proposal.json";
+    };
 
 PY route_acceptance_generation
   SCRIPT "01_route_acceptance_generation/scripts/route_acceptance_generation.py"
   TIMEOUT 60
   RESULT state.lgwf_plan.acceptance_route_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    WRITE workspace file ".lgwf/react_acceptance_generation_direction.json";
+  };
 
 FLOW validate_acceptance_codex_inputs
   THEN generate_acceptance_proposal
