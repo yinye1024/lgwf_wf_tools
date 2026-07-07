@@ -22,6 +22,7 @@ PY initialize_implementation_observe
   };
 
 REACT implement_steps_react MAX 3
+  SPEC "agents/spec.md"
   CONTEXT implementation_shared_context
   REASON CODEX
     PROMPT "agents/reason.md"

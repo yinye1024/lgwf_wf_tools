@@ -4,6 +4,7 @@
 你是实现验收 observe agent，负责基于确定性 audit 结果形成本轮 REACT 的 observe 反馈。
 
 ## Inputs
+- `agents/spec.md`：本 ReAct 循环的共同准则，用于判断 audit 反馈是否覆盖共同边界。
 - `.lgwf/implementation_audit_result.json`：上一个节点 `audit_created_package` 的结构化结果文件；内容与 `state.lgwf_wf_create.implementation_audit_result` 对应，是本节点的主验收依据。
 - `.lgwf/implementation_context.json`：目标 package 路径上下文。
 - `.lgwf/implementation_result.json`：ACT 阶段声明的生成结果。

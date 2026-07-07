@@ -98,16 +98,19 @@ class PromptContractTest(unittest.TestCase):
         workflow = read("03_confirm_step_designs/workflow.lgwf")
         implement_workflow = read("04_implement_steps_react/workflow.lgwf")
         observe_workflow = read("04_implement_steps_react/observe_audit.lgwf")
-        prompt = read("04_implement_steps_react/agents/act.md")
+        spec = read("04_implement_steps_react/agents/spec.md")
         observe_prompt = read("04_implement_steps_react/agents/observe.md")
         self.assertIn("PY prepare_implementation_context", workflow)
         self.assertIn("apply_confirmed_step_designs THEN prepare_implementation_context", workflow)
         self.assertIn('WORKFLOW "04_implement_steps_react/workflow.lgwf"', root_workflow)
+        self.assertIn('SPEC "agents/spec.md"', implement_workflow)
+        self.assertTrue((ROOT / "04_implement_steps_react/agents/spec.md").exists())
+        self.assertFalse((ROOT / "03_confirm_step_designs/agents/implement_steps_react_spec.md").exists())
         self.assertIn('workspace file ".lgwf/implementation_context.json"', implement_workflow)
         self.assertIn('workspace file ".lgwf/implementation_observe.json"', implement_workflow)
-        self.assertIn("target_package_abs", prompt)
-        self.assertIn("target_package_root` 是 `workspace_root` 相对路径", prompt)
-        self.assertIn("禁止从 `work_dir` 使用 `..`", prompt)
+        self.assertIn("target_package_abs", spec)
+        self.assertIn("target_package_root` 是 `workspace_root` 相对路径", spec)
+        self.assertIn("禁止从 `work_dir` 使用 `..`", spec)
         self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
         self.assertIn("scripts/audit_created_package.py", observe_workflow)
         self.assertIn("CODEX observe_implementation", observe_workflow)
@@ -115,6 +118,39 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn(".lgwf/implementation_audit_result.json", observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_prompt)
         self.assertIn("脚本 audit", observe_prompt)
+
+    def test_implementation_react_shared_rules_live_in_spec(self) -> None:
+        spec = read("04_implement_steps_react/agents/spec.md")
+        role_prompts = {
+            "reason": read("04_implement_steps_react/agents/reason.md"),
+            "act": read("04_implement_steps_react/agents/act.md"),
+            "observe": read("04_implement_steps_react/agents/observe.md"),
+        }
+
+        self.assertIn("## ReAct 共同准则", spec)
+        for required in (
+            "`target_package_abs`",
+            "`target_package_root` 是 `workspace_root` 相对路径",
+            "禁止从 `work_dir` 使用 `..`",
+            "`wf/docs/steps/`",
+            "`implementation_result.generated_files`",
+            "`workflow.lgwf` 只能生成在 `wf/workflow.lgwf` 或 `wf/<stage>/workflow.lgwf`",
+            "不得生成 `wf/<stage>/<substage>/workflow.lgwf`",
+            "裸 `INPUT state.*`",
+            "不负责 `lgwf-wf-prompt-fix`",
+        ):
+            self.assertIn(required, spec)
+
+        for name, prompt in role_prompts.items():
+            self.assertIn("`agents/spec.md`", prompt, name)
+            for duplicated_rule in (
+                "`workflow.lgwf` 只能生成在",
+                "不得生成 `wf/<stage>/<substage>/workflow.lgwf`",
+                "根 `SKILL.md` 只允许",
+                "裸 `INPUT state.*`",
+                "不负责 `lgwf-wf-prompt-fix`",
+            ):
+                self.assertNotIn(duplicated_rule, prompt, name)
 
 
 if __name__ == "__main__":
