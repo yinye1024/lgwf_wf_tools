@@ -44,6 +44,7 @@ CODEX summarize_business_flow
     READ workspace file ".lgwf/e2e_target_request.normalized.json";
     READ workspace file ".lgwf/e2e_workflow_graph.json";
     READ workspace file ".lgwf/e2e_workflow_sources.json";
+    WRITE workspace file ".lgwf/e2e_business_flow_summary.json";
   };
 
 FLOW validate_target_request

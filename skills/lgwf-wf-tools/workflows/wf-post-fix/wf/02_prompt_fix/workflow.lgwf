@@ -70,6 +70,7 @@ PY finish_prompt_fix_stage
   RESULT state.lgwf_wf_post_fix.finish_prompt_fix_stage_result
   UPDATES_STATE
   CONTRACT {
+    READ state.lgwf_wf_post_fix.prompt_fix_result;
   };
 
 PY set_prompt_fix_auto

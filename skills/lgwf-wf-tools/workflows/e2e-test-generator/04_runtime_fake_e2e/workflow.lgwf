@@ -44,6 +44,7 @@ REACT runtime_fake_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
       READ workspace file ".lgwf/example.json";
+      WRITE workspace file ".lgwf/e2e_runtime_fake_design.json";
     }
   ACT CODEX
     PROMPT "02_generate/agents/act.md"
@@ -59,6 +60,7 @@ REACT runtime_fake_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
       READ workspace file ".lgwf/e2e_workflow_graph.json";
       READ workspace file ".lgwf/example.json";
+      WRITE workspace file ".lgwf/e2e_runtime_fake_generation.json";
     }
   OBSERVE CODEX
     PROMPT "03_validate/agents/observe.md"
@@ -73,6 +75,7 @@ REACT runtime_fake_e2e_react MAX 3
       READ workspace file ".lgwf/e2e_runtime_fake_design.json";
       READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
       READ workspace file ".lgwf/e2e_target_request.normalized.json";
+      WRITE workspace file ".lgwf/e2e_runtime_fake_observe.json";
     }
   DECIDE PY
     SCRIPT "04_repair/scripts/decide_runtime_fake.py"

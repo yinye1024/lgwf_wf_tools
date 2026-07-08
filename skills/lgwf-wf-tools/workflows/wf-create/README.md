@@ -2,10 +2,13 @@
 
 `lgwf-wf-create` 用于根据用户原始意图创建一个新的 LGWF workflow 初稿。当前目录已经是 `lgwf-wf-tools/workflows/wf-create` 下的内部 workflow package：外层承载说明、测试和固定 `ws/`，真实 workflow package root 位于 `wf/`，由 facade 根目录 `registry.json` 以 `wf-create` 派发。
 
+创建出的目标 workflow package 必须遵循 facade 共享的 [LGWF 工作流模块化创建指引](../../docs/LGWF_WF_MODULAR_DEVELOPMENT.md)：先确认 workflow、子 workflow、复杂 step 和目录边界，再落地入口文档、状态目录、产物和验证契约。
+
 ## 目标
 
 - 固化 `collect_raw_intent` 到 `summarize_create_result` 的主流程阶段顺序。
 - 提前锁定目录结构、节点命名和包内相对路径约束。
+- 在需求、业务流、步骤设计和实现阶段持续应用 workflow 模块化边界。
 - 为后续需求方案、业务流转、步骤设计和实现初稿阶段提供稳定落位点。
 
 ## 第一版范围
@@ -73,7 +76,7 @@
 
 步骤设计和实现阶段当前已补齐以下契约：
 
-- `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，供后续 Codex 节点读取。
+- `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，从 facade docs 复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供后续 Codex 节点读取。
 - `design_steps_react`：定义输出为 `docs/steps/*.md` 的可确认步骤设计文档草案，要求覆盖目标、输入、输出、依赖和实现建议。
 - `confirm_step_designs`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分设计草案审阅与 confirm 后固化。
 - `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；`observe` 执行 authoring audit check，失败反馈回下一轮修复，同时明确不负责 prompt 修复、agent 化和自动修复。
@@ -121,7 +124,7 @@
 
 - 只按已确认设计文档生成 workflow 初稿文件与目录。
 - 设计文档字段必须能被实现阶段直接消费，避免接口脱节。
-- 必须按 `dsl-assist` 规范保持根 workflow 薄编排，阶段细节优先拆到子 workflow，并保证所有子 workflow 可被递归审计。
+- 必须按 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md` 规范保持根 workflow 薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，并保证所有子 workflow 可被递归审计。
 - `observe` 必须执行 `lgwf.py audit` 类 authoring audit check，并把失败 stderr 写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
 - `decide` 只根据 observe 的 audit 结果决定 `continue` 或 `exit`。
 

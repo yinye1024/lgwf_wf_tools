@@ -23,4 +23,6 @@ CODEX audit_target_prompts
     READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
     READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/*.md";
     READ workspace file ".lgwf/prompt_fix_target.json";
+    READ workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist";
+    WRITE workspace file ".lgwf/prompt_acceptance/audit.json";
   };

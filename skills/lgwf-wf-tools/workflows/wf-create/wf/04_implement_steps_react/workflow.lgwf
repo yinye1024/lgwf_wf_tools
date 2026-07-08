@@ -59,8 +59,6 @@ REACT implement_steps_react MAX 3
       WRITE workspace file ".lgwf/implementation_result.json";
     }
   OBSERVE WORKFLOW observe_audit
-  CONTRACT {
-  };
     WORKFLOW "observe_audit.lgwf"
     RESULT state.lgwf_wf_create.implementation_observe_result
     CONTRACT {

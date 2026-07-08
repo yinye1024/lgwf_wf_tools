@@ -1,0 +1,33 @@
+{
+  "bootstrap_inputs": [],
+  "script_writes": {
+    "act_codex_42": [
+      ".lgwf/prompt_workflow_inspection.json"
+    ],
+    "act_codex_84": [
+      ".lgwf/wf_create_input_proposal.json"
+    ],
+    "collect_prompt_workflow_target": [
+      ".lgwf/prompt_convert_target.json"
+    ],
+    "confirm_create_input": [
+      ".lgwf/wf_create_input_approval.json"
+    ],
+    "finalize_create_input": [
+      ".lgwf/wf_create_input.json"
+    ],
+    "prepare_payload": [
+      ".lgwf/wf_create_input_for_wf_create.json",
+      ".lgwf/wf_create_payload.json"
+    ],
+    "reason_codex_31": [
+      ".lgwf/prompt_workflow_inspection_reason.json"
+    ],
+    "reason_codex_72": [
+      ".lgwf/wf_create_input_reason.json"
+    ],
+    "verify_business_parity": [
+      ".lgwf/business_parity_report.json"
+    ]
+  }
+}

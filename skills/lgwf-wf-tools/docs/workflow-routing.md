@@ -17,7 +17,7 @@ python scripts/list_workflows.py
 | Workflow id | 使用时机 |
 | --- | --- |
 | `wf-fix` | 目标是运行失败、卡住、产物不对、需要自动诊断修复。 |
-| `wf-create` | 目标是从原始意图创建新的 LGWF workflow 初稿；使用 `wf-create`。 |
+| `wf-create` | 目标是从原始意图创建新的 LGWF workflow 初稿；使用 `wf-create`，并按 [LGWF_WF_MODULAR_DEVELOPMENT.md](LGWF_WF_MODULAR_DEVELOPMENT.md) 约束 workflow、子 workflow、复杂 step 和目录边界。 |
 | `wf-convert` | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告。 |
 | `wf-prompt-fix` | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足。 |
 | `wf-prompt-upgrade` | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量。 |
@@ -57,3 +57,5 @@ python scripts\run_skill_workflow.py --workflow-id <id> --input-json-file <utf8-
 命中 `wf-create` 后，主 agent 必须启动或继续 `wf-create` run，并按 `workflows/wf-create/AGENTS.md` 处理 approval、resume、monitor 和 handoff。
 
 禁止主 agent 直接手工创建目标 workflow package、直接写目标 DSL 或 registry entry，或用 `apply_patch` 脚手架替代 `wf-create` 的确认阶段。只有在 `wf-create` 已启动或继续后出现可复核的 runtime/子进程异常，且用户基于证据明确确认恢复方案时，才允许人工恢复。
+
+`wf-create` 的需求、业务流、步骤设计和初稿实现阶段必须读取 [LGWF_WF_MODULAR_DEVELOPMENT.md](LGWF_WF_MODULAR_DEVELOPMENT.md)，用该文档决定阶段是否拆为子 workflow、保留为复杂 step，以及对应目录、状态和验证边界。

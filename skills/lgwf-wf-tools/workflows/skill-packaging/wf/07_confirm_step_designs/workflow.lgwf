@@ -10,27 +10,42 @@ DEFAULTS {
 PY prepare_step_design_confirmation
   SCRIPT "scripts/prepare_step_design_confirmation.py"
   INPUT state.confirmed_business_flow
-  RESULT state.step_design_confirmation;
+  RESULT state.step_design_confirmation
+  CONTRACT {
+    READ state.confirmed_business_flow;
+  };
 
 APPROVAL confirm_step_designs
   CONTEXT state.step_design_confirmation
   PROMPT "agents/confirm_step_designs.md"
-  RESULT state.step_design_approval;
+  RESULT state.step_design_approval
+  CONTRACT {
+    READ state.step_design_confirmation;
+  };
 
 PY materialize_packaged_skill
   SCRIPT "scripts/materialize_packaged_skill.py"
   INPUT state.confirmed_business_flow
-  RESULT state.materialized_package;
+  RESULT state.materialized_package
+  CONTRACT {
+    READ state.confirmed_business_flow;
+  };
 
 PY validate_packaged_skill
   SCRIPT "scripts/validate_packaged_skill.py"
   INPUT state.materialized_package
-  RESULT state.package_validation;
+  RESULT state.package_validation
+  CONTRACT {
+    READ state.materialized_package;
+  };
 
 PY apply_confirmed_step_designs
   SCRIPT "scripts/apply_confirmed_step_designs.py"
   INPUT state.package_validation
-  RESULT state.implementation_result;
+  RESULT state.implementation_result
+  CONTRACT {
+    READ state.package_validation;
+  };
 
 ROUTE confirm_step_designs
   WHEN "approve" THEN materialize_packaged_skill

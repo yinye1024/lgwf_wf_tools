@@ -10,12 +10,18 @@ DEFAULTS {
 CODEX summarize_packaging_result
   PROMPT "agents/summarize_packaging_result.md"
   INPUT state.implementation_result
-  RESULT state.summary_context;
+  RESULT state.summary_context
+  CONTRACT {
+    READ state.implementation_result;
+  };
 
 PY summarize_create_result
   SCRIPT "scripts/summarize_create_result.py"
   INPUT state.summary_context
-  RESULT state.summary_result;
+  RESULT state.summary_result
+  CONTRACT {
+    READ state.summary_context;
+  };
 
 FLOW main
   START summarize_packaging_result

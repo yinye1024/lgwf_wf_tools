@@ -2,6 +2,8 @@
 
 本规范定义 `lgwf-wf-create` 生成 workflow 初稿时必须遵循的 package 结构。它面向 `design_steps_react`、`implement_steps_react` 和人工审阅者；机器可读模板见 `scaffold_package_template.json`，脚手架输出契约见 `scaffold_result_contract.md`。
 
+本规范是 workflow 模块化创建指引的脚手架落地细则。它在源码维护态引用 facade 共享的 `docs/LGWF_WF_MODULAR_DEVELOPMENT.md`；如果后续作为运行态 Codex context 使用，调用方必须先把共享指引镜像到 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`，不能要求运行态 Codex 直接读取 facade docs。涉及 workflow、子 workflow、复杂 step、目录边界、状态隔离和验证方式时，先遵循对应的源码共享指引或运行态镜像，再应用本文的模板字段。
+
 ## 目标结构
 
 默认生成“外层 package + 内层 workflow root”的结构：

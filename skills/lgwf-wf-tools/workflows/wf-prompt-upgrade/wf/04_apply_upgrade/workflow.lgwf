@@ -53,6 +53,8 @@ REACT apply_prompt_upgrade MAX 3
       READ workspace file ".lgwf/prompt_upgrade/inventory.json";
       READ workspace file ".lgwf/prompt_upgrade/proposal.json";
       READ workspace file ".lgwf/prompt_upgrade_target.json";
+      READ workspace file ".lgwf/prompt_upgrade/apply_review.json";
+      WRITE workspace file ".lgwf/prompt_upgrade/apply_plan.json";
     }
 
   ACT CODEX
@@ -76,6 +78,7 @@ REACT apply_prompt_upgrade MAX 3
       READ workspace file ".lgwf/prompt_upgrade/decision.json";
       READ workspace file ".lgwf/prompt_upgrade/inventory.json";
       READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+      WRITE workspace file ".lgwf/prompt_upgrade/apply_review.json";
     }
 
   DECIDE PY

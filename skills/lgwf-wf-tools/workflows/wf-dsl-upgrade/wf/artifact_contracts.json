@@ -1,0 +1,49 @@
+{
+  "bootstrap_inputs": [],
+  "script_writes": {
+    "apply_upgrade_rules": [
+      ".lgwf/applied_changes.json",
+      ".lgwf/applied_target_manifest.json"
+    ],
+    "batch_audit_stage": [
+      ".lgwf/batch_audit_result.json",
+      ".lgwf/batch_audit_stats.json"
+    ],
+    "build_target_manifest": [
+      ".lgwf/target_manifest.json",
+      ".lgwf/target_scope_validation.json"
+    ],
+    "build_upgrade_plan": [
+      ".lgwf/upgrade_plan.json",
+      ".lgwf/upgrade_plan_summary.json"
+    ],
+    "capture_approval_decision": [
+      ".lgwf/upgrade_plan_approval.json"
+    ],
+    "classify_findings": [
+      ".lgwf/classification_summary.json",
+      ".lgwf/classified_findings.json"
+    ],
+    "classify_findings_stage": [
+      ".lgwf/classification_summary.json",
+      ".lgwf/classified_findings.json"
+    ],
+    "finalize_upgrade_plan_approval": [
+      ".lgwf/upgrade_plan_approval.json"
+    ],
+    "prepare_approval_context": [
+      ".lgwf/upgrade_plan_confirmation_context.json"
+    ],
+    "render_upgrade_summary": [
+      ".lgwf/result_summary.json"
+    ],
+    "run_batch_audit": [
+      ".lgwf/batch_audit_result.json",
+      ".lgwf/batch_audit_stats.json"
+    ],
+    "verify_upgraded_workflows": [
+      ".lgwf/post_upgrade_audit_result.json",
+      ".lgwf/post_upgrade_diff_summary.json"
+    ]
+  }
+}

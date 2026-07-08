@@ -26,7 +26,12 @@ APPROVAL select_prompt_fixes
   WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection
   RESULT state.lgwf_wf_prompt_fix.prompt_fix_selection_result
   PERSIST ".lgwf/prompt_acceptance/fix_selection.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ state.lgwf_wf_prompt_fix.prompt_fix_selection_context;
+    WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection;
+  };
 
 PY validate_prompt_fix_selection
   SCRIPT "scripts/validate_prompt_fix_selection.py"

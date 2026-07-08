@@ -13,7 +13,12 @@ APPROVAL init_prompt_fix_target
   WRITE state.lgwf_wf_prompt_fix.prompt_fix_target
   RESULT state.lgwf_wf_prompt_fix.init_target_result
   PERSIST ".lgwf/prompt_fix_target.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_fix_target.json";
+    READ state.prompt_fix_target;
+    WRITE state.lgwf_wf_prompt_fix.prompt_fix_target;
+  };
 
 PY check_lgwf_client_assist
   SCRIPT "scripts/check_lgwf_client_assist.py"

@@ -48,7 +48,6 @@ STEP enrich_contracts_react
   CONTRACT {
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/implementation_result.json";
-    READ workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
     WRITE workspace file ".lgwf/contract_enrichment_result.json";
     WRITE workspace file ".lgwf/contract_observe.json";
   };
@@ -80,6 +79,7 @@ PY prepare_post_fix_handoff
   RESULT state.lgwf_wf_create.post_fix_handoff_payload
   UPDATES_STATE
   CONTRACT {
+    READ state.lgwf_wf_create.summary_result;
   };
 
 HANDOFF handoff_wf_post_fix

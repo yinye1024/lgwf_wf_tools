@@ -9,27 +9,41 @@ DEFAULTS {
 
 PY finish_raw_intent
   SCRIPT "scripts/finish_raw_intent.py"
-  RESULT state.packaging_request;
+  RESULT state.packaging_request
+  CONTRACT {
+  };
 
 CODEX draft_requirements
   PROMPT "agents/draft_requirements.md"
   INPUT state.packaging_request
-  RESULT state.requirements_proposal;
+  RESULT state.requirements_proposal
+  CONTRACT {
+    READ state.packaging_request;
+  };
 
 PY prepare_requirements_confirmation
   SCRIPT "scripts/prepare_requirements_confirmation.py"
   INPUT state.requirements_proposal
-  RESULT state.requirements_confirmation;
+  RESULT state.requirements_confirmation
+  CONTRACT {
+    READ state.requirements_proposal;
+  };
 
 APPROVAL confirm_requirements
   CONTEXT state.requirements_confirmation
   PROMPT "agents/confirm_requirements.md"
-  RESULT state.requirements_approval;
+  RESULT state.requirements_approval
+  CONTRACT {
+    READ state.requirements_confirmation;
+  };
 
 PY apply_confirmed_requirements
   SCRIPT "scripts/apply_confirmed_requirements.py"
   INPUT state.requirements_proposal
-  RESULT state.confirmed_requirements;
+  RESULT state.confirmed_requirements
+  CONTRACT {
+    READ state.requirements_proposal;
+  };
 
 ROUTE confirm_requirements
   WHEN "approve" THEN apply_confirmed_requirements

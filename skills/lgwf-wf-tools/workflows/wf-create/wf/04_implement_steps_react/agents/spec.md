@@ -24,6 +24,7 @@
 - `.lgwf/implementation_observe.json` 是上一轮 observe 反馈；如果 `passed=false` 或 `audit.ok=false`，下一轮必须优先修复 audit 失败，不得扩展新范围。
 - `.lgwf/create_reference_context/dsl-assist/*.md` 是 LGWF DSL 创建、审计和 workflow 拆分规范。
 - `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md` 和 `.lgwf/create_reference_context/scaffold/scaffold_package_template.json` 是 package profile、目录结构和文件计划的脚手架规范。
+- `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md` 是 workflow、子 workflow、复杂 step、目录边界、状态隔离和验证入口的总纲。
 - 不要从 `ws/02_confirm_business_flow/resources/...` 读取 scaffold 资源；Codex 子进程的 workspace root 是 `ws/`，scaffold 资源已由 `prepare_dsl_reference_context` 镜像到 `.lgwf/create_reference_context/scaffold/`。
 
 ### 实现范围
@@ -45,6 +46,7 @@
 - 根 `wf/workflow.lgwf` 只负责编排阶段；多个节点、人工确认、循环或修复逻辑必须下沉到 `wf/<stage>/workflow.lgwf`。
 - `wf/<stage>/workflow.lgwf` 内部不得再通过 `STEP ... WORKFLOW` 引用孙级 workflow；阶段内复杂逻辑应在本文件内用 `PY`、`CODEX`、`REACT`、`APPROVAL`、`ROUTE` 编排。
 - 每个 `wf/<stage>/` 目录保持自包含，拥有本阶段的 `workflow.lgwf`、`agents/`、`scripts/`、`resources/`。
+- 不值得独立运行但需要独立说明和验收的内容应保留为复杂 step，并在 `wf/docs/steps/*.md` 或阶段私有 `resources/` 中写明目标、输入、输出、依赖、验证和禁止事项。
 - 根 `SKILL.md` 只允许在 `scaffold_plan.package_profile=skill_wrapped_workflow` 时生成；默认 `internal_workflow_package` 禁止生成根 `SKILL.md`。
 - 所有 resource path 必须使用目标 package 内相对路径，不得使用绝对路径、盘符路径或 `..`。
 - 运行状态边界仍归 `ws/.lgwf`；不得向目标 package 根目录写入 `.lgwf`。

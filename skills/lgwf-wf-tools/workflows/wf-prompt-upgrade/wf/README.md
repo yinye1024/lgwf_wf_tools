@@ -4,6 +4,8 @@
 
 根 `workflow.lgwf` 只编排 `prepare_target`、`design_upgrade`、`confirm_upgrade`、`apply_upgrade` 和 `summary` 五个阶段。每个阶段的脚本、prompt、approval 和执行细节由对应第一层子 workflow 维护。
 
+本 workflow 的两层目录结构是 facade 共享 `docs/LGWF_WF_MODULAR_DEVELOPMENT.md` 的局部实例：根 workflow 保持薄编排，阶段目录自包含 prompt、spec、resource、script 和验证边界。
+
 目录结构只允许两层 workflow：
 
 - 第一层：`wf/workflow.lgwf` 主编排。

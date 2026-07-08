@@ -14,7 +14,12 @@ APPROVAL collect_react_task_request
   RESULT state.lgwf_plan.task_request_result
   PERSIST ".lgwf/react_task_request.json"
   ROUTE_ON_DECISION
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/react_task_request.json";
+    READ state.input;
+    WRITE state.lgwf_plan.task_request;
+  };
 
 PY finish_react_task_request
   SCRIPT "00_collect_react_task_request/scripts/finish_react_task_request.py"
@@ -50,6 +55,8 @@ REACT generate_plan_proposal MAX 3
     RESULT state.lgwf_plan.plan_reason_result
     CONTRACT {
       READ workspace file ".lgwf/react_task_request.json";
+      READ workspace file ".lgwf/react_task_plan_observe.json";
+      WRITE workspace file ".lgwf/react_task_plan_reason.md";
     }
   ACT CODEX
     PROMPT "02_generate_plan_proposal/agents/act.md"
@@ -62,6 +69,7 @@ REACT generate_plan_proposal MAX 3
       READ workspace file ".lgwf/react_task_plan.json";
       READ workspace file ".lgwf/react_task_plan_reason.md";
       READ workspace file ".lgwf/react_task_request.json";
+      WRITE workspace file ".lgwf/react_task_plan_proposal.json";
     }
   OBSERVE CODEX
     PROMPT "02_generate_plan_proposal/agents/observe.md"
@@ -73,6 +81,7 @@ REACT generate_plan_proposal MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_task_plan_proposal.json";
       READ workspace file ".lgwf/react_task_request.json";
+      WRITE workspace file ".lgwf/react_task_plan_observe.json";
     }
   DECIDE PY
     SCRIPT "02_generate_plan_proposal/scripts/decide.py"

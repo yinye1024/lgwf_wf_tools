@@ -88,8 +88,28 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
 
         context = result["lgwf_wf_create.dsl_reference_context"]
         self.assertTrue(context["reference_context_ready"])
+        self.assertTrue(context["modular_development_context_ready"])
+        self.assertTrue(context["module_contract_context_ready"])
         self.assertTrue((self.work_dir / ".lgwf" / "create_reference_context" / "dsl-assist" / "guide.md").is_file())
         self.assertTrue((self.work_dir / ".lgwf" / "create_reference_context" / "dsl_reference_context.json").is_file())
+        self.assertTrue(
+            (
+                self.work_dir
+                / ".lgwf"
+                / "create_reference_context"
+                / "workflow-modular-development"
+                / "LGWF_WF_MODULAR_DEVELOPMENT.md"
+            ).is_file()
+        )
+        self.assertTrue(
+            (
+                self.work_dir
+                / ".lgwf"
+                / "create_reference_context"
+                / "module-contract"
+                / "module-contract.md"
+            ).is_file()
+        )
         self.assertFalse((self.workflow_root / ".lgwf").exists())
 
     def test_prepare_implementation_context_resolves_target_from_repo_root_not_run_cwd(self) -> None:

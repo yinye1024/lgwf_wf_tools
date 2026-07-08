@@ -26,7 +26,12 @@ APPROVAL confirm_prompt_upgrade
   WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision
   RESULT state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision_result
   PERSIST ".lgwf/prompt_upgrade/decision.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/decision.json";
+    READ state.lgwf_wf_prompt_upgrade.prompt_upgrade_confirmation_context;
+    WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision;
+  };
 
 PY validate_prompt_upgrade_decision
   SCRIPT "scripts/validate_prompt_upgrade_decision.py"

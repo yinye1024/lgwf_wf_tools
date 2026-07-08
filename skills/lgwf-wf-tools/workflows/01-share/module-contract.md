@@ -2,6 +2,8 @@
 
 本文件定义 `lgwf_wf_tools` 仓库内 skill 和 workflow 的统一模块边界。目标是让每个模块从自己的入口文档即可理解定位、入口、依赖、状态、产物、验证和禁止事项；自包含不表示复制 runtime 或 vendor，而是把运行和维护契约写清楚。
 
+创建或调整 LGWF workflow 的目录边界、子 workflow 拆分、复杂 step 自包含和状态隔离时，先读取 facade 根目录 `docs/LGWF_WF_MODULAR_DEVELOPMENT.md`；本文负责在边界确定后补齐模块入口契约。
+
 ## 模块类型
 
 - `codex_skill`：位于 `skills/<skill>/` 的 Codex skill package，必须有 `SKILL.md`、`AGENTS.md` 和 `README.md`。
@@ -48,6 +50,6 @@
 
 ## 维护要求
 
-- 新增、转换、修复或优化任何 skill/workflow 时，先确认模块类型，再按对应契约补齐入口文档和 `entry_contract.json`。
+- 新增、转换、修复或优化任何 skill/workflow 时，先按 `docs/LGWF_WF_MODULAR_DEVELOPMENT.md` 确认 workflow、子 workflow、复杂 step 和目录边界，再确认模块类型，并按对应契约补齐入口文档和 `entry_contract.json`。
 - `lgwf-wf-tools` 内部 workflow 必须由 `registry.json` 派发；`workflows/01-share/` 只保存共享规则，不注册为 workflow。
 - 共享规则可以被引用，但每个模块仍必须在自己的 `AGENTS.md` 中写出自身的具体入口、依赖、状态边界和验证命令。

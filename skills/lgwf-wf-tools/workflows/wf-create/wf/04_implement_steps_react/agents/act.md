@@ -15,6 +15,7 @@
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_template_spec.md` 镜像而来。
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_package_template.json`：由 workflow resource `02_confirm_business_flow/resources/scaffold_package_template.json` 镜像而来，作为生成文件清单和 profile 语义的参考。
 - `.lgwf/create_reference_context/dsl-assist/*.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
+- `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：workflow 模块化创建总纲。
 - `.lgwf/implementation_observe.json`：如果存在，必须优先修复其中确定性 audit 失败项。
 - 当前 target package 中已存在、且被批准步骤明确引用的相关文件与目录。
 

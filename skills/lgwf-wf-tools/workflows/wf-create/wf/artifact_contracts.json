@@ -9,6 +9,7 @@
       ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md",
       ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md",
       ".lgwf/create_reference_context/scaffold/scaffold_package_template.json",
+      ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md",
       ".lgwf/create_reference_context/module-contract/module-contract.md"
     ]
   }

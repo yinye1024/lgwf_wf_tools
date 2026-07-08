@@ -58,8 +58,6 @@ REACT enrich_contracts_react MAX 3
       WRITE workspace file ".lgwf/contract_enrichment_result.json";
     }
   OBSERVE WORKFLOW observe_contract_audit
-  CONTRACT {
-  };
     WORKFLOW "observe_audit.lgwf"
     RESULT state.lgwf_wf_create.contract_observe_result
     CONTRACT {

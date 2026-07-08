@@ -9,6 +9,7 @@ from typing import Any
 ARTIFACT_ROOT = ".lgwf/create_reference_context"
 REFERENCE_CONTEXT_ROOT = "dsl-assist"
 SCAFFOLD_CONTEXT_ROOT = "scaffold"
+MODULAR_DEVELOPMENT_CONTEXT_ROOT = "workflow-modular-development"
 MODULE_CONTRACT_CONTEXT_ROOT = "module-contract"
 REFERENCE_FILES = (
     ("references/dsl-assist/guide.md", "guide.md"),
@@ -19,6 +20,9 @@ SCAFFOLD_REFERENCE_FILES = (
     ("02_confirm_business_flow/resources/scaffold_template_spec.md", "scaffold_template_spec.md"),
     ("02_confirm_business_flow/resources/scaffold_result_contract.md", "scaffold_result_contract.md"),
     ("02_confirm_business_flow/resources/scaffold_package_template.json", "scaffold_package_template.json"),
+)
+MODULAR_DEVELOPMENT_REFERENCE_FILES = (
+    ("docs/LGWF_WF_MODULAR_DEVELOPMENT.md", "LGWF_WF_MODULAR_DEVELOPMENT.md"),
 )
 MODULE_CONTRACT_REFERENCE_FILES = (
     ("05_enrich_contracts_react/resources/module-contract.md", "module-contract.md"),
@@ -95,6 +99,33 @@ def find_workflow_root(start: Path) -> Path:
     raise FileNotFoundError("未找到 wf-create workflow root，无法复制 scaffold reference context")
 
 
+def find_facade_root(start: Path, work_dir: Path | None = None) -> Path:
+    roots = [start.resolve()]
+    if work_dir is not None:
+        roots.append(work_dir.resolve())
+
+    seen: set[Path] = set()
+    checked: list[Path] = []
+    for root in roots:
+        for parent in (root, *root.parents):
+            if parent in seen:
+                continue
+            seen.add(parent)
+            candidates = (
+                parent,
+                parent / "lgwf-wf-tools",
+                parent / "skills" / "lgwf-wf-tools",
+                parent / "workspace" / "skills" / "lgwf-wf-tools",
+            )
+            for candidate in candidates:
+                marker = candidate / "docs" / "LGWF_WF_MODULAR_DEVELOPMENT.md"
+                checked.append(marker)
+                if marker.is_file():
+                    return candidate
+    checked_text = ", ".join(str(path) for path in checked)
+    raise FileNotFoundError(f"未找到 facade 根目录，无法复制 workflow 模块化规范；已检查: {checked_text}")
+
+
 def prepare_scaffold_context(workflow_root: Path, out_dir: Path) -> dict[str, Any]:
     context_root = out_dir / SCAFFOLD_CONTEXT_ROOT
     if context_root.exists():
@@ -116,6 +147,30 @@ def prepare_scaffold_context(workflow_root: Path, out_dir: Path) -> dict[str, An
         "missing_scaffold_files": missing,
         "scaffold_context_ready": not missing,
         "source_workflow_root": str(workflow_root),
+    }
+
+
+def prepare_modular_development_context(facade_root: Path, out_dir: Path) -> dict[str, Any]:
+    context_root = out_dir / MODULAR_DEVELOPMENT_CONTEXT_ROOT
+    if context_root.exists():
+        shutil.rmtree(context_root)
+    copied: list[str] = []
+    missing: list[str] = []
+    for source_rel, dest_rel in MODULAR_DEVELOPMENT_REFERENCE_FILES:
+        source = facade_root / source_rel
+        dest = context_root / dest_rel
+        if not source.is_file():
+            missing.append(source_rel)
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, dest)
+        copied.append(f"{ARTIFACT_ROOT}/{MODULAR_DEVELOPMENT_CONTEXT_ROOT}/{dest_rel}".replace("\\", "/"))
+    return {
+        "modular_development_context_root": f"{ARTIFACT_ROOT}/{MODULAR_DEVELOPMENT_CONTEXT_ROOT}",
+        "copied_modular_development_files": copied,
+        "missing_modular_development_files": missing,
+        "modular_development_context_ready": not missing,
+        "source_facade_root": str(facade_root),
     }
 
 
@@ -147,10 +202,13 @@ def main() -> None:
     out_dir = lgwf_dir(root) / "create_reference_context"
     skill_dir = find_bundled_client_dir(Path(__file__), root)
     workflow_root = find_workflow_root(Path(__file__))
+    facade_root = find_facade_root(Path(__file__), root)
     result = prepare_reference_context(skill_dir, out_dir)
     scaffold_result = prepare_scaffold_context(workflow_root, out_dir)
+    modular_development_result = prepare_modular_development_context(facade_root, out_dir)
     module_contract_result = prepare_module_contract_context(workflow_root, out_dir)
     result.update(scaffold_result)
+    result.update(modular_development_result)
     result.update(module_contract_result)
     (out_dir / "dsl_reference_context.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2),
@@ -160,8 +218,10 @@ def main() -> None:
         raise RuntimeError("bundled lgwf-client-assist dsl reference context is incomplete")
     if not result["scaffold_context_ready"]:
         raise RuntimeError("wf-create scaffold reference context is incomplete")
+    if not result["modular_development_context_ready"]:
+        raise RuntimeError("wf-create workflow modular development context is incomplete")
     if not result["module_contract_context_ready"]:
-        raise RuntimeError("wf-create module contract reference context is incomplete")
+        raise RuntimeError("wf-create module contract context is incomplete")
     output_state(result)
 
 

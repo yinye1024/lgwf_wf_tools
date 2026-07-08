@@ -37,6 +37,7 @@ REACT inspect_prompt_workflow_react MAX 3
       READ workspace file ".lgwf/prompt_file_index.json";
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
       READ workspace file ".lgwf/prompt_workflow_inspection_observe.json";
+      WRITE workspace file ".lgwf/prompt_workflow_inspection_reason.json";
     }
   ACT CODEX
     PROMPT "agents/inspect_act.md"
@@ -46,6 +47,7 @@ REACT inspect_prompt_workflow_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/prompt_file_index.json";
       READ workspace file ".lgwf/prompt_workflow_inspection_reason.json";
+      WRITE workspace file ".lgwf/prompt_workflow_inspection.json";
     }
   OBSERVE CODEX
     PROMPT "agents/inspect_observe.md"
@@ -54,6 +56,7 @@ REACT inspect_prompt_workflow_react MAX 3
     RESULT state.lgwf_wf_convert.inspect_observe_result
     CONTRACT {
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      WRITE workspace file ".lgwf/prompt_workflow_inspection_observe.json";
     }
   DECIDE PY
     SCRIPT "scripts/decide_inspection.py"
@@ -77,6 +80,7 @@ REACT propose_create_input_react MAX 3
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
       READ workspace file ".lgwf/wf_create_input_observe.json";
       READ workspace file ".lgwf/wf_create_input_proposal.json";
+      WRITE workspace file ".lgwf/wf_create_input_reason.json";
     }
   ACT CODEX
     PROMPT "agents/propose_act.md"
@@ -87,6 +91,7 @@ REACT propose_create_input_react MAX 3
       READ workspace file ".lgwf/prompt_convert_target.json";
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
       READ workspace file ".lgwf/wf_create_input_reason.json";
+      WRITE workspace file ".lgwf/wf_create_input_proposal.json";
     }
   OBSERVE CODEX
     PROMPT "agents/propose_observe.md"
@@ -94,6 +99,7 @@ REACT propose_create_input_react MAX 3
     RESULT state.lgwf_wf_convert.propose_observe_result
     CONTRACT {
       READ workspace file ".lgwf/wf_create_input_proposal.json";
+      WRITE workspace file ".lgwf/wf_create_input_observe.json";
     }
   DECIDE PY
     SCRIPT "scripts/decide_create_input.py"
@@ -109,7 +115,11 @@ REVIEW confirm_create_input
   CONTEXT state.lgwf_wf_convert.wf_create_input_proposal
   RESULT state.lgwf_wf_convert.wf_create_input_decision_result
   PERSIST ".lgwf/wf_create_input_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/wf_create_input_approval.json";
+    READ state.lgwf_wf_convert.wf_create_input_proposal;
+  };
 
 PY finalize_create_input
   SCRIPT "scripts/finalize_create_input.py"

@@ -2,6 +2,8 @@
 
 `scaffold_package` 的输出是确定性 `scaffold_result`，用于说明目标 package 将如何被创建，供后续步骤设计和实现阶段消费。
 
+`scaffold_result` 必须能证明目标 package 遵循 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md` 中的 workflow 模块化创建指引：workflow package、子 workflow、复杂 step、运行状态和验证入口都有明确边界。
+
 ## 最小结构
 
 `scaffold_result` 至少应包含以下字段：

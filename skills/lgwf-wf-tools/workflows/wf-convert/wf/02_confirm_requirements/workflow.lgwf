@@ -12,4 +12,9 @@ APPROVAL collect_prompt_workflow_target
   WRITE state.lgwf_wf_convert.prompt_convert_target
   RESULT state.lgwf_wf_convert.prompt_convert_target_result
   PERSIST ".lgwf/prompt_convert_target.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_convert_target.json";
+    READ state.lgwf_wf_convert.target_context;
+    WRITE state.lgwf_wf_convert.prompt_convert_target;
+  };

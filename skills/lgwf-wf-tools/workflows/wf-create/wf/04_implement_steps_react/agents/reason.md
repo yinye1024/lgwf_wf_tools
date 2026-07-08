@@ -11,6 +11,7 @@
 - `.lgwf/implementation_observe.json`：如果存在，表示上一轮确定性 observe 的 audit 结果。
 - `.lgwf/create_reference_context/dsl-assist/*.md`：LGWF DSL 创建和 audit 规则。
 - `.lgwf/create_reference_context/scaffold/*.md|*.json`：wf-create 脚手架规则。
+- `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：workflow 模块化创建总纲。
 
 ## Task
 1. 先按 `agents/spec.md` 识别本轮必须遵守的共同准则。

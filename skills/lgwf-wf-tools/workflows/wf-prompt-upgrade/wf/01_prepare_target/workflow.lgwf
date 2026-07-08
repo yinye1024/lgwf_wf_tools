@@ -13,7 +13,12 @@ APPROVAL init_prompt_upgrade_target
   WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_target
   RESULT state.lgwf_wf_prompt_upgrade.init_target_result
   PERSIST ".lgwf/prompt_upgrade_target.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade_target.json";
+    READ state.prompt_upgrade_target;
+    WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_target;
+  };
 
 PY check_lgwf_client_assist
   SCRIPT "scripts/check_lgwf_client_assist.py"

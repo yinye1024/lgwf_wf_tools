@@ -70,6 +70,7 @@ PY finish_e2e_generate_stage
   RESULT state.lgwf_wf_post_fix.finish_e2e_generate_stage_result
   UPDATES_STATE
   CONTRACT {
+    READ state.lgwf_wf_post_fix.e2e_generate_result;
   };
 
 PY set_e2e_generate_auto

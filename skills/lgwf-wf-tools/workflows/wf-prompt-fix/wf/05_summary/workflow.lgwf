@@ -47,7 +47,12 @@ APPROVAL confirm_prompt_acceptance
   WRITE state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation_result
   PERSIST ".lgwf/prompt_acceptance/confirmation.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/confirmation.json";
+    READ state.lgwf_wf_prompt_fix.prompt_acceptance_summary;
+    WRITE state.lgwf_wf_prompt_fix.prompt_acceptance_confirmation;
+  };
 
 FLOW summarize_prompt_acceptance
   THEN route_after_prompt_acceptance_summary;

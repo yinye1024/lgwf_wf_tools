@@ -21,7 +21,11 @@ REVIEW confirm_plan_and_acceptance
   CONTEXT state.lgwf_plan.confirmation_context
   RESULT state.lgwf_plan.contract_approval_result
   PERSIST ".lgwf/react_task_contract_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/react_task_contract_approval.json";
+    READ state.lgwf_plan.confirmation_context;
+  };
 
 PY apply_confirmed_contracts
   SCRIPT "03_confirm_plan_and_acceptance/01_apply_confirmed_contracts/scripts/apply_confirmed_contracts.py"

@@ -10,6 +10,7 @@
 - `state.lgwf_wf_create.scaffold_package_result.scaffold_plan`：`scaffold_package` 根据模板生成的确定性脚手架计划。
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_template_spec.md` 镜像而来，定义 workflow packaged skill 的结构规范、profile 语义和路径边界。
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_result_contract.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_result_contract.md` 镜像而来，定义 `scaffold_plan` 输出字段契约。
+- workflow 模块化创建指引 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：由 `prepare_dsl_reference_context` 镜像而来，是 workflow、子 workflow、复杂 step、目录边界、状态隔离和验证入口的总纲。
 - `.lgwf/create_reference_context/dsl-assist/*.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
 - `docs/steps/`：当前步骤设计草案目录；若已有草案，可作为增量整理或覆盖参考范围。
 - `state.lgwf_wf_create.creation_context_dirs` / `state.lgwf_wf_create.creation_context_files`：通过 `TARGET_DIRS` / `TARGET_FILES` 暴露给当前 Codex 节点的只读创建资料目录和文件，可能包含主 agent 确认后的 workflow 开发计划、验收说明或补充约束。
@@ -20,15 +21,15 @@
 1. 根据业务阶段、关键节点和依赖，拆分出需要实现的步骤设计文档草案。
 2. 为每个待实现步骤生成 `docs/steps/<step-slug>.md`，并同时产出 `step_designs_proposal` 索引。
 3. 将 `scaffold_plan` 中的 `package_profile`、`create_dirs`、`create_files`、`placeholders` 和状态边界转化为步骤设计约束。
-4. 按 `dsl-assist` 和 `scaffold_template_spec.md` 的 workflow 创建规范设计根 workflow 与子 workflow 边界：根 workflow 只保留业务骨架，阶段细节落到第一层子 workflow。
+4. 按 `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md`、`.lgwf/create_reference_context/scaffold/scaffold_template_spec.md` 和 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md` 设计根 workflow 与子 workflow 边界：根 workflow 只保留业务骨架，阶段细节落到第一层子 workflow。
 5. 子 workflow 目录必须自包含：每个 `wf/<stage>/` 目录拥有本阶段的 `workflow.lgwf`、`agents/`、`scripts/`、`resources/`；不得设计 `wf/<stage>/<substage>/workflow.lgwf`。
 6. 若存在 `creation_context_dirs` 或 `creation_context_files`，读取其中与步骤拆分、实现顺序、验收约束和已确认开发计划相关的信息，作为步骤设计草案的参考来源。
 7. 确保每份步骤文档都能被 `confirm_step_designs` 审阅，并在批准后被 `implement_steps_react` 直接消费。
 
 ## Success Criteria
 - `step_designs_proposal` 明确列出每个 `docs/steps/*.md` 草案的路径、`step_slug` 和确认要点。
-- 步骤设计明确引用并遵守 `02_confirm_business_flow/resources/scaffold_template_spec.md`。
-- 涉及 `workflow.lgwf` 的步骤设计必须引用并遵守 `.lgwf/create_reference_context/dsl-assist/create-workflow.md` 和 `workflow-audit-checklist.md`。
+- 步骤设计明确引用并遵守 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md` 和 `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`。
+- 涉及 `workflow.lgwf` 的步骤设计必须引用并遵守 `.lgwf/create_reference_context/dsl-assist/create-workflow.md` 和 `.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md`。
 - 设计内容不与 `scaffold_plan.package_profile`、`wf/` 唯一 workflow root 和 `ws/.lgwf` 状态边界冲突。
 - 每份步骤文档都覆盖 `step_slug`、`step_name`、`goal`、`inputs`、`outputs`、`dependencies`、`implementation_suggestions`、`acceptance_notes` 和 `out_of_scope`。
 - 文档字段稳定，能直接作为实现阶段输入契约。
@@ -58,7 +59,7 @@
 - `outputs` 必须说明预期生成的 workflow 初稿文件、目录或结构片段。
 - `dependencies` 必须写清前置步骤、依赖节点和人工确认点。
 - `implementation_suggestions` 只给出实现方向、建议文件位置和必要约束，不直接写成完整实现代码。
-- 不得生成与 `scaffold_template_spec.md` 冲突的根目录结构；根 `workflow.lgwf` 永远禁止，根 `SKILL.md` 只允许在 `package_profile=skill_wrapped_workflow` 时出现。
+- 不得生成与 `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md` 冲突的根目录结构；根 `workflow.lgwf` 永远禁止，根 `SKILL.md` 只允许在 `package_profile=skill_wrapped_workflow` 时出现。
 - 不得把多阶段实现压进单个大 `workflow.lgwf`；可独立审计、修复或复用的阶段必须设计为第一层子 workflow。
 - 不得设计孙级 workflow；如果某个阶段内包含多个节点、人工确认、ReAct 循环或脚本，仍然放在该阶段自己的 `wf/<stage>/workflow.lgwf` 内编排。
 - `out_of_scope` 至少排除 `lgwf-wf-prompt-fix`、`lgwf-wf-tools`、自动修复和端到端运行保证。

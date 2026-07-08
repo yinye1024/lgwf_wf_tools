@@ -25,7 +25,12 @@ APPROVAL capture_approval_decision
   WRITE state.lgwf_wf_dsl_upgrade.upgrade_plan_approval
   RESULT state.lgwf_wf_dsl_upgrade.capture_approval_decision_result
   PERSIST ".lgwf/upgrade_plan_approval.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/upgrade_plan_approval.json";
+    READ state.lgwf_wf_dsl_upgrade.upgrade_plan_confirmation_context;
+    WRITE state.lgwf_wf_dsl_upgrade.upgrade_plan_approval;
+  };
 
 PY finalize_upgrade_plan_approval
   SCRIPT "scripts/finalize_upgrade_plan_approval.py"

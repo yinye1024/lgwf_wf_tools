@@ -41,6 +41,8 @@ REACT implement_react_task MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_acceptance_plan.json";
       READ workspace file ".lgwf/react_task_context.json";
+      READ workspace file ".lgwf/react_task_result.json";
+      WRITE workspace file ".lgwf/react_task_implementation_reason.md";
     }
   ACT CODEX
     PROMPT "01_implement_task/agents/act.md"
@@ -53,6 +55,7 @@ REACT implement_react_task MAX 3
       READ workspace file ".lgwf/react_task_context.json";
       READ workspace file ".lgwf/react_task_implementation_reason.md";
       READ workspace file ".lgwf/react_task_result.json";
+      WRITE workspace file ".lgwf/react_task_input.json";
     }
   OBSERVE CODEX
     PROMPT "01_implement_task/agents/observe.md"
@@ -64,6 +67,7 @@ REACT implement_react_task MAX 3
     CONTRACT {
       READ workspace file ".lgwf/react_task_context.json";
       READ workspace file ".lgwf/react_task_input.json";
+      WRITE workspace file ".lgwf/react_task_result.json";
     }
   DECIDE PY
     SCRIPT "01_implement_task/scripts/decide.py"
@@ -111,7 +115,12 @@ APPROVAL decide_react_task_block
   RESULT state.lgwf_plan.max_attempt_approval
   PERSIST ".lgwf/react_task_max_attempt_decision.json"
   ROUTE_ON_DECISION
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/react_task_max_attempt_decision.json";
+    READ state.lgwf_plan.current_review;
+    WRITE state.lgwf_plan.max_attempt_decision;
+  };
 
 PY resolve_max_attempt_decision
   SCRIPT "04_resolve/scripts/resolve_max_attempt_decision.py"
