@@ -8,7 +8,11 @@ DEFAULTS {
 }
 
 STEP collect_targets_stage
-  WORKFLOW "01_collect_targets/workflow.lgwf";
+  WORKFLOW "01_collect_targets/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/target_manifest.json";
+    WRITE workspace file ".lgwf/target_scope_validation.json";
+  };
 
 PY batch_audit_stage
   SCRIPT "02_batch_audit/scripts/run_batch_audit.py"
@@ -33,19 +37,50 @@ PY classify_findings_stage
   };
 
 STEP build_upgrade_plan_stage
-  WORKFLOW "04_build_upgrade_plan/workflow.lgwf";
+  WORKFLOW "04_build_upgrade_plan/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/classified_findings.json";
+    WRITE workspace file ".lgwf/upgrade_plan.json";
+    WRITE workspace file ".lgwf/upgrade_plan_summary.json";
+  };
 
 STEP confirm_upgrade_plan_stage
-  WORKFLOW "05_confirm_upgrade_plan/workflow.lgwf";
+  WORKFLOW "05_confirm_upgrade_plan/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/classification_summary.json";
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/upgrade_plan_summary.json";
+    WRITE workspace file ".lgwf/upgrade_plan_approval.json";
+  };
 
 STEP apply_upgrade_rules_stage
-  WORKFLOW "06_apply_upgrade_rules/workflow.lgwf";
+  WORKFLOW "06_apply_upgrade_rules/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/upgrade_plan.json";
+    READ workspace file ".lgwf/upgrade_plan_approval.json";
+    WRITE workspace file ".lgwf/applied_changes.json";
+    WRITE workspace file ".lgwf/applied_target_manifest.json";
+  };
 
 STEP batch_verify_stage
-  WORKFLOW "07_batch_verify/workflow.lgwf";
+  WORKFLOW "07_batch_verify/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/applied_changes.json";
+    WRITE workspace file ".lgwf/post_upgrade_audit_result.json";
+    WRITE workspace file ".lgwf/post_upgrade_diff_summary.json";
+  };
 
 STEP summarize_upgrade_result_stage
-  WORKFLOW "08_summarize_upgrade_result/workflow.lgwf";
+  WORKFLOW "08_summarize_upgrade_result/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/applied_changes.json";
+    READ workspace file ".lgwf/classification_summary.json";
+    READ workspace file ".lgwf/post_upgrade_diff_summary.json";
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/upgrade_plan_approval.json";
+    READ workspace file ".lgwf/upgrade_plan_summary.json";
+    WRITE workspace file ".lgwf/result_summary.json";
+  };
 
 FLOW main
   START collect_targets_stage

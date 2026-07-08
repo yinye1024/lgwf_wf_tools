@@ -1,5 +1,13 @@
 {
   "bootstrap_inputs": [],
+  "final_outputs": [
+    ".lgwf/applied_target_manifest.json",
+    ".lgwf/batch_audit_stats.json",
+    ".lgwf/post_upgrade_audit_result.json",
+    ".lgwf/result_summary.json",
+    ".lgwf/target_scope_validation.json",
+    ".lgwf/upgrade_plan_confirmation_context.json"
+  ],
   "script_writes": {
     "apply_upgrade_rules": [
       ".lgwf/applied_changes.json",
