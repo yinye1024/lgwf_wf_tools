@@ -1,0 +1,23 @@
+{
+  "packager": "lgwf-wf-tools/skill-packaging",
+  "created_at_utc": "2026-07-07T11:05:20+00:00",
+  "source_skill_name": "wf-audit-fix",
+  "source_skill_path": "D:\\allen\\github\\lgwf_wf_tools\\skills\\wf-audit-fix",
+  "runtime_source_path": "D:\\allen\\github\\lgwf_wf_tools\\skills\\lgwf-wf-tools\\vendor\\lgwf-client-assist",
+  "runtime_relative_path": "vendor/lgwf-client-assist",
+  "local_runner": "scripts/run_local_lgwf_workflow.py",
+  "excluded_names": [
+    ".git",
+    ".lgwf",
+    ".local",
+    ".mypy_cache",
+    ".pytest_cache",
+    "__pycache__",
+    "reports",
+    "ws"
+  ],
+  "excluded_suffixes": [
+    ".pyc",
+    ".pyo"
+  ]
+}

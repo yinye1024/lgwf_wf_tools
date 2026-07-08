@@ -1,0 +1,48 @@
+WORKFLOW wf_audit_fix_real_audit_gate;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_audit_fix.instructions.{node}";
+  result_path "lgwf_wf_audit_fix.results.{node}";
+}
+
+PY run_initial_real_audit
+  SCRIPT "scripts/run_initial_real_audit.py"
+  TIMEOUT 300
+  RESULT state.lgwf_wf_audit_fix.initial_real_audit_result
+  UPDATES_STATE;
+
+PY capture_initial_diagnostics
+  SCRIPT "scripts/capture_initial_diagnostics.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.capture_initial_diagnostics_result
+  UPDATES_STATE;
+
+PY route_initial_audit_decision
+  SCRIPT "scripts/decide_exit_or_enter_candidate_loop.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.route_initial_audit_decision_result
+  UPDATES_STATE;
+
+PY finish_summary_entry
+  SCRIPT "scripts/finish_summary_entry.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.finish_summary_entry_result
+  UPDATES_STATE;
+
+PY finish_candidate_entry
+  SCRIPT "scripts/finish_candidate_entry.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_audit_fix.finish_candidate_entry_result
+  UPDATES_STATE;
+
+FLOW main
+  START run_initial_real_audit
+  THEN capture_initial_diagnostics
+  THEN route_initial_audit_decision;
+
+ROUTE route_initial_audit_decision
+  WHEN "summary" THEN finish_summary_entry
+  WHEN "candidate" THEN finish_candidate_entry;

@@ -1,0 +1,27 @@
+WORKFLOW lgwf_wf_audit_fix;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  instruction_path "lgwf_wf_audit_fix.instructions.{node}";
+  result_path "lgwf_wf_audit_fix.results.{node}";
+}
+
+STEP input_resolution_stage
+  WORKFLOW "02_confirm_requirements/workflow.lgwf";
+
+STEP real_audit_gate_stage
+  WORKFLOW "04_confirm_business_flow/workflow.lgwf";
+
+STEP candidate_repair_loop_stage
+  WORKFLOW "07_confirm_step_designs/workflow.lgwf";
+
+STEP summarize_stage
+  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+
+FLOW main
+  START input_resolution_stage
+  THEN real_audit_gate_stage
+  THEN candidate_repair_loop_stage
+  THEN summarize_stage;
