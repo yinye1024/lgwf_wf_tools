@@ -9,7 +9,7 @@
 
 显式指令由根目录 `SKILL.md` 做 bootstrap 分发。本文件只负责 workflow router：根据用户意图选择 `registry.json` 中的 `workflows/<id>`，再读取目标 workflow 的 `entry_contract.json` 和 `AGENTS.md`。
 
-创建、转换、修复或优化任何 skill/workflow 模块时，必须读取 `workflows/01-share/module-contract.md`，先确认模块类型，再补齐入口、依赖、状态边界、产物、验证和禁止事项。
+创建、转换、修复或优化任何 skill/workflow 模块时，必须先读取 `docs/LGWF_WF_MODULAR_DEVELOPMENT.md` 和 `workflows/01-share/module-contract.md`，先确认 workflow、子 workflow、复杂 step 和目录边界，再确认模块类型并补齐入口、依赖、状态边界、产物、验证和禁止事项。
 
 ## 入口
 
@@ -82,6 +82,8 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 8. 目标 `AGENTS.md` 再按需引用 `workflows/01-share/` 共用规则。
 
 ## `wf-create` 执行纪律
+
+用户意图命中 `wf-create` 但目标不明确、缺少 `raw_intent`，或只表达“帮我创建 workflow”这类泛化请求时，不直接启动 workflow。主 agent 必须先按 [docs/workflow-inputs.md](docs/workflow-inputs.md) 的“wf-create 启动前输入模板”提示用户补充目标，或让用户提供初步计划、需求说明、验收说明等计划文档路径。用户给出计划文档路径时，主 agent 可以读取并整理为 `raw_intent`，同时把该路径放入 `request.target_file` 或 `request.target_files`，再展示整理后的启动输入给用户确认。
 
 命中 `wf-create` 后必须启动或继续同一个 `wf-create` run，不能由主 agent 直接手工创建目标 workflow package、直接写目标 `workflow.lgwf`、直接注册 registry，或把创建流程替换为 `apply_patch` 脚手架。
 

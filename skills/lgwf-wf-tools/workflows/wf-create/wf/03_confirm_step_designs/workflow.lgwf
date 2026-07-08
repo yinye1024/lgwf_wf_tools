@@ -19,6 +19,8 @@ PY prepare_dsl_reference_context
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
+    WRITE workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
+    WRITE workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl_reference_context.json";
   };
 
@@ -26,6 +28,7 @@ CODEX design_steps_react
   PROMPT "agents/design_steps_react.md"
   CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"
   CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"
+  CONTEXT workspace dir ".lgwf/create_reference_context/workflow-modular-development"
   TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
   TARGET_FILES state.lgwf_wf_create.creation_context_files
   OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
@@ -38,7 +41,12 @@ CODEX design_steps_react
     READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
+    READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
     READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/step_designs_proposal.json";
+    READ workspace dir ".lgwf/create_reference_context/dsl-assist";
+    READ workspace dir ".lgwf/create_reference_context/scaffold";
+    READ workspace dir ".lgwf/create_reference_context/workflow-modular-development";
   };
 
 PY prepare_step_design_confirmation
@@ -55,7 +63,11 @@ REVIEW confirm_step_designs
   CONTEXT state.lgwf_wf_create.step_design_confirmation_context
   RESULT state.lgwf_wf_create.step_design_decision_result
   PERSIST ".lgwf/step_design_confirmation_record.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/step_design_confirmation_record.json";
+    READ state.lgwf_wf_create.step_design_confirmation_context;
+  };
 
 PY apply_confirmed_step_designs
   SCRIPT "scripts/apply_confirmed_step_designs.py"

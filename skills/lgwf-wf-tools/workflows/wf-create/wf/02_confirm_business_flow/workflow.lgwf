@@ -16,6 +16,7 @@ CODEX propose_business_flow_react
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/business_flow_proposal.json";
   };
 
 PY prepare_business_flow_confirmation
@@ -32,7 +33,11 @@ REVIEW confirm_business_flow
   CONTEXT state.lgwf_wf_create.business_flow_confirmation_context
   RESULT state.lgwf_wf_create.business_flow_decision_result
   PERSIST ".lgwf/business_flow_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/business_flow_approval.json";
+    READ state.lgwf_wf_create.business_flow_confirmation_context;
+  };
 
 PY apply_confirmed_business_flow
   SCRIPT "scripts/apply_confirmed_business_flow.py"

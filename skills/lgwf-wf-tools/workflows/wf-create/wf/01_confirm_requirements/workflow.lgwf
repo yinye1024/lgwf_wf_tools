@@ -12,7 +12,12 @@ APPROVAL collect_raw_intent
   WRITE state.lgwf_wf_create.raw_intent_request
   RESULT state.lgwf_wf_create.raw_intent_result
   PERSIST ".lgwf/raw_intent_request.json"
-  POLL 1;
+  POLL 1
+  CONTRACT {
+    WRITE workspace file ".lgwf/raw_intent_request.json";
+    READ state.lgwf_wf_create.raw_intent_context;
+    WRITE state.lgwf_wf_create.raw_intent_request;
+  };
 
 PY finish_raw_intent
   SCRIPT "scripts/finish_raw_intent.py"
@@ -37,6 +42,7 @@ CODEX propose_requirements_react
   CONTRACT {
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/raw_intent_request.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
   };
 
 PY prepare_requirements_confirmation
@@ -55,7 +61,11 @@ REVIEW confirm_requirements
   CONTEXT state.lgwf_wf_create.requirements_confirmation_context
   RESULT state.lgwf_wf_create.requirements_decision_result
   PERSIST ".lgwf/create_requirements_approval.json"
-  OPTIONS ["approve", "revise", "reject"];
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/create_requirements_approval.json";
+    READ state.lgwf_wf_create.requirements_confirmation_context;
+  };
 
 PY apply_confirmed_requirements
   SCRIPT "scripts/apply_confirmed_requirements.py"

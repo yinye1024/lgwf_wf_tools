@@ -194,10 +194,23 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
             prompt = (ROOT / prompt_relative).read_text(encoding="utf-8")
             self.assertIn(f'OUTPUT_JSON "{artifact}"', workflow)
+            self.assertIn(f'WRITE workspace file "{artifact}"', workflow)
             if uses_as_file:
                 self.assertIn(f'OUTPUT_JSON "{artifact}" AS_FILE', workflow)
             self.assertIn("OUTPUT_JSON", prompt)
             self.assertIn(artifact, prompt)
+
+    def test_persisted_decision_files_have_contract_writes(self) -> None:
+        expectations = (
+            ("01_confirm_requirements/workflow.lgwf", ".lgwf/raw_intent_request.json"),
+            ("01_confirm_requirements/workflow.lgwf", ".lgwf/create_requirements_approval.json"),
+            ("02_confirm_business_flow/workflow.lgwf", ".lgwf/business_flow_approval.json"),
+            ("03_confirm_step_designs/workflow.lgwf", ".lgwf/step_design_confirmation_record.json"),
+        )
+        for workflow_relative, artifact in expectations:
+            workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
+            self.assertIn(f'PERSIST "{artifact}"', workflow)
+            self.assertIn(f'WRITE workspace file "{artifact}"', workflow)
 
     def test_implementation_is_react_child_workflow_with_deterministic_audit_observe(self) -> None:
         design_workflow = (ROOT / "03_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8")
@@ -266,10 +279,18 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
         self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"', step_workflow)
+        self.assertIn(
+            'CONTEXT workspace dir ".lgwf/create_reference_context/workflow-modular-development"',
+            step_workflow,
+        )
         for resource in scaffold_resources:
             self.assertTrue((ROOT / resource).is_file(), resource)
             filename = Path(resource).name
             self.assertIn(f".lgwf/create_reference_context/scaffold/{filename}", script_writes)
+        self.assertIn(
+            ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md",
+            script_writes,
+        )
 
         for prompt_relative in (
             "03_confirm_step_designs/agents/design_steps_react.md",
@@ -278,6 +299,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             prompt = (ROOT / prompt_relative).read_text(encoding="utf-8")
             self.assertIn("02_confirm_business_flow/resources/scaffold_template_spec.md", prompt)
             self.assertIn(".lgwf/create_reference_context/scaffold", prompt)
+            self.assertIn(".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md", prompt)
             self.assertIn("scaffold_plan", prompt)
             self.assertIn("package_profile", prompt)
 

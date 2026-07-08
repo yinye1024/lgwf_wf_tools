@@ -221,11 +221,14 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
         text = (ROOT / "03_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"', text)
+        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context/workflow-modular-development"', text)
         for _ in (0,):
             for reference in (
                 ".lgwf/create_reference_context/dsl-assist/guide.md",
                 ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
                 ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",
+                ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md",
+                ".lgwf/create_reference_context/module-contract/module-contract.md",
             ):
                 self.assertIn(reference, script_writes)
 
@@ -293,8 +296,11 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
         self.assertIn("REACT enrich_contracts_react MAX 3", workflow)
         self.assertIn('SPEC "agents/spec.md"', workflow)
+        self.assertIn('workspace file ".lgwf/create_reference_context/module-contract/module-contract.md"', workflow)
         self.assertIn('WORKFLOW "observe_audit.lgwf"', workflow)
         self.assertIn('OUTPUT_JSON ".lgwf/contract_enrichment_result.json"', workflow)
+        self.assertIn('WRITE workspace file ".lgwf/contract_reason.md"', workflow)
+        self.assertIn('WRITE workspace file ".lgwf/contract_enrichment_result.json"', workflow)
         self.assertIn('WRITE workspace file ".lgwf/contract_observe.json"', workflow)
         self.assertIn('SCRIPT "scripts/audit_contract_package.py"', observe_workflow)
         audit_script = (ROOT / "05_enrich_contracts_react/scripts/audit_contract_package.py").read_text(encoding="utf-8")
@@ -307,6 +313,25 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertIn("产物", act_prompt)
         self.assertIn("验证", act_prompt)
         self.assertIn("禁止事项", act_prompt)
+        for required in (
+            "扫描目标 package 下所有 `workflow.lgwf`",
+            "为所有节点逐个生成或补齐 `CONTRACT`",
+            "`OUTPUT_JSON`、`OUTPUT_FILE` 和 `PERSIST` 必须有同节点 `CONTRACT WRITE workspace file`",
+            "不要把节点内部临时文件、scratch 文件或 helper 缓存写入 `CONTRACT`",
+        ):
+            self.assertIn(required, spec)
+        for required in (
+            "建立逐节点契约清单",
+            "逐个节点说明应声明的 `CONTRACT READ` 和 `CONTRACT WRITE`",
+            "扫描 prompt、script、`OUTPUT_JSON`、`OUTPUT_FILE`、`PERSIST` 和上下游文件引用",
+        ):
+            self.assertIn(required, (ROOT / "05_enrich_contracts_react/agents/reason.md").read_text(encoding="utf-8"))
+        for required in (
+            "逐个修改目标 package 内所有 `workflow.lgwf`",
+            "为每个有外部业务文件 I/O 的节点补齐 `CONTRACT`",
+            "`CONTRACT` 只声明节点外部业务文件输入输出",
+        ):
+            self.assertIn(required, act_prompt)
 
     def test_agents_doc_names_route_back_to_facade_when_out_of_scope(self) -> None:
         text = (PACKAGE_ROOT / "AGENTS.md").read_text(encoding="utf-8")

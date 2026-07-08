@@ -35,6 +35,7 @@ CODEX observe_implementation
     READ workspace file ".lgwf/implementation_audit_result.json";
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/implementation_result.json";
+    WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
 FLOW audit_created_package

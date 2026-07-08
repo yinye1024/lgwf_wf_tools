@@ -5,9 +5,9 @@
 ## 模块契约
 
 - 模块类型：`lgwf_workflow_package`。
-- 执行前必须读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
+- 执行前必须读取 `../../docs/LGWF_WF_MODULAR_DEVELOPMENT.md`、`../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
 - 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
-- 本模块生成的目标 workflow 也必须按 `module-contract.md` 补齐自包含契约。
+- 本模块生成的目标 workflow 必须先按 `LGWF_WF_MODULAR_DEVELOPMENT.md` 确认 workflow、子 workflow、复杂 step 和目录边界，再按 `module-contract.md` 补齐自包含契约。
 
 ## 适用场景
 
@@ -29,6 +29,8 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 
 ## 输入契约
 
+启动前整理：当用户目标不明确、没有可用 `raw_intent`，或只有“创建 workflow”这类泛化请求时，主 agent 不直接启动本 workflow。先按 facade 的 `docs/workflow-inputs.md` 提示用户补充目标、输入、输出、人工确认点、目标目录和非目标；用户提供初步计划、需求说明或验收说明的计划文档路径时，主 agent 可以读取文档，整理为 `raw_intent`，并把原始计划文档路径写入 `request.target_file` 或 `request.target_files`，再展示启动 JSON 给用户确认。
+
 入口允许从原始意图开始，不要求用户先提供完整结构化 JSON。为了支持 `wf-convert` 的闭环转换，入口也兼容 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context` 等结构化上下文；这些字段存在时优先作为需求和业务流设计依据，缺失时保持只消费 `raw_intent` 的旧行为。后续阶段会逐步形成：
 
 入口 `request` 可选携带 `target_dir`、`target_file`、`target_dirs` 和 `target_files`，用于传入创建 workflow 时可参考的资料目录或文件，例如主 agent 已确认的开发计划、需求补充和验收说明。`01_confirm_requirements` 会将这些输入统一归一化为 `state.lgwf_wf_create.creation_context_dirs` 和 `state.lgwf_wf_create.creation_context_files`；`propose_requirements_react`、`propose_business_flow_react` 和 `design_steps_react` 通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考这些资料。它们不是目标 workflow 输出目录，不得与 `target_package_root` 混用。
@@ -45,7 +47,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 
 ## 状态交接
 
-- `prepare_dsl_reference_context` 复制 facade 内置 bundled client 的 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，供步骤设计和实现阶段读取。
+- `prepare_dsl_reference_context` 复制 facade 内置 bundled client 的 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，复制 scaffold 规范到 `.lgwf/create_reference_context/scaffold/`，复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供步骤设计、实现和 Contract 补强阶段读取。
 - `prepare_requirements_confirmation` 读取 `.lgwf/create_requirements_proposal.json`，输出 `requirements_confirmation_context`。
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
@@ -79,6 +81,8 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/step_design_confirmation_record.json`
 - `.lgwf/step_designs.json`
 - `.lgwf/create_reference_context/dsl-assist/*.md`
+- `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`
+- `.lgwf/create_reference_context/module-contract/module-contract.md`
 - `.lgwf/implementation_result.json`
 - `.lgwf/implementation_reason.md`
 - `.lgwf/implementation_observe.json`
@@ -99,7 +103,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - 不负责把生成出的目标 workflow 自动接入 facade 路由、registry 或其他治理链路。
 - 不承诺端到端业务 happy path 成功。
 - 实现阶段只允许在 `04_implement_steps_react` 的 ReAct 最大轮次内基于 audit 反馈修复初稿；不做跨 workflow 自动修复、自动重试或后续 agent 化。
-- 创建或修改 `workflow.lgwf` 时必须遵守 `dsl-assist`：根 workflow 保持薄编排，阶段细节优先拆到子 workflow，所有引用路径保持包内相对路径。
+- 创建或修改 `workflow.lgwf` 时必须遵守 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md`：根 workflow 保持薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，所有引用路径保持包内相对路径。
 
 ## 最小验证
 
