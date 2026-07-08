@@ -104,6 +104,59 @@ class PreparePayloadTests(unittest.TestCase):
         legacy_child_input = module.build_wf_create_input({"raw_intent": "legacy intent"})
         self.assertEqual(legacy_child_input, {"raw_intent": "legacy intent"})
 
+    def test_build_wf_create_input_passes_source_root_as_creation_context_request(self):
+        module = load_module(
+            "wf/07_confirm_step_designs/scripts/prepare_wf_create_payload.py",
+            "prepare_wf_create_payload_request_context",
+        )
+        payload = module.build_payload(
+            confirmed_input={
+                "workflow_name": "wf-convert",
+                "target_package_root": "skills/lgwf-wf-tools/workflows/generated",
+                "source_root": "skills/source-prompt-workflow",
+                "raw_intent": "把 prompt workflow 转成 LGWF workflow",
+                "request": {"target_file": "skills/source-prompt-workflow/README.md"},
+            },
+        )
+
+        child_input = module.build_wf_create_input(payload)
+
+        self.assertEqual(child_input["request"]["target_dir"], "skills/source-prompt-workflow")
+        self.assertEqual(child_input["request"]["target_file"], "skills/source-prompt-workflow/README.md")
+        self.assertNotIn("target_package_root", child_input["request"])
+
+
+class MapWfCreateInputTests(unittest.TestCase):
+    def test_extract_wf_create_input_accepts_legacy_nested_payload(self):
+        module = load_module("wf/scripts/map_wf_create_input.py", "map_wf_create_input_legacy")
+        payload = {
+            "prompt_convert_payload": {"workflow_name": "demo"},
+            "wf_create_payload": {
+                "raw_intent": "创建 demo workflow",
+                "request": {"target_dir": "skills/source-prompt-workflow"},
+            },
+        }
+
+        child_input = module.extract_wf_create_input(payload)
+
+        self.assertEqual(child_input["raw_intent"], "创建 demo workflow")
+        self.assertEqual(child_input["request"]["target_dir"], "skills/source-prompt-workflow")
+
+    def test_extract_wf_create_input_accepts_flat_wf_create_input(self):
+        module = load_module("wf/scripts/map_wf_create_input.py", "map_wf_create_input_flat")
+        payload = {
+            "raw_intent": "创建 demo workflow",
+            "request": {"target_dir": "skills/source-prompt-workflow"},
+        }
+
+        self.assertEqual(module.extract_wf_create_input(payload), payload)
+
+    def test_extract_wf_create_input_rejects_missing_raw_intent(self):
+        module = load_module("wf/scripts/map_wf_create_input.py", "map_wf_create_input_invalid")
+
+        with self.assertRaises(ValueError):
+            module.extract_wf_create_input({"wf_create_payload": {"request": {"target_dir": "source"}}})
+
 
 class SummaryTests(unittest.TestCase):
     def test_build_report_sections(self):

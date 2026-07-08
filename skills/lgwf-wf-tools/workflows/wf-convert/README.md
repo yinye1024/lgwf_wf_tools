@@ -10,7 +10,7 @@
 - 区分必须迁移的业务逻辑与不迁移的 prompt 执行技巧，例如执行矩阵、预填充、few-shot、角色强化和格式诱导。
 - 使用 ReAct 生成 `wf-create` 创建输入 proposal、`conversion_mapping` 和 `parity_requirements`。
 - 人工确认 proposal 后固化为 `.lgwf/wf_create_payload.json`。
-- 通过映射节点提取 `wf-create` 输入，再用原生 `RUN_WORKFLOW` 节点启动后续 `wf-create`。
+- 通过映射节点提取 `wf-create` 输入，把 `source_root` 作为新版 `request.target_dir` 只读资料目录传给下游，再用原生 `RUN_WORKFLOW` 节点启动后续 `wf-create`。
 - 在 `wf-create` 完成后生成 `.lgwf/business_parity_report.json`，并把一致性审查结果写入转换报告和 `wf-post-fix` handoff。
 
 ## 不做的事
@@ -24,6 +24,12 @@
 ## 运行状态
 
 运行状态只写入 `ws/.lgwf`。目标 package 根目录不得写入 `.lgwf`。
+
+## `wf-create` 输入兼容
+
+`wf-convert` 固化的 `wf-create` 输入必须保留顶层 `raw_intent`，并可附带 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。源 prompt workflow 目录通过 `request.target_dir` 传给 `wf-create`，只作为创建阶段的只读上下文，不表示目标输出目录。
+
+`map_wf_create_input.py` 需要同时兼容旧的 `{ "wf_create_payload": ... }` 包装和已经扁平化的 `wf-create` 输入；无论哪种形状，进入 `RUN_WORKFLOW wf_create` 前都必须有非空 `raw_intent`。
 
 ## ReAct 反馈闭环
 

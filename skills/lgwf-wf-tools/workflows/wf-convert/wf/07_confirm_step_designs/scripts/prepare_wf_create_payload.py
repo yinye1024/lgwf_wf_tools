@@ -5,6 +5,10 @@ from pathlib import PurePosixPath
 from typing import Any
 
 
+REQUEST_SCALAR_FIELDS = ("target_dir", "target_file")
+REQUEST_LIST_FIELDS = ("target_dirs", "target_files")
+
+
 def normalize_package_path(raw_path: str, field_name: str) -> str:
     cleaned = raw_path.strip()
     candidate = PurePosixPath(cleaned.replace("\\", "/"))
@@ -19,6 +23,60 @@ def normalize_package_path(raw_path: str, field_name: str) -> str:
     if any(part == ".lgwf" for part in candidate.parts):
         raise ValueError(f"{field_name} 禁止写入 `.lgwf`")
     return candidate.as_posix().strip("/")
+
+
+def as_string_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+    if isinstance(value, list):
+        result: list[str] = []
+        for item in value:
+            if isinstance(item, str) and item.strip():
+                result.append(item.strip())
+        return result
+    return []
+
+
+def dedupe_strings(values: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+def normalize_creation_request(raw_request: Any) -> dict[str, Any]:
+    if not isinstance(raw_request, dict):
+        return {}
+    request: dict[str, Any] = {}
+    for field in REQUEST_SCALAR_FIELDS:
+        values = as_string_list(raw_request.get(field))
+        if values:
+            request[field] = values[0]
+    for field in REQUEST_LIST_FIELDS:
+        values = dedupe_strings(as_string_list(raw_request.get(field)))
+        if values:
+            request[field] = values
+    return request
+
+
+def with_source_root_request(request: dict[str, Any], source_root: str) -> dict[str, Any]:
+    cleaned_source_root = source_root.strip()
+    if not cleaned_source_root:
+        return request
+    if not request.get("target_dir"):
+        request["target_dir"] = cleaned_source_root
+        return request
+    if request.get("target_dir") == cleaned_source_root:
+        return request
+    target_dirs = as_string_list(request.get("target_dirs"))
+    target_dirs.append(cleaned_source_root)
+    request["target_dirs"] = dedupe_strings(target_dirs)
+    return request
 
 
 def build_payload(
@@ -53,12 +111,19 @@ def build_payload(
             "out_of_scope": confirmed_input.get("out_of_scope", []),
         },
     }
+    request = normalize_creation_request(confirmed_input.get("request"))
+    if request:
+        payload["request"] = request
     return payload
 
 
 def build_wf_create_input(payload: dict[str, Any]) -> dict[str, Any]:
     raw_intent = str(payload.get("raw_intent", "")).strip()
     child_input: dict[str, Any] = {"raw_intent": raw_intent}
+    request = normalize_creation_request(payload.get("request"))
+    request = with_source_root_request(request, str(payload.get("source_root", "")))
+    if request:
+        child_input["request"] = request
     for field in ("source_business_contract", "conversion_mapping", "prompt_workflow_context"):
         value = payload.get(field)
         if value:

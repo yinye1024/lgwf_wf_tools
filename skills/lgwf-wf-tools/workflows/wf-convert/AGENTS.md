@@ -15,7 +15,7 @@
 
 第一版不直接生成最终目标 LGWF workflow，但会在转换输入通过人工确认后，通过 `RUN_WORKFLOW` 启动 `wf-create`。结束时会通过 `HANDOFF` 引导用户选择是否对刚创建的 workflow 启用 `wf-post-fix`，但不自动调用 `wf-prompt-fix`、`wf-prompt-upgrade`、`wf-fix` 或 `wf-post-fix`。
 
-`wf-convert` 先通过 `map_wf_create_input` 把 `state.lgwf_wf_convert.wf_create_payload` 映射为 `state.lgwf_wf_convert.wf_create_input`，再通过原生 `RUN_WORKFLOW wf_create` 节点启动下游 `wf-create`，并由 `capture_wf_create_result` 消费运行结果。随后 `verify_business_parity` 基于 `source_business_contract`、`conversion_mapping` 和创建结果生成 `.lgwf/business_parity_report.json`，`summarize_result` 输出转换报告，`prepare_post_fix_handoff` 从刚创建的 workflow 信息和一致性报告生成 `wf-post-fix` 输入文件，`handoff_wf_post_fix` 暴露 pending action 给主 agent 等待用户确认。
+`wf-convert` 先通过 `prepare_wf_create_payload` 生成兼容 `wf-create` 的输入，其中 `source_root` 会映射为 `request.target_dir`，作为下游创建阶段可读取的只读资料目录；再通过 `map_wf_create_input` 把 `state.lgwf_wf_convert.wf_create_payload` 映射为 `state.lgwf_wf_convert.wf_create_input`。`map_wf_create_input` 必须兼容旧的 `{ "wf_create_payload": ... }` 包装和已经扁平化的 `wf-create` 输入，避免中间状态形状变化导致链路中断。随后原生 `RUN_WORKFLOW wf_create` 节点启动下游 `wf-create`，并由 `capture_wf_create_result` 消费运行结果。`verify_business_parity` 基于 `source_business_contract`、`conversion_mapping` 和创建结果生成 `.lgwf/business_parity_report.json`，`summarize_result` 输出转换报告，`prepare_post_fix_handoff` 从刚创建的 workflow 信息和一致性报告生成 `wf-post-fix` 输入文件，`handoff_wf_post_fix` 暴露 pending action 给主 agent 等待用户确认。
 
 ## 目录边界
 
@@ -71,7 +71,7 @@
 
 `wf-create` 自身仍保留需求、业务流和步骤设计的人工确认边界。
 
-`wf-convert` 传给 `wf-create` 的输入保持 `raw_intent` 兼容，同时在可用时附带 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。下游缺少结构化字段时仍按旧的 `raw_intent` 输入运行。
+`wf-convert` 传给 `wf-create` 的输入保持 `raw_intent` 兼容，同时在可用时附带 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。`source_root` 会作为 `request.target_dir` 传入，只表示创建 workflow 时可参考的源 prompt workflow 目录，不是目标 workflow 输出目录；目标输出目录仍由 `raw_intent`、需求确认和后续 `target_package_root` 确认收敛。下游缺少结构化字段时仍按旧的 `raw_intent` 输入运行。
 
 ## 下游 `wf-post-fix` handoff
 

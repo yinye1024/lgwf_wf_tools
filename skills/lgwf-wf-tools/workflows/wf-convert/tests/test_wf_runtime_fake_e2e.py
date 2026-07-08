@@ -122,9 +122,16 @@ def build_runtime_authoring_package(root: Path) -> Path:
 
             def main() -> None:
                 child_result = json.load(sys.stdin)
+                summary = {
+                    "status": child_result.get("status") if isinstance(child_result, dict) else None,
+                    "result": child_result,
+                }
                 print(
                     json.dumps(
-                        {"lgwf_wf_convert.runtime_fake_wf_create_result": child_result},
+                        {
+                            "lgwf_wf_convert.runtime_fake_wf_create_result": child_result,
+                            "lgwf_wf_convert.wf_create_result_summary": summary,
+                        },
                         ensure_ascii=False,
                     )
                 )
@@ -138,77 +145,68 @@ def build_runtime_authoring_package(root: Path) -> Path:
     )
     root_workflow_path = package_root / "wf" / "workflow.lgwf"
     root_workflow_text = root_workflow_path.read_text(encoding="utf-8")
-    root_workflow_marker = (
-        'PY map_wf_create_input\n'
-        '  SCRIPT "scripts/map_wf_create_input.py"\n'
-        '  INPUT state.lgwf_wf_convert.wf_create_payload\n'
-        '  RESULT state.lgwf_wf_convert.wf_create_input\n'
-        '  UPDATES_STATE;\n\n'
-        'RUN_WORKFLOW wf_create\n'
-        '  WORKFLOW "workflows/wf-create/wf/workflow.lgwf"\n'
-        '  WORK_DIR "workflows/wf-create/ws"\n'
-        '  INPUT state.lgwf_wf_convert.wf_create_input\n'
-        '  RESULT state.lgwf_wf_convert.wf_create_result;\n\n'
-        'PY capture_wf_create_result\n'
-        '  SCRIPT "scripts/capture_wf_create_result.py"\n'
-        '  INPUT state.lgwf_wf_convert.wf_create_result\n'
-        '  RESULT state.lgwf_wf_convert.wf_create_result_summary\n'
-        '  UPDATES_STATE;\n\n'
-        'PY verify_business_parity\n'
-        '  SCRIPT "scripts/verify_business_parity.py"\n'
-        '  INPUT state.lgwf_wf_convert.wf_create_result_summary\n'
-        '  RESULT state.lgwf_wf_convert.business_parity_report\n'
-        '  UPDATES_STATE;\n\n'
-        'STEP summarize_result\n'
-        '  WORKFLOW "09_summarize_create_result/workflow.lgwf";\n\n'
-        'PY prepare_post_fix_handoff\n'
-        '  SCRIPT "scripts/prepare_post_fix_handoff.py"\n'
-        '  INPUT state.lgwf_wf_convert.wf_create_result_summary\n'
-        '  RESULT state.lgwf_wf_convert.post_fix_handoff_payload\n'
-        '  UPDATES_STATE;\n\n'
-        'HANDOFF handoff_wf_post_fix\n'
-        '  CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload\n'
-        '  PROMPT "handoff_wf_post_fix.md"\n'
-        '  RESULT state.lgwf_wf_convert.post_fix_handoff;\n\n'
-        'FLOW collect_target\n'
-        '  THEN analyze_source\n'
-        '  THEN prepare_payload\n'
-        '  THEN map_wf_create_input\n'
-        '  THEN wf_create\n'
-        '  THEN capture_wf_create_result\n'
-        '  THEN verify_business_parity\n'
-        '  THEN summarize_result\n'
-        '  THEN prepare_post_fix_handoff\n'
-        '  THEN handoff_wf_post_fix;\n'
-    )
-    if root_workflow_marker not in root_workflow_text:
+    map_start = root_workflow_text.find("PY map_wf_create_input\n")
+    flow_start = root_workflow_text.find("FLOW collect_target\n", map_start)
+    if map_start < 0 or flow_start < 0:
         raise AssertionError("runtime fake 根 workflow 镜像补丁锚点失效")
-    root_workflow_text = root_workflow_text.replace(
-        root_workflow_marker,
-        'STEP summarize_result\n'
-        '  WORKFLOW "09_summarize_create_result/workflow.lgwf";\n\n'
+    root_workflow_text = (
+        root_workflow_text[:map_start]
+        +
         'PY runtime_fake_map_wf_create_input\n'
         '  SCRIPT "scripts/runtime_fake_map_wf_create_input.py"\n'
         '  INPUT state.lgwf_wf_convert.wf_create_payload\n'
         '  RESULT state.lgwf_wf_convert.runtime_fake_wf_create_input\n'
-        '  UPDATES_STATE;\n\n'
+        '  UPDATES_STATE\n'
+        '  CONTRACT {\n'
+        '    READ state.lgwf_wf_convert.wf_create_payload;\n'
+        '  };\n\n'
         'RUN_WORKFLOW wf_create\n'
         '  WORKFLOW "workflows/wf-create/wf/workflow.lgwf"\n'
         '  WORK_DIR "workflows/wf-create/ws"\n'
         '  INPUT state.lgwf_wf_convert.runtime_fake_wf_create_input\n'
-        '  RESULT state.lgwf_wf_convert.wf_create_result;\n\n'
+        '  RESULT state.lgwf_wf_convert.wf_create_result\n'
+        '  CONTRACT {\n'
+        '    READ state.lgwf_wf_convert.runtime_fake_wf_create_input;\n'
+        '    READ workspace file "workflows/wf-create/wf/workflow.lgwf";\n'
+        '    WRITE workspace dir "workflows/wf-create/ws";\n'
+        '  };\n\n'
         'PY runtime_fake_capture_wf_create_result\n'
         '  SCRIPT "scripts/runtime_fake_capture_wf_create_result.py"\n'
         '  INPUT state.lgwf_wf_convert.wf_create_result\n'
         '  RESULT state.lgwf_wf_convert.runtime_fake_wf_create_result\n'
-        '  UPDATES_STATE;\n\n'
+        '  UPDATES_STATE\n'
+        '  CONTRACT {\n'
+        '    READ state.lgwf_wf_convert.wf_create_result;\n'
+        '    WRITE state.lgwf_wf_convert.wf_create_result_summary;\n'
+        '  };\n\n'
+        'PY verify_business_parity\n'
+        '  SCRIPT "scripts/verify_business_parity.py"\n'
+        '  INPUT state.lgwf_wf_convert.wf_create_result_summary\n'
+        '  RESULT state.lgwf_wf_convert.business_parity_report\n'
+        '  UPDATES_STATE\n'
+        '  CONTRACT {\n'
+        '    READ workspace file ".lgwf/wf_create_payload.json";\n'
+        '    WRITE workspace file ".lgwf/business_parity_report.json";\n'
+        '    READ state.lgwf_wf_convert.wf_create_result_summary;\n'
+        '  };\n\n'
+        'PY summarize_result\n'
+        '  SCRIPT "09_summarize_create_result/scripts/summarize_convert_result.py"\n'
+        '  TIMEOUT 60\n'
+        '  RESULT state.lgwf_wf_convert.summary_result\n'
+        '  UPDATES_STATE\n'
+        '  CONTRACT {\n'
+        '    READ workspace file ".lgwf/business_parity_report.json";\n'
+        '    READ workspace file ".lgwf/prompt_workflow_inspection.json";\n'
+        '    READ workspace file ".lgwf/wf_create_payload.json";\n'
+        '  };\n\n'
         'FLOW collect_target\n'
         '  THEN analyze_source\n'
         '  THEN prepare_payload\n'
         '  THEN runtime_fake_map_wf_create_input\n'
         '  THEN wf_create\n'
         '  THEN runtime_fake_capture_wf_create_result\n'
-        '  THEN summarize_result;\n',
+        '  THEN verify_business_parity\n'
+        '  THEN summarize_result;\n'
     )
     root_workflow_path.write_text(root_workflow_text, encoding="utf-8")
     return package_root / "wf" / "workflow.lgwf"
