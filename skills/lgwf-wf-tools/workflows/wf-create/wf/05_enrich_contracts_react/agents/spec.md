@@ -42,6 +42,17 @@
 - 不要把节点内部临时文件、scratch 文件或 helper 缓存写入 `CONTRACT`。
 - 不得把当前节点输出文件声明为同节点 `CONTRACT READ`。
 
+### CONTRACT 合法落点
+
+补齐节点级 `CONTRACT` 时必须按 parser 接受的位置落点：
+
+- 常规 `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`CHOICE`、`HANDOFF`、`HANDOFF_FILES`、`RUN_WORKFLOW` 节点：放在该节点字段末尾、结尾分号之前。
+- `STEP <id> WORKFLOW "<path>"`：放在 `WORKFLOW "<path>"` 之后、结尾分号之前。
+- `REACT slot`：放在 slot 任务内部。`REASON CODEX` / `ACT CODEX` / `OBSERVE CODEX` 放在该 CODEX slot 的 `PROMPT`、`CONTEXT`、`OUTPUT_JSON` 等字段之后；`DECIDE PY` 放在该 PY slot 的 `SCRIPT`、`RESULT`、`UPDATES_STATE` 等字段之后。
+- ReAct `WORKFLOW` slot：合法形状是 `OBSERVE WORKFLOW observe_step`，随后写 `WORKFLOW "observe_audit.lgwf"`、`RESULT state.*`，再写 `CONTRACT { ... }`。
+
+不得生成 `STEP <id> CONTRACT ... WORKFLOW ...`、`REASON CONTRACT ... CODEX ...`、`ACT CONTRACT ... CODEX ...`、`OBSERVE CONTRACT ... WORKFLOW ...` 或 `DECIDE CONTRACT ... PY ...`。如果上一轮 observe/audit 暴露的是 `CONTRACT` 语法落点错误，优先把现有契约移动到上述合法位置，不改变契约内容和业务拓扑。
+
 ## Observe 和退出
 
 - observe 阶段运行确定性脚本，检查目标入口文档是否包含 Contract 必备段落，并执行 `lgwf.py audit <target>/wf/workflow.lgwf`；audit 负责校验 `OUTPUT_JSON`、`OUTPUT_FILE`、`PERSIST` 与同节点 `CONTRACT WRITE` 的一致性。

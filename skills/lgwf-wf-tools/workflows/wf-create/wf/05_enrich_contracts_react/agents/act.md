@@ -31,9 +31,14 @@
    - 读取上游 `.lgwf/`、`reports/`、`data/` 等业务文件时，必须写入同节点 `CONTRACT READ workspace file`。
    - `CONTRACT` 只声明节点外部业务文件输入输出，不声明节点内部临时文件、scratch 文件或 helper 缓存。
    - 不要把当前节点输出文件声明为同节点 `CONTRACT READ`。
-5. 内容应贴合目标 workflow 的实际 `wf/workflow.lgwf`、子 workflow、`ws/`、测试目录和实现产物，不要复制空泛模板。
-6. 若上一轮 observe 提供失败项，只修复这些失败项以及直接相关的 Contract 缺口；若失败项来自 audit 缺少节点 `CONTRACT WRITE`，必须修复对应节点。
-7. 写出 `.lgwf/contract_enrichment_result.json`，供 observe 和最终追踪使用。
+5. 按节点类型把 `CONTRACT` 放到 parser 接受的位置：
+   - 常规 `PY` / `CODEX` / `APPROVAL` / `REVIEW` / `CHOICE` / `HANDOFF` / `HANDOFF_FILES` / `RUN_WORKFLOW` 节点放在节点字段末尾、分号之前。
+   - `STEP <id> WORKFLOW "<path>"` 放在 `WORKFLOW "<path>"` 后面。
+   - ReAct slot 放在 slot 任务内部；`WORKFLOW` slot 放在该 slot 的 `WORKFLOW "..."` 和 `RESULT state.*` 之后。
+   - 禁止写成 `STEP <id> CONTRACT ... WORKFLOW ...`、`REASON CONTRACT ... CODEX ...` 或 `OBSERVE CONTRACT ... WORKFLOW ...`。
+6. 内容应贴合目标 workflow 的实际 `wf/workflow.lgwf`、子 workflow、`ws/`、测试目录和实现产物，不要复制空泛模板。
+7. 若上一轮 observe 提供失败项，只修复这些失败项以及直接相关的 Contract 缺口；若失败项来自 audit 缺少节点 `CONTRACT WRITE`，必须修复对应节点；若失败项来自语法落点错误，必须移动 `CONTRACT` 到合法位置。
+8. 写出 `.lgwf/contract_enrichment_result.json`，供 observe 和最终追踪使用。
 
 ## Output Format
 
@@ -65,3 +70,4 @@
 - 修改 `workflow.lgwf` 时只补节点 `CONTRACT`，不得改变业务 DSL 拓扑、route、approval/review 语义或已确认步骤设计。
 - 不得生成新的业务阶段、审批节点或 prompt 修复链路。
 - 不得把目标 package 的 `target_package_root` 与创建上下文 `target_dir` 混用。
+- 如果某个节点无法在当前 DSL 支持的合法位置表达所需 `CONTRACT`，不要硬塞到非法位置；把该节点、原因和建议写入 `remaining_risks`。

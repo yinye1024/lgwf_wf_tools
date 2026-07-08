@@ -318,18 +318,24 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "为所有节点逐个生成或补齐 `CONTRACT`",
             "`OUTPUT_JSON`、`OUTPUT_FILE` 和 `PERSIST` 必须有同节点 `CONTRACT WRITE workspace file`",
             "不要把节点内部临时文件、scratch 文件或 helper 缓存写入 `CONTRACT`",
+            "CONTRACT 合法落点",
+            "STEP <id> WORKFLOW",
+            "REACT slot",
+            "不得生成 `STEP <id> CONTRACT",
         ):
             self.assertIn(required, spec)
         for required in (
             "建立逐节点契约清单",
             "逐个节点说明应声明的 `CONTRACT READ` 和 `CONTRACT WRITE`",
             "扫描 prompt、script、`OUTPUT_JSON`、`OUTPUT_FILE`、`PERSIST` 和上下游文件引用",
+            "确认每个待补 `CONTRACT` 的合法落点",
         ):
             self.assertIn(required, (ROOT / "05_enrich_contracts_react/agents/reason.md").read_text(encoding="utf-8"))
         for required in (
             "逐个修改目标 package 内所有 `workflow.lgwf`",
             "为每个有外部业务文件 I/O 的节点补齐 `CONTRACT`",
             "`CONTRACT` 只声明节点外部业务文件输入输出",
+            "按节点类型把 `CONTRACT` 放到 parser 接受的位置",
         ):
             self.assertIn(required, act_prompt)
 
