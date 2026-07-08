@@ -26,7 +26,10 @@ STEP apply_upgrade
   };
 
 STEP summary
-  WORKFLOW "05_summary/workflow.lgwf";
+  WORKFLOW "05_summary/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_upgrade/decision.json";
+  };
 
 FLOW prepare_target
   THEN design_upgrade

@@ -13,6 +13,8 @@ PY route_repair_loop_entry
   RESULT state.lgwf_wf_prompt_fix.route_repair_entry_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/repair_review.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection.json";
   };
 
 PY finish_repair_loop_skip
@@ -21,6 +23,7 @@ PY finish_repair_loop_skip
   RESULT state.lgwf_wf_prompt_fix.finish_repair_skip_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/repair_review.json";
   };
 
 CONTEXT_SET repair_target_prompts_shared_context {

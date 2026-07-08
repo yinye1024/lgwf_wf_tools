@@ -31,11 +31,15 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 
 入口允许从原始意图开始，不要求用户先提供完整结构化 JSON。为了支持 `wf-convert` 的闭环转换，入口也兼容 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context` 等结构化上下文；这些字段存在时优先作为需求和业务流设计依据，缺失时保持只消费 `raw_intent` 的旧行为。后续阶段会逐步形成：
 
+入口 `request` 可选携带 `target_dir`、`target_file`、`target_dirs` 和 `target_files`，用于传入创建 workflow 时可参考的资料目录或文件，例如主 agent 已确认的开发计划、需求补充和验收说明。`01_confirm_requirements` 会将这些输入统一归一化为 `state.lgwf_wf_create.creation_context_dirs` 和 `state.lgwf_wf_create.creation_context_files`；`propose_requirements_react`、`propose_business_flow_react` 和 `design_steps_react` 通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考这些资料。它们不是目标 workflow 输出目录，不得与 `target_package_root` 混用。
+
 - `create_requirements_proposal`：需求方案草案。
 - `business_flow_proposal`：业务流转草案。
 - `step_designs_proposal`：步骤设计草案。
 - `implementation_result`：按已确认设计生成的 workflow 初稿说明。
 - `implementation_observe`：实现 ReAct observe 阶段的 authoring audit check 结果，失败时反馈给下一轮实现修复。
+- `contract_enrichment_result`：Contract 补强 ReAct 阶段的文档补齐结果。
+- `contract_observe`：Contract 补强 observe 阶段的 Contract 文档检查和 authoring audit check 结果，失败时反馈给下一轮 Contract 修复。
 
 所有目标 package 路径和 resource path 只允许使用包内相对路径，禁止绝对路径、盘符路径和 `..`。
 
@@ -48,6 +52,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
 - `validate_created_package` 在实现阶段之后确定性校验目标 package：目标目录必须存在，`wf/workflow.lgwf` 必须存在，已批准 stage 必须有 `wf/<stage>/workflow.lgwf` 以及 `agents/`、`scripts/`、`resources/`，且 `lgwf.py audit` 必须通过；失败时终止，不进入 summary 或 handoff。
 - `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；`observe` 必须执行 authoring audit check，把 `.lgwf/implementation_observe.json` 作为下一轮反馈，不得只依赖 ACT 自报成功。
+- `05_enrich_contracts_react` 是 Contract 补强子 workflow，位于实现阶段之后、最终 package validation 之前；它只补目标 package 的入口文档 Contract，不新增业务能力，`observe` 必须检查 Contract 必备段落并执行 authoring audit check。
 - `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
 - `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
 
@@ -78,6 +83,11 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/implementation_reason.md`
 - `.lgwf/implementation_observe.json`
 - `.lgwf/implementation_decision.json`
+- `.lgwf/contract_reason.md`
+- `.lgwf/contract_enrichment_result.json`
+- `.lgwf/contract_audit_result.json`
+- `.lgwf/contract_observe.json`
+- `.lgwf/contract_decision.json`
 - `.lgwf/created_package_validation.json`
 - `.lgwf/post_fix_handoff_input.json`
 - `reports/create-workflow/create_result_report.md`

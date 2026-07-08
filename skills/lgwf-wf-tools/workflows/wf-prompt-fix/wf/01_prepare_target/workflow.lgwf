@@ -21,6 +21,7 @@ PY check_lgwf_client_assist
   RESULT state.lgwf_wf_prompt_fix.environment_check_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/environment_check.json";
   };
 
 PY build_prompt_inventory
@@ -29,6 +30,7 @@ PY build_prompt_inventory
   RESULT state.lgwf_wf_prompt_fix.prompt_inventory_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/inventory.json";
   };
 
 FLOW init_prompt_fix_target

@@ -13,7 +13,7 @@ from pathlib import Path
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE_ROOT / "wf"
 ROOT_WORKFLOW = ROOT / "workflow.lgwf"
-SUMMARY_SCRIPT = ROOT / "05_summarize_create_result" / "scripts" / "summarize_create_result.py"
+SUMMARY_SCRIPT = ROOT / "06_summarize_create_result" / "scripts" / "summarize_create_result.py"
 STRUCTURE_VALIDATOR_SCRIPT = PACKAGE_ROOT / "scripts" / "validate_two_layer_workflow.py"
 sys.dont_write_bytecode = True
 
@@ -46,7 +46,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             'WORKFLOW "02_confirm_business_flow/workflow.lgwf"',
             'WORKFLOW "03_confirm_step_designs/workflow.lgwf"',
             'WORKFLOW "04_implement_steps_react/workflow.lgwf"',
-            'WORKFLOW "05_summarize_create_result/workflow.lgwf"',
+            'WORKFLOW "06_summarize_create_result/workflow.lgwf"',
         )
         for fragment in expected_stage_files:
             self.assertIn(fragment, text)
@@ -79,8 +79,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             "tests/test_scaffold_package_rules.py",
             "wf/workflow.lgwf",
             "wf/04_implement_steps_react/workflow.lgwf",
-            "wf/05_summarize_create_result/workflow.lgwf",
-            "wf/05_summarize_create_result/scripts/summarize_create_result.py",
+            "wf/06_summarize_create_result/workflow.lgwf",
+            "wf/06_summarize_create_result/scripts/summarize_create_result.py",
         ):
             self.assertTrue((PACKAGE_ROOT / relative).exists(), relative)
 
@@ -356,7 +356,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             PACKAGE_ROOT / "README.md",
             PACKAGE_ROOT / "AGENTS.md",
             PACKAGE_ROOT / "tests" / "README.md",
-            ROOT / "05_summarize_create_result" / "scripts" / "summarize_create_result.py",
+            ROOT / "06_summarize_create_result" / "scripts" / "summarize_create_result.py",
         )
         for path in docs:
             text = path.read_text(encoding="utf-8")

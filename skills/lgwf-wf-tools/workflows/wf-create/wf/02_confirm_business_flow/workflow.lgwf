@@ -8,6 +8,8 @@ DEFAULTS {
 
 CODEX propose_business_flow_react
   PROMPT "agents/propose_business_flow_react.md"
+  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
+  TARGET_FILES state.lgwf_wf_create.creation_context_files
   OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
   RESULT state.lgwf_wf_create.business_flow_proposal_result
   CONTRACT {

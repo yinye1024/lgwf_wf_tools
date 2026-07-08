@@ -43,8 +43,18 @@ STEP implement_steps_react
     WRITE workspace file ".lgwf/implementation_result.json";
   };
 
+STEP enrich_contracts_react
+  WORKFLOW "05_enrich_contracts_react/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
+    WRITE workspace file ".lgwf/contract_enrichment_result.json";
+    WRITE workspace file ".lgwf/contract_observe.json";
+  };
+
 STEP summarize_create_result
-  WORKFLOW "05_summarize_create_result/workflow.lgwf"
+  WORKFLOW "06_summarize_create_result/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
@@ -81,6 +91,7 @@ FLOW define_requirements
   THEN design_structure
   THEN implement_draft
   THEN implement_steps_react
+  THEN enrich_contracts_react
   THEN validate_created_package
   THEN summarize_create_result
   THEN prepare_post_fix_handoff

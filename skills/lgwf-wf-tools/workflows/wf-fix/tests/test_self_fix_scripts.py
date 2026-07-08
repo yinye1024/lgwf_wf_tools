@@ -150,7 +150,8 @@ class SelfFixScriptsTest(unittest.TestCase):
         self.assertNotIn("02_collect_target_input", source)
         self.assertNotIn("02_prompt_acceptance", source)
         self.assertNotIn("choose_prompt_acceptance", source)
-        self.assertIn('STEP repair_target_loop\n  WORKFLOW "03_repair_target_agent_loop/workflow.lgwf";', source)
+        self.assertIn('STEP repair_target_loop\n  WORKFLOW "03_repair_target_agent_loop/workflow.lgwf"', source)
+        self.assertIn('WRITE workspace file ".lgwf/target_repair/report.json";', source)
         self.assertIn('PY summarize_self_fix\n  SCRIPT "04_summarize_self_fix/scripts/summarize_self_fix.py"', source)
         self.assertIn("THEN repair_target_loop\n  THEN summarize_self_fix;", source)
         for node in (

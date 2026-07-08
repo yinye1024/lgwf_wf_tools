@@ -20,6 +20,8 @@ PY finish_raw_intent
   RESULT state.lgwf_wf_create.raw_intent_finish_result
   UPDATES_STATE {
     WRITE state.lgwf_wf_create.raw_intent_request;
+    WRITE state.lgwf_wf_create.creation_context_dirs;
+    WRITE state.lgwf_wf_create.creation_context_files;
     WRITE state.lgwf_wf_create.raw_intent_finished;
   }
   CONTRACT {
@@ -28,6 +30,8 @@ PY finish_raw_intent
 
 CODEX propose_requirements_react
   PROMPT "agents/propose_requirements_react.md"
+  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
+  TARGET_FILES state.lgwf_wf_create.creation_context_files
   OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
   RESULT state.lgwf_wf_create.requirements_proposal_result
   CONTRACT {

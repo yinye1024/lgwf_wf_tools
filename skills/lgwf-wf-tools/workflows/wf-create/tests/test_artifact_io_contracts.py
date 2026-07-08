@@ -52,6 +52,33 @@ class ArtifactIOContractsTest(unittest.TestCase):
 
         self.assertEqual(result["lgwf_wf_create.raw_intent_request"]["raw_intent"], "创建 git-diff-brief")
 
+    def test_finish_raw_intent_exports_creation_context_targets(self) -> None:
+        write_json(
+            self.work_dir / ".lgwf" / "raw_intent_request.json",
+            {
+                "raw_intent": "创建 git-diff-brief",
+                "creation_context_dirs": ["D:/plans/context"],
+                "creation_context_files": ["D:/plans/workflow-plan.md"],
+                "request": {
+                    "target_dir": "D:/plans/context",
+                    "target_dirs": ["D:/plans/extra-context"],
+                    "target_file": "D:/plans/workflow-plan.md",
+                    "target_files": ["D:/plans/notes.md"],
+                },
+            },
+        )
+
+        result = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
+
+        self.assertEqual(
+            result["lgwf_wf_create.creation_context_dirs"],
+            ["D:/plans/context", "D:/plans/extra-context"],
+        )
+        self.assertEqual(
+            result["lgwf_wf_create.creation_context_files"],
+            ["D:/plans/workflow-plan.md", "D:/plans/notes.md"],
+        )
+
     def test_prepare_confirmation_scripts_read_runtime_proposals(self) -> None:
         write_json(self.work_dir / ".lgwf" / "create_requirements_proposal.json", {"workflow_name": "git-diff-brief"})
         write_json(self.work_dir / ".lgwf" / "business_flow_proposal.json", {"stages": []})

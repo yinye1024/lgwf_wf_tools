@@ -75,7 +75,7 @@ class LgwfWfCreateScriptFlowE2ETest(unittest.TestCase):
             "e2e_apply_steps",
         )
         summarize = load_module(
-            "05_summarize_create_result/scripts/summarize_create_result.py",
+            "06_summarize_create_result/scripts/summarize_create_result.py",
             "e2e_summarize",
         )
 

@@ -8,7 +8,8 @@
       ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",
       ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md",
       ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md",
-      ".lgwf/create_reference_context/scaffold/scaffold_package_template.json"
+      ".lgwf/create_reference_context/scaffold/scaffold_package_template.json",
+      ".lgwf/create_reference_context/module-contract/module-contract.md"
     ]
   }
 }

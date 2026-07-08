@@ -193,7 +193,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
     def test_confirmed_runtime_artifacts_are_reported_separately_from_source_files(self) -> None:
         summary_module = load_module(
-            ROOT / "05_summarize_create_result/scripts/summarize_create_result.py",
+            ROOT / "06_summarize_create_result/scripts/summarize_create_result.py",
             "summary_integrity",
         )
         summary = summary_module.build_summary({})
@@ -264,8 +264,8 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertNotIn("wf/common/confirmation_io.py", plan["create_files"])
 
     def test_summary_workflow_uses_py_result_and_script_writes_json(self) -> None:
-        workflow = (ROOT / "05_summarize_create_result/workflow.lgwf").read_text(encoding="utf-8")
-        script = (ROOT / "05_summarize_create_result/scripts/summarize_create_result.py").read_text(encoding="utf-8")
+        workflow = (ROOT / "06_summarize_create_result/workflow.lgwf").read_text(encoding="utf-8")
+        script = (ROOT / "06_summarize_create_result/scripts/summarize_create_result.py").read_text(encoding="utf-8")
         self.assertNotIn("OUTPUT_JSON", workflow)
         self.assertIn("RESULT state.lgwf_wf_create.summary_result", workflow)
         self.assertIn("create_result_summary.json", script)
@@ -273,14 +273,40 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
     def test_created_package_validation_runs_before_summary_and_handoff(self) -> None:
         workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("PY validate_created_package", workflow)
+        self.assertIn('STEP enrich_contracts_react', workflow)
+        self.assertIn('WORKFLOW "05_enrich_contracts_react/workflow.lgwf"', workflow)
         self.assertIn(
             "THEN implement_draft\n"
             "  THEN implement_steps_react\n"
+            "  THEN enrich_contracts_react\n"
             "  THEN validate_created_package\n"
             "  THEN summarize_create_result",
             workflow,
         )
         self.assertIn('SCRIPT "scripts/validate_created_package.py"', workflow)
+
+    def test_contract_enrichment_react_runs_audit_before_final_validation(self) -> None:
+        workflow = (ROOT / "05_enrich_contracts_react/workflow.lgwf").read_text(encoding="utf-8")
+        observe_workflow = (ROOT / "05_enrich_contracts_react/observe_audit.lgwf").read_text(encoding="utf-8")
+        spec = (ROOT / "05_enrich_contracts_react/agents/spec.md").read_text(encoding="utf-8")
+        act_prompt = (ROOT / "05_enrich_contracts_react/agents/act.md").read_text(encoding="utf-8")
+
+        self.assertIn("REACT enrich_contracts_react MAX 3", workflow)
+        self.assertIn('SPEC "agents/spec.md"', workflow)
+        self.assertIn('WORKFLOW "observe_audit.lgwf"', workflow)
+        self.assertIn('OUTPUT_JSON ".lgwf/contract_enrichment_result.json"', workflow)
+        self.assertIn('WRITE workspace file ".lgwf/contract_observe.json"', workflow)
+        self.assertIn('SCRIPT "scripts/audit_contract_package.py"', observe_workflow)
+        audit_script = (ROOT / "05_enrich_contracts_react/scripts/audit_contract_package.py").read_text(encoding="utf-8")
+        self.assertIn("lgwf.py audit", audit_script)
+        self.assertIn("module-contract.md", spec)
+        self.assertIn("模块定位", act_prompt)
+        self.assertIn("入口", act_prompt)
+        self.assertIn("依赖", act_prompt)
+        self.assertIn("状态边界", act_prompt)
+        self.assertIn("产物", act_prompt)
+        self.assertIn("验证", act_prompt)
+        self.assertIn("禁止事项", act_prompt)
 
     def test_agents_doc_names_route_back_to_facade_when_out_of_scope(self) -> None:
         text = (PACKAGE_ROOT / "AGENTS.md").read_text(encoding="utf-8")

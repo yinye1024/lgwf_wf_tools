@@ -12,6 +12,7 @@
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_result_contract.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_result_contract.md` 镜像而来，定义 `scaffold_plan` 输出字段契约。
 - `.lgwf/create_reference_context/dsl-assist/*.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
 - `docs/steps/`：当前步骤设计草案目录；若已有草案，可作为增量整理或覆盖参考范围。
+- `state.lgwf_wf_create.creation_context_dirs` / `state.lgwf_wf_create.creation_context_files`：通过 `TARGET_DIRS` / `TARGET_FILES` 暴露给当前 Codex 节点的只读创建资料目录和文件，可能包含主 agent 确认后的 workflow 开发计划、验收说明或补充约束。
 
 路径约束：不要从 `ws/02_confirm_business_flow/resources/...` 读取 scaffold 资源；Codex 子进程的 workspace root 是 `ws/`，scaffold 资源已由 `prepare_dsl_reference_context` 镜像到 `.lgwf/create_reference_context/scaffold/`。
 
@@ -21,7 +22,8 @@
 3. 将 `scaffold_plan` 中的 `package_profile`、`create_dirs`、`create_files`、`placeholders` 和状态边界转化为步骤设计约束。
 4. 按 `dsl-assist` 和 `scaffold_template_spec.md` 的 workflow 创建规范设计根 workflow 与子 workflow 边界：根 workflow 只保留业务骨架，阶段细节落到第一层子 workflow。
 5. 子 workflow 目录必须自包含：每个 `wf/<stage>/` 目录拥有本阶段的 `workflow.lgwf`、`agents/`、`scripts/`、`resources/`；不得设计 `wf/<stage>/<substage>/workflow.lgwf`。
-6. 确保每份步骤文档都能被 `confirm_step_designs` 审阅，并在批准后被 `implement_steps_react` 直接消费。
+6. 若存在 `creation_context_dirs` 或 `creation_context_files`，读取其中与步骤拆分、实现顺序、验收约束和已确认开发计划相关的信息，作为步骤设计草案的参考来源。
+7. 确保每份步骤文档都能被 `confirm_step_designs` 审阅，并在批准后被 `implement_steps_react` 直接消费。
 
 ## Success Criteria
 - `step_designs_proposal` 明确列出每个 `docs/steps/*.md` 草案的路径、`step_slug` 和确认要点。
@@ -60,5 +62,6 @@
 - 不得把多阶段实现压进单个大 `workflow.lgwf`；可独立审计、修复或复用的阶段必须设计为第一层子 workflow。
 - 不得设计孙级 workflow；如果某个阶段内包含多个节点、人工确认、ReAct 循环或脚本，仍然放在该阶段自己的 `wf/<stage>/workflow.lgwf` 内编排。
 - `out_of_scope` 至少排除 `lgwf-wf-prompt-fix`、`lgwf-wf-tools`、自动修复和端到端运行保证。
+- `creation_context_dirs` 和 `creation_context_files` 只作为只读参考资料；如果资料内容与 `.lgwf/business_flow.json`、`.lgwf/business_flow_proposal.json` 或 `scaffold_plan` 冲突，必须在 `acceptance_notes` 中记录待确认项，不得覆盖已确认业务流和脚手架计划。
 - 不得生成 `.lgwf/step_designs.json`。
 - 不得直接产出 workflow 实现文件内容；若信息不足，只能在 `acceptance_notes` 中记录待确认项。

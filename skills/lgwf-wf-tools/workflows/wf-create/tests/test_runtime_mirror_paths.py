@@ -136,7 +136,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
             "produced_files": ["wf/workflow.lgwf", "AGENTS.md"],
         }
 
-        result = self.run_script("05_summarize_create_result/scripts/summarize_create_result.py", payload)
+        result = self.run_script("06_summarize_create_result/scripts/summarize_create_result.py", payload)
 
         self.assertEqual(result["target_package_root"], "skills/git-diff-brief")
         self.assertTrue((self.work_dir / ".lgwf" / "create_result_summary.json").is_file())
@@ -159,7 +159,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
             },
         )
 
-        result = self.run_script("05_summarize_create_result/scripts/summarize_create_result.py")
+        result = self.run_script("06_summarize_create_result/scripts/summarize_create_result.py")
 
         self.assertEqual(result["workflow_name"], "git-diff-brief")
         self.assertEqual(result["target_package_root"], "skills/git-diff-brief")

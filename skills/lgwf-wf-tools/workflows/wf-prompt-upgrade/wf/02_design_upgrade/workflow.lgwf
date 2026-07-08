@@ -13,6 +13,7 @@ PY prepare_prompt_upgrade_design_feedback
   RESULT state.lgwf_wf_prompt_upgrade.design_feedback_prepare_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/proposal_review.json";
   };
 
 CONTEXT_SET design_prompt_upgrade_shared_context {

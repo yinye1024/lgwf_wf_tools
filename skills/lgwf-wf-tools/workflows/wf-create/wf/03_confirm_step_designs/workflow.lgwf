@@ -19,12 +19,15 @@ PY prepare_dsl_reference_context
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
+    WRITE workspace file ".lgwf/create_reference_context/dsl_reference_context.json";
   };
 
 CODEX design_steps_react
   PROMPT "agents/design_steps_react.md"
   CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"
   CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"
+  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
+  TARGET_FILES state.lgwf_wf_create.creation_context_files
   OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
   TIMEOUT 900
   RESULT state.lgwf_wf_create.step_design_result

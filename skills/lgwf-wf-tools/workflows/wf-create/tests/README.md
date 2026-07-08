@@ -33,7 +33,7 @@ python tests\lgwf_wf_create_real_positive_e2e.py
 - 验证入口会检查根目录没有 `workflow.lgwf` 和 `SKILL.md`，真实入口固定为 `wf/workflow.lgwf`。
 - 验证入口会检查 `wf/workflow.lgwf` 的阶段顺序、REVIEW route 与 resource path，仅允许包内相对路径。
 - 验证入口会检查 `README.md`、`AGENTS.md`、`tests/README.md` 和 `summarize_create_result` 脚本能够以 UTF-8 正常读取，且中文说明可读。
-- 验证入口会检查 `wf/05_summarize_create_result/scripts/summarize_create_result.py` 已定义第一版结果汇总接口，不暗示后续 workflow 已集成。
+- 验证入口会检查 `wf/06_summarize_create_result/scripts/summarize_create_result.py` 已定义第一版结果汇总接口，不暗示后续 workflow 已集成。
 - 如需单独验证脚手架规则函数，可额外执行 `python -m unittest tests.test_scaffold_package_rules`。
 
 未覆盖范围：

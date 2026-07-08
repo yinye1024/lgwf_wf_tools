@@ -22,6 +22,7 @@
 - `docs/steps/*.md` 的字段模板、命名约定和实现阶段输入契约。
 - `confirm_step_designs` 的确认模板与决策结构示例。
 - `04_implement_steps_react` 的 ReAct 实现循环、audit observe 和边界说明。
+- `05_enrich_contracts_react` 的 Contract 补强 ReAct 循环、Contract 文档检查和 audit observe。
 - `dsl-assist` 创建与审计规范的运行时参考上下文。
 - 中文 UTF-8 说明文档。
 
@@ -54,11 +55,13 @@
 7. `design_steps_react`
 8. `confirm_step_designs`
 9. `implement_steps_react`
-10. `summarize_create_result`
+10. `enrich_contracts_react`
+11. `summarize_create_result`
 
 其中需求阶段已经补齐以下契约：
 
 - `collect_raw_intent`：允许用户从原始意图启动，不要求先手写完整结构化 JSON。
+- `creation_context_dirs/files`：可由入口 `request.target_dir`、`request.target_file`、`request.target_dirs` 和 `request.target_files` 传入，作为需求、业务流和步骤设计阶段的只读创建资料。
 - `propose_requirements_react`：定义 `create_requirements_proposal` 的关键字段、输出格式和设计理由。
 - `confirm_requirements`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分 approval 与 confirm 后固化。
 
@@ -74,6 +77,7 @@
 - `design_steps_react`：定义输出为 `docs/steps/*.md` 的可确认步骤设计文档草案，要求覆盖目标、输入、输出、依赖和实现建议。
 - `confirm_step_designs`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分设计草案审阅与 confirm 后固化。
 - `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；`observe` 执行 authoring audit check，失败反馈回下一轮修复，同时明确不负责 prompt 修复、agent 化和自动修复。
+- `enrich_contracts_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环补齐目标 package 的模块 Contract；`observe` 同时检查 Contract 必备段落并运行 `lgwf.py audit`，只有全部通过才进入最终 package validation。
 
 ## 需求阶段边界
 
@@ -84,6 +88,8 @@
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/create_requirements.json`，对应“确认后固化”产物。
 
 `approve` 后会把确认结果固化为 `.lgwf/create_requirements.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游业务流转阶段。
+
+如果入口提供 `request.target_dir`、`request.target_file`、`request.target_dirs` 或 `request.target_files`，需求阶段会把这些资料目标整理为 `creation_context_dirs` 和 `creation_context_files`，并由后续 Codex 设计节点通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考。它们用于补充创建背景，例如主 agent 确认后的开发计划；它们不表示生成出的 workflow package 目录，输出目录仍由 `target_package_root` 确认。
 
 ## 业务流转与脚手架边界
 
@@ -118,6 +124,13 @@
 - 必须按 `dsl-assist` 规范保持根 workflow 薄编排，阶段细节优先拆到子 workflow，并保证所有子 workflow 可被递归审计。
 - `observe` 必须执行 `lgwf.py audit` 类 authoring audit check，并把失败 stderr 写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
 - `decide` 只根据 observe 的 audit 结果决定 `continue` 或 `exit`。
+
+`enrich_contracts_react` 当前是独立 Contract 补强子 workflow，重点约束：
+
+- 只补目标 package 的 `AGENTS.md`、`README.md` 等入口文档 Contract，不新增业务阶段或实现能力。
+- Contract 必须覆盖模块定位、入口、依赖、状态边界、产物、验证和禁止事项。
+- `observe` 必须执行 Contract 文档检查和 `lgwf.py audit`，失败时反馈给下一轮 Contract 修复。
+- Contract 补强通过后，仍由 `validate_created_package` 执行最终确定性验收。
 - 不负责 `lgwf-wf-prompt-fix` 自动调用、生成出的目标 workflow 自动接入 facade 路由、自动修复或端到端运行保证。
 
 ## 文档与编码

@@ -204,7 +204,7 @@ class StateHandoffContractTest(unittest.TestCase):
             helper.require_approve({"decision": {"value": "revise"}})
 
     def test_summary_rejects_invalid_runtime_artifact_paths(self) -> None:
-        summary = load_module(ROOT / "05_summarize_create_result/scripts/summarize_create_result.py", "summary_handoff")
+        summary = load_module(ROOT / "06_summarize_create_result/scripts/summarize_create_result.py", "summary_handoff")
         with self.assertRaises(ValueError):
             summary.build_summary({"runtime_artifacts": ["workflow.lgwf"]})
         with self.assertRaises(ValueError):
@@ -406,7 +406,7 @@ class StateHandoffContractTest(unittest.TestCase):
                 self.assertNotIn("approval", artifact)
 
     def test_summary_report_path_is_relative(self) -> None:
-        summary = load_module(ROOT / "05_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")
+        summary = load_module(ROOT / "06_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")
         with tempfile.TemporaryDirectory() as temp:
             report = summary.write_report(Path(temp), summary.build_summary({}))
             self.assertFalse(Path(report.as_posix()).is_absolute())

@@ -32,8 +32,10 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
             ("apply_upgrade", "04_apply_upgrade/workflow.lgwf"),
             ("summary", "05_summary/workflow.lgwf"),
         ):
-            self.assertIn(f"STEP {step_id}\n  WORKFLOW \"{workflow_path}\";", source)
+            self.assertIn(f"STEP {step_id}\n  WORKFLOW \"{workflow_path}\"", source)
             self.assertTrue((ROOT / "wf" / workflow_path).is_file())
+        self.assertIn('WRITE workspace file ".lgwf/prompt_upgrade/decision.json";', source)
+        self.assertIn('READ workspace file ".lgwf/prompt_upgrade/decision.json";', source)
         self.assertNotIn("APPROVAL init_prompt_upgrade_target", source)
         self.assertNotIn("REACT design_prompt_upgrade", source)
         self.assertNotIn("REACT apply_prompt_upgrade", source)

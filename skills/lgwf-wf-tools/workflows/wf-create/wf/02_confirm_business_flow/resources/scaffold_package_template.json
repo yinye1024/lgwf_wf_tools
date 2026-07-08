@@ -32,7 +32,7 @@
     "01_confirm_requirements",
     "02_confirm_business_flow",
     "03_confirm_step_designs",
-    "05_summarize_create_result"
+    "06_summarize_create_result"
   ],
   "step_private_dirs": [
     "agents",
@@ -56,7 +56,7 @@
     "wf/03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
     "wf/03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
     "wf/03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
-    "wf/05_summarize_create_result/scripts/summarize_create_result.py"
+    "wf/06_summarize_create_result/scripts/summarize_create_result.py"
   ],
   "test_files": [
     "tests/test_scaffold_package_rules.py",

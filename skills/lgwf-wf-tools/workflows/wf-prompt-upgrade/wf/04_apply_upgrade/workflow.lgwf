@@ -13,6 +13,8 @@ PY route_apply_upgrade_entry
   RESULT state.lgwf_wf_prompt_upgrade.route_apply_entry_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/apply_review.json";
+    READ workspace file ".lgwf/prompt_upgrade/decision.json";
   };
 
 PY finish_apply_upgrade_skip
@@ -21,6 +23,7 @@ PY finish_apply_upgrade_skip
   RESULT state.lgwf_wf_prompt_upgrade.finish_apply_skip_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/apply_review.json";
   };
 
 CONTEXT_SET apply_prompt_upgrade_shared_context {

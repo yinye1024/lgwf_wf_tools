@@ -13,6 +13,11 @@ PY prepare_prompt_fix_selection_context
   RESULT state.lgwf_wf_prompt_fix.prepare_prompt_selection_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/selection_context.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/repair_review.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/react_history.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
   };
 
 APPROVAL select_prompt_fixes
@@ -29,6 +34,9 @@ PY validate_prompt_fix_selection
   RESULT state.lgwf_wf_prompt_fix.validate_prompt_selection_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
   };
 
 FLOW prepare_prompt_fix_selection_context

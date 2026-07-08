@@ -21,6 +21,7 @@ PY check_lgwf_client_assist
   RESULT state.lgwf_wf_prompt_upgrade.environment_check_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/environment_check.json";
   };
 
 PY build_prompt_inventory
@@ -29,6 +30,8 @@ PY build_prompt_inventory
   RESULT state.lgwf_wf_prompt_upgrade.prompt_inventory_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/react_history.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/inventory.json";
   };
 
 FLOW init_prompt_upgrade_target

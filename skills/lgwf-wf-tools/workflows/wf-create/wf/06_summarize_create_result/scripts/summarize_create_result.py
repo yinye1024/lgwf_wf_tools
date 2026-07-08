@@ -193,7 +193,7 @@ def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
             "README.md",
             "AGENTS.md",
             "tests/test_structured_contracts.py",
-            "wf/05_summarize_create_result/scripts/summarize_create_result.py",
+            "wf/06_summarize_create_result/scripts/summarize_create_result.py",
         ],
     )
     if not isinstance(produced_files, list):

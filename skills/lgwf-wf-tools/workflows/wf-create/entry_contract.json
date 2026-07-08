@@ -10,14 +10,28 @@
     "required": ["raw_intent"],
     "properties": {
       "raw_intent": {"type": "string"},
-      "request": {"type": "object"}
+      "request": {
+        "type": "object",
+        "properties": {
+          "target_dir": {"type": "string"},
+          "target_file": {"type": "string"},
+          "target_dirs": {"type": "array"},
+          "target_files": {"type": "array"}
+        }
+      }
     },
-    "example": {"raw_intent": "要创建的新 LGWF workflow 原始意图"}
+    "example": {
+      "raw_intent": "要创建的新 LGWF workflow 原始意图",
+      "request": {
+        "target_dir": "D:/example/context-dir",
+        "target_file": "D:/example/workflow-plan.md"
+      }
+    }
   },
   "input_file_policy": "Use UTF-8 no BOM --input-json-file when raw_intent contains Chinese or nested JSON.",
   "auto_human_policy": "conditional",
   "target_scope": {
-    "fields": ["raw_intent", "request"],
+    "fields": ["raw_intent", "request.target_dir", "request.target_file", "request.target_dirs", "request.target_files"],
     "write_scope": "Creates or updates only the package path approved by the workflow confirmations."
   },
   "state_boundary": {

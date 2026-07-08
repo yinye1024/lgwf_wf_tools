@@ -30,7 +30,7 @@
       agents/
       scripts/
       resources/
-    05_summarize_create_result/
+    06_summarize_create_result/
       workflow.lgwf
       scripts/
 ```

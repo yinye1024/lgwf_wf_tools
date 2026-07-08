@@ -54,6 +54,36 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("优先使用 `source_business_contract`", requirements_prompt)
         self.assertIn("优先使用 `conversion_mapping`", business_prompt)
 
+    def test_creation_context_targets_are_available_to_three_design_stages(self) -> None:
+        entry_contract = (ROOT.parent / "entry_contract.json").read_text(encoding="utf-8")
+        raw_prompt = read("01_confirm_requirements/confirm_raw_intent.md")
+        raw_contract = read("01_confirm_requirements/resources/raw_intent_contract.md")
+        requirements_workflow = read("01_confirm_requirements/workflow.lgwf")
+        business_workflow = read("02_confirm_business_flow/workflow.lgwf")
+        step_workflow = read("03_confirm_step_designs/workflow.lgwf")
+        requirements_prompt = read("01_confirm_requirements/agents/propose_requirements_react.md")
+        business_prompt = read("02_confirm_business_flow/agents/propose_business_flow_react.md")
+        step_prompt = read("03_confirm_step_designs/agents/design_steps_react.md")
+
+        self.assertIn('"target_dir"', entry_contract)
+        self.assertIn('"target_file"', entry_contract)
+        self.assertIn('"target_dirs"', entry_contract)
+        self.assertIn('"target_files"', entry_contract)
+        self.assertIn("request.target_dir", raw_prompt)
+        self.assertIn("request.target_file", raw_prompt)
+        self.assertIn("creation_context_dirs", raw_contract)
+        self.assertIn("creation_context_files", raw_contract)
+        self.assertIn("creation_context_dirs", requirements_prompt)
+        self.assertIn("creation_context_files", requirements_prompt)
+        self.assertIn("creation_context_dirs", business_prompt)
+        self.assertIn("creation_context_files", business_prompt)
+        self.assertIn("creation_context_dirs", step_prompt)
+        self.assertIn("creation_context_files", step_prompt)
+
+        for workflow in (requirements_workflow, business_workflow, step_workflow):
+            self.assertIn("TARGET_DIRS state.lgwf_wf_create.creation_context_dirs", workflow)
+            self.assertIn("TARGET_FILES state.lgwf_wf_create.creation_context_files", workflow)
+
     def test_revision_prompts_are_revision_approval_prompts(self) -> None:
         for relative in (
             "01_confirm_requirements/revise_requirements.md",

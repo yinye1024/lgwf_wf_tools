@@ -13,4 +13,11 @@ PY summarize_prompt_upgrade
   RESULT state.lgwf_wf_prompt_upgrade.summary_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/target_prompt_upgrade_summary.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/summary.json";
+    READ workspace file ".lgwf/prompt_upgrade/react_history.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+    READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+    READ workspace file ".lgwf/prompt_upgrade/decision.json";
+    READ workspace file ".lgwf/prompt_upgrade/apply_review.json";
   };

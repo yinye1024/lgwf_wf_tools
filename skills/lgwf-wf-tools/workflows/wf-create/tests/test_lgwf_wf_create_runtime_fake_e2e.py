@@ -170,7 +170,7 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             )
             run_script(work_dir, "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
 
-            summary_state = run_script(work_dir, "05_summarize_create_result/scripts/summarize_create_result.py")
+            summary_state = run_script(work_dir, "06_summarize_create_result/scripts/summarize_create_result.py")
             summary = json.loads((lgwf_dir / "create_result_summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["status"], "draft_structure_ready")
             self.assertEqual(summary_state["status"], "draft_structure_ready")

@@ -13,6 +13,11 @@ PY prepare_prompt_upgrade_confirmation
   RESULT state.lgwf_wf_prompt_upgrade.prepare_confirmation_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/confirmation_context.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal_review.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+    READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+    READ workspace file ".lgwf/prompt_upgrade/analysis.json";
   };
 
 APPROVAL confirm_prompt_upgrade
@@ -29,6 +34,9 @@ PY validate_prompt_upgrade_decision
   RESULT state.lgwf_wf_prompt_upgrade.validate_decision_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade/decision.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+    READ workspace file ".lgwf/prompt_upgrade/decision.json";
   };
 
 PY route_after_prompt_upgrade_decision
@@ -37,6 +45,7 @@ PY route_after_prompt_upgrade_decision
   RESULT state.lgwf_wf_prompt_upgrade.route_decision_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/prompt_upgrade/decision.json";
   };
 
 PY finish_prompt_upgrade_confirmation

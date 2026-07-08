@@ -13,6 +13,13 @@ PY summarize_prompt_acceptance
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/target_prompt_acceptance_summary.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/summary.json";
+    READ workspace file ".lgwf/prompt_acceptance/repair_review.json";
+    READ workspace file ".lgwf/prompt_acceptance/react_history.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
   };
 
 PY route_after_prompt_acceptance_summary
@@ -21,6 +28,7 @@ PY route_after_prompt_acceptance_summary
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_summary_route_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/prompt_acceptance/summary.json";
   };
 
 PY finish_prompt_acceptance
@@ -29,6 +37,8 @@ PY finish_prompt_acceptance
   RESULT state.lgwf_wf_prompt_fix.prompt_acceptance_finish_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_acceptance/confirmation.json";
+    READ workspace file ".lgwf/prompt_acceptance/summary.json";
   };
 
 APPROVAL confirm_prompt_acceptance
