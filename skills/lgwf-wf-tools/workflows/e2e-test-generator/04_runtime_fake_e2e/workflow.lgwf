@@ -13,6 +13,8 @@ PY prepare_runtime_fake_repair_context
   RESULT state.lgwf_e2e.runtime_fake_prepare_repair_context_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/e2e_runtime_fake_observe.json";
+    WRITE workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
   };
 
 CONTEXT_SET runtime_fake_e2e_shared_context {
@@ -29,6 +31,8 @@ CONTEXT_SET runtime_fake_e2e_design_context {
 REACT runtime_fake_e2e_react MAX 3
   SPEC "01_design/agents/spec.md"
   CONTEXT runtime_fake_e2e_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "01_design/agents/reason.md"
     CONTEXT workspace file ".lgwf/e2e_runtime_fake_observe.json"

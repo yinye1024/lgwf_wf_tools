@@ -3,6 +3,13 @@
     ".lgwf/prompt_acceptance/react_history.json",
     ".lgwf/prompt_acceptance/repair_review.json"
   ],
+  "final_outputs": [
+    ".lgwf/prompt_acceptance/confirmation.json",
+    ".lgwf/prompt_acceptance/repair_review.json",
+    ".lgwf/prompt_acceptance/selection_context.json",
+    ".lgwf/prompt_acceptance/summary.json",
+    ".lgwf/target_prompt_acceptance_summary.json"
+  ],
   "script_writes": {
     "check_lgwf_client_assist": [
       ".lgwf/prompt_acceptance/environment_check.json",

@@ -23,11 +23,14 @@ PY index_prompt_files
   UPDATES_STATE
   CONTRACT {
     READ workspace file ".lgwf/prompt_convert_target.json";
+    WRITE workspace file ".lgwf/prompt_file_index.json";
   };
 
 REACT inspect_prompt_workflow_react MAX 3
   SPEC "agents/inspect_prompt_workflow_react.md"
   CONTEXT inspect_prompt_workflow_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "agents/inspect_reason.md"
     CONTEXT workspace file ".lgwf/prompt_workflow_inspection_observe.json"
@@ -70,6 +73,8 @@ REACT inspect_prompt_workflow_react MAX 3
 REACT propose_create_input_react MAX 3
   SPEC "agents/propose_create_input_react.md"
   CONTEXT propose_create_input_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "agents/propose_reason.md"
     CONTEXT workspace file ".lgwf/wf_create_input_observe.json"
@@ -127,6 +132,7 @@ PY finalize_create_input
   RESULT state.lgwf_wf_convert.finalize_create_input_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/wf_create_input_approval.json";
     READ workspace file ".lgwf/wf_create_input_proposal.json";
     WRITE workspace file ".lgwf/wf_create_input.json";
   };

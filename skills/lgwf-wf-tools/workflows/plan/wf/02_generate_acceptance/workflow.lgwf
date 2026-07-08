@@ -23,6 +23,8 @@ CONTEXT_SET generate_acceptance_proposal_shared_context {
 REACT generate_acceptance_proposal MAX 3
   SPEC "00_generate_acceptance_proposal/agents/spec.md"
   CONTEXT generate_acceptance_proposal_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "00_generate_acceptance_proposal/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_plan_observe.json"

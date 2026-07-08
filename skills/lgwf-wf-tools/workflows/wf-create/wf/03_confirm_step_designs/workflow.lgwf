@@ -14,8 +14,11 @@ PY prepare_dsl_reference_context
   CONTRACT {
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/dsl_reference_context.json";
+    WRITE workspace file ".lgwf/create_reference_context/dsl-assist/*.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
+    WRITE workspace file ".lgwf/create_reference_context/scaffold/*.md";
+    WRITE workspace file ".lgwf/create_reference_context/scaffold/*.md|*.json";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";

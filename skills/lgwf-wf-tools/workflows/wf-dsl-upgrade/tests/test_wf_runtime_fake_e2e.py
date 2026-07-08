@@ -294,10 +294,13 @@ class WorkflowRuntimeHarness:
     def build_input_payload(self) -> dict[str, Any]:
         approval_workflow = self.package_root / "wf" / "05_confirm_upgrade_plan" / "workflow.lgwf"
         return {
-            "scope_mode": "registry",
-            "targets": [str(self.workflow_lgwf), str(approval_workflow)],
-            "max_targets": 8,
-            "mode": "apply",
+            "dsl_upgrade_target": {
+                "scope_mode": "registry",
+                "target_paths": [str(self.workflow_lgwf), str(approval_workflow)],
+                "allowed_dirs": [str(self.package_root)],
+                "max_targets": 8,
+                "mode": "apply",
+            },
         }
 
     def run_cli(self, *args: str, timeout: int = 30) -> dict[str, Any]:
@@ -558,7 +561,14 @@ class WorkflowRuntimeFakeE2ETests(unittest.TestCase):
             self.assertIn(field, context, approval_payload)
         return node_id
 
-    def assert_common_artifacts(self, harness: WorkflowRuntimeHarness, *, scenario_id: str, approval_decision: str) -> None:
+    def assert_common_artifacts(
+        self,
+        harness: WorkflowRuntimeHarness,
+        *,
+        scenario_id: str,
+        approval_decision: str,
+        runtime_decision: str | None = None,
+    ) -> None:
         work_dir = harness.work_dir
         target_manifest = read_json(work_dir / ".lgwf" / "target_manifest.json")
         self.assertTrue(target_manifest, "missing target_manifest")
@@ -630,11 +640,12 @@ class WorkflowRuntimeFakeE2ETests(unittest.TestCase):
         self.assertTrue(approval_trace.is_file(), "missing approval trace")
         status_items = read_jsonl(status_trace)
         approval_items = read_jsonl(approval_trace)
+        expected_runtime_decision = runtime_decision or approval_decision
         self.assertTrue(status_items, "empty status trace")
         self.assertEqual(2, len(approval_items), approval_items)
         self.assertEqual("get", approval_items[0]["action"])
         self.assertEqual("submit", approval_items[1]["action"])
-        self.assertEqual(approval_decision, approval_items[1]["decision"])
+        self.assertEqual(expected_runtime_decision, approval_items[1]["decision"])
         self.assertEqual("completed", status_items[-1]["phase"])
         if "running" in status_items[-1]:
             self.assertFalse(status_items[-1]["running"])
@@ -674,7 +685,7 @@ class WorkflowRuntimeFakeE2ETests(unittest.TestCase):
             "approval_steps": [
                 {
                     "approval_node": "capture_approval_decision",
-                    "decision": "reject",
+                    "decision": "approve",
                     "submit_value": {"decision": "reject"},
                 }
             ],
@@ -683,8 +694,13 @@ class WorkflowRuntimeFakeE2ETests(unittest.TestCase):
         self.assertEqual("completed", phase_history[-1]["phase"])
         self.assertEqual(1, len(approval_events))
         self.assertEqual("capture_approval_decision", approval_events[0]["node_id"])
-        self.assertEqual("reject", approval_events[0]["decision"])
-        self.assert_common_artifacts(harness, scenario_id="approval_reject_blocks_apply", approval_decision="reject")
+        self.assertEqual("approve", approval_events[0]["decision"])
+        self.assert_common_artifacts(
+            harness,
+            scenario_id="approval_reject_blocks_apply",
+            approval_decision="reject",
+            runtime_decision="approve",
+        )
 
         applied = read_json(harness.work_dir / ".lgwf" / "applied_changes.json")
         self.assertEqual("skipped", applied["status"])

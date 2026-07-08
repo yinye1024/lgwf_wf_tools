@@ -27,6 +27,11 @@ PY check_lgwf_client_assist
   UPDATES_STATE
   CONTRACT {
     WRITE workspace file ".lgwf/prompt_acceptance/environment_check.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/*.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
   };
 
 PY build_prompt_inventory

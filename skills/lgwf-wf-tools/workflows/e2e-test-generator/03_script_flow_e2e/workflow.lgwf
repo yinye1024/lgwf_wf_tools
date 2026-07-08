@@ -12,6 +12,7 @@ PY prepare_script_flow_observe_feedback
   RESULT state.lgwf_e2e.script_flow_observe_feedback_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/e2e_script_flow_observe.json";
   };
 
 CONTEXT_SET script_flow_e2e_shared_context {
@@ -27,6 +28,8 @@ CONTEXT_SET script_flow_e2e_design_context {
 REACT script_flow_e2e_react MAX 3
   SPEC "01_design/agents/spec.md"
   CONTEXT script_flow_e2e_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "01_design/agents/reason.md"
     CONTEXT workspace file ".lgwf/e2e_script_flow_observe.json"

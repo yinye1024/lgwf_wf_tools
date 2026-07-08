@@ -7,7 +7,7 @@ WF_ROOT = Path(__file__).resolve().parents[2]
 if str(WF_ROOT) not in sys.path:
     sys.path.insert(0, str(WF_ROOT))
 
-from shared.scripts.upgrade_helpers import dump_state_updates, load_runtime_payload, read_json, write_json
+from shared.scripts.upgrade_helpers import dump_state_updates, get_runtime_field, load_runtime_payload, read_json, write_json
 
 
 def build_confirmation_context(payload: dict) -> dict:
@@ -16,7 +16,7 @@ def build_confirmation_context(payload: dict) -> dict:
     classification = read_json(work_dir / ".lgwf/classification_summary.json", {})
     plan_summary = read_json(work_dir / ".lgwf/upgrade_plan_summary.json", {})
     return {
-        "mode": payload.get("mode", "dry_run"),
+        "mode": get_runtime_field(payload, "mode", "dry_run"),
         "target_count": len(manifest.get("targets", [])),
         "classification_summary": classification,
         "upgrade_plan_summary": plan_summary,
@@ -25,7 +25,7 @@ def build_confirmation_context(payload: dict) -> dict:
 
 
 def main() -> None:
-    payload = load_runtime_payload("work_dir", "mode")
+    payload = load_runtime_payload("work_dir")
     work_dir = Path(payload.get("work_dir", "."))
     context = build_confirmation_context(payload)
     write_json(work_dir / ".lgwf/upgrade_plan_confirmation_context.json", context)

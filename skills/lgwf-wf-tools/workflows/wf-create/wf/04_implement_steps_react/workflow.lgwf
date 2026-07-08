@@ -20,11 +20,14 @@ PY initialize_implementation_observe
   RESULT state.lgwf_wf_create.initialize_implementation_observe_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
 REACT implement_steps_react MAX 3
   SPEC "agents/spec.md"
   CONTEXT implementation_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "agents/reason.md"
     OUTPUT_FILE ".lgwf/implementation_reason.md"

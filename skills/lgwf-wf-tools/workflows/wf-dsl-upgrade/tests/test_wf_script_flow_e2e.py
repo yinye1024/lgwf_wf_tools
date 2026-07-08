@@ -79,13 +79,15 @@ class WorkflowScriptFlowE2ETests(unittest.TestCase):
             (work_dir / "reports").mkdir(parents=True, exist_ok=True)
             payload = {
                 "work_dir": str(work_dir),
-                "scope_mode": "registry",
-                "targets": [
-                    "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/workflow.lgwf",
-                    "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/05_confirm_upgrade_plan/workflow.lgwf",
-                ],
-                "max_targets": 8,
-                "mode": "dry_run",
+                "dsl_upgrade_target": {
+                    "scope_mode": "registry",
+                    "target_paths": [
+                        "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/workflow.lgwf",
+                        "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/05_confirm_upgrade_plan/workflow.lgwf",
+                    ],
+                    "max_targets": 8,
+                    "mode": "dry_run",
+                },
             }
 
             updates = self.run_script_with_json_stdin(
@@ -115,9 +117,10 @@ class WorkflowScriptFlowE2ETests(unittest.TestCase):
             target_manifest = self.assert_json_file_fields(
                 work_dir,
                 ".lgwf/target_manifest.json",
-                ["scope_mode", "targets", "max_targets", "authorized"],
+                ["scope_mode", "mode", "targets", "max_targets", "authorized"],
             )
             self.assertEqual("registry", target_manifest["scope_mode"])
+            self.assertEqual("dry_run", target_manifest["mode"])
             self.assertEqual(2, len(target_manifest["targets"]))
             self.assertTrue(target_manifest["authorized"])
 
@@ -258,13 +261,15 @@ class WorkflowScriptFlowE2ETests(unittest.TestCase):
                 "input": {
                     "payload": {
                         "work_dir": str(work_dir),
-                        "scope_mode": "registry",
-                        "targets": [
-                            "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/workflow.lgwf",
-                            "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/05_confirm_upgrade_plan/workflow.lgwf",
-                        ],
-                        "max_targets": 8,
-                        "mode": "apply",
+                        "dsl_upgrade_target": {
+                            "scope_mode": "registry",
+                            "target_paths": [
+                                "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/workflow.lgwf",
+                                "skills/lgwf-wf-tools/workflows/wf-dsl-upgrade/wf/05_confirm_upgrade_plan/workflow.lgwf",
+                            ],
+                            "max_targets": 8,
+                            "mode": "apply",
+                        },
                     }
                 }
             }
@@ -299,9 +304,10 @@ class WorkflowScriptFlowE2ETests(unittest.TestCase):
             target_manifest = self.assert_json_file_fields(
                 work_dir,
                 ".lgwf/target_manifest.json",
-                ["scope_mode", "targets", "max_targets", "authorized"],
+                ["scope_mode", "mode", "targets", "max_targets", "authorized"],
             )
             self.assertEqual("registry", target_manifest["scope_mode"])
+            self.assertEqual("apply", target_manifest["mode"])
             self.assertEqual(2, len(target_manifest["targets"]))
 
             validation = self.assert_json_file_fields(

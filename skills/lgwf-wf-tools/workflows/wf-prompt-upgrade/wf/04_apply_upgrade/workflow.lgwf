@@ -41,6 +41,8 @@ CONTEXT_SET apply_prompt_upgrade_plan_context {
 REACT apply_prompt_upgrade MAX 3
   SPEC "agents/spec.md"
   CONTEXT apply_prompt_upgrade_shared_context
+  CONTRACT {
+  }
 
   REASON CODEX
     PROMPT "agents/reason.md"

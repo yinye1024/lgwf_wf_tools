@@ -7,7 +7,7 @@ WF_ROOT = Path(__file__).resolve().parents[2]
 if str(WF_ROOT) not in sys.path:
     sys.path.insert(0, str(WF_ROOT))
 
-from shared.scripts.upgrade_helpers import dump_state_updates, load_runtime_payload, read_json, write_json
+from shared.scripts.upgrade_helpers import dump_state_updates, get_runtime_field, load_runtime_payload, read_json, write_json
 
 
 def build_plan(payload: dict) -> tuple[dict, dict]:
@@ -27,7 +27,7 @@ def build_plan(payload: dict) -> tuple[dict, dict]:
             }
         )
     summary = {
-        "mode": payload.get("mode", "dry_run"),
+        "mode": get_runtime_field(payload, "mode", "dry_run"),
         "plan_count": len(plan_items),
         "empty_plan": len(plan_items) == 0,
         "reason": "第一版默认不自动推进 manual_review 项。",
@@ -36,7 +36,7 @@ def build_plan(payload: dict) -> tuple[dict, dict]:
 
 
 def main() -> None:
-    payload = load_runtime_payload("work_dir", "mode")
+    payload = load_runtime_payload("work_dir")
     work_dir = Path(payload.get("work_dir", "."))
     plan, summary = build_plan(payload)
     write_json(work_dir / ".lgwf/upgrade_plan.json", plan)

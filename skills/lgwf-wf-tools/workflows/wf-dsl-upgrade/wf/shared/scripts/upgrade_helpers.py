@@ -23,6 +23,9 @@ SIGNAL_KEYS = {
     "mode",
     "scope_mode",
     "targets",
+    "target_paths",
+    "allowed_dirs",
+    "dsl_upgrade_target",
     "max_targets",
     "decision",
     "approval",
@@ -55,6 +58,60 @@ def load_stdin_json() -> Any:
     return json.loads(raw)
 
 
+def _input_payload_from_command(command: Any) -> dict[str, Any]:
+    if not isinstance(command, list):
+        return {}
+    for index, token in enumerate(command):
+        if token == "--input-json" and index + 1 < len(command):
+            value = command[index + 1]
+            if isinstance(value, str) and value.strip():
+                return json.loads(value)
+        if token == "--input-json-file" and index + 1 < len(command):
+            value = command[index + 1]
+            if isinstance(value, str) and value.strip():
+                input_path = Path(value)
+                if input_path.is_file():
+                    payload = json.loads(input_path.read_text(encoding="utf-8"))
+                    return payload if isinstance(payload, dict) else {}
+    return {}
+
+
+def _load_session_input_payload(work_dir: Any) -> dict[str, Any]:
+    if not isinstance(work_dir, str) or not work_dir:
+        return {}
+    sessions_dir = Path(work_dir) / ".lgwf" / "main_agent" / "sessions"
+    if not sessions_dir.is_dir():
+        return {}
+    session_files = sorted(
+        sessions_dir.glob("*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for session_file in session_files:
+        session = read_json(session_file, {})
+        payload = _input_payload_from_command(session.get("command"))
+        if payload:
+            return payload
+    return {}
+
+
+def _merge_session_input(payload: dict[str, Any]) -> dict[str, Any]:
+    work_dir = payload.get("work_dir")
+    if not isinstance(work_dir, str) or not work_dir:
+        work_dir = str(Path.cwd())
+    session_input = _load_session_input_payload(work_dir)
+    if not session_input:
+        if "work_dir" not in payload:
+            merged_without_session = dict(payload)
+            merged_without_session["work_dir"] = work_dir
+            return merged_without_session
+        return payload
+    merged = dict(session_input)
+    merged.update(payload)
+    merged.setdefault("work_dir", work_dir)
+    return merged
+
+
 def _iter_payload_candidates(payload: Any) -> list[dict[str, Any]]:
     if not isinstance(payload, dict):
         return []
@@ -85,7 +142,51 @@ def select_runtime_payload(payload: Any, *expected_keys: str) -> dict[str, Any]:
 
 
 def load_runtime_payload(*expected_keys: str) -> dict[str, Any]:
-    return select_runtime_payload(load_stdin_json(), *expected_keys)
+    payload = select_runtime_payload(load_stdin_json(), *expected_keys)
+    return _merge_session_input(payload)
+
+
+def _has_value(value: Any) -> bool:
+    return value not in (None, "", [])
+
+
+def find_payload_section(payload: Any, section_key: str) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    section = payload.get(section_key)
+    if isinstance(section, dict):
+        return section
+    for key in WRAPPER_KEYS:
+        nested = payload.get(key)
+        found = find_payload_section(nested, section_key)
+        if found:
+            return found
+    for nested in payload.values():
+        if isinstance(nested, dict):
+            found = find_payload_section(nested, section_key)
+            if found:
+                return found
+    return {}
+
+
+def get_dsl_upgrade_target(payload: Any) -> dict[str, Any]:
+    section = find_payload_section(payload, "dsl_upgrade_target")
+    if section:
+        return section
+    if isinstance(payload, dict) and any(key in payload for key in ("target_paths", "allowed_dirs")):
+        return payload
+    return {}
+
+
+def get_runtime_field(payload: dict[str, Any], key: str, default: Any = None) -> Any:
+    if _has_value(payload.get(key)):
+        return payload[key]
+    dsl_target = get_dsl_upgrade_target(payload)
+    if key == "targets" and _has_value(dsl_target.get("target_paths")):
+        return dsl_target["target_paths"]
+    if _has_value(dsl_target.get(key)):
+        return dsl_target[key]
+    return default
 
 
 def normalize_decision_value(value: Any) -> str:

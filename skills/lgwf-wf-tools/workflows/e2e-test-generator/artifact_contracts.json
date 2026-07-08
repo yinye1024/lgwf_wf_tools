@@ -1,5 +1,12 @@
 {
-  "bootstrap_inputs": [],
+  "bootstrap_inputs": [
+    ".lgwf/*.json",
+    ".lgwf/example.json"
+  ],
+  "final_outputs": [
+    "reports/e2e-test-generator/report.json",
+    "reports/e2e-test-generator/report.md"
+  ],
   "script_writes": {
     "validate_target_request": [
       ".lgwf/e2e_target_request.normalized.json"

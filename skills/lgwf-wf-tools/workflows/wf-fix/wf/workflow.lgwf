@@ -26,7 +26,6 @@ APPROVAL confirm_self_fix_request
   POLL 1
   CONTRACT {
     WRITE workspace file ".lgwf/self_fix_request_input.json";
-    READ state.lgwf_wf_fix.self_fix_request_context;
     WRITE state.lgwf_wf_fix.self_fix_request;
   };
 
@@ -55,7 +54,7 @@ CODEX analyze_target_input_contract
   CONTRACT {
     READ workspace file ".lgwf/self_fix_request.json";
     READ workspace file ".lgwf/self_fix_target.json";
-    READ workspace file ".lgwf/target_input_contract.json";
+    WRITE workspace file ".lgwf/target_input_contract.json";
   };
 
 PY prepare_input_collection_context
@@ -78,7 +77,6 @@ APPROVAL collect_target_workflow_input
   POLL 1
   CONTRACT {
     WRITE workspace file ".lgwf/target_workflow_input.json";
-    READ state.lgwf_wf_fix.input_collection_context;
     WRITE state.lgwf_wf_fix.target_workflow_input;
   };
 
@@ -88,12 +86,16 @@ PY validate_target_workflow_input
   RESULT state.lgwf_wf_fix.validate_target_input_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/target_workflow_input.json";
     WRITE workspace file ".lgwf/target_workflow_input.json";
   };
 
 STEP repair_target_loop
   WORKFLOW "03_repair_target_agent_loop/workflow.lgwf"
   CONTRACT {
+    READ workspace file ".lgwf/self_fix_request.json";
+    READ workspace file ".lgwf/target_workflow_input.json";
+    WRITE workspace file ".lgwf/self_fix_history.json";
     WRITE workspace file ".lgwf/target_repair/report.json";
   };
 

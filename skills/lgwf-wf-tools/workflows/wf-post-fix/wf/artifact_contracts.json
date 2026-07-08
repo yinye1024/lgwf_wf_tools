@@ -1,5 +1,26 @@
 {
-  "bootstrap_inputs": [],
+  "bootstrap_inputs": [
+    ".lgwf/post_fix_decisions/e2e_generate.json",
+    ".lgwf/post_fix_decisions/prompt_fix.json",
+    ".lgwf/post_fix_decisions/prompt_upgrade.json",
+    ".lgwf/post_fix_decisions/real_positive_e2e.json",
+    ".lgwf/post_fix_decisions/runtime_fake_e2e.json",
+    ".lgwf/post_fix_decisions/script_flow_e2e.json",
+    ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json"
+  ],
+  "final_outputs": [
+    ".lgwf/post_fix_decisions/e2e_generate.json",
+    ".lgwf/post_fix_decisions/prompt_fix.json",
+    ".lgwf/post_fix_decisions/prompt_upgrade.json",
+    ".lgwf/post_fix_decisions/real_positive_e2e.json",
+    ".lgwf/post_fix_decisions/runtime_fake_e2e.json",
+    ".lgwf/post_fix_decisions/script_flow_e2e.json",
+    ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json",
+    ".lgwf/post_fix_generated_tests.json",
+    ".lgwf/post_fix_summary.json",
+    "reports/wf-post-fix/report.json",
+    "reports/wf-post-fix/report.md"
+  ],
   "script_writes": {
     "build_e2e_generate_input": [
       ".lgwf/post_fix_decisions.json",

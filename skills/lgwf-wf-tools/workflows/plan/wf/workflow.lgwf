@@ -8,11 +8,22 @@ DEFAULTS {
 }
 
 STEP generate_plan
-  WORKFLOW "01_generate_plan/workflow.lgwf";
+  WORKFLOW "01_generate_plan/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/react_task_plan_observe.json";
+    WRITE workspace file ".lgwf/react_task_plan_proposal.json";
+    WRITE workspace file ".lgwf/react_task_request.json";
+    WRITE workspace file ".lgwf/react_task_request_finish.json";
+  };
 
 STEP generate_acceptance
   WORKFLOW "02_generate_acceptance/workflow.lgwf"
   CONTRACT {
+    READ workspace file ".lgwf/react_task_plan_observe.json";
+    READ workspace file ".lgwf/react_task_plan_proposal.json";
+    READ workspace file ".lgwf/react_task_request.json";
+    WRITE workspace file ".lgwf/react_acceptance_generation_direction.json";
+    WRITE workspace file ".lgwf/react_acceptance_proposal.json";
     WRITE state.lgwf_plan.confirmation_context;
   };
 
@@ -37,6 +48,8 @@ PY apply_confirmed_contracts
     READ workspace file ".lgwf/react_task_contract_approval.json";
     READ workspace file ".lgwf/react_task_plan_proposal.json";
     READ workspace file ".lgwf/react_task_request.json";
+    WRITE workspace file ".lgwf/react_acceptance_plan.json";
+    WRITE workspace file ".lgwf/react_task_plan.json";
   };
 
 PY finish_contract_review
@@ -50,16 +63,21 @@ PY finish_contract_review
   };
 
 STEP execute_react_loop
-  WORKFLOW "04_execute_react_loop/workflow.lgwf";
+  WORKFLOW "04_execute_react_loop/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/react_acceptance_plan.json";
+    READ workspace file ".lgwf/react_task_plan.json";
+  };
 
 FLOW {
   generate_plan THEN generate_acceptance THEN confirm_plan_and_acceptance;
 
   confirm_plan_and_acceptance
-    WHEN "approve" THEN apply_confirmed_contracts
+    WHEN "approve" THEN finish_contract_review
     WHEN "revise" THEN confirm_plan_and_acceptance
     WHEN "reject" THEN FAIL_ALL;
 
+  finish_contract_review THEN apply_confirmed_contracts;
   apply_confirmed_contracts THEN execute_react_loop;
 }
 

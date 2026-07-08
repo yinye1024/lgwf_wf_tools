@@ -1,5 +1,8 @@
 {
   "bootstrap_inputs": [],
+  "final_outputs": [
+    ".lgwf/self_fix_summary.json"
+  ],
   "script_writes": {
     "prepare_target": [
       ".lgwf/self_fix_request.json",

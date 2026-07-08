@@ -14,22 +14,16 @@ STEP collect_targets_stage
     WRITE workspace file ".lgwf/target_scope_validation.json";
   };
 
-PY batch_audit_stage
-  SCRIPT "02_batch_audit/scripts/run_batch_audit.py"
-  TIMEOUT 300
-  RESULT state.lgwf_wf_dsl_upgrade.run_batch_audit_result
-  UPDATES_STATE
+STEP batch_audit_stage
+  WORKFLOW "02_batch_audit/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/target_manifest.json";
     WRITE workspace file ".lgwf/batch_audit_result.json";
     WRITE workspace file ".lgwf/batch_audit_stats.json";
   };
 
-PY classify_findings_stage
-  SCRIPT "03_classify_findings/scripts/classify_findings.py"
-  TIMEOUT 180
-  RESULT state.lgwf_wf_dsl_upgrade.classify_findings_result
-  UPDATES_STATE
+STEP classify_findings_stage
+  WORKFLOW "03_classify_findings/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/batch_audit_result.json";
     WRITE workspace file ".lgwf/classification_summary.json";

@@ -15,7 +15,9 @@
         "properties": {
           "target_paths": {"type": "array"},
           "mode": {"type": "string"},
-          "allowed_dirs": {"type": "array"}
+          "allowed_dirs": {"type": "array"},
+          "scope_mode": {"type": "string"},
+          "max_targets": {"type": "integer"}
         }
       },
       "request": {"type": "object"}
@@ -24,7 +26,9 @@
       "dsl_upgrade_target": {
         "target_paths": ["D:/example/workflow.lgwf"],
         "mode": "dry_run",
-        "allowed_dirs": ["D:/example"]
+        "allowed_dirs": ["D:/example"],
+        "scope_mode": "registry",
+        "max_targets": 8
       }
     }
   },

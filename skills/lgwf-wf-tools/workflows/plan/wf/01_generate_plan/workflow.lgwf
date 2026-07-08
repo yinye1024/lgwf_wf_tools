@@ -46,6 +46,8 @@ CONTEXT_SET generate_plan_proposal_shared_context {
 REACT generate_plan_proposal MAX 3
   SPEC "02_generate_plan_proposal/agents/spec.md"
   CONTEXT generate_plan_proposal_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "02_generate_plan_proposal/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_plan_observe.json"
@@ -103,8 +105,9 @@ PY route_plan_generation
 
 FLOW {
   collect_react_task_request
-    WHEN "approve" THEN validate_plan_analysis_targets
+    WHEN "approve" THEN finish_react_task_request
     WHEN "reject" THEN FAIL_ALL;
 
+  finish_react_task_request THEN validate_plan_analysis_targets;
   validate_plan_analysis_targets THEN generate_plan_proposal THEN route_plan_generation;
 }

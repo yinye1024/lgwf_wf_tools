@@ -29,6 +29,8 @@ PY initialize_contract_observe
 REACT enrich_contracts_react MAX 3
   SPEC "agents/spec.md"
   CONTEXT contract_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "agents/reason.md"
     TARGET_DIRS state.lgwf_wf_create.contract_target_dirs

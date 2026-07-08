@@ -13,6 +13,8 @@ PY validate_target_request
   RESULT state.lgwf_e2e.validate_target_request_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.json";
+    WRITE workspace file ".lgwf/e2e_target_request.normalized.json";
   };
 
 PY scan_workflow_package
@@ -21,6 +23,8 @@ PY scan_workflow_package
   RESULT state.lgwf_e2e.scan_workflow_package_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    WRITE workspace file ".lgwf/e2e_workflow_sources.json";
   };
 
 PY parse_workflow_graph
@@ -29,6 +33,8 @@ PY parse_workflow_graph
   RESULT state.lgwf_e2e.parse_workflow_graph_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/e2e_workflow_sources.json";
+    WRITE workspace file ".lgwf/e2e_workflow_graph.json";
   };
 
 CODEX summarize_business_flow

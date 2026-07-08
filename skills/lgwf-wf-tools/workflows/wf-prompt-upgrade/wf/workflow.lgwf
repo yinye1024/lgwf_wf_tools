@@ -8,14 +8,32 @@ DEFAULTS {
 }
 
 STEP prepare_target
-  WORKFLOW "01_prepare_target/workflow.lgwf";
+  WORKFLOW "01_prepare_target/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_upgrade_target.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/environment_check.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/inventory.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/react_history.json";
+  };
 
 STEP design_upgrade
-  WORKFLOW "02_design_upgrade/workflow.lgwf";
+  WORKFLOW "02_design_upgrade/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+    READ workspace file ".lgwf/prompt_upgrade_target.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/analysis.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/proposal.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/proposal_review.json";
+  };
 
 STEP confirm_upgrade
   WORKFLOW "03_confirm_upgrade/workflow.lgwf"
   CONTRACT {
+    READ workspace file ".lgwf/prompt_upgrade/analysis.json";
+    READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal_review.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/confirmation_context.json";
     WRITE workspace file ".lgwf/prompt_upgrade/decision.json";
   };
 
@@ -23,12 +41,23 @@ STEP apply_upgrade
   WORKFLOW "04_apply_upgrade/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/prompt_upgrade/decision.json";
+    READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+    READ workspace file ".lgwf/prompt_upgrade/react_history.json";
+    READ workspace file ".lgwf/prompt_upgrade_target.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/apply_review.json";
   };
 
 STEP summary
   WORKFLOW "05_summary/workflow.lgwf"
   CONTRACT {
+    READ workspace file ".lgwf/prompt_upgrade/apply_review.json";
     READ workspace file ".lgwf/prompt_upgrade/decision.json";
+    READ workspace file ".lgwf/prompt_upgrade/inventory.json";
+    READ workspace file ".lgwf/prompt_upgrade/proposal.json";
+    READ workspace file ".lgwf/prompt_upgrade/react_history.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/summary.json";
+    WRITE workspace file ".lgwf/target_prompt_upgrade_summary.json";
   };
 
 FLOW prepare_target
