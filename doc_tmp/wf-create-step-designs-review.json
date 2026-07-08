@@ -1,1 +1,0 @@
-{"approval":"approve","approved_step_slugs":["prepare-package-layout","design-input-resolution-stage","design-audit-gate-stage","design-candidate-repair-loop","design-promote-and-verify-stage","design-summary-stage"],"changes":[],"comment":"确认通过，可进入 implement_steps_react 生成 workflow 初稿"}
