@@ -1,50 +1,67 @@
 {
   "id": "skill-packaging",
-  "kind": "tool-workflow",
+  "kind": "lgwf",
   "version": 1,
-  "entry": "scripts/package_lgwf_skill.py",
-  "input_mode": "tool_args",
+  "workflow_lgwf": "workflows/skill-packaging/wf/workflow.lgwf",
+  "work_dir": "workflows/skill-packaging/ws",
+  "input_mode": "input_json_required",
   "input_schema": {
     "type": "object",
-    "required": ["source_skill", "output_parent"],
+    "required": ["packaging_request"],
     "properties": {
-      "source_skill": {
-        "type": "string",
-        "description": "源 Codex skill 目录，必须包含 SKILL.md、AGENTS.md、README.md 和 wf/workflow.lgwf。"
-      },
-      "output_parent": {
-        "type": "string",
-        "description": "打包产物的输出父目录；最终产物写入 output_parent/source_skill_name。"
-      },
-      "runtime_source": {
-        "type": "string",
-        "description": "可选；lgwf-client-assist runtime 目录，默认使用 facade vendor/lgwf-client-assist。"
-      },
-      "force": {
-        "type": "boolean",
-        "description": "可选；只有为 true 时才允许覆盖已存在的输出目录。"
+      "packaging_request": {
+        "type": "object",
+        "required": ["source_skill", "output_parent"],
+        "properties": {
+          "source_skill": {
+            "type": "string"
+          },
+          "output_parent": {
+            "type": "string"
+          },
+          "runtime_source": {
+            "type": "string"
+          },
+          "force": {
+            "type": "boolean"
+          },
+          "audit_smoke": {
+            "type": "boolean"
+          }
+        }
       }
     },
     "example": {
-      "source_skill": "skills/wf-audit-fix",
-      "output_parent": ".local/packager-smoke",
-      "force": true
+      "packaging_request": {
+        "source_skill": "skills/example-skill",
+        "output_parent": "dist",
+        "runtime_source": "skills/lgwf-wf-tools/vendor/lgwf-client-assist",
+        "force": false,
+        "audit_smoke": true
+      }
     }
   },
-  "input_file_policy": "Tool workflow; pass values as CLI args: --source-skill, --output-parent, optional --runtime-source and --force.",
-  "auto_human_policy": "not_applicable",
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file when source_skill or output_parent contains Chinese or spaces.",
+  "auto_human_policy": "conditional",
   "target_scope": {
-    "fields": ["source_skill", "output_parent"],
-    "write_scope": "Only the declared output_parent/source_skill_name directory may be created or overwritten when --force is explicit."
+    "fields": [
+      "packaging_request.source_skill",
+      "packaging_request.output_parent",
+      "packaging_request.runtime_source"
+    ],
+    "write_scope": "Writes only the approved packaged skill output directory under output_parent."
   },
   "state_boundary": {
-    "target_writes": "packaged skill output",
-    "local_state": "none"
+    "work_dir": "workflows/skill-packaging/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "approved packaged skill output only"
   },
   "outputs": {
-    "summary": "script JSON output",
-    "handoff": "PACKAGING_MANIFEST.json in the packaged skill",
-    "reports": ["<output_parent>/<source_skill_name>/PACKAGING_MANIFEST.json"]
+    "summary": ".lgwf/packaging_result_summary.json",
+    "handoff": "",
+    "reports": [
+      "reports/skill-packaging/packaging_result_report.md"
+    ]
   },
-  "resume_policy": "Tool workflow; no LGWF work_dir resume."
+  "resume_policy": "Reuse the same work_dir when a pending review or partial packaging result already exists."
 }

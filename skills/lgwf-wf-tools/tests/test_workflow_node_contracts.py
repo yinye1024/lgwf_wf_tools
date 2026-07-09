@@ -190,6 +190,19 @@ class WorkflowNodeContractTests(unittest.TestCase):
                         failures.append(f"{node.label}: output {path_value} must not be a same-node READ")
         self.assertEqual([], failures)
 
+    def test_wf_create_contract_file_entries_are_concrete_paths(self) -> None:
+        failures: list[str] = []
+        for workflow_file in source_lgwf_files_for_package(WORKFLOWS_ROOT / "wf-create"):
+            for node in parse_nodes(workflow_file):
+                for entry in node.contract_entries:
+                    resource_match = re.match(r'(READ|WRITE)\s+workspace\s+file\s+"([^"]+)"', entry)
+                    if not resource_match:
+                        continue
+                    action, path_value = resource_match.groups()
+                    if "*" in path_value or "?" in path_value or "|" in path_value:
+                        failures.append(f"{node.label}: {action} workspace file must be concrete: {path_value}")
+        self.assertEqual([], failures)
+
     def test_workflow_packages_have_artifact_contract_files(self) -> None:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
         missing: list[str] = []

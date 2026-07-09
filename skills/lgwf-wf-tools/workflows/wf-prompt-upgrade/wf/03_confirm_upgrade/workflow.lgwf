@@ -20,17 +20,16 @@ PY prepare_prompt_upgrade_confirmation
     READ workspace file ".lgwf/prompt_upgrade/analysis.json";
   };
 
-APPROVAL confirm_prompt_upgrade
+REVIEW confirm_prompt_upgrade
   PROMPT_REF "confirm_prompt_upgrade.md"
-  READ state.lgwf_wf_prompt_upgrade.prompt_upgrade_confirmation_context
-  WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision
-  RESULT state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision_result
-  PERSIST ".lgwf/prompt_upgrade/decision.json"
-  POLL 1
+  CONTEXT state.lgwf_wf_prompt_upgrade.prompt_upgrade_confirmation_context
+  RESULT state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision_review_result
+  PERSIST ".lgwf/prompt_upgrade/decision_review.json"
+  OPTIONS ["approve", "revise", "reject"]
   CONTRACT {
-    WRITE workspace file ".lgwf/prompt_upgrade/decision.json";
     READ state.lgwf_wf_prompt_upgrade.prompt_upgrade_confirmation_context;
-    WRITE state.lgwf_wf_prompt_upgrade.prompt_upgrade_decision;
+    READ workspace file ".lgwf/prompt_upgrade/confirmation_context.json";
+    WRITE workspace file ".lgwf/prompt_upgrade/decision_review.json";
   };
 
 PY validate_prompt_upgrade_decision
@@ -41,7 +40,7 @@ PY validate_prompt_upgrade_decision
   CONTRACT {
     WRITE workspace file ".lgwf/prompt_upgrade/decision.json";
     READ workspace file ".lgwf/prompt_upgrade/proposal.json";
-    READ workspace file ".lgwf/prompt_upgrade/decision.json";
+    READ workspace file ".lgwf/prompt_upgrade/decision_review.json";
   };
 
 PY route_after_prompt_upgrade_decision

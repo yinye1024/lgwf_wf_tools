@@ -675,27 +675,24 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
         work_dir: Path,
         env: dict[str, str],
         request_id: str,
-        value: dict[str, Any],
         decision: str,
+        value: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        submit = run_lgwf(
-            [
-                "approval",
-                "submit",
-                "--work-dir",
-                str(work_dir),
-                "--request-id",
-                request_id,
-                "--decision",
-                decision,
-                "--value-json",
-                json.dumps(value, ensure_ascii=False),
-                "--comment",
-                "runtime fake e2e auto approval",
-            ],
-            env=env,
-            timeout=30,
-        )
+        args = [
+            "approval",
+            "submit",
+            "--work-dir",
+            str(work_dir),
+            "--request-id",
+            request_id,
+            "--decision",
+            decision,
+            "--comment",
+            "runtime fake e2e auto approval",
+        ]
+        if value is not None:
+            args.extend(["--value-json", json.dumps(value, ensure_ascii=False)])
+        submit = run_lgwf(args, env=env, timeout=30)
         self.assertEqual(submit.returncode, 0, submit.stderr + submit.stdout)
         deadline = time.monotonic() + 20
         last_status: dict[str, Any] | None = None
@@ -709,6 +706,44 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
             time.sleep(1)
         raise AssertionError(f"approval {request_id} did not advance within 20s: {last_status}")
 
+    def _submit_review(
+        self,
+        *,
+        pid: int,
+        work_dir: Path,
+        env: dict[str, str],
+        request_id: str,
+        value: dict[str, Any],
+        route: str,
+    ) -> dict[str, Any]:
+        args = [
+            "review",
+            "submit",
+            "--work-dir",
+            str(work_dir),
+            "--request-id",
+            request_id,
+            "--route",
+            route,
+            "--comment",
+            "runtime fake e2e auto review",
+        ]
+        if route == "revise":
+            args.extend(["--value-json", json.dumps(value, ensure_ascii=False)])
+        submit = run_lgwf(args, env=env, timeout=30)
+        self.assertEqual(submit.returncode, 0, submit.stderr + submit.stdout)
+        deadline = time.monotonic() + 20
+        last_status: dict[str, Any] | None = None
+        while time.monotonic() < deadline:
+            status = self._wait_for_status(pid, work_dir, env, timeout_seconds=5)
+            last_status = status
+            if status.get("running") is False or status.get("phase") in {"completed", "failed", "cancelled", "timed_out"}:
+                return status
+            if self._approval_request_id(status) != request_id:
+                return status
+            time.sleep(1)
+        raise AssertionError(f"review {request_id} did not advance within 20s: {last_status}")
+
     def _run_scenario(
         self,
         scenario_id: str,
@@ -721,6 +756,7 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
             stack = ExitStack()
             env, work_dir, log_file = self._prepare_runtime(stack, f"lgwf-prompt-upgrade-{scenario_id}-")
             target_package = work_dir / "target-package"
+            target_payload = initial_target_payload(target_package)
             launch = run_lgwf(
                 [
                     "run",
@@ -729,7 +765,13 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
                     "--work-dir",
                     str(work_dir),
                     "--input-json",
-                    json.dumps({"scenario": scenario_id}, ensure_ascii=False),
+                    json.dumps(
+                        {
+                            "scenario": scenario_id,
+                            "prompt_upgrade_target": target_payload,
+                        },
+                        ensure_ascii=False,
+                    ),
                     "--background",
                     "--log-file",
                     str(log_file),
@@ -795,7 +837,6 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
                     work_dir=work_dir,
                     env=env,
                     request_id=request_id,
-                    value=initial_target_payload(target_package),
                     decision="approve",
                 )
             elif (
@@ -803,13 +844,13 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
                 and isinstance(context.get("prompt_upgrades"), list)
                 and isinstance(context.get("instructions"), dict)
             ):
-                status = self._submit_approval(
+                status = self._submit_review(
                     pid=pid,
                     work_dir=work_dir,
                     env=env,
                     request_id=request_id,
                     value=confirm_value,
-                    decision=confirm_decision,
+                    route=confirm_decision,
                 )
             else:
                 self.fail(f"unexpected approval node prompt={prompt!r} context={context!r}")
@@ -872,8 +913,8 @@ class PromptUpgradeRuntimeFakeEndToEndTest(unittest.TestCase):
     def test_reject_to_summarize(self) -> None:
         work_dir, runtime = self._run_scenario(
             "reject_to_summarize",
-            {"reject": True, "comment": "runtime fake reject branch"},
-            "approve",
+            {},
+            "reject",
             expected_phase="failed",
         )
         prompt_root = work_dir / ".lgwf" / "prompt_upgrade"

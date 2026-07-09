@@ -79,14 +79,28 @@ def confirmed_step_design_items(step_designs: dict[str, Any]) -> list[dict[str, 
     return []
 
 
-def package_relative_path(raw_path: str, field_name: str) -> str:
+def strip_target_package_root(normalized_path: str, target_package_root: str) -> str:
+    if not target_package_root:
+        return normalized_path
+    path_parts = PurePosixPath(normalized_path).parts
+    root_parts = PurePosixPath(target_package_root).parts
+    if path_parts[: len(root_parts)] != root_parts:
+        return normalized_path
+    remaining = path_parts[len(root_parts) :]
+    if not remaining:
+        return ""
+    return PurePosixPath(*remaining).as_posix()
+
+
+def package_relative_path(raw_path: str, field_name: str, target_package_root: str = "") -> str:
     normalized = normalize_relative_path(raw_path, field_name)
+    normalized = strip_target_package_root(normalized, target_package_root)
     if normalized.startswith("docs/steps/"):
         return f"wf/{normalized}"
     return normalized
 
 
-def implementation_generated_files(implementation: dict[str, Any]) -> list[str]:
+def implementation_generated_files(implementation: dict[str, Any], target_package_root: str) -> list[str]:
     raw_items = implementation.get("generated_files", [])
     if not isinstance(raw_items, list):
         return []
@@ -99,7 +113,13 @@ def implementation_generated_files(implementation: dict[str, Any]) -> list[str]:
         else:
             continue
         if raw_path:
-            result.append(package_relative_path(raw_path, f"implementation.generated_files[{index}].path"))
+            result.append(
+                package_relative_path(
+                    raw_path,
+                    f"implementation.generated_files[{index}].path",
+                    target_package_root,
+                )
+            )
     return result
 
 
@@ -232,10 +252,10 @@ def validate_created_package(work_dir: Path) -> dict[str, Any]:
         raw_path = str(item.get("doc_path") or item.get("path") or "").strip()
         if not raw_path:
             continue
-        rel_path = package_relative_path(raw_path, "step_design.path")
+        rel_path = package_relative_path(raw_path, "step_design.path", target_package_root)
         require_path(target_abs / rel_path, f"approved step design {rel_path}")
 
-    for rel_path in implementation_generated_files(implementation):
+    for rel_path in implementation_generated_files(implementation, target_package_root):
         require_path(target_abs / rel_path, f"implementation_result generated file {rel_path}")
 
     for failure in implementation_validation_failures(implementation):

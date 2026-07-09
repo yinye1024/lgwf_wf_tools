@@ -1,4 +1,32 @@
 {
   "bootstrap_inputs": [],
-  "script_writes": {}
+  "script_writes": {},
+  "final_outputs": [
+    ".lgwf/runtime_source_resolution.json",
+    ".lgwf/packaging_result_summary.json",
+    "reports/skill-packaging/packaging_result_report.md"
+  ],
+  "runtime_artifacts": [
+    ".lgwf/packaging_request.json",
+    ".lgwf/packaging_path_context.json",
+    ".lgwf/runtime_source_resolution.json",
+    ".lgwf/packaging_write_scope.json",
+    ".lgwf/packaging_preflight.json",
+    ".lgwf/packaging_plan_proposal.json",
+    ".lgwf/packaging_plan_confirmation_context.json",
+    ".lgwf/packaging_plan_approval.json",
+    ".lgwf/confirmed_packaging_plan.json",
+    ".lgwf/materialized_package.json",
+    ".lgwf/package_validation.json",
+    ".lgwf/packaging_result_summary.json"
+  ],
+  "reports": [
+    "reports/skill-packaging/packaging_result_report.md"
+  ],
+  "target_outputs": [
+    "<output_parent>/<source-skill-name>/",
+    "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/",
+    "<output_parent>/<source-skill-name>/scripts/run_local_lgwf_workflow.py",
+    "<output_parent>/<source-skill-name>/PACKAGING_MANIFEST.json"
+  ]
 }

@@ -37,6 +37,8 @@ STEP e2e_generate_stage
     READ workspace file ".lgwf/post_fix_target.json";
     WRITE workspace file ".lgwf/post_fix_decisions.json";
     WRITE workspace file ".lgwf/post_fix_stage_results.json";
+    WRITE workspace file ".lgwf/post_fix_generated_tests.json";
+    WRITE workspace file ".lgwf/post_fix_generated_tests.materialized.json";
   };
 
 STEP route_script_flow_e2e

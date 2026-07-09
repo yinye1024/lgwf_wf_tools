@@ -36,7 +36,9 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def unwrap_approval(payload: dict[str, Any], key: str) -> dict[str, Any]:
-    value = payload.get("value", payload)
+    value = payload.get("value")
+    if not isinstance(value, dict):
+        value = payload
     if isinstance(value, dict):
         approval = value.get(key, value)
         if isinstance(approval, dict):

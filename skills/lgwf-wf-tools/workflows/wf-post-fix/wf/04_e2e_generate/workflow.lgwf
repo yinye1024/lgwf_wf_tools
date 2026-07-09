@@ -9,7 +9,7 @@ DEFAULTS {
 
 ROUTE e2e_generate_auto_route
   READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled
-  WHEN true THEN run_e2e_generate_flow
+  WHEN true THEN auto_e2e_generate_flow
   WHEN false THEN choose_e2e_generate;
 
 CHOICE choose_e2e_generate
@@ -71,6 +71,10 @@ PY finish_e2e_generate_stage
   UPDATES_STATE
   CONTRACT {
     READ state.lgwf_wf_post_fix.e2e_generate_result;
+    READ workspace file ".lgwf/post_fix_target.json";
+    WRITE state.lgwf_wf_post_fix.e2e_generate_materialized_tests;
+    WRITE workspace file ".lgwf/post_fix_generated_tests.json";
+    WRITE workspace file ".lgwf/post_fix_generated_tests.materialized.json";
   };
 
 PY set_e2e_generate_auto
@@ -79,6 +83,8 @@ PY set_e2e_generate_auto
   RESULT state.lgwf_wf_post_fix.set_e2e_generate_auto_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/e2e_generate.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
   };
 
 PY skip_e2e_generate
@@ -87,4 +93,8 @@ PY skip_e2e_generate
   RESULT state.lgwf_wf_post_fix.skip_e2e_generate_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/post_fix_target.json";
+    WRITE state.lgwf_wf_post_fix.e2e_generate_materialized_tests;
+    WRITE workspace file ".lgwf/post_fix_generated_tests.json";
+    WRITE workspace file ".lgwf/post_fix_generated_tests.materialized.json";
   };

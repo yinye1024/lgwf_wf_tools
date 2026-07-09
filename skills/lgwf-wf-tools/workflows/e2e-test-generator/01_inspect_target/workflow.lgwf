@@ -37,15 +37,11 @@ PY parse_workflow_graph
     WRITE workspace file ".lgwf/e2e_workflow_graph.json";
   };
 
-CODEX summarize_business_flow
-  PROMPT "04_summarize_business_flow/agents/summarize_business_flow.md"
-  CONTEXT workspace file ".lgwf/e2e_target_request.normalized.json"
-  CONTEXT workspace file ".lgwf/e2e_workflow_sources.json"
-  CONTEXT workspace file ".lgwf/e2e_workflow_graph.json"
-  TARGET_DIRS state.lgwf_e2e.target_dirs
-  TARGET_FILES state.lgwf_e2e.target_files
-  OUTPUT_JSON ".lgwf/e2e_business_flow_summary.json"
+PY summarize_business_flow
+  SCRIPT "04_summarize_business_flow/scripts/summarize_business_flow.py"
+  TIMEOUT 60
   RESULT state.lgwf_e2e.business_flow_summary_result
+  UPDATES_STATE
   CONTRACT {
     READ workspace file ".lgwf/e2e_target_request.normalized.json";
     READ workspace file ".lgwf/e2e_workflow_graph.json";

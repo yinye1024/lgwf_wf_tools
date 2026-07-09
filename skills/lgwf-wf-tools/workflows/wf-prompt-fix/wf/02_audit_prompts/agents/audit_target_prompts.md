@@ -14,7 +14,7 @@
 - `.lgwf/prompt_acceptance/environment_check.json`: bundled client 检测结果和 reference context 复制结果。
 - `.lgwf/prompt_acceptance/inventory.json`: 已发现的 `inventory.prompts[]`，包含 prompt `.md` 引用、所在 workflow、node、ReAct phase 和 excerpt。
 - `.lgwf/prompt_acceptance/reference_context/AGENTS.md`: prompt 验收规范入口。
-- `.lgwf/prompt_acceptance/reference_context/prompt-assist/*.md`: 本次验收允许使用的 prompt-assist references。
+- `.lgwf/prompt_acceptance/reference_context/prompt-assist/`: 本次验收允许使用的 prompt-assist references，至少包含 `guide.md`、`shared-rules.md`、`prompt-audit-checklist.md`、`draft-prompt.md`、`action-prompt.md`、`audit-prompt.md` 和 `normal-prompt.md`。
 - `TARGET_DIRS`: 目标 workflow A package，可读取被引用的 prompt 文件和 workflow source。
 
 # Invocation Procedure

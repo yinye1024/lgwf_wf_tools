@@ -210,10 +210,11 @@ def main() -> None:
     result.update(scaffold_result)
     result.update(modular_development_result)
     result.update(module_contract_result)
-    (out_dir / "dsl_reference_context.json").write_text(
-        json.dumps(result, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    metadata = json.dumps(result, ensure_ascii=False, indent=2)
+    (out_dir / "dsl_reference_context.json").write_text(metadata, encoding="utf-8")
+    dsl_metadata = out_dir / REFERENCE_CONTEXT_ROOT / "dsl_reference_context.json"
+    dsl_metadata.parent.mkdir(parents=True, exist_ok=True)
+    dsl_metadata.write_text(metadata, encoding="utf-8")
     if not result["reference_context_ready"]:
         raise RuntimeError("bundled lgwf-client-assist dsl reference context is incomplete")
     if not result["scaffold_context_ready"]:

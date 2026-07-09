@@ -91,6 +91,15 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         self.assertTrue(context["modular_development_context_ready"])
         self.assertTrue(context["module_contract_context_ready"])
         self.assertTrue((self.work_dir / ".lgwf" / "create_reference_context" / "dsl-assist" / "guide.md").is_file())
+        self.assertTrue(
+            (
+                self.work_dir
+                / ".lgwf"
+                / "create_reference_context"
+                / "dsl-assist"
+                / "dsl_reference_context.json"
+            ).is_file()
+        )
         self.assertTrue((self.work_dir / ".lgwf" / "create_reference_context" / "dsl_reference_context.json").is_file())
         self.assertTrue(
             (
@@ -148,6 +157,34 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         self.assertNotIn(("plugins", "plugins"), list(zip(path_parts, path_parts[1:])))
         self.assertTrue((self.work_dir / ".lgwf" / "implementation_context.json").is_file())
         self.assertFalse((self.workflow_root / ".lgwf").exists())
+
+    def test_prepare_implementation_context_does_not_reuse_stale_self_output(self) -> None:
+        write_json(
+            self.work_dir / ".lgwf" / "implementation_context.json",
+            {
+                "workflow_name": "stale-workflow",
+                "target_package_root": "skills/stale-workflow",
+                "package_profile": "skill_wrapped_workflow",
+            },
+        )
+        write_json(
+            self.work_dir / ".lgwf" / "scaffold_package_result.json",
+            {
+                "scaffold_plan": {
+                    "workflow_name": "git-diff-brief",
+                    "target_package_root": "skills/git-diff-brief",
+                    "package_profile": "internal_workflow_package",
+                }
+            },
+        )
+        (self.work_dir / ".git").mkdir()
+
+        result = self.run_script("03_confirm_step_designs/scripts/prepare_implementation_context.py")
+
+        context = result["lgwf_wf_create.implementation_context"]
+        self.assertEqual(context["workflow_name"], "git-diff-brief")
+        self.assertEqual(context["target_package_root"], "skills/git-diff-brief")
+        self.assertEqual(context["package_profile"], "internal_workflow_package")
 
     def test_summarize_create_result_uses_current_target_package_from_stdin(self) -> None:
         payload = {

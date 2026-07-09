@@ -129,6 +129,18 @@ class RunWorkflowRuntimeTest(unittest.TestCase):
         self.assertIn("child workflow failed", record["failure"]["message"])
         self.assertIn("stderr", record)
 
+    def test_invoke_dsl_persists_initial_input_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            parent_ws = Path(temp) / "parent_ws"
+            parent_ws.mkdir()
+            input_state = {"raw_intent": "创建 workflow", "request": {"target_file": "plan.md"}}
+
+            runtime_module._persist_input_state(parent_ws, input_state)
+
+            persisted = json.loads((parent_ws / ".lgwf" / "input_state.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(input_state, persisted)
+
     def test_child_approval_is_visible_and_submittable_from_parent(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -165,7 +177,6 @@ class RunWorkflowRuntimeTest(unittest.TestCase):
                     parent_ws,
                     pending_action["request_id"],
                     decision="approve",
-                    value={"approved": True},
                     comment="test approval",
                 )
                 stdout, stderr = process.communicate(timeout=20)
@@ -177,7 +188,7 @@ class RunWorkflowRuntimeTest(unittest.TestCase):
         final_state = json.loads(stdout)
         child_result = final_state["pipeline"]["child_result"]
         self.assertEqual(child_result["status"], "completed")
-        self.assertEqual(child_result["final_state"]["child_approved"]["approved"], True)
+        self.assertEqual(child_result["final_state"]["child_approved"]["ok"], True)
 
 
 def _compile(parent: Path, cwd: Path) -> dict:
@@ -223,7 +234,10 @@ ENTRY done;
 PY done
   SCRIPT "scripts/done.py"
   RESULT state.child.done
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    WRITE state.child.done;
+  };
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -243,7 +257,10 @@ ENTRY fail;
 
 PY fail
   SCRIPT "scripts/fail.py"
-  RESULT state.child.fail;
+  RESULT state.child.fail
+  CONTRACT {
+    WRITE state.child.fail;
+  };
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -265,7 +282,11 @@ APPROVAL confirm
   PROMPT "confirm child"
   READ state.child_request
   WRITE state.child_approved
-  RESULT state.child_approval_result;
+  RESULT state.child_approval_result
+  CONTRACT {
+    READ state.child_request;
+    WRITE state.child_approved;
+  };
 """.strip()
         + "\n",
         encoding="utf-8",

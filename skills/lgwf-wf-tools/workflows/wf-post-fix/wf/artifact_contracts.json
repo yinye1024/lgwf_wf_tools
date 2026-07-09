@@ -8,6 +8,9 @@
     ".lgwf/post_fix_decisions/script_flow_e2e.json",
     ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json"
   ],
+  "external_inputs": [
+    ".lgwf/isolations/run_workflow/e2e_generate/work_dir/reports/e2e-test-generator/report.json"
+  ],
   "final_outputs": [
     ".lgwf/post_fix_decisions/e2e_generate.json",
     ".lgwf/post_fix_decisions/prompt_fix.json",
@@ -17,6 +20,7 @@
     ".lgwf/post_fix_decisions/script_flow_e2e.json",
     ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json",
     ".lgwf/post_fix_generated_tests.json",
+    ".lgwf/post_fix_generated_tests.materialized.json",
     ".lgwf/post_fix_summary.json",
     "reports/wf-post-fix/report.json",
     "reports/wf-post-fix/report.md"
@@ -58,6 +62,10 @@
     "collect_post_fix_target": [
       ".lgwf/post_fix_target.request.json"
     ],
+    "finish_e2e_generate_stage": [
+      ".lgwf/post_fix_generated_tests.json",
+      ".lgwf/post_fix_generated_tests.materialized.json"
+    ],
     "normalize_post_fix_target": [
       ".lgwf/post_fix_decisions.json",
       ".lgwf/post_fix_stage_results.json",
@@ -78,6 +86,34 @@
     "run_wf_fix_positive_e2e": [
       ".lgwf/post_fix_decisions.json",
       ".lgwf/post_fix_stage_results.json"
+    ],
+    "set_e2e_generate_auto": [
+      ".lgwf/post_fix_decisions/e2e_generate.json",
+      ".lgwf/post_fix_decisions.json"
+    ],
+    "set_prompt_fix_auto": [
+      ".lgwf/post_fix_decisions/prompt_fix.json",
+      ".lgwf/post_fix_decisions.json"
+    ],
+    "set_prompt_upgrade_auto": [
+      ".lgwf/post_fix_decisions/prompt_upgrade.json",
+      ".lgwf/post_fix_decisions.json"
+    ],
+    "set_real_positive_e2e_auto": [
+      ".lgwf/post_fix_decisions/real_positive_e2e.json",
+      ".lgwf/post_fix_decisions.json"
+    ],
+    "set_runtime_fake_e2e_auto": [
+      ".lgwf/post_fix_decisions/runtime_fake_e2e.json",
+      ".lgwf/post_fix_decisions.json"
+    ],
+    "set_script_flow_e2e_auto": [
+      ".lgwf/post_fix_decisions/script_flow_e2e.json",
+      ".lgwf/post_fix_decisions.json"
+    ],
+    "set_wf_fix_positive_e2e_auto": [
+      ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json",
+      ".lgwf/post_fix_decisions.json"
     ],
     "summarize_post_fix": [
       ".lgwf/post_fix_generated_tests.json",

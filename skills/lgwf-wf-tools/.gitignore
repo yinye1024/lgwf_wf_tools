@@ -1,4 +1,5 @@
 assets/*.zip
+output/
 vendor/lgwf-client-assist/assets/install-state.*
 .local/
 workflows/*/ws/*

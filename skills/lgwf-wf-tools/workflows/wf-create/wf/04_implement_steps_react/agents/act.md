@@ -14,7 +14,7 @@
 - `state.lgwf_wf_create.scaffold_package_result.scaffold_plan`：确定性脚手架计划，包含 `package_profile`、模板元信息、目录和文件计划。
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_template_spec.md` 镜像而来。
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_package_template.json`：由 workflow resource `02_confirm_business_flow/resources/scaffold_package_template.json` 镜像而来，作为生成文件清单和 profile 语义的参考。
-- `.lgwf/create_reference_context/dsl-assist/*.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
+- `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/guide.md` 和 `.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
 - `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：workflow 模块化创建总纲。
 - `.lgwf/implementation_observe.json`：如果存在，必须优先修复其中确定性 audit 失败项。
 - 当前 target package 中已存在、且被批准步骤明确引用的相关文件与目录。
@@ -24,6 +24,12 @@
 2. 按 reason 计划和 `agents/spec.md` 的共同准则执行本轮最小实现或修复。
 3. 如果 `.lgwf/implementation_observe.json` 存在且 audit 失败，本轮只处理 audit 反馈要求的修复。
 4. 记录本轮实际生成的文件、目录、步骤设计文档副本、占位内容、剩余风险和本轮处理的 audit 反馈。
+
+## Resume And Budget Rules
+- 如果目标目录里已存在的目标 package 只有部分文件，把它视为本轮可续写草稿；先读取精简文件清单，先补齐缺失的必需文件，除非 audit 反馈要求，不重写已经成型的文件。
+- resume 后优先完成 `wf/docs/steps/`、各阶段 `workflow.lgwf`、阶段私有 `agents/`、`scripts/`、`resources/`、根契约和最小测试这些必需项，再考虑说明性优化。
+- 避免重新展开大范围参考阅读；已读过的设计文档、DSL 参考和仓库范式只在需要修正具体文件时按路径回看。
+- 在执行昂贵校验或可选完善前，先确保 `.lgwf/implementation_result.json` 可由当前草稿生成，避免超时后没有结构化交接。
 
 ## Success Criteria
 - 生成结果满足 `agents/spec.md` 的共同准则。

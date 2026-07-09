@@ -143,7 +143,9 @@ def record_stage_decision(stage_id: str, response: dict[str, Any] | None, *, sou
 
 
 def enable_auto_for_stage(stage_id: str) -> dict[str, Any]:
-    return record_stage_decision(stage_id, {"decision": "auto", "reason": "用户选择 auto"})
+    response = {"decision": "auto", "reason": "用户选择 auto"}
+    write_json(stage_response_path(stage_id), response)
+    return record_stage_decision(stage_id, response, source="auto")
 
 
 def latest_stage_decision(stage_id: str) -> dict[str, Any] | None:
@@ -187,8 +189,29 @@ def workflow_name_from_target(target: dict[str, Any]) -> str:
     return normalized or "workflow"
 
 
+def resolve_workspace_path(path_value: str | Path) -> Path:
+    path = Path(str(path_value)).expanduser()
+    if path.is_absolute():
+        return path
+    candidates = [workspace_root(), *workspace_root().parents]
+    for base in candidates:
+        candidate = (base / path).resolve()
+        if candidate.exists():
+            return candidate
+    for base in candidates:
+        candidate = (base / path).resolve()
+        if candidate.parent.exists():
+            return candidate
+    return (workspace_root() / path).resolve()
+
+
+def target_package_root(target: dict[str, Any]) -> Path:
+    root = target.get("target_package_root") or Path(str(target["target_workflow_lgwf"])).parent
+    return resolve_workspace_path(str(root))
+
+
 def generated_test_files(target: dict[str, Any]) -> dict[str, str]:
-    root = Path(str(target.get("target_package_root") or Path(str(target["target_workflow_lgwf"])).parent))
+    root = target_package_root(target)
     prefix = workflow_name_from_target(target)
     tests = root / "tests"
     return {

@@ -185,6 +185,7 @@ class PromptUpgradeRealPositiveEndToEndTest(unittest.TestCase):
         env = dict(os.environ)
 
         try:
+            target_payload = initial_target_payload(target_package)
             launch = run_lgwf(
                 [
                     "run",
@@ -193,7 +194,13 @@ class PromptUpgradeRealPositiveEndToEndTest(unittest.TestCase):
                     "--work-dir",
                     str(work_dir),
                     "--input-json",
-                    json.dumps({"scenario": "real_positive_minimal_prompt_contract_upgrade"}, ensure_ascii=False),
+                    json.dumps(
+                        {
+                            "scenario": "real_positive_minimal_prompt_contract_upgrade",
+                            "prompt_upgrade_target": target_payload,
+                        },
+                        ensure_ascii=False,
+                    ),
                     "--background",
                     "--log-file",
                     str(log_file),
@@ -243,35 +250,45 @@ class PromptUpgradeRealPositiveEndToEndTest(unittest.TestCase):
                 context = approval_request.get("context")
 
                 if "prompt-upgrade 目标 workflow 信息" in prompt:
-                    value = initial_target_payload(target_package)
-                    decision = "approve"
+                    submit = run_lgwf(
+                        [
+                            "approval",
+                            "submit",
+                            "--work-dir",
+                            str(work_dir),
+                            "--request-id",
+                            str(request_id),
+                            "--decision",
+                            "approve",
+                            "--comment",
+                            "real positive E2E auto approval",
+                        ],
+                        env=env,
+                        timeout=60,
+                    )
                 elif isinstance(context, dict) and context.get("ready_for_confirmation") is True:
                     self.assertTrue(context.get("prompt_upgrades"), context)
                     self.assertTrue(context.get("files_to_modify"), context)
-                    value = {"approve": True}
-                    decision = "approve"
+                    submit = run_lgwf(
+                        [
+                            "review",
+                            "submit",
+                            "--work-dir",
+                            str(work_dir),
+                            "--request-id",
+                            str(request_id),
+                            "--route",
+                            "approve",
+                            "--comment",
+                            "real positive E2E auto review",
+                        ],
+                        env=env,
+                        timeout=60,
+                    )
                     submitted_confirmation = True
                 else:
                     self.fail(f"unexpected approval prompt={prompt!r} context={context!r}")
 
-                submit = run_lgwf(
-                    [
-                        "approval",
-                        "submit",
-                        "--work-dir",
-                        str(work_dir),
-                        "--request-id",
-                        str(request_id),
-                        "--decision",
-                        decision,
-                        "--value-json",
-                        json.dumps(value, ensure_ascii=False),
-                        "--comment",
-                        "real positive E2E auto approval",
-                    ],
-                    env=env,
-                    timeout=60,
-                )
                 self.assertEqual(submit.returncode, 0, submit.stderr + submit.stdout)
                 time.sleep(1)
             else:

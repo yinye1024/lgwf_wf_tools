@@ -1,0 +1,14 @@
+{
+  "proposal_kind": "packaging_plan_proposal",
+  "required_sections": [
+    "source_skill",
+    "output",
+    "runtime",
+    "copy_plan",
+    "runner_plan",
+    "manifest_plan",
+    "audit_smoke",
+    "risks",
+    "pending_decisions"
+  ]
+}

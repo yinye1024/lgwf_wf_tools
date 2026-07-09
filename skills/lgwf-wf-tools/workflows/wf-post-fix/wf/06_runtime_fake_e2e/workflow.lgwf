@@ -9,7 +9,7 @@ DEFAULTS {
 
 ROUTE runtime_fake_e2e_auto_route
   READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled
-  WHEN true THEN run_runtime_fake_e2e_flow
+  WHEN true THEN auto_runtime_fake_e2e_flow
   WHEN false THEN choose_runtime_fake_e2e;
 
 CHOICE choose_runtime_fake_e2e
@@ -52,6 +52,8 @@ PY set_runtime_fake_e2e_auto
   RESULT state.lgwf_wf_post_fix.set_runtime_fake_e2e_auto_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/runtime_fake_e2e.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
   };
 
 PY skip_runtime_fake_e2e

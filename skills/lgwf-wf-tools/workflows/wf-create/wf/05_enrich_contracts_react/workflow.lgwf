@@ -35,7 +35,7 @@ REACT enrich_contracts_react MAX 3
     PROMPT "agents/reason.md"
     TARGET_DIRS state.lgwf_wf_create.contract_target_dirs
     OUTPUT_FILE ".lgwf/contract_reason.md"
-    TIMEOUT 900
+    TIMEOUT 1200
     RESULT state.lgwf_wf_create.contract_reason_result
     CONTRACT {
       READ workspace file ".lgwf/implementation_context.json";
@@ -49,7 +49,7 @@ REACT enrich_contracts_react MAX 3
     CONTEXT workspace file ".lgwf/contract_reason.md"
     TARGET_DIRS state.lgwf_wf_create.contract_target_dirs
     OUTPUT_JSON ".lgwf/contract_enrichment_result.json" AS_FILE
-    TIMEOUT 900
+    TIMEOUT 1800
     RESULT state.lgwf_wf_create.contract_enrichment_result
     CONTRACT {
       READ workspace file ".lgwf/implementation_context.json";

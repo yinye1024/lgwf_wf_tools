@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "skill-packaging-self-improve",
+  "entrypoint": "scripts/self_improve.py",
+  "local_state_root": ".local/self-improve",
+  "protected_local_roots": [
+    ".local/self-improve"
+  ],
+  "commands": {
+    "check": "scripts/check_self_improve.py"
+  },
+  "release_policy": {
+    "must_preserve": [
+      ".local"
+    ]
+  }
+}

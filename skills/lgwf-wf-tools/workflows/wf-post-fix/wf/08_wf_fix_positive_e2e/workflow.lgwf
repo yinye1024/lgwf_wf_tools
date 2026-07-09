@@ -47,6 +47,8 @@ PY set_wf_fix_positive_e2e_auto
   RESULT state.lgwf_wf_post_fix.set_wf_fix_positive_e2e_auto_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/wf_fix_positive_e2e.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
   };
 
 PY skip_wf_fix_positive_e2e

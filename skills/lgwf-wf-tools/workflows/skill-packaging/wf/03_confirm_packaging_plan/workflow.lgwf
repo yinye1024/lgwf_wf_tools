@@ -1,0 +1,68 @@
+WORKFLOW confirm_packaging_plan;
+ENTRY prepare_packaging_plan_confirmation;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_packaging_plan_confirmation
+  SCRIPT "scripts/prepare_packaging_plan_confirmation.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.prepare_packaging_plan_confirmation_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.packaging_plan_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_plan_proposal.json";
+    WRITE workspace file ".lgwf/packaging_plan_confirmation_context.json";
+  };
+
+REVIEW confirm_packaging_plan
+  PROMPT_REF "agents/confirm_packaging_plan.md"
+  CONTEXT state.skill_packaging.packaging_plan_confirmation_context
+  RESULT state.skill_packaging.packaging_plan_decision_result
+  PERSIST ".lgwf/packaging_plan_approval.json"
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    READ state.skill_packaging.packaging_plan_confirmation_context;
+    READ workspace file ".lgwf/packaging_plan_confirmation_context.json";
+    WRITE workspace file ".lgwf/packaging_plan_approval.json";
+  };
+
+PY prepare_packaging_plan_revision_confirmation
+  SCRIPT "scripts/prepare_packaging_plan_revision_confirmation.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.prepare_packaging_plan_revision_confirmation_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.packaging_plan_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_plan_approval.json";
+    READ workspace file ".lgwf/packaging_plan_proposal.json";
+    WRITE workspace file ".lgwf/packaging_plan_confirmation_context.json";
+  };
+
+PY apply_confirmed_packaging_plan
+  SCRIPT "scripts/apply_confirmed_packaging_plan.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.apply_confirmed_packaging_plan_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.confirmed_packaging_plan;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_plan_approval.json";
+    READ workspace file ".lgwf/packaging_plan_proposal.json";
+    WRITE workspace file ".lgwf/confirmed_packaging_plan.json";
+  };
+
+FLOW {
+  prepare_packaging_plan_confirmation THEN confirm_packaging_plan;
+
+  confirm_packaging_plan
+    WHEN "approve" THEN apply_confirmed_packaging_plan
+    WHEN "revise" THEN prepare_packaging_plan_revision_confirmation
+    WHEN "reject" THEN FAIL_ALL;
+
+  prepare_packaging_plan_revision_confirmation THEN confirm_packaging_plan;
+}

@@ -33,6 +33,16 @@
 - 内部 LGWF workflow 的运行状态写入各自 registry `work_dir` 下的 `.lgwf/`。
 - 内部 `tool_workflow` 按自身 `AGENTS.md` 写入 `.local/`、目标 package 或约定输出目录。
 
+## 打包发布包
+
+给同事分发整个 `lgwf-wf-tools` skill 时，运行：
+
+```powershell
+python skills\lgwf-wf-tools\scripts\package_lgwf_wf_tools_zip.py
+```
+
+脚本默认覆盖生成 `skills\lgwf-wf-tools\output\lgwf-wf-tools.zip`，并排除任意层级的 `.local/` 和 `.lgwf/` 本地状态目录。需要防止覆盖已有 zip 时，追加 `--no-force`。
+
 ## 验证
 
 ```powershell

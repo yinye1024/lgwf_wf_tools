@@ -13,18 +13,20 @@ PY prepare_target_request_context
   RESULT state.lgwf_e2e.prepare_target_request_context_result
   UPDATES_STATE
   CONTRACT {
+    WRITE state.lgwf_e2e.target_request;
+    WRITE state.lgwf_e2e.target_request_context;
   };
 
 APPROVAL collect_target_request
   PROMPT_REF "01_inspect_target/00_collect_target_request/confirm_target_request.md"
-  READ state.lgwf_e2e.target_request_context
+  READ state.lgwf_e2e.target_request
   WRITE state.lgwf_e2e.target_request
   RESULT state.lgwf_e2e.target_request_result
   PERSIST ".lgwf/e2e_target_request.json"
   POLL 1
   CONTRACT {
     WRITE workspace file ".lgwf/e2e_target_request.json";
-    READ state.lgwf_e2e.target_request_context;
+    READ state.lgwf_e2e.target_request;
     WRITE state.lgwf_e2e.target_request;
   };
 

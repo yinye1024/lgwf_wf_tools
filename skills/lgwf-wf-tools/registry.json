@@ -107,10 +107,11 @@
     },
     {
       "id": "skill-packaging",
-      "kind": "tool-workflow",
+      "kind": "lgwf",
       "description": "把带 wf/workflow.lgwf 的 LGWF workflow skill 打包成内置 lgwf-client-assist runtime 的自包含 skill。",
+      "workflow_lgwf": "workflows/skill-packaging/wf/workflow.lgwf",
+      "work_dir": "workflows/skill-packaging/ws",
       "agents_md": "workflows/skill-packaging/AGENTS.md",
-      "entry": "scripts/package_lgwf_skill.py",
       "entry_contract": "workflows/skill-packaging/entry_contract.json"
     }
   ]

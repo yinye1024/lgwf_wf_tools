@@ -82,12 +82,12 @@ python $lgwfPy codex token-status --work-dir <work_dir>
 
 - 如果是 `flow.human_approval`，按 vendor main-agent ask flow 在当前对话确认并提交；展示给用户前必须套用 `workflows/01-share/approval.md` 的人工确认展示模板。
 - 如果是 `AGENT_LOOP` 控制状态但没有 human request，汇报 loop reason、evidence 和 artifact 路径，等待用户决定。
-- 只提交用户明确确认的 approval value。
+- 只提交用户明确确认的决策或 `review revise` value；`approve` 不得携带业务 value。
 - 凡是 `approval`、`review`、`human_choice`、`waiting_human` 或子 workflow 代理确认，都必须展示确认原因、影响范围、待确认内容、可选决策、提交值、相关产物和后续动作；不得只用一句话询问用户是否确认。
-- `approval submit --value-json` 和 `review submit --value-json` 当前只支持字符串参数，不支持 value file。包含中文或复杂嵌套时，优先使用 `scripts/safe_approval_submit.py` 的 `--value-file` 或 `--value-json-base64`，由脚本转换成 ASCII-only JSON 参数后提交：
+- `approve` 使用纯决策提交；只有 `review revise` 需要 `--value-json`。`review submit --value-json` 当前只支持字符串参数，不支持 value file。包含中文或复杂嵌套时，优先使用 `scripts/safe_approval_submit.py` 的 `--value-file` 或 `--value-json-base64`，由脚本转换成 ASCII-only JSON 参数后提交：
 
 ```powershell
-python skills\lgwf-wf-tools\scripts\safe_approval_submit.py --kind approval --work-dir <work_dir> --request-id <request_id> --decision approve --value-file <value.json> --comment "user approved"
+python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py approval submit --work-dir <work_dir> --request-id <request_id> --decision approve
 python skills\lgwf-wf-tools\scripts\safe_approval_submit.py --kind review --work-dir <work_dir> --request-id <request_id> --route revise --value-file <value.json> --comment "user requested edits"
 ```
 

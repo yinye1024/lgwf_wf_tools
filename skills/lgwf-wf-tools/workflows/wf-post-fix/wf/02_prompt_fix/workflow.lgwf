@@ -9,7 +9,7 @@ DEFAULTS {
 
 ROUTE prompt_fix_auto_route
   READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled
-  WHEN true THEN run_prompt_fix_flow
+  WHEN true THEN auto_prompt_fix_flow
   WHEN false THEN choose_prompt_fix;
 
 CHOICE choose_prompt_fix
@@ -79,6 +79,8 @@ PY set_prompt_fix_auto
   RESULT state.lgwf_wf_post_fix.set_prompt_fix_auto_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/prompt_fix.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
   };
 
 PY skip_prompt_fix

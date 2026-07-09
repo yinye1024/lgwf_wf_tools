@@ -14,6 +14,7 @@
 - 本 workflow 只编排已有 workflow，不替代 `wf-prompt-fix`、`wf-prompt-upgrade`、`e2e-test-generator` 的内部职责。
 - 默认每个阶段运行前都要向用户解释该阶段作用、可能影响和跳过后果，并请求 `run | skip | auto | stop` 决策；用户选择 `stop` 时，由当前子 workflow 直接 `FAIL_ALL` 终止并向父 workflow 传播失败。
 - 用户选择 `auto` 后，只自动进入允许自动的阶段：`wf-prompt-fix`、`wf-prompt-upgrade`、`e2e-test-generator`、`script_flow_e2e`、`runtime_fake_e2e`。
+- 自动进入允许自动的阶段时，仍必须先执行对应 `set_*_auto` 节点，固化 `.lgwf/post_fix_decisions/<stage>.json`，再进入实际运行节点；不得让 auto route 直接跳到 `run_*_flow` 绕过阶段 decision 文件。
 - `real_positive_e2e` 和 `wf_fix_positive_e2e` 即使处于 `auto` 也必须再次请求用户确认。
 - 默认不自动绕过子 workflow 自己的 approval；只有目标 workflow 的 `entry_contract.json` 允许、且本 run 显式启用 `--auto-human` 时，`RUN_WORKFLOW` 才继承 run-level auto-human。handoff、`agent_loop waiting_human` 和 `subgraph.react on_max` 不受 auto-human 覆盖；需要人工确认时，主 agent 必须按 `workflows/01-share/approval.md` 的人工确认展示模板展示子 workflow 原始确认上下文并等待明确确认。
 
@@ -49,7 +50,7 @@
 4. `route_prompt_upgrade`：解释 `wf-prompt-upgrade` 并处理阶段决策。
 5. `prompt_upgrade`：通过 `RUN_WORKFLOW` 调用 `workflows/wf-prompt-upgrade/wf/workflow.lgwf`。
 6. `route_e2e_generate`：解释 `e2e-test-generator` 并处理阶段决策。
-7. `e2e_generate`：通过 `RUN_WORKFLOW` 调用 `workflows/e2e-test-generator/workflow.lgwf`。
+7. `e2e_generate`：通过 `RUN_WORKFLOW` 调用 `workflows/e2e-test-generator/workflow.lgwf`，并在阶段收尾时读取子 workflow 隔离目录中的 `reports/e2e-test-generator/report.json`，把已选择生成的测试文件复制回目标 workflow 的 `tests` 目录。生成报告声明的文件缺失时必须在该阶段失败，不得让后续测试阶段静默跳过。
 8. `route_script_flow_e2e`、`route_runtime_fake_e2e`、`route_real_positive_e2e`、`route_wf_fix_positive_e2e`：确认并执行或跳过生成后的测试入口；任一阶段选择 `stop` 会在该子 workflow 内直接 `FAIL_ALL`。
 9. `finish`：仅在所有阶段正常完成或跳过后汇总阶段状态、跳过原因、生成测试、测试结果和后续建议。
 
@@ -60,6 +61,7 @@
 .lgwf/post_fix_decisions.json
 .lgwf/post_fix_stage_results.json
 .lgwf/post_fix_generated_tests.json
+.lgwf/post_fix_generated_tests.materialized.json
 .lgwf/post_fix_summary.json
 reports/wf-post-fix/report.json
 reports/wf-post-fix/report.md

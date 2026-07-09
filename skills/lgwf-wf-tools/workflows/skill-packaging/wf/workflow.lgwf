@@ -4,23 +4,73 @@ ENTRY FLOW main;
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  result_path "{node}_result";
+  result_path "skill_packaging.results.{node}";
 }
 
-STEP confirm_requirements
-  WORKFLOW "02_confirm_requirements/workflow.lgwf";
+STEP prepare_packaging_request
+  WORKFLOW "01_prepare_packaging_request/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/packaging_request.json";
+    WRITE workspace file ".lgwf/runtime_source_resolution.json";
+    WRITE workspace file ".lgwf/packaging_write_scope.json";
+  };
 
-STEP confirm_business_flow
-  WORKFLOW "04_confirm_business_flow/workflow.lgwf";
+STEP preflight_packaging_plan
+  WORKFLOW "02_preflight_packaging_plan/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_request.json";
+    READ workspace file ".lgwf/packaging_write_scope.json";
+    WRITE workspace file ".lgwf/packaging_preflight.json";
+    WRITE workspace file ".lgwf/packaging_plan_proposal.json";
+  };
 
-STEP confirm_step_designs
-  WORKFLOW "07_confirm_step_designs/workflow.lgwf";
+STEP confirm_packaging_plan
+  WORKFLOW "03_confirm_packaging_plan/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_plan_proposal.json";
+    WRITE workspace file ".lgwf/confirmed_packaging_plan.json";
+  };
 
-STEP summarize_create_result
-  WORKFLOW "09_summarize_create_result/workflow.lgwf";
+STEP materialize_packaged_skill
+  WORKFLOW "04_materialize_packaged_skill/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/confirmed_packaging_plan.json";
+    READ workspace file ".lgwf/packaging_preflight.json";
+    WRITE workspace file ".lgwf/materialized_package.json";
+    WRITE workspace file "<output_parent>/<source-skill-name>/";
+    WRITE workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/";
+    WRITE workspace file "<output_parent>/<source-skill-name>/scripts/run_local_lgwf_workflow.py";
+    WRITE workspace file "<output_parent>/<source-skill-name>/PACKAGING_MANIFEST.json";
+  };
+
+STEP verify_packaged_skill
+  WORKFLOW "05_verify_packaged_skill/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/confirmed_packaging_plan.json";
+    READ workspace file ".lgwf/materialized_package.json";
+    READ workspace file "<output_parent>/<source-skill-name>/";
+    READ workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/";
+    READ workspace file "<output_parent>/<source-skill-name>/wf/workflow.lgwf";
+    READ workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/scripts/lgwf.py";
+    READ workspace file "<output_parent>/<source-skill-name>/scripts/run_local_lgwf_workflow.py";
+    READ workspace file "<output_parent>/<source-skill-name>/PACKAGING_MANIFEST.json";
+    WRITE workspace file ".lgwf/package_validation.json";
+  };
+
+STEP summarize_packaging_result
+  WORKFLOW "06_summarize_packaging_result/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/confirmed_packaging_plan.json";
+    READ workspace file ".lgwf/materialized_package.json";
+    READ workspace file ".lgwf/package_validation.json";
+    WRITE workspace file ".lgwf/packaging_result_summary.json";
+    WRITE workspace file "reports/skill-packaging/packaging_result_report.md";
+  };
 
 FLOW main
-  START confirm_requirements
-  THEN confirm_business_flow
-  THEN confirm_step_designs
-  THEN summarize_create_result;
+  START prepare_packaging_request
+  THEN preflight_packaging_plan
+  THEN confirm_packaging_plan
+  THEN materialize_packaged_skill
+  THEN verify_packaged_skill
+  THEN summarize_packaging_result;

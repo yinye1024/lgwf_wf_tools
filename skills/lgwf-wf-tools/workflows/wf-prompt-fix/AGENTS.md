@@ -61,7 +61,7 @@
 
 1. `prepare_target`：请求用户确认目标 workflow 信息，确认 facade 内置 `lgwf-client-assist` 可用，复制最小 prompt reference context，并生成 `.lgwf/prompt_acceptance/inventory.json`。
 2. `audit_prompts`：由 Codex 审计 prompt 文件、引用关系、上下文和输出契约，生成 `.lgwf/prompt_acceptance/audit.json`。
-3. `select_fixes`：整理 audit summary 和可选 issue，请求用户选择要修复的 issue，并校验选择结果。
+3. `select_fixes`：整理 audit summary 和可选 issue，生成默认修复选择的 review context，通过 `REVIEW` 让用户 `approve/revise/reject`，并在 `approve` 后校验生成最终 `.lgwf/prompt_acceptance/fix_selection.json`。`fix_selection_review.json` 只作为控制面审计，不作为后续修复的业务输入。
 4. `repair_loop`：阶段内部读取 `.lgwf/prompt_acceptance/fix_selection.json` 判断是否修复；用户跳过或未选择 issue 时只写入跳过态 review 并返回，有已确认 issue 时执行最多 3 轮 `REACT` 修复，依次生成修复计划、应用修改、复核结果。该阶段目录必须自包含，`ACT` prompt 和辅助脚本放在 `04_repair_loop/agents` 与 `04_repair_loop/scripts`，不得再拆出孙级 workflow。
 5. `summary`：汇总 inventory、audit、选择、修复和复核结果；根据摘要状态自动完成或进入最终人工确认。
 
@@ -82,6 +82,9 @@
 .lgwf/prompt_acceptance/reference_context/prompt-assist/*.md
 .lgwf/prompt_acceptance/inventory.json
 .lgwf/prompt_acceptance/audit.json
+.lgwf/prompt_acceptance/selection_context.json
+.lgwf/prompt_acceptance/fix_selection_review_context.json
+.lgwf/prompt_acceptance/fix_selection_review.json
 .lgwf/prompt_acceptance/fix_selection.json
 .lgwf/prompt_acceptance/repair_plan.json
 .lgwf/prompt_acceptance/repair_review.json

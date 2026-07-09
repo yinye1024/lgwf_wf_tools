@@ -9,6 +9,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,11 +45,15 @@ def read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
-def call_main(relative: str, cwd: Path, name: str) -> str:
+def call_main(relative: str, cwd: Path, name: str, stdin_text: str | None = None) -> str:
     module = load_module(relative, name)
     output = StringIO()
     with pushd(cwd), redirect_stdout(output):
-        module.main()
+        if stdin_text is None:
+            module.main()
+        else:
+            with patch("sys.stdin", StringIO(stdin_text)):
+                module.main()
     return output.getvalue()
 
 
@@ -121,6 +126,39 @@ FLOW prepare
 
 
 class E2eGeneratorScriptsTest(unittest.TestCase):
+    def test_prepare_target_request_context_exports_business_request_for_auto_approval(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+            payload = {
+                "workflow_lgwf": "skills/lgwf-wf-tools/workflows/skill-packaging/wf/workflow.lgwf",
+                "workflow_root": "skills/lgwf-wf-tools/workflows/skill-packaging",
+                "test_output_dir": "tests",
+                "test_name_prefix": "skill_packaging",
+                "test_types": ["script_flow", "runtime_fake"],
+            }
+
+            output = call_main(
+                "01_inspect_target/00_collect_target_request/scripts/prepare_target_request_context.py",
+                work,
+                "prepare_target_request_with_input",
+                json.dumps(payload, ensure_ascii=False),
+            )
+
+            state = json.loads(output)
+            request = state["lgwf_e2e.target_request"]
+            context = state["lgwf_e2e.target_request_context"]
+            self.assertEqual(request["workflow_lgwf"], payload["workflow_lgwf"])
+            self.assertEqual(request["workflow_root"], payload["workflow_root"])
+            self.assertEqual(request["test_types"], ["script_flow", "runtime_fake"])
+            self.assertEqual(context["candidate_request"]["workflow_lgwf"], payload["workflow_lgwf"])
+            self.assertEqual(context["approval_target"], "e2e_target_request")
+
+    def test_collect_target_request_approval_reads_business_request_not_context(self) -> None:
+        workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        approval_block = workflow.split("APPROVAL collect_target_request", 1)[1].split("STEP inspect_target", 1)[0]
+        self.assertIn("READ state.lgwf_e2e.target_request", approval_block)
+        self.assertNotIn("READ state.lgwf_e2e.target_request_context", approval_block)
+
     def test_validate_target_request_requires_workflow_lgwf(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             work = Path(temp)
@@ -155,6 +193,30 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
                 ["script_flow", "runtime_fake", "real_positive", "wf_fix_positive"],
             )
             self.assertNotIn("real_codex_env", normalized)
+
+    def test_validate_target_request_resolves_facade_relative_path_in_run_workflow_isolation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            isolation = Path(temp) / "run_workflow" / "e2e_generate"
+            work = isolation / "work_dir"
+            workspace = isolation / "workspace"
+            package_root = workspace / "workflows" / "skill-packaging"
+            workflow_dir = package_root / "wf"
+            work.mkdir(parents=True)
+            workflow_dir.mkdir(parents=True)
+            workflow = create_target_workflow(workflow_dir)
+            write_json(
+                work / ".lgwf" / "e2e_target_request.json",
+                {
+                    "workflow_lgwf": "skills/lgwf-wf-tools/workflows/skill-packaging/wf/workflow.lgwf",
+                    "workflow_root": "skills/lgwf-wf-tools/workflows/skill-packaging",
+                },
+            )
+
+            call_main("01_inspect_target/01_validate_target_request/scripts/validate_target_request.py", work, "validate_isolated")
+
+            normalized = read_json(work / ".lgwf" / "e2e_target_request.normalized.json")
+            self.assertEqual(Path(normalized["workflow_lgwf"]).resolve(), workflow.resolve())
+            self.assertEqual(Path(normalized["workflow_root"]).resolve(), package_root.resolve())
 
     def test_validate_target_request_normalizes_selected_test_types(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -210,6 +272,40 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             self.assertIn(".lgwf/generated.json", graph["output_json"])
             self.assertIn(".lgwf/confirm.json", graph["persist"])
             self.assertEqual(graph["routes"][0]["branches"][0]["value"], "retry")
+
+    def test_summarize_business_flow_uses_deterministic_script(self) -> None:
+        workflow_text = (ROOT / "01_inspect_target" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("PY summarize_business_flow", workflow_text)
+        self.assertIn('SCRIPT "04_summarize_business_flow/scripts/summarize_business_flow.py"', workflow_text)
+        self.assertNotIn("CODEX summarize_business_flow", workflow_text)
+
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "work"
+            target = Path(temp) / "target"
+            work.mkdir()
+            target.mkdir()
+            workflow = create_target_workflow(target)
+            write_json(work / ".lgwf" / "e2e_target_request.json", {"workflow_lgwf": workflow.as_posix()})
+
+            for relative, name in (
+                ("01_inspect_target/01_validate_target_request/scripts/validate_target_request.py", "validate_summary"),
+                ("01_inspect_target/02_scan_workflow_package/scripts/scan_workflow_package.py", "scan_summary"),
+                ("01_inspect_target/03_parse_workflow_graph/scripts/parse_workflow_graph.py", "parse_summary"),
+                ("01_inspect_target/04_summarize_business_flow/scripts/summarize_business_flow.py", "summarize_flow"),
+            ):
+                call_main(relative, work, name)
+
+            summary = read_json(work / ".lgwf" / "e2e_business_flow_summary.json")
+            self.assertIn("sample_target", summary["summary"])
+            self.assertTrue(summary["main_flow"])
+            self.assertEqual(summary["approval_points"][0]["node_id"], "confirm")
+            self.assertEqual(summary["route_points"][0]["route_id"], "choose_next")
+            artifact_nodes = {item["node_id"] for item in summary["codex_artifacts"]}
+            self.assertTrue({"generate_json", "repair_loop"}.issubset(artifact_nodes))
+            self.assertEqual(
+                set(summary["test_focus"]),
+                {"script_flow", "runtime_fake", "real_positive", "wf_fix_positive"},
+            )
 
     def test_coverage_matrix_extracts_routes_approvals_and_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -327,20 +423,17 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
         self.assertIn("issue_code", observe)
         self.assertIn("prepare_runtime_fake_repair_context", workflow)
         self.assertIn('workspace file ".lgwf/e2e_runtime_fake_repair_context.json"', workflow)
-        self.assertIn('CONTEXT workspace file ".lgwf/e2e_runtime_fake_observe.json"', workflow)
+        self.assertNotIn("REACT runtime_fake_e2e_react", workflow)
+        self.assertNotIn("REASON CODEX", workflow)
+        for node in (
+            "design_runtime_fake_e2e",
+            "generate_runtime_fake_e2e",
+            "validate_runtime_fake_e2e",
+        ):
+            self.assertIn(node, workflow)
 
     def test_react_reason_prompts_receive_observe_feedback(self) -> None:
         contracts = (
-            (
-                "03_script_flow_e2e",
-                "prepare_script_flow_observe_feedback",
-                ".lgwf/e2e_script_flow_observe.json",
-            ),
-            (
-                "04_runtime_fake_e2e",
-                "prepare_runtime_fake_repair_context",
-                ".lgwf/e2e_runtime_fake_observe.json",
-            ),
             (
                 "05_real_positive_e2e",
                 "prepare_real_positive_observe_feedback",
@@ -360,6 +453,197 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
                 self.assertIn(f'CONTEXT workspace file "{observe_path}"', workflow)
                 self.assertIn(observe_path, reason)
                 self.assertIn("initial_placeholder", reason)
+
+    def test_script_flow_stage_uses_deterministic_scripts_not_codex_react(self) -> None:
+        workflow = (ROOT / "03_script_flow_e2e" / "workflow.lgwf").read_text(encoding="utf-8")
+
+        self.assertNotIn("REACT script_flow_e2e_react", workflow)
+        self.assertNotIn("REASON CODEX", workflow)
+        self.assertNotIn("ACT CODEX", workflow)
+        self.assertNotIn("OBSERVE CODEX", workflow)
+        for node in (
+            "prepare_script_flow_observe_feedback",
+            "design_script_flow_e2e",
+            "generate_script_flow_e2e",
+            "validate_script_flow_e2e",
+        ):
+            self.assertIn(node, workflow)
+
+    def test_script_flow_scripts_generate_and_validate_without_codex(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "work"
+            target = Path(temp) / "target"
+            work.mkdir()
+            target.mkdir()
+            (target / "scripts").mkdir()
+            (target / "tests").mkdir()
+            (target / "workflow.lgwf").write_text(
+                """WORKFLOW target;
+ENTRY prepare;
+
+PY prepare
+  SCRIPT "scripts/prepare.py"
+  RESULT state.target.prepare;
+
+APPROVAL confirm
+  PROMPT "confirm"
+  RESULT state.target.confirm
+  PERSIST ".lgwf/confirm.json";
+
+ROUTE choose_next
+  WHEN "retry" THEN prepare
+  WHEN "done" THEN finish;
+
+PY finish
+  SCRIPT "scripts/finish.py"
+  RESULT state.target.finish;
+""",
+                encoding="utf-8",
+            )
+            (target / "scripts" / "prepare.py").write_text("def main():\n    return None\n", encoding="utf-8")
+            (target / "scripts" / "finish.py").write_text("def main():\n    return None\n", encoding="utf-8")
+            request = {
+                "workflow_name": "target",
+                "workflow_root": str(target),
+                "workflow_lgwf": str(target / "workflow.lgwf"),
+                "test_output_dir": "tests",
+                "generated_tests": {"script_flow": "test_target_script_flow_e2e.py"},
+                "selected_test_types": ["script_flow"],
+            }
+            matrix = {
+                "script_flow": {
+                    "selected": True,
+                    "script_contracts": ["scripts/prepare.py", "scripts/finish.py"],
+                    "routes": [
+                        {"route_id": "choose_next", "value": "retry", "target": "prepare", "workflow": "workflow.lgwf"},
+                        {"route_id": "choose_next", "value": "done", "target": "finish", "workflow": "workflow.lgwf"},
+                    ],
+                    "approval_persist": [".lgwf/confirm.json"],
+                }
+            }
+            graph = {
+                "workflow_name": "target",
+                "workflows": [{"path": "workflow.lgwf"}],
+                "scripts": matrix["script_flow"]["script_contracts"],
+                "routes": [{"id": "choose_next", "workflow": "workflow.lgwf", "branches": matrix["script_flow"]["routes"]}],
+                "persist": [".lgwf/confirm.json"],
+            }
+            write_json(work / ".lgwf" / "e2e_target_request.normalized.json", request)
+            write_json(work / ".lgwf" / "e2e_coverage_matrix.json", matrix)
+            write_json(work / ".lgwf" / "e2e_workflow_graph.json", graph)
+            write_json(work / ".lgwf" / "e2e_script_flow_observe.json", {"initial_placeholder": True, "passed": False})
+
+            call_main("03_script_flow_e2e/01_design/scripts/design_script_flow_e2e.py", work, "script_flow_design")
+            design = read_json(work / ".lgwf" / "e2e_script_flow_design.json")
+            self.assertEqual(design["test_file"], "tests/test_target_script_flow_e2e.py")
+            self.assertGreaterEqual(len(design["cases"]), 3)
+            self.assertTrue(any(case["case_id"] == "case_script_contracts_compile" for case in design["cases"]))
+            self.assertTrue(any(claim["coverage_ref"] == "script_contracts" for claim in design["coverage_claims"]))
+
+            call_main("03_script_flow_e2e/02_generate/scripts/generate_script_flow_e2e.py", work, "script_flow_generate")
+            generated_test = target / "tests" / "test_target_script_flow_e2e.py"
+            self.assertTrue(generated_test.exists())
+            generation = read_json(work / ".lgwf" / "e2e_script_flow_generation.json")
+            self.assertTrue(generation["generated"])
+            self.assertTrue(generation["guard_mechanisms"])
+
+            call_main("03_script_flow_e2e/03_validate/scripts/validate_script_flow_e2e.py", work, "script_flow_validate")
+            observe = read_json(work / ".lgwf" / "e2e_script_flow_observe.json")
+            self.assertTrue(observe["passed"], observe)
+            self.assertTrue(observe["criterion_checks"]["py_compile"]["passed"])
+            self.assertTrue(observe["criterion_checks"]["unittest"]["passed"])
+
+    def test_runtime_fake_scripts_generate_and_validate_without_codex(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp) / "work"
+            target = Path(temp) / "target"
+            work.mkdir()
+            target.mkdir()
+            (target / "tests").mkdir()
+            (target / "workflow.lgwf").write_text(
+                """WORKFLOW target;
+ENTRY prepare;
+
+CODEX generate
+  PROMPT "agents/generate.md"
+  OUTPUT_JSON ".lgwf/generated.json"
+  RESULT state.target.generate;
+
+APPROVAL confirm
+  PROMPT "confirm"
+  RESULT state.target.confirm
+  PERSIST ".lgwf/confirm.json";
+
+ROUTE choose_next
+  WHEN "retry" THEN generate
+  WHEN "done" THEN finish;
+
+PY finish
+  SCRIPT "scripts/finish.py"
+  RESULT state.target.finish;
+""",
+                encoding="utf-8",
+            )
+            request = {
+                "workflow_name": "target",
+                "workflow_root": str(target),
+                "workflow_lgwf": str(target / "workflow.lgwf"),
+                "test_output_dir": "tests",
+                "generated_tests": {"runtime_fake": "test_target_runtime_fake_e2e.py"},
+                "selected_test_types": ["runtime_fake"],
+            }
+            matrix = {
+                "runtime_fake": {
+                    "selected": True,
+                    "codex_like_nodes": [{"id": "generate", "kind": "CODEX", "workflow": "workflow.lgwf"}],
+                    "approval_nodes": [{"id": "confirm", "kind": "APPROVAL", "workflow": "workflow.lgwf"}],
+                    "routes": [
+                        {"route_id": "choose_next", "value": "retry", "target": "generate", "workflow": "workflow.lgwf"},
+                        {"route_id": "choose_next", "value": "done", "target": "finish", "workflow": "workflow.lgwf"},
+                    ],
+                    "output_json": [".lgwf/generated.json"],
+                    "persist_artifacts": [".lgwf/confirm.json"],
+                    "branch_targets": [
+                        {"route_id": "choose_next", "value": "retry", "target": "generate", "workflow": "workflow.lgwf"},
+                        {"route_id": "choose_next", "value": "done", "target": "finish", "workflow": "workflow.lgwf"},
+                    ],
+                    "repair_or_retry_nodes": [],
+                }
+            }
+            graph = {
+                "workflow_name": "target",
+                "nodes": [
+                    {"id": "generate", "kind": "CODEX", "workflow": "workflow.lgwf"},
+                    {"id": "confirm", "kind": "APPROVAL", "workflow": "workflow.lgwf"},
+                ],
+                "routes": [{"id": "choose_next", "workflow": "workflow.lgwf", "branches": matrix["runtime_fake"]["routes"]}],
+                "output_json": [".lgwf/generated.json"],
+                "persist": [".lgwf/confirm.json"],
+            }
+            write_json(work / ".lgwf" / "e2e_target_request.normalized.json", request)
+            write_json(work / ".lgwf" / "e2e_coverage_matrix.json", matrix)
+            write_json(work / ".lgwf" / "e2e_workflow_graph.json", graph)
+            write_json(work / ".lgwf" / "e2e_runtime_fake_observe.json", {"initial_placeholder": True, "passed": False})
+            write_json(work / ".lgwf" / "e2e_runtime_fake_repair_context.json", {"active": False, "blockers": [], "history_count": 0})
+
+            call_main("04_runtime_fake_e2e/01_design/scripts/design_runtime_fake_e2e.py", work, "runtime_fake_design")
+            design = read_json(work / ".lgwf" / "e2e_runtime_fake_design.json")
+            self.assertEqual(design["test_file"], "tests/test_target_runtime_fake_e2e.py")
+            self.assertTrue(any(scenario["scenario_id"] == "happy_path" for scenario in design["scenarios"]))
+            self.assertTrue(design["fake_codex_contract"]["prompt_file_support"])
+
+            call_main("04_runtime_fake_e2e/02_generate/scripts/generate_runtime_fake_e2e.py", work, "runtime_fake_generate")
+            generated_test = target / "tests" / "test_target_runtime_fake_e2e.py"
+            self.assertTrue(generated_test.exists())
+            source = generated_test.read_text(encoding="utf-8")
+            self.assertIn("lgwf.py run --workflow-lgwf", source)
+            self.assertIn("--prompt-file", source)
+            self.assertIn("approval submit", source)
+
+            call_main("04_runtime_fake_e2e/03_validate/scripts/validate_runtime_fake_e2e.py", work, "runtime_fake_validate")
+            observe = read_json(work / ".lgwf" / "e2e_runtime_fake_observe.json")
+            self.assertTrue(observe["passed"], observe)
+            self.assertTrue(observe["contract_checks"]["business_route_coverage"]["passed"])
 
     def test_wf_fix_positive_prompts_define_driver_contract(self) -> None:
         workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
@@ -487,15 +771,43 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
             self.assertIn(token, observe)
 
     def test_selection_route_scripts_emit_runtime_route_keys(self) -> None:
+        workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+        for node_id in (
+            "route_script_flow_selection",
+            "route_runtime_fake_selection",
+            "route_real_positive_selection",
+            "route_wf_fix_positive_selection",
+        ):
+            with self.subTest(contract=node_id):
+                block = workflow.split(f"PY {node_id}", 1)[1].split("};", 1)[0]
+                self.assertNotIn("WRITE workspace file", block)
+
         with tempfile.TemporaryDirectory() as temp:
             work = Path(temp)
-            write_json(work / ".lgwf" / "e2e_target_request.normalized.json", {"selected_test_types": ["wf_fix_positive"]})
+            write_json(
+                work / ".lgwf" / "e2e_target_request.normalized.json",
+                {
+                    "selected_test_types": ["wf_fix_positive"],
+                    "generated_tests": {
+                        "script_flow": "test_target_script_flow_e2e.py",
+                        "runtime_fake": "test_target_runtime_fake_e2e.py",
+                        "real_positive": "lgwf_target_real_positive_e2e.py",
+                        "wf_fix_positive": "lgwf_target_real_positive_e2e_for_wf_fix.py",
+                    },
+                },
+            )
             cases = [
                 ("route_script_flow_selection", "script_flow", "skip"),
                 ("route_runtime_fake_selection", "runtime_fake", "skip"),
                 ("route_real_positive_selection", "real_positive", "skip"),
                 ("route_wf_fix_positive_selection", "wf_fix_positive", "run"),
             ]
+            artifact_names = {
+                "script_flow": ("e2e_script_flow_generation.json", "e2e_script_flow_observe.json"),
+                "runtime_fake": ("e2e_runtime_fake_generation.json", "e2e_runtime_fake_observe.json"),
+                "real_positive": ("e2e_real_positive_generation.json", "e2e_real_positive_observe.json"),
+                "wf_fix_positive": ("e2e_wf_fix_positive_generation.json", "e2e_wf_fix_positive_observe.json"),
+            }
 
             for node_id, module_suffix, expected in cases:
                 with self.subTest(node_id=node_id):
@@ -508,6 +820,15 @@ class E2eGeneratorScriptsTest(unittest.TestCase):
                     self.assertEqual(result[f"__route__{node_id}"], expected)
                     self.assertEqual(result["next"], expected)
                     self.assertEqual(result["selected"], expected == "run")
+                    generation_name, observe_name = artifact_names[module_suffix]
+                    generation_path = work / ".lgwf" / generation_name
+                    observe_path = work / ".lgwf" / observe_name
+                    if expected == "skip":
+                        self.assertEqual(read_json(generation_path)["status"], "skipped")
+                        self.assertEqual(read_json(observe_path)["status"], "skipped")
+                    else:
+                        self.assertFalse(generation_path.exists())
+                        self.assertFalse(observe_path.exists())
 
     def test_wf_fix_positive_prepare_creates_real_positive_design_placeholder(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

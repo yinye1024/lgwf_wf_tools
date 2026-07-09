@@ -39,15 +39,34 @@ def render_report(summary: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def latest_stage_results(stages: list[Any]) -> list[dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for stage in stages:
+        if not isinstance(stage, dict):
+            continue
+        stage_id = stage.get("stage_id")
+        if not isinstance(stage_id, str) or not stage_id:
+            continue
+        if stage_id not in latest:
+            order.append(stage_id)
+        latest[stage_id] = stage
+    return [latest[stage_id] for stage_id in order]
+
+
 def build_summary() -> dict[str, Any]:
     target = load_target()
     decisions = load_decisions()
     stage_results = load_stage_results()
+    stage_history = stage_results.get("stages", [])
+    if not isinstance(stage_history, list):
+        stage_history = []
     generated_tests = generated_test_files(target)
     summary = {
         "target": target,
         "decisions": decisions,
-        "stages": stage_results.get("stages", []),
+        "stages": latest_stage_results(stage_history),
+        "stage_history": stage_history,
         "generated_tests": generated_tests,
     }
     return summary

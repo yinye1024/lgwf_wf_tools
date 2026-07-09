@@ -9,8 +9,8 @@
 - `.lgwf/implementation_context.json`：目标包路径上下文。
 - `.lgwf/implementation_result.json`：如果存在，表示上一轮 ACT 的实现结果。
 - `.lgwf/implementation_observe.json`：如果存在，表示上一轮确定性 observe 的 audit 结果。
-- `.lgwf/create_reference_context/dsl-assist/*.md`：LGWF DSL 创建和 audit 规则。
-- `.lgwf/create_reference_context/scaffold/*.md|*.json`：wf-create 脚手架规则。
+- `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/guide.md` 和 `.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md`：LGWF DSL 创建和 audit 规则。
+- `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`、`.lgwf/create_reference_context/scaffold/scaffold_result_contract.md` 和 `.lgwf/create_reference_context/scaffold/scaffold_package_template.json`：wf-create 脚手架规则。
 - `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：workflow 模块化创建总纲。
 
 ## Task

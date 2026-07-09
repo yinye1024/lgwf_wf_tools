@@ -17,76 +17,47 @@ PY prepare_runtime_fake_repair_context
     WRITE workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
   };
 
-CONTEXT_SET runtime_fake_e2e_shared_context {
-  workspace file ".lgwf/e2e_target_request.normalized.json";
-  workspace file ".lgwf/e2e_workflow_graph.json";
-  workspace file ".lgwf/e2e_coverage_matrix.json";
-  workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
-}
-
-CONTEXT_SET runtime_fake_e2e_design_context {
-  workspace file ".lgwf/e2e_runtime_fake_design.json";
-}
-
-REACT runtime_fake_e2e_react MAX 3
-  SPEC "01_design/agents/spec.md"
-  CONTEXT runtime_fake_e2e_shared_context
+PY design_runtime_fake_e2e
+  SCRIPT "01_design/scripts/design_runtime_fake_e2e.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.runtime_fake_design_result
+  UPDATES_STATE
   CONTRACT {
-  }
-  REASON CODEX
-    PROMPT "01_design/agents/reason.md"
-    CONTEXT workspace file ".lgwf/e2e_runtime_fake_observe.json"
-    TARGET_DIRS state.lgwf_e2e.target_dirs
-    TARGET_FILES state.lgwf_e2e.target_files
-    OUTPUT_JSON ".lgwf/e2e_runtime_fake_design.json"
-    RESULT state.lgwf_e2e.runtime_fake_reason_result
-    CONTRACT {
-      READ workspace file ".lgwf/*.json";
-      READ workspace file ".lgwf/e2e_coverage_matrix.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_observe.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
-      READ workspace file ".lgwf/e2e_target_request.normalized.json";
-      READ workspace file ".lgwf/e2e_workflow_graph.json";
-      READ workspace file ".lgwf/example.json";
-      WRITE workspace file ".lgwf/e2e_runtime_fake_design.json";
-    }
-  ACT CODEX
-    PROMPT "02_generate/agents/act.md"
-    CONTEXT runtime_fake_e2e_design_context
-    TARGET_DIRS state.lgwf_e2e.target_dirs
-    TARGET_FILES state.lgwf_e2e.target_files
-    OUTPUT_JSON ".lgwf/e2e_runtime_fake_generation.json"
-    RESULT state.lgwf_e2e.runtime_fake_act_result
-    CONTRACT {
-      READ workspace file ".lgwf/e2e_coverage_matrix.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_design.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
-      READ workspace file ".lgwf/e2e_target_request.normalized.json";
-      READ workspace file ".lgwf/e2e_workflow_graph.json";
-      READ workspace file ".lgwf/example.json";
-      WRITE workspace file ".lgwf/e2e_runtime_fake_generation.json";
-    }
-  OBSERVE CODEX
-    PROMPT "03_validate/agents/observe.md"
-    CONTEXT runtime_fake_e2e_design_context
-    CONTEXT workspace file ".lgwf/e2e_runtime_fake_generation.json"
-    TARGET_DIRS state.lgwf_e2e.target_dirs
-    TARGET_FILES state.lgwf_e2e.target_files
-    OUTPUT_JSON ".lgwf/e2e_runtime_fake_observe.json"
-    RESULT state.lgwf_e2e.runtime_fake_observe_result
-    CONTRACT {
-      READ workspace file ".lgwf/e2e_coverage_matrix.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_design.json";
-      READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
-      READ workspace file ".lgwf/e2e_target_request.normalized.json";
-      WRITE workspace file ".lgwf/e2e_runtime_fake_observe.json";
-    }
-  DECIDE PY
-    SCRIPT "04_repair/scripts/decide_runtime_fake.py"
-    RESULT state.lgwf_e2e.runtime_fake_decide_result
-    UPDATES_STATE
-    CONTRACT {
-    };
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_observe.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_runtime_fake_design.json";
+  };
+
+PY generate_runtime_fake_e2e
+  SCRIPT "02_generate/scripts/generate_runtime_fake_e2e.py"
+  TIMEOUT 60
+  RESULT state.lgwf_e2e.runtime_fake_generation_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_design.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_repair_context.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    WRITE workspace file ".lgwf/e2e_runtime_fake_generation.json";
+  };
+
+PY validate_runtime_fake_e2e
+  SCRIPT "03_validate/scripts/validate_runtime_fake_e2e.py"
+  TIMEOUT 180
+  RESULT state.lgwf_e2e.runtime_fake_validation_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_design.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    WRITE workspace file ".lgwf/e2e_runtime_fake_observe.json";
+  };
 
 FLOW prepare_runtime_fake_repair_context
-  THEN runtime_fake_e2e_react;
+  THEN design_runtime_fake_e2e
+  THEN generate_runtime_fake_e2e
+  THEN validate_runtime_fake_e2e;

@@ -170,6 +170,35 @@ class ValidateCreatedPackageTests(unittest.TestCase):
 
             self.assertIn("implementation_result generated file README.md", str(raised.exception))
 
+    def test_validate_created_package_accepts_repo_relative_generated_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            work_dir = self.make_work_dir(root, ["prepare"])
+            target_root = root / "skills" / "demo-workflow"
+            self.add_stage(target_root, "prepare")
+            write_json(
+                work_dir / ".lgwf" / "implementation_result.json",
+                {
+                    "target_package_root": "skills/demo-workflow",
+                    "status": "implemented",
+                    "generated_files": [
+                        {"path": "skills/demo-workflow/README.md"},
+                        {"path": "skills/demo-workflow/wf/workflow.lgwf"},
+                    ],
+                    "validation": [{"command": "unit", "status": "passed"}],
+                },
+            )
+            self.module.run_authoring_audit = lambda workflow_lgwf, workspace_root: {
+                "ok": True,
+                "exit_code": 0,
+                "stdout": "",
+                "stderr": "",
+            }
+
+            result = self.module.validate_created_package(work_dir)
+
+            self.assertEqual(result["status"], "passed")
+
     def test_validate_created_package_rejects_agent_loop_target_dirs_prompt_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

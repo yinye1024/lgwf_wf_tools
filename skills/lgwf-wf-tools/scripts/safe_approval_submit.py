@@ -48,10 +48,14 @@ def build_command(args: argparse.Namespace, value: dict[str, Any]) -> list[str]:
     if args.kind == "approval":
         if not args.decision:
             raise ValueError("--decision is required for --kind approval")
+        if args.decision == "approve":
+            raise ValueError("approval approve does not accept value-json")
         command.extend(["--decision", args.decision])
     else:
         if not args.route:
             raise ValueError("--route is required for --kind review")
+        if args.route != "revise":
+            raise ValueError("only review revise accepts value-json")
         command.extend(["--route", args.route])
     command.extend(["--value-json", value_json])
     if args.comment:

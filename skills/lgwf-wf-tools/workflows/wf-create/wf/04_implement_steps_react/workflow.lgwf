@@ -31,12 +31,15 @@ REACT implement_steps_react MAX 3
   REASON CODEX
     PROMPT "agents/reason.md"
     OUTPUT_FILE ".lgwf/implementation_reason.md"
-    TIMEOUT 900
+    TIMEOUT 1200
     RESULT state.lgwf_wf_create.implementation_reason_result
     CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/*.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/*.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/*.md|*.json";
+      READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
+      READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
+      READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
+      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
+      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
+      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
       READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_observe.json";
@@ -48,10 +51,12 @@ REACT implement_steps_react MAX 3
     PROMPT "agents/act.md"
     CONTEXT workspace file ".lgwf/implementation_reason.md"
     OUTPUT_JSON ".lgwf/implementation_result.json"
-    TIMEOUT 900
+    TIMEOUT 3600
     RESULT state.lgwf_wf_create.implementation_result
     CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/*.md";
+      READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
+      READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
+      READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
       READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
       READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
       READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";

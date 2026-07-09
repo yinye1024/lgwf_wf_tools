@@ -15,14 +15,17 @@ def read(relative: str) -> str:
 class PromptContractTest(unittest.TestCase):
     def test_collect_raw_intent_drops_decision_routing(self) -> None:
         workflow = read("01_confirm_requirements/workflow.lgwf")
-        self.assertIn("APPROVAL collect_raw_intent", workflow)
+        self.assertNotIn("APPROVAL collect_raw_intent", workflow)
+        self.assertIn("PY prepare_raw_intent_confirmation", workflow)
+        self.assertIn("REVIEW confirm_raw_intent", workflow)
+        self.assertIn("PY apply_confirmed_raw_intent", workflow)
         self.assertIn('PROMPT_REF "confirm_raw_intent.md"', workflow)
         self.assertIn('WRITE state.lgwf_wf_create.raw_intent_request', workflow)
-        self.assertIn('PERSIST ".lgwf/raw_intent_request.json"', workflow)
-        raw_intent_block = re.search(r"APPROVAL collect_raw_intent.*?;", workflow, re.S)
+        self.assertIn('PERSIST ".lgwf/raw_intent_approval.json"', workflow)
+        raw_intent_block = re.search(r"REVIEW confirm_raw_intent.*?;", workflow, re.S)
         self.assertIsNotNone(raw_intent_block)
         self.assertNotIn("ROUTE_ON_DECISION", raw_intent_block.group(0))
-        self.assertRegex(workflow, r"collect_raw_intent\s+THEN\s+finish_raw_intent")
+        self.assertRegex(workflow, r"apply_confirmed_raw_intent\s+THEN\s+finish_raw_intent")
         self.assertIn("THEN finish_raw_intent", workflow)
 
     def test_finish_raw_intent_syncs_state_from_output_file(self) -> None:
@@ -32,11 +35,12 @@ class PromptContractTest(unittest.TestCase):
 
     def test_confirm_raw_intent_prompt_is_plain_output_prompt(self) -> None:
         prompt = read("01_confirm_requirements/confirm_raw_intent.md")
-        self.assertIn("## Success Criteria", prompt)
+        self.assertIn("## Task", prompt)
         self.assertIn("## Output Format", prompt)
-        self.assertNotIn("decision", prompt.lower())
+        self.assertIn("approve", prompt)
+        self.assertIn("revise", prompt)
         self.assertNotIn("workflow control", prompt.lower())
-        self.assertIn("只写入 `.lgwf/raw_intent_request.json`", prompt)
+        self.assertIn("approve` 不得携带空对象或完整业务 value", prompt)
 
     def test_structured_prompt_convert_context_is_supported_without_replacing_raw_intent(self) -> None:
         raw_prompt = read("01_confirm_requirements/confirm_raw_intent.md")
@@ -132,6 +136,8 @@ class PromptContractTest(unittest.TestCase):
         observe_prompt = read("04_implement_steps_react/agents/observe.md")
         self.assertIn("PY prepare_implementation_context", workflow)
         self.assertIn("apply_confirmed_step_designs THEN prepare_implementation_context", workflow)
+        self.assertNotIn('READ workspace file ".lgwf/implementation_context.json";', workflow)
+        self.assertIn('WRITE workspace file ".lgwf/implementation_context.json";', workflow)
         self.assertIn('WORKFLOW "04_implement_steps_react/workflow.lgwf"', root_workflow)
         self.assertIn('SPEC "agents/spec.md"', implement_workflow)
         self.assertTrue((ROOT / "04_implement_steps_react/agents/spec.md").exists())
@@ -181,6 +187,28 @@ class PromptContractTest(unittest.TestCase):
                 "不负责 `lgwf-wf-prompt-fix`",
             ):
                 self.assertNotIn(duplicated_rule, prompt, name)
+
+    def test_implementation_act_is_resumable_and_not_bound_to_default_timeout(self) -> None:
+        workflow = read("04_implement_steps_react/workflow.lgwf")
+        act_prompt = read("04_implement_steps_react/agents/act.md")
+        reason_block = re.search(r"REASON CODEX.*?ACT CODEX", workflow, re.S)
+        act_block = re.search(r"ACT CODEX.*?OBSERVE WORKFLOW", workflow, re.S)
+        self.assertIsNotNone(reason_block)
+        self.assertIsNotNone(act_block)
+        self.assertRegex(reason_block.group(0), r"TIMEOUT\s+1200")
+        self.assertRegex(act_block.group(0), r"TIMEOUT\s+3600")
+        self.assertIn("已存在的目标 package", act_prompt)
+        self.assertIn("续写草稿", act_prompt)
+        self.assertIn("先补齐缺失的必需文件", act_prompt)
+
+    def test_contract_enrichment_react_has_extended_codex_timeouts(self) -> None:
+        workflow = read("05_enrich_contracts_react/workflow.lgwf")
+        reason_block = re.search(r"REASON CODEX.*?ACT CODEX", workflow, re.S)
+        act_block = re.search(r"ACT CODEX.*?OBSERVE WORKFLOW", workflow, re.S)
+        self.assertIsNotNone(reason_block)
+        self.assertIsNotNone(act_block)
+        self.assertRegex(reason_block.group(0), r"TIMEOUT\s+1200")
+        self.assertRegex(act_block.group(0), r"TIMEOUT\s+1800")
 
 
 if __name__ == "__main__":

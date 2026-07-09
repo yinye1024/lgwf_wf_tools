@@ -14,11 +14,8 @@ PY prepare_dsl_reference_context
   CONTRACT {
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/dsl_reference_context.json";
-    WRITE workspace file ".lgwf/create_reference_context/dsl-assist/*.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
-    WRITE workspace file ".lgwf/create_reference_context/scaffold/*.md";
-    WRITE workspace file ".lgwf/create_reference_context/scaffold/*.md|*.json";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
@@ -40,8 +37,9 @@ CODEX design_steps_react
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/business_flow_proposal.json";
-    READ workspace file ".lgwf/create_reference_context/dsl-assist/*.md";
     READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
+    READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
+    READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
     READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
@@ -89,7 +87,6 @@ PY prepare_implementation_context
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/scaffold_package_result.json";
     WRITE workspace file ".lgwf/implementation_context.json";
   };

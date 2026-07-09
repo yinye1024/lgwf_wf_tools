@@ -1,0 +1,67 @@
+WORKFLOW preflight_packaging_plan;
+ENTRY validate_source_skill_structure;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY validate_source_skill_structure
+  SCRIPT "scripts/validate_source_skill_structure.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.validate_source_skill_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.preflight;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_request.json";
+    WRITE workspace file ".lgwf/packaging_preflight.json";
+  };
+
+PY validate_runtime_source
+  SCRIPT "scripts/validate_runtime_source.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.validate_runtime_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.preflight;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_preflight.json";
+    READ workspace file ".lgwf/packaging_request.json";
+    WRITE workspace file ".lgwf/packaging_preflight.json";
+  };
+
+PY inspect_output_parent_state
+  SCRIPT "scripts/inspect_output_parent_state.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.inspect_output_parent_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.preflight;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_preflight.json";
+    READ workspace file ".lgwf/packaging_request.json";
+    READ workspace file ".lgwf/packaging_write_scope.json";
+    WRITE workspace file ".lgwf/packaging_preflight.json";
+  };
+
+PY draft_packaging_plan_proposal
+  SCRIPT "scripts/draft_packaging_plan_proposal.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.packaging_plan_proposal_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.packaging_plan_proposal;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/packaging_preflight.json";
+    READ workspace file ".lgwf/packaging_request.json";
+    READ workspace file ".lgwf/packaging_write_scope.json";
+    WRITE workspace file ".lgwf/packaging_plan_proposal.json";
+  };
+
+FLOW {
+  validate_source_skill_structure
+  THEN validate_runtime_source
+  THEN inspect_output_parent_state
+  THEN draft_packaging_plan_proposal;
+}

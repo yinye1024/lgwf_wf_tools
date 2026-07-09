@@ -8,16 +8,18 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
 STAGES = [
-    "02_confirm_requirements",
-    "04_confirm_business_flow",
-    "07_confirm_step_designs",
-    "09_summarize_create_result",
+    "01_prepare_packaging_request",
+    "02_preflight_packaging_plan",
+    "03_confirm_packaging_plan",
+    "04_materialize_packaged_skill",
+    "05_verify_packaged_skill",
+    "06_summarize_packaging_result",
 ]
 STEP_DOCS = [
-    "normalize-packaging-request.md",
-    "build-preflight-plan.md",
+    "prepare-packaging-request.md",
+    "preflight-packaging-plan.md",
     "confirm-packaging-plan.md",
-    "execute-package-build.md",
+    "materialize-packaged-skill.md",
     "verify-packaged-skill.md",
     "summarize-packaging-result.md",
 ]

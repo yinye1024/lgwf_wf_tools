@@ -16,18 +16,18 @@
 6. 展示默认决策说明，帮助用户理解“批准全部”“部分批准”“拒绝/暂不应用”三种选择的含义。
 
 让用户选择：
-- 批准全部升级：`approve=true`，`approved_upgrade_ids=[]`。
-- 只批准部分升级：`approve=true`，`approved_upgrade_ids` 填入要应用的 upgrade id。
-- 拒绝：`reject=true`，workflow 将通过 `FAIL_ALL` 终止，不进入 apply 或 summary。
+- 批准全部升级：提交 `approve` 纯决策，不携带业务 value；workflow 会根据当前 proposal 默认批准全部 upgrade id。
+- 只批准部分升级：提交 `revise`，value 必须是完整 JSON object，`approve=true`，`approved_upgrade_ids` 填入要应用的 upgrade id。
+- 拒绝：提交 `reject` 纯决策；workflow 将通过 `FAIL_ALL` 终止，不进入 apply 或 summary。
 
 ## Success Criteria
 - 在返回 `decision.json` 前，已完整展示统计摘要、升级项细节、文件范围和风险信息。
-- 已明确向用户说明三种决策分支及其对应 JSON 含义。
+- 已明确向用户说明三种决策分支、`approve` 纯决策语义，以及部分批准必须走 `revise` 完整 JSON。
 - 已基于当前输入稳定展示可用的推荐说明；如果缺少分组字段，不把 `must_apply`、`optional`、`defer` 作为必展示内容。
 - 收集到的结果足以让后续节点稳定判断是全量批准、部分批准还是拒绝。
 
 ## Output
-返回 JSON object，保存为 `.lgwf/prompt_upgrade/decision.json`。
+当前节点写入 REVIEW 控制记录 `.lgwf/prompt_upgrade/decision_review.json`。后续 `validate_prompt_upgrade_decision` 会根据控制记录和 proposal 生成业务决策 `.lgwf/prompt_upgrade/decision.json`。
 
 ## Output Format
 ```json
@@ -40,6 +40,7 @@
 ```
 
 ## Constraints
-- 只能返回 JSON object。
+- `approve` 和 `reject` 不提交业务 value。
+- 只有 `revise` 可以提交完整 JSON object，用于部分批准或修订决策。
 - 不修改 prompt 文件。
 - 如果用户只说 `approve`，默认批准全部升级。

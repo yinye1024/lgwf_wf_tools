@@ -34,7 +34,9 @@ CONTEXT_SET repair_target_prompts_shared_context {
   workspace file ".lgwf/prompt_acceptance/fix_selection.json";
   workspace file ".lgwf/prompt_acceptance/repair_review.json";
   workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
-  workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist";
+  workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
+  workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
+  workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
 }
 
 REACT repair_target_prompts MAX 3

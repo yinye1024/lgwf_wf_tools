@@ -4,18 +4,52 @@
   "version": 1,
   "workflow_lgwf": "workflows/e2e-test-generator/workflow.lgwf",
   "work_dir": "workflows/e2e-test-generator/ws",
-  "input_mode": "empty_then_approval",
+  "input_mode": "input_json_required",
   "input_schema": {
     "type": "object",
-    "required": [],
-    "properties": {},
-    "example": {}
+    "required": ["workflow_lgwf"],
+    "properties": {
+      "workflow_lgwf": {
+        "type": "string"
+      },
+      "workflow_root": {
+        "type": "string"
+      },
+      "test_output_dir": {
+        "type": "string"
+      },
+      "test_name_prefix": {
+        "type": "string"
+      },
+      "test_types": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "script_flow",
+            "runtime_fake",
+            "real_positive",
+            "wf_fix_positive"
+          ]
+        }
+      }
+    },
+    "example": {
+      "workflow_lgwf": "skills/lgwf-wf-tools/workflows/skill-packaging/wf/workflow.lgwf",
+      "workflow_root": "skills/lgwf-wf-tools/workflows/skill-packaging",
+      "test_output_dir": "tests",
+      "test_name_prefix": "skill_packaging",
+      "test_types": [
+        "script_flow",
+        "runtime_fake"
+      ]
+    }
   },
-  "input_file_policy": "Use UTF-8 no BOM --input-json-file for non-empty input; this workflow collects target info by approval.",
-  "auto_human_policy": "forbidden",
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for target workflow configuration; the entry approval only confirms or revises that business request. With conditional --auto-human, the provided request is approved as-is and is not replaced by approval metadata.",
+  "auto_human_policy": "conditional",
   "target_scope": {
     "fields": ["workflow_lgwf", "workflow_root", "test_output_dir", "test_name_prefix"],
-    "collection": "Collected by the entry approval gate.",
+    "collection": "Provided by input JSON, then confirmed by the entry approval gate.",
     "write_scope": "Only the confirmed test output directory."
   },
   "state_boundary": {

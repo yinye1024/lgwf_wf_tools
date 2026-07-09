@@ -12,11 +12,35 @@ from e2e_generator_common import LGWF_DIR, output_state, read_json, slugify, wor
 TEST_TYPE_ORDER = ("script_flow", "runtime_fake", "real_positive", "wf_fix_positive")
 
 
+def relative_path_variants(path: Path) -> list[Path]:
+    variants = [path]
+    parts = path.parts
+    if len(parts) >= 2 and parts[0] == "skills" and parts[1] == "lgwf-wf-tools":
+        stripped = Path(*parts[2:])
+        if stripped not in variants:
+            variants.append(stripped)
+    return variants
+
+
 def resolve_path(raw: str, base: Path) -> Path:
     path = Path(raw)
-    if not path.is_absolute():
-        path = base / path
-    return path.resolve()
+    if path.is_absolute():
+        return path.resolve()
+
+    candidate_roots = [base]
+    isolated_workspace = base.parent / "workspace"
+    if isolated_workspace.is_dir():
+        candidate_roots.append(isolated_workspace)
+
+    candidates = [
+        (root / relative).resolve()
+        for root in candidate_roots
+        for relative in relative_path_variants(path)
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def normalize_test_types(raw: object) -> list[str]:
