@@ -1,68 +1,71 @@
-# LGWF Workflow DSL Upgrade 指引
+# wf-dsl-upgrade 工作流指引
 
-本目录是 `lgwf-wf-tools` facade 下的内部 workflow package，用于对已授权的 LGWF workflow 批量执行 DSL 升级草稿流程。它不是独立 Codex skill，只能由 facade 通过 `registry.json` 派发到 `wf/workflow.lgwf`。
-
-## 模块契约
-
-- 模块类型：`lgwf_workflow_package`。
-- 执行前应读取 `../01-share/module-contract.md`、`../01-share/registry-contract.md`、`../01-share/lgwf-dispatch.md`、`../01-share/lgwf-monitor.md`、`../01-share/approval.md` 和 `../01-share/artifacts.md`。
-- 入口字段、输入示例和 `--auto-human` 策略以本目录 `entry_contract.json` 为准；本文件只解释业务纪律和运行边界。
-- 根 `wf/workflow.lgwf` 只编排第一层子 workflow，不在根目录生成可运行 `workflow.lgwf`。
+本目录是 `lgwf-wf-tools` facade 通过 `registry.json` 派发的内部 `lgwf_workflow_package`。它负责对已授权的 LGWF workflow 执行 DSL 兼容性升级：收集授权目标、确认目标范围、通过 `FOREACH` 逐个运行真实 authoring audit、必要时由 Codex 做最小修复、复检并汇总结果。
 
 ## 模块定位
 
-- 面向 DSL 兼容性升级，不运行业务 workflow。
-- 第一版只支持“目标收集、静态 audit、诊断分类、升级计划、人审闸门、受控写入、复检、总结”八个阶段。
-- 自动修改仅允许规则化脚本执行；不接入自由形式自愈。
+- 模块类型：`lgwf_workflow_package`。
+- registry id：`wf-dsl-upgrade`。
+- 不是独立 Codex skill，不得单独注册。
+- 只处理 manifest 授权范围内的 `.lgwf` 文件，不运行业务 workflow。
+- 根 workflow 使用 `FOREACH upgrade_each` 调度 `03_upgrade_one_target`；不要退回 Python 批处理循环。
 
 ## 入口
 
-- registry id：`wf-dsl-upgrade`
+- workflow root：`wf/`
 - workflow 入口：`wf/workflow.lgwf`
 - work dir：`ws/`
+- 机器入口契约：`entry_contract.json`
+- facade 启动命令示例：
+
+```powershell
+$lgwfPy = "skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py"
+python $lgwfPy run --workflow-lgwf skills\lgwf-wf-tools\workflows\wf-dsl-upgrade\wf\workflow.lgwf --work-dir skills\lgwf-wf-tools\workflows\wf-dsl-upgrade\ws --input-json-file D:\tmp\wf-dsl-upgrade-input.json --background
+```
 
 ## 依赖
 
-- 依赖 `vendor/lgwf-client-assist/scripts/lgwf.py` 执行 authoring audit。
-- 依赖 facade 提供的共享 approval 规则和 bundled client。
-- 依赖外部传入的升级目标、范围模式、升级规则配置与执行 mode。
+- 依赖 LGWF runtime 支持 authoring `FOREACH` / runtime `subgraph.foreach`。
+- 依赖 `skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py` 执行真实 audit；若 bundled vendor 尚未刷新到支持 `FOREACH` 的 wheel，则源码 audit 可临时使用已更新的 LGWF 主仓库 runtime，正式运行前必须刷新 vendor。
+- 依赖 `workflows/01-share/` 的模块契约、dispatch、monitor、approval 和 artifacts 共享规则。
+- 依赖 `wf/shared/scripts/dsl_upgrade_common.py` 提供 UTF-8 JSON、路径校验、hash、audit 调用和诊断键归一化。
 
 ## 状态边界
 
-- 运行状态只允许写入 `ws/.lgwf/` 与 `ws/reports/`。
-- workflow 源码树不写入 `.lgwf/`、临时目录或运行摘要。
-- 所有 workflow、脚本、资源路径都必须保持包内相对路径。
+- 运行状态只允许写入 `ws/.lgwf/` 和 `ws/reports/`。
+- workflow 源码树只保存 `wf/`、`tests/`、`scripts/`、入口文档和静态资源，不保存运行态 `.lgwf/`、`__pycache__/` 或临时输出。
+- 目标文件写入只允许发生在 `mode=apply` 且 `.lgwf/scope_approval.json.decision=approve` 时，并且当前 `FOREACH` item 必须同时位于 `target_manifest.json` 与 `allowed_dirs` 内；`scope_mode=explicit` 的 `target_paths` 可传 `.lgwf` 文件或目录，目录会递归展开为 `.lgwf` 文件列表。
+- Codex 修复节点只能通过 `TARGET_FILES state.wf_dsl_upgrade.target_files` 访问当前 `.lgwf` 文件。
+- `dry_run` 不进入写入式修复，只记录 audit 结果并汇总。
+- package 内资源路径、`workflow.lgwf` 引用路径和文档示例路径必须使用包内相对路径，禁止绝对路径、盘符路径和 `..`。
 
 ## 产物
 
 - `.lgwf/target_manifest.json`
 - `.lgwf/target_scope_validation.json`
-- `.lgwf/batch_audit_result.json`
-- `.lgwf/batch_audit_stats.json`
-- `.lgwf/classified_findings.json`
-- `.lgwf/classification_summary.json`
-- `.lgwf/upgrade_plan.json`
-- `.lgwf/upgrade_plan_summary.json`
-- `.lgwf/upgrade_plan_confirmation_context.json`
-- `.lgwf/upgrade_plan_approval.json`
-- `.lgwf/applied_changes.json`
-- `.lgwf/applied_target_manifest.json`
-- `.lgwf/post_upgrade_audit_result.json`
-- `.lgwf/post_upgrade_diff_summary.json`
+- `.lgwf/scope_confirmation_context.json`
+- `.lgwf/scope_approval.json`
+- `.lgwf/foreach/upgrade_each/items/{index}/.lgwf/current_target_context.json`
+- `.lgwf/foreach/upgrade_each/items/{index}/.lgwf/current_target_audit.json`
 - `.lgwf/result_summary.json`
 - `reports/wf-dsl-upgrade/report.md`
 
 ## 验证
 
 ```powershell
-python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py audit skills\lgwf-wf-tools\workflows\wf-dsl-upgrade\wf\workflow.lgwf
 python -m unittest discover skills\lgwf-wf-tools\workflows\wf-dsl-upgrade\tests
+$lgwfRepo = "<lgwf-repo>"
+$env:PYTHONPATH = "$lgwfRepo\src"
+& "$lgwfRepo\.venv\Scripts\python.exe" -m lgwf_dsl.cli audit skills\lgwf-wf-tools\workflows\wf-dsl-upgrade\wf\workflow.lgwf
 ```
 
 ## 禁止事项
 
-- 不得把 `wf-dsl-upgrade` 注册成独立 Codex skill。
-- 不得越过 `target_manifest.json` 授权范围写入文件。
-- 不得在 `mode=dry_run`、审批 `reject` 或未审批时执行真实写入。
-- 不得创建孙级 `workflow.lgwf`。
-- 不得把绝对路径、盘符路径或 `..` 写入 workflow 资源引用。
+- 不得把本 workflow 注册为独立 Codex skill。
+- 不得读取或修改未进入 manifest 的文件。
+- 不得在 `dry_run` 下写入目标文件。
+- 不得绕过 `02_confirm_scope` 的人工确认直接进入 `FOREACH`。
+- 不得把 `reject` 路由成 `FAIL_ALL`，必须允许进入总结阶段。
+- 不得把阶段私有逻辑塞进根 `wf/workflow.lgwf`。
+- 不得在子 workflow 目录下继续创建孙级 `workflow.lgwf`。
+- 不得写入源码树 `.lgwf/`、`__pycache__/` 或占位运行产物。

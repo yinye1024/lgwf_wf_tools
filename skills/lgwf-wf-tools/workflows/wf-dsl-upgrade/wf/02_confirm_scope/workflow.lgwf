@@ -1,0 +1,53 @@
+WORKFLOW confirm_scope;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY prepare_scope_confirmation
+  SCRIPT "scripts/prepare_scope_confirmation.py"
+  TIMEOUT 60
+  RESULT state.wf_dsl_upgrade.prepare_scope_confirmation_result
+  UPDATES_STATE {
+    WRITE state.wf_dsl_upgrade.scope_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ state.wf_dsl_upgrade.targets;
+    WRITE state.wf_dsl_upgrade.scope_confirmation_context;
+    WRITE workspace file ".lgwf/scope_confirmation_context.json";
+  };
+
+APPROVAL confirm_scope
+  PROMPT_REF "agents/confirm_scope.md"
+  READ state.wf_dsl_upgrade.scope_confirmation_context
+  WRITE state.wf_dsl_upgrade.scope_approval
+  RESULT state.wf_dsl_upgrade.confirm_scope_result
+  PERSIST ".lgwf/scope_approval.json"
+  CONTRACT {
+    READ state.wf_dsl_upgrade.scope_confirmation_context;
+    WRITE state.wf_dsl_upgrade.scope_approval;
+    WRITE workspace file ".lgwf/scope_approval.json";
+  };
+
+PY prepare_scope_route
+  SCRIPT "scripts/route_scope_decision.py"
+  TIMEOUT 30
+  RESULT state.wf_dsl_upgrade.prepare_scope_route_result
+  UPDATES_STATE {
+    WRITE state.wf_dsl_upgrade.scope_route;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ workspace file ".lgwf/scope_approval.json";
+    WRITE state.wf_dsl_upgrade.scope_route;
+  };
+
+FLOW main
+  START prepare_scope_confirmation
+  THEN confirm_scope
+  THEN prepare_scope_route;

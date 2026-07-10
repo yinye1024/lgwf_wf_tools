@@ -1,137 +1,32 @@
 {
-  "bootstrap_inputs": [],
-  "entry_inputs": {
-    "dsl_upgrade_target.target_paths": "待升级或审计的 workflow 文件路径列表。",
-    "dsl_upgrade_target.mode": "dry_run 或 apply；只有 apply 且业务审批 approve 时允许真实写入。",
-    "dsl_upgrade_target.allowed_dirs": "允许写入或扫描的目标目录边界。"
-  },
-  "stage_boundaries": {
-    "collect_targets_stage": {
-      "writes": [
-        ".lgwf/target_manifest.json",
-        ".lgwf/target_scope_validation.json"
-      ]
-    },
-    "batch_audit_stage": {
-      "reads": [
-        ".lgwf/target_manifest.json"
-      ],
-      "writes": [
-        ".lgwf/batch_audit_result.json",
-        ".lgwf/batch_audit_stats.json"
-      ]
-    },
-    "classify_findings_stage": {
-      "reads": [
-        ".lgwf/batch_audit_result.json"
-      ],
-      "writes": [
-        ".lgwf/classification_summary.json",
-        ".lgwf/classified_findings.json"
-      ]
-    },
-    "build_upgrade_plan_stage": {
-      "reads": [
-        ".lgwf/classified_findings.json"
-      ],
-      "writes": [
-        ".lgwf/upgrade_plan.json",
-        ".lgwf/upgrade_plan_summary.json"
-      ]
-    },
-    "confirm_upgrade_plan_stage": {
-      "reads": [
-        ".lgwf/classification_summary.json",
-        ".lgwf/target_manifest.json",
-        ".lgwf/upgrade_plan_summary.json"
-      ],
-      "writes": [
-        ".lgwf/upgrade_plan_approval.json"
-      ]
-    },
-    "apply_upgrade_rules_stage": {
-      "reads": [
-        ".lgwf/upgrade_plan.json",
-        ".lgwf/upgrade_plan_approval.json"
-      ],
-      "writes": [
-        ".lgwf/applied_changes.json",
-        ".lgwf/applied_target_manifest.json"
-      ]
-    },
-    "batch_verify_stage": {
-      "reads": [
-        ".lgwf/applied_changes.json"
-      ],
-      "writes": [
-        ".lgwf/post_upgrade_audit_result.json",
-        ".lgwf/post_upgrade_diff_summary.json"
-      ]
-    },
-    "summarize_upgrade_result_stage": {
-      "reads": [
-        ".lgwf/applied_changes.json",
-        ".lgwf/classification_summary.json",
-        ".lgwf/post_upgrade_diff_summary.json",
-        ".lgwf/target_manifest.json",
-        ".lgwf/upgrade_plan_approval.json",
-        ".lgwf/upgrade_plan_summary.json"
-      ],
-      "writes": [
-        ".lgwf/result_summary.json",
-        "reports/wf-dsl-upgrade/report.md"
-      ]
-    }
-  },
+  "bootstrap_inputs": [
+    ".lgwf/target_manifest.json",
+    ".lgwf/target_scope_validation.json"
+  ],
   "final_outputs": [
-    ".lgwf/applied_changes.json",
-    ".lgwf/applied_target_manifest.json",
-    ".lgwf/batch_audit_stats.json",
-    ".lgwf/post_upgrade_audit_result.json",
-    ".lgwf/post_upgrade_diff_summary.json",
-    ".lgwf/result_summary.json",
     ".lgwf/target_manifest.json",
     ".lgwf/target_scope_validation.json",
-    ".lgwf/upgrade_plan_approval.json",
-    ".lgwf/upgrade_plan_confirmation_context.json",
+    ".lgwf/scope_confirmation_context.json",
+    ".lgwf/scope_approval.json",
+    ".lgwf/foreach/upgrade_each/items/{index}/.lgwf/current_target_context.json",
+    ".lgwf/foreach/upgrade_each/items/{index}/.lgwf/current_target_audit.json",
+    ".lgwf/result_summary.json",
     "reports/wf-dsl-upgrade/report.md"
   ],
   "script_writes": {
-    "apply_upgrade_rules": [
-      ".lgwf/applied_changes.json",
-      ".lgwf/applied_target_manifest.json"
-    ],
-    "build_target_manifest": [
+    "collect_targets": [
       ".lgwf/target_manifest.json",
       ".lgwf/target_scope_validation.json"
     ],
-    "build_upgrade_plan": [
-      ".lgwf/upgrade_plan.json",
-      ".lgwf/upgrade_plan_summary.json"
+    "prepare_scope_confirmation": [
+      ".lgwf/scope_confirmation_context.json"
     ],
-    "capture_approval_decision": [
-      ".lgwf/upgrade_plan_approval.json"
+    "audit_current_target": [
+      ".lgwf/current_target_audit.json"
     ],
-    "classify_findings": [
-      ".lgwf/classification_summary.json",
-      ".lgwf/classified_findings.json"
-    ],
-    "finalize_upgrade_plan_approval": [
-      ".lgwf/upgrade_plan_approval.json"
-    ],
-    "prepare_approval_context": [
-      ".lgwf/upgrade_plan_confirmation_context.json"
-    ],
-    "render_upgrade_summary": [
-      ".lgwf/result_summary.json"
-    ],
-    "run_batch_audit": [
-      ".lgwf/batch_audit_result.json",
-      ".lgwf/batch_audit_stats.json"
-    ],
-    "verify_upgraded_workflows": [
-      ".lgwf/post_upgrade_audit_result.json",
-      ".lgwf/post_upgrade_diff_summary.json"
+    "summarize_upgrade_result": [
+      ".lgwf/result_summary.json",
+      "reports/wf-dsl-upgrade/report.md"
     ]
   }
 }

@@ -1,0 +1,136 @@
+WORKFLOW upgrade_one_target;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "wf_dsl_upgrade.upgrade_one_target.{node}";
+}
+
+PY prepare_repair_context
+  SCRIPT "scripts/prepare_repair_context.py"
+  INPUT state.wf_dsl_upgrade.current_target
+  TIMEOUT 60
+  RESULT state.wf_dsl_upgrade.prepare_repair_context_result
+  UPDATES_STATE {
+    WRITE state.wf_dsl_upgrade.repair_context;
+    WRITE state.wf_dsl_upgrade.target_files;
+    WRITE state.wf_dsl_upgrade.target_dirs;
+  }
+  CONTRACT {
+    READ state.wf_dsl_upgrade.current_target;
+    WRITE state.wf_dsl_upgrade.repair_context;
+    WRITE state.wf_dsl_upgrade.target_files;
+    WRITE state.wf_dsl_upgrade.target_dirs;
+    WRITE workspace file ".lgwf/current_target_context.json";
+  };
+
+PY audit_current_target
+  SCRIPT "scripts/audit_current_target.py"
+  INPUT state.wf_dsl_upgrade.current_target
+  TIMEOUT 120
+  RESULT state.wf_dsl_upgrade.audit_current_target_result
+  UPDATES_STATE {
+    WRITE state.wf_dsl_upgrade.current_audit;
+    WRITE state.wf_dsl_upgrade.repair_route;
+  }
+  CONTRACT {
+    READ state.wf_dsl_upgrade.current_target;
+    WRITE state.wf_dsl_upgrade.current_audit;
+    WRITE state.wf_dsl_upgrade.repair_route;
+    WRITE workspace file ".lgwf/current_target_audit.json";
+  };
+
+REACT repair_target MAX 3
+  SPEC "agents/repair_spec.md"
+  CONTEXT workspace file ".lgwf/current_target_context.json"
+  CONTRACT {
+    READ state.wf_dsl_upgrade.current_target;
+    READ state.wf_dsl_upgrade.current_audit;
+    READ state.wf_dsl_upgrade.target_files;
+    READ workspace file ".lgwf/current_target_context.json";
+    WRITE state.wf_dsl_upgrade.current_audit;
+    WRITE state.wf_dsl_upgrade.repair_observation;
+    WRITE state.wf_dsl_upgrade.repair_decision;
+    WRITE state.next;
+  }
+  REASON CODEX
+    PROMPT "agents/reason.md"
+    TARGET_FILES state.wf_dsl_upgrade.target_files
+    RESULT state.wf_dsl_upgrade.repair_reason
+    CONTRACT {
+      READ state.wf_dsl_upgrade.current_target;
+      READ state.wf_dsl_upgrade.current_audit;
+      READ state.wf_dsl_upgrade.target_files;
+      READ workspace file ".lgwf/current_target_context.json";
+      WRITE state.wf_dsl_upgrade.repair_reason;
+    }
+  ACT CODEX
+    PROMPT "agents/act.md"
+    TARGET_FILES state.wf_dsl_upgrade.target_files
+    RESULT state.wf_dsl_upgrade.repair_action
+    CONTRACT {
+      READ state.wf_dsl_upgrade.current_target;
+      READ state.wf_dsl_upgrade.current_audit;
+      READ state.wf_dsl_upgrade.repair_reason;
+      READ state.wf_dsl_upgrade.target_files;
+      READ workspace file ".lgwf/current_target_context.json";
+      WRITE state.wf_dsl_upgrade.repair_action;
+    }
+  OBSERVE CODEX
+    PROMPT "agents/observe.md"
+    TARGET_FILES state.wf_dsl_upgrade.target_files
+    RESULT state.wf_dsl_upgrade.repair_observation
+    CONTRACT {
+      READ state.wf_dsl_upgrade.current_target;
+      READ state.wf_dsl_upgrade.current_audit;
+      READ state.wf_dsl_upgrade.repair_action;
+      READ state.wf_dsl_upgrade.target_files;
+      READ workspace file ".lgwf/current_target_context.json";
+      WRITE state.wf_dsl_upgrade.repair_observation;
+    }
+  DECIDE PY
+    SCRIPT "scripts/decide_next.py"
+    INPUT state.wf_dsl_upgrade.current_target
+    TIMEOUT 30
+    RESULT state.wf_dsl_upgrade.decide_next_result
+    UPDATES_STATE {
+      WRITE state.next;
+      WRITE state.wf_dsl_upgrade.current_audit;
+      WRITE state.wf_dsl_upgrade.repair_decision;
+    }
+    CONTRACT {
+      READ state.wf_dsl_upgrade.current_target;
+      WRITE state.next;
+      WRITE state.wf_dsl_upgrade.current_audit;
+      WRITE state.wf_dsl_upgrade.repair_decision;
+      WRITE workspace file ".lgwf/current_target_audit.json";
+    };
+
+PY finalize_target
+  SCRIPT "scripts/finalize_target.py"
+  TIMEOUT 60
+  RESULT state.wf_dsl_upgrade.finalize_target_result
+  UPDATES_STATE {
+    WRITE state.wf_dsl_upgrade.current_result;
+  }
+  CONTRACT {
+    READ state.wf_dsl_upgrade.current_target;
+    READ state.wf_dsl_upgrade.current_audit;
+    WRITE state.wf_dsl_upgrade.current_result;
+    READ workspace file ".lgwf/current_target_context.json";
+    READ workspace file ".lgwf/current_target_audit.json";
+  };
+
+ROUTE select_repair_branch READ state.wf_dsl_upgrade.repair_route
+  WHEN "repair" THEN repair_followup
+  WHEN "finalize" THEN finalize_target;
+
+FLOW main
+  START prepare_repair_context
+  THEN audit_current_target
+  THEN select_repair_branch;
+
+FLOW repair_followup
+  START repair_target
+  THEN finalize_target;

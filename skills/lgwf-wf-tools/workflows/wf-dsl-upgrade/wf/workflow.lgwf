@@ -1,87 +1,77 @@
-WORKFLOW lgwf_wf_dsl_upgrade;
+WORKFLOW wf_dsl_upgrade;
 ENTRY FLOW main;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
-  result_path "lgwf_wf_dsl_upgrade.results.{node}";
+  result_path "wf_dsl_upgrade.results.{node}";
 }
 
-STEP collect_targets_stage
+STEP collect_targets
   WORKFLOW "01_collect_targets/workflow.lgwf"
   CONTRACT {
+    READ state.dsl_upgrade_target;
+    WRITE state.wf_dsl_upgrade.targets;
+    WRITE state.wf_dsl_upgrade.collect_targets_result;
     WRITE workspace file ".lgwf/target_manifest.json";
     WRITE workspace file ".lgwf/target_scope_validation.json";
   };
 
-STEP batch_audit_stage
-  WORKFLOW "02_batch_audit/workflow.lgwf"
+STEP confirm_scope
+  WORKFLOW "02_confirm_scope/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/target_manifest.json";
-    WRITE workspace file ".lgwf/batch_audit_result.json";
-    WRITE workspace file ".lgwf/batch_audit_stats.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ state.wf_dsl_upgrade.targets;
+    WRITE state.wf_dsl_upgrade.scope_route;
+    WRITE state.wf_dsl_upgrade.scope_approval;
+    WRITE state.wf_dsl_upgrade.scope_confirmation_context;
+    WRITE workspace file ".lgwf/scope_confirmation_context.json";
+    WRITE workspace file ".lgwf/scope_approval.json";
   };
 
-STEP classify_findings_stage
-  WORKFLOW "03_classify_findings/workflow.lgwf"
+FOREACH upgrade_each
+  ITEMS state.wf_dsl_upgrade.targets
+  CURRENT state.wf_dsl_upgrade.current_target
+  INDEX state.wf_dsl_upgrade.current_index
+  OUTPUT state.wf_dsl_upgrade.current_result
+  RESULTS state.wf_dsl_upgrade.target_results
+  FAIL collect
   CONTRACT {
-    READ workspace file ".lgwf/batch_audit_result.json";
-    WRITE workspace file ".lgwf/classification_summary.json";
-    WRITE workspace file ".lgwf/classified_findings.json";
+    READ state.wf_dsl_upgrade.targets;
+    WRITE state.wf_dsl_upgrade.target_results;
+  }
+  RUN_WORKFLOW "03_upgrade_one_target/workflow.lgwf"
+  WORK_DIR ".lgwf/foreach/upgrade_each/items/{index}"
+  CONTRACT {
+    READ state.wf_dsl_upgrade.current_target;
+    READ state.wf_dsl_upgrade.current_index;
+    WRITE state.wf_dsl_upgrade.current_result;
+    READ workspace file "03_upgrade_one_target/workflow.lgwf";
+    WRITE workspace dir ".lgwf/foreach/upgrade_each/items/{index}";
   };
 
-STEP build_upgrade_plan_stage
-  WORKFLOW "04_build_upgrade_plan/workflow.lgwf"
+STEP summarize_upgrade_result
+  WORKFLOW "04_summarize_upgrade_result/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/classified_findings.json";
-    WRITE workspace file ".lgwf/upgrade_plan.json";
-    WRITE workspace file ".lgwf/upgrade_plan_summary.json";
-  };
-
-STEP confirm_upgrade_plan_stage
-  WORKFLOW "05_confirm_upgrade_plan/workflow.lgwf"
-  CONTRACT {
-    READ workspace file ".lgwf/classification_summary.json";
     READ workspace file ".lgwf/target_manifest.json";
-    READ workspace file ".lgwf/upgrade_plan_summary.json";
-    WRITE workspace file ".lgwf/upgrade_plan_approval.json";
-  };
-
-STEP apply_upgrade_rules_stage
-  WORKFLOW "06_apply_upgrade_rules/workflow.lgwf"
-  CONTRACT {
-    READ workspace file ".lgwf/upgrade_plan.json";
-    READ workspace file ".lgwf/upgrade_plan_approval.json";
-    WRITE workspace file ".lgwf/applied_changes.json";
-    WRITE workspace file ".lgwf/applied_target_manifest.json";
-  };
-
-STEP batch_verify_stage
-  WORKFLOW "07_batch_verify/workflow.lgwf"
-  CONTRACT {
-    READ workspace file ".lgwf/applied_changes.json";
-    WRITE workspace file ".lgwf/post_upgrade_audit_result.json";
-    WRITE workspace file ".lgwf/post_upgrade_diff_summary.json";
-  };
-
-STEP summarize_upgrade_result_stage
-  WORKFLOW "08_summarize_upgrade_result/workflow.lgwf"
-  CONTRACT {
-    READ workspace file ".lgwf/applied_changes.json";
-    READ workspace file ".lgwf/classification_summary.json";
-    READ workspace file ".lgwf/post_upgrade_diff_summary.json";
-    READ workspace file ".lgwf/target_manifest.json";
-    READ workspace file ".lgwf/upgrade_plan_approval.json";
-    READ workspace file ".lgwf/upgrade_plan_summary.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ workspace file ".lgwf/scope_confirmation_context.json";
+    READ workspace file ".lgwf/scope_approval.json";
+    READ state.wf_dsl_upgrade.target_results;
     WRITE workspace file ".lgwf/result_summary.json";
+    WRITE workspace file "reports/wf-dsl-upgrade/report.md";
   };
+
+ROUTE select_scope_branch READ state.wf_dsl_upgrade.scope_route
+  WHEN "run" THEN upgrade_followup
+  WHEN "summary" THEN summarize_upgrade_result;
 
 FLOW main
-  START collect_targets_stage
-  THEN batch_audit_stage
-  THEN classify_findings_stage
-  THEN build_upgrade_plan_stage
-  THEN confirm_upgrade_plan_stage
-  THEN apply_upgrade_rules_stage
-  THEN batch_verify_stage
-  THEN summarize_upgrade_result_stage;
+  START collect_targets
+  THEN confirm_scope
+  THEN select_scope_branch;
+
+FLOW upgrade_followup
+  START upgrade_each
+  THEN summarize_upgrade_result;
