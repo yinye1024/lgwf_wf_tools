@@ -24,7 +24,7 @@
 - `design_steps_react` 的步骤设计文档 prompt 与规格。
 - `docs/steps/*.md` 的字段模板、命名约定和实现阶段输入契约。
 - `confirm_step_designs` 的确认模板与决策结构示例。
-- `04_implement_steps_react` 的 ReAct 实现循环、audit observe 和边界说明。
+- `04_implement_steps_react` 的 ReAct 实现循环、ACT FOREACH 拆分、audit observe 和边界说明。
 - `05_enrich_contracts_react` 的 Contract 补强 ReAct 循环、Contract 文档检查和 audit observe。
 - `dsl-assist` 创建与审计规范的运行时参考上下文。
 - 中文 UTF-8 说明文档。
@@ -79,7 +79,7 @@
 - `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，同时写入根级和 `dsl-assist` 目录下的 `dsl_reference_context.json` 元数据；从 facade docs 复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供后续 Codex 节点读取。
 - `design_steps_react`：定义输出为 `docs/steps/*.md` 的可确认步骤设计文档草案，要求覆盖目标、输入、输出、依赖和实现建议。
 - `confirm_step_designs`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分设计草案审阅与 confirm 后固化。
-- `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；`observe` 执行 authoring audit check，失败反馈回下一轮修复，同时明确不负责 prompt 修复、agent 化和自动修复。
+- `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；其中 ACT 通过 `act_implement_units.lgwf` 拆成 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results`，每个 unit 由 `implement_one_unit.lgwf` 独立执行；`observe` 执行 authoring audit check，失败反馈回下一轮修复，同时明确不负责 prompt 修复、agent 化和自动修复。
 - `enrich_contracts_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环补齐目标 package 的模块 Contract；`observe` 同时检查 Contract 必备段落并运行 `lgwf.py audit`，只有全部通过才进入最终 package validation。
 
 ## 需求阶段边界
@@ -90,7 +90,7 @@
 - `approval`：`confirm_requirements` 产出的 `create_requirements_approval` 决策结构，记录 `approve`、`revise`、`reject`。
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/create_requirements.json`，对应“确认后固化”产物。
 
-`approve` 后会把确认结果固化为 `.lgwf/create_requirements.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游业务流转阶段。
+`approve` 后会把确认结果固化为 `.lgwf/create_requirements.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_requirements` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游业务流转阶段。
 
 如果入口提供 `request.target_dir`、`request.target_file`、`request.target_dirs` 或 `request.target_files`，需求阶段会把这些资料目标整理为 `creation_context_dirs` 和 `creation_context_files`，并由后续 Codex 设计节点通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考。它们用于补充创建背景，例如主 agent 确认后的开发计划；它们不表示生成出的 workflow package 目录，输出目录仍由 `target_package_root` 确认。
 
@@ -102,7 +102,7 @@
 - `approval`：`confirm_business_flow` 产出的 `business_flow_approval` 决策结构，记录 `approve`、`revise`、`reject`。
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/business_flow.json`，对应“确认后固化”产物。
 
-`approve` 后会把确认结果固化为 `.lgwf/business_flow.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游脚手架和步骤设计阶段。
+`approve` 后会把确认结果固化为 `.lgwf/business_flow.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_business_flow` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游脚手架和步骤设计阶段。
 
 `scaffold_package` 当前输出的是确定性规则和计划接口，重点约束：
 
@@ -118,12 +118,14 @@
 - `approval`：`confirm_step_designs` 产出的 `step_design_confirmation_record` 决策结构，记录 `approve`、`revise`、`reject`。
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/step_designs.json`，对应“确认后固化”产物。
 
-`approve` 后会把确认结果固化为 `.lgwf/step_designs.json`；`revise` 会回到修订确认点，`reject` 通过 `FAIL_ALL` 终止整个 run，不进入实现阶段。
+`approve` 后会把确认结果固化为 `.lgwf/step_designs.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_step_designs` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入实现阶段。
 
 `implement_steps_react` 当前是独立 ReAct 子 workflow，重点约束：
 
 - 只按已确认设计文档生成 workflow 初稿文件与目录。
 - 设计文档字段必须能被实现阶段直接消费，避免接口脱节。
+- ACT 不再由单个 Codex 负责整包创建；`prepare_implementation_units` 会根据首轮或 observe 失败项生成 package、root workflow、stage 和 shared/test units，`FOREACH implement_each_unit` 对每个 unit 调用 `implement_one_unit.lgwf`，最后由 `merge_implementation_results` 写出 `.lgwf/implementation_result.json`。
+- `implement_one_unit.lgwf` 内部 Codex 必须显式读取 `agents/spec.md`，并通过当前 unit 的 `TARGET_DIRS` / `TARGET_FILES` 限制写入范围。
 - 必须按 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md` 规范保持根 workflow 薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，并保证所有子 workflow 可被递归审计。
 - `observe` 必须执行 `lgwf.py audit` 类 authoring audit check，并把失败 stderr 写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
 - `decide` 只根据 observe 的 audit 结果决定 `continue` 或 `exit`。
@@ -165,7 +167,7 @@ python -m unittest discover skills\lgwf-wf-tools\workflows\wf-create\tests
 - `scaffold_package` 规则和测试会拒绝绝对路径、盘符路径与 `..`，并明确不向目标 package 根目录写入 `.lgwf`。
 - 步骤设计文档模板定义 `goal`、`inputs`、`outputs`、`dependencies`、`implementation_suggestions` 等字段，并与 `implement_steps_react` 输入契约一致。
 - `confirm_step_designs` 模板支持三类决策。
-- `implement_steps_react` 通过 `04_implement_steps_react/workflow.lgwf` 的 ReAct 循环生成 workflow 初稿，并把 authoring audit 失败反馈给下一轮修复；它仍不把 prompt 修复、agent 化和自动修复纳入当前范围。
+- `implement_steps_react` 通过 `04_implement_steps_react/workflow.lgwf` 的 ReAct 循环生成 workflow 初稿；ACT 阶段使用 `act_implement_units.lgwf` 的 FOREACH 拆分小任务，并把 authoring audit 失败反馈给下一轮只重跑相关 unit；它仍不把 prompt 修复、agent 化和自动修复纳入当前范围。
 - `summarize_create_result` 已定义未来运行时结果汇总接口，汇总内容只指向第一版结构性产物与验证入口，不宣称后续 workflow 已集成。
 - `README.md` 与 `AGENTS.md` 明确写出 `wf/`、`ws/.lgwf` 边界，以及“不自动调用 `lgwf-wf-prompt-fix` / 不自动把生成出的目标 workflow 接入 facade 路由”。
 - `README.md`、`AGENTS.md`、`tests/README.md` 和结果汇总脚本可按 UTF-8 正常读取，中文说明无乱码。
@@ -176,4 +178,4 @@ python -m unittest discover skills\lgwf-wf-tools\workflows\wf-create\tests
 - `lgwf-wf-prompt-fix` 自动调用、生成出的目标 workflow 自动接入 facade 路由、自动修复与端到端业务成功。
 ### revise 语义
 
-`revise` 表示局部调整，不等同于 `reject`。需求、业务流和步骤设计三个确认点收到 `revise` 后，会进入对应 `revise_*` 人工确认点；主 agent 可以根据 `changes` 提交修订后的 `approve` 结果，workflow 随后固化修订产物并继续下游。`reject` 表示整体失败，通过 `FAIL_ALL` 终止整个 run。
+`revise` 表示局部调整，不等同于 `reject`。需求、业务流和步骤设计三个确认点收到 `revise` 后，会运行对应 `prepare_*_revision_confirmation` 节点，把修订请求写回原确认节点的上下文，然后重新进入同一个 REVIEW 节点；主 agent 可以根据 `changes` 提交修订后的 `approve` 结果，workflow 随后固化产物并继续下游。`reject` 表示整体失败，通过 `FAIL_ALL` 终止整个 run。

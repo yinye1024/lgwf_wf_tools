@@ -44,31 +44,37 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             (
                 "01_confirm_requirements/workflow.lgwf",
                 "confirm_requirements",
+                "prepare_requirements_revision_confirmation",
                 "apply_confirmed_requirements",
                 ".lgwf/create_requirements_approval.json",
             ),
             (
                 "02_confirm_business_flow/workflow.lgwf",
                 "confirm_business_flow",
+                "prepare_business_flow_revision_confirmation",
                 "apply_confirmed_business_flow",
                 ".lgwf/business_flow_approval.json",
             ),
             (
                 "03_confirm_step_designs/workflow.lgwf",
                 "confirm_step_designs",
+                "prepare_step_design_revision_confirmation",
                 "apply_confirmed_step_designs",
                 ".lgwf/step_design_confirmation_record.json",
             ),
         )
-        for relative, approval, apply_node, persist in expectations:
+        for relative, approval, prepare_revision, apply_node, persist in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn(f"REVIEW {approval}", text)
             self.assertIn('OPTIONS ["approve", "revise", "reject"]', text)
             self.assertIn(f'PERSIST "{persist}"', text)
+            self.assertIn(f"PY {prepare_revision}", text)
             self.assertIn("FLOW {", text)
             self.assertIn(approval, text)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
-            self.assertIn(f'WHEN "revise" THEN {approval}', text)
+            self.assertIn(f'WHEN "revise" THEN {prepare_revision}', text)
+            self.assertIn(f"{prepare_revision}\n  THEN {approval}", text)
+            self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
             self.assertIn('WHEN "reject" THEN FAIL_ALL', text)
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:

@@ -3,7 +3,7 @@ ENTRY propose_business_flow_react;
 
 DEFAULTS {
   ref_root workflow ".";
-  timeout_seconds 300;
+  timeout_seconds 900;
 }
 
 CODEX propose_business_flow_react
@@ -11,6 +11,7 @@ CODEX propose_business_flow_react
   TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
   TARGET_FILES state.lgwf_wf_create.creation_context_files
   OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
+  TIMEOUT 900
   RESULT state.lgwf_wf_create.business_flow_proposal_result
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
@@ -39,12 +40,25 @@ REVIEW confirm_business_flow
     READ state.lgwf_wf_create.business_flow_confirmation_context;
   };
 
+PY prepare_business_flow_revision_confirmation
+  SCRIPT "scripts/prepare_business_flow_revision_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    READ workspace file ".lgwf/business_flow_approval.json";
+    WRITE state.lgwf_wf_create.business_flow_confirmation_context;
+    WRITE state.lgwf_wf_create.business_flow_revision_context;
+  };
+
 PY apply_confirmed_business_flow
   SCRIPT "scripts/apply_confirmed_business_flow.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_create.apply_business_flow_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/business_flow_approval.json";
     WRITE workspace file ".lgwf/business_flow.json";
   };
 
@@ -64,8 +78,11 @@ FLOW {
 
   confirm_business_flow
     WHEN "approve" THEN apply_confirmed_business_flow
-    WHEN "revise" THEN confirm_business_flow
+    WHEN "revise" THEN prepare_business_flow_revision_confirmation
     WHEN "reject" THEN FAIL_ALL;
+
+  prepare_business_flow_revision_confirmation
+  THEN confirm_business_flow;
 
   apply_confirmed_business_flow THEN scaffold_package;
 }

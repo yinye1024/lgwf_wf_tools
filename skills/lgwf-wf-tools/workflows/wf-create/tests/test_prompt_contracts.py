@@ -150,16 +150,37 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
         self.assertIn("scripts/audit_created_package.py", observe_workflow)
         self.assertIn("CODEX observe_implementation", observe_workflow)
+        self.assertIn('workflow file "agents/spec.md"', observe_workflow)
+        self.assertIn('READ workflow file "agents/spec.md";', observe_workflow)
         self.assertNotIn("INSTRUCTION state.lgwf_wf_create.implementation_audit_result", observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_prompt)
+        self.assertIn('CONTEXT workflow file "agents/spec.md"', observe_prompt)
         self.assertIn("脚本 audit", observe_prompt)
+        act_workflow = read("04_implement_steps_react/act_implement_units.lgwf")
+        unit_workflow = read("04_implement_steps_react/implement_one_unit.lgwf")
+        unit_prompt = read("04_implement_steps_react/agents/act_unit.md")
+        self.assertIn("ACT WORKFLOW implement_units", implement_workflow)
+        self.assertIn('WORKFLOW "act_implement_units.lgwf"', implement_workflow)
+        self.assertNotIn("ACT CODEX", implement_workflow)
+        self.assertIn("FOREACH implement_each_unit", act_workflow)
+        self.assertIn('WORKFLOW "implement_one_unit.lgwf"', act_workflow)
+        self.assertNotIn('RUN_WORKFLOW "implement_one_unit.lgwf"', act_workflow)
+        self.assertIn("RESULTS state.lgwf_wf_create.implementation_unit_results.items", act_workflow)
+        self.assertIn("CODEX implement_current_unit", unit_workflow)
+        self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
+        self.assertIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
+        self.assertNotIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
+        self.assertIn("当前 implementation unit", unit_prompt)
+        self.assertIn("current_implementation_unit_context.json", unit_prompt)
 
     def test_implementation_react_shared_rules_live_in_spec(self) -> None:
         spec = read("04_implement_steps_react/agents/spec.md")
         role_prompts = {
             "reason": read("04_implement_steps_react/agents/reason.md"),
             "act": read("04_implement_steps_react/agents/act.md"),
+            "act_unit": read("04_implement_steps_react/agents/act_unit.md"),
             "observe": read("04_implement_steps_react/agents/observe.md"),
         }
 
@@ -190,13 +211,15 @@ class PromptContractTest(unittest.TestCase):
 
     def test_implementation_act_is_resumable_and_not_bound_to_default_timeout(self) -> None:
         workflow = read("04_implement_steps_react/workflow.lgwf")
+        act_workflow = read("04_implement_steps_react/act_implement_units.lgwf")
         act_prompt = read("04_implement_steps_react/agents/act.md")
-        reason_block = re.search(r"REASON CODEX.*?ACT CODEX", workflow, re.S)
-        act_block = re.search(r"ACT CODEX.*?OBSERVE WORKFLOW", workflow, re.S)
+        reason_block = re.search(r"REASON CODEX.*?ACT WORKFLOW", workflow, re.S)
+        act_block = re.search(r"ACT WORKFLOW.*?OBSERVE WORKFLOW", workflow, re.S)
         self.assertIsNotNone(reason_block)
         self.assertIsNotNone(act_block)
         self.assertRegex(reason_block.group(0), r"TIMEOUT\s+1200")
-        self.assertRegex(act_block.group(0), r"TIMEOUT\s+3600")
+        self.assertIn("PY prepare_implementation_units", act_workflow)
+        self.assertIn("PY merge_implementation_results", act_workflow)
         self.assertIn("已存在的目标 package", act_prompt)
         self.assertIn("续写草稿", act_prompt)
         self.assertIn("先补齐缺失的必需文件", act_prompt)

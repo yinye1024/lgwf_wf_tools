@@ -53,8 +53,9 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
 - `validate_created_package` 在实现阶段之后确定性校验目标 package：目标目录必须存在，`wf/workflow.lgwf` 必须存在，已批准 stage 必须有 `wf/<stage>/workflow.lgwf` 以及 `agents/`、`scripts/`、`resources/`，且 `lgwf.py audit` 必须通过；失败时终止，不进入 summary 或 handoff。
-- `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；`observe` 必须执行 authoring audit check，把 `.lgwf/implementation_observe.json` 作为下一轮反馈，不得只依赖 ACT 自报成功。
-- `04_implement_steps_react` 的 ACT 节点可能需要生成完整目标 package 初稿，超时时应把已落盘目标 package 视为可续写草稿；resume 后优先补齐缺失必需文件，不从零重写已成型内容。
+- `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；其中 ACT 是 `ACT WORKFLOW implement_units`，内部通过 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results` 拆分实现任务，避免单个 Codex 负责整包创建。
+- `04_implement_steps_react` 的每个 ACT unit 由 `implement_one_unit.lgwf` 独立执行，并显式读取 `agents/spec.md`；unit 只能在当前 `TARGET_DIRS` / `TARGET_FILES` 范围内落地。超时时应把已落盘目标 package 视为可续写草稿；resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
+- `04_implement_steps_react` 的 `observe` 必须执行 authoring audit check，把 `.lgwf/implementation_observe.json` 作为下一轮反馈，不得只依赖 ACT 自报成功。
 - `05_enrich_contracts_react` 是 Contract 补强子 workflow，位于实现阶段之后、最终 package validation 之前；它只补目标 package 的入口文档 Contract，不新增业务能力，`observe` 必须检查 Contract 必备段落并执行 authoring audit check。
 - `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
 - `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
@@ -87,6 +88,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`
 - `.lgwf/create_reference_context/module-contract/module-contract.md`
 - `.lgwf/implementation_result.json`
+- `.lgwf/implementation_units.json`
 - `.lgwf/implementation_reason.md`
 - `.lgwf/implementation_observe.json`
 - `.lgwf/implementation_decision.json`
