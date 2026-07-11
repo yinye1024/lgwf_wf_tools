@@ -9,6 +9,7 @@ from typing import Any
 
 STATE_ROOT = "lgwf_wf_post_fix"
 AUTO_ALLOWED_STAGES = {
+    "audit_fix",
     "prompt_fix",
     "prompt_upgrade",
     "e2e_generate",

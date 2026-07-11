@@ -30,11 +30,11 @@ def build_context(root: Path) -> dict:
         approval_target="business_flow_revision",
         proposal=proposal,
         approve_writes=".lgwf/business_flow.json",
-        persist_path=".lgwf/business_flow_revision_approval.json",
+        persist_path=".lgwf/business_flow_approval.json",
         revision_request=revision_request,
     )
     context["revision_request"] = revision_request
-    context["revision_persist"] = ".lgwf/business_flow_revision_approval.json"
+    context["revision_persist"] = ".lgwf/business_flow_approval.json"
     context["instruction"] = (
         "请主 agent 根据 revision_request.changes 调整业务流对象；"
         "确认可继续时返回 decision=approve，并提供完整 JSON，不要只返回局部 diff。"
@@ -44,7 +44,16 @@ def build_context(root: Path) -> dict:
 
 def main() -> None:
     context = build_context(Path.cwd())
-    print(json.dumps({"lgwf_wf_create.business_flow_revision_context": context}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                "lgwf_wf_create.business_flow_revision_context": context,
+                "lgwf_wf_create.business_flow_confirmation_context": context,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

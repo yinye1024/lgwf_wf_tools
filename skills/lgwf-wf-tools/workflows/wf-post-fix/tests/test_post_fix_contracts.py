@@ -65,10 +65,25 @@ class WorkflowShapeTests(unittest.TestCase):
         self.assertIn("FLOW main", text)
         self.assertIn("START prepare_target", text)
         self.assertNotIn("FLOW {", text)
+        self.assertIn('WORKFLOW "02_audit_fix/workflow.lgwf"', text)
         self.assertIn('WORKFLOW "02_prompt_fix/workflow.lgwf"', text)
         self.assertIn('WORKFLOW "03_prompt_upgrade/workflow.lgwf"', text)
         self.assertIn('WORKFLOW "04_e2e_generate/workflow.lgwf"', text)
         self.assertNotIn("ROUTE prompt_fix_stage", text)
+
+        audit_fix_text = (PACKAGE_ROOT / "wf/02_audit_fix/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("ENTRY NODE audit_fix_auto_route", audit_fix_text)
+        self.assertIn("ROUTE audit_fix_auto_route", audit_fix_text)
+        self.assertIn("READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled", audit_fix_text)
+        self.assertIn("WHEN true THEN auto_audit_fix_flow", audit_fix_text)
+        self.assertIn("WHEN false THEN choose_audit_fix", audit_fix_text)
+        self.assertIn("CHOICE choose_audit_fix", audit_fix_text)
+        self.assertIn('OPTION run LABEL "运行 audit 修复" THEN run_audit_fix_flow', audit_fix_text)
+        self.assertIn('OPTION auto LABEL "开启自动并运行 audit 修复" THEN auto_audit_fix_flow', audit_fix_text)
+        self.assertIn('OPTION stop LABEL "停止整个 wf-post-fix" THEN FAIL_ALL', audit_fix_text)
+        self.assertIn("FLOW auto_audit_fix_flow", audit_fix_text)
+        self.assertIn("RUN_WORKFLOW audit_fix", audit_fix_text)
+        self.assertIn('WORKFLOW "workflows/wf-audit-fix/wf/workflow.lgwf"', audit_fix_text)
 
         prompt_fix_text = (PACKAGE_ROOT / "wf/02_prompt_fix/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("ENTRY NODE prompt_fix_auto_route", prompt_fix_text)
@@ -163,6 +178,68 @@ class WorkflowShapeTests(unittest.TestCase):
         self.assertIn('OPTION stop LABEL "停止整个 wf-post-fix" THEN FAIL_ALL', wf_fix_text)
         self.assertIn("FLOW auto_wf_fix_positive_e2e_flow", wf_fix_text)
 
+    def test_audit_fix_choice_routes_compile_to_named_flow_entry_nodes(self) -> None:
+        compiled = self.compile_workflow(PACKAGE_ROOT / "wf/02_audit_fix/workflow.lgwf")
+        routes = {item["from"]: item["branches"] for item in compiled["routes"]}
+        nodes = {item["id"]: item for item in compiled["nodes"]}
+
+        self.assertEqual(
+            {"true": "set_audit_fix_auto", "false": "choose_audit_fix"},
+            routes["audit_fix_auto_route"],
+        )
+        self.assertEqual(
+            {
+                "run": "build_audit_fix_input",
+                "skip": "skip_audit_fix",
+                "auto": "set_audit_fix_auto",
+                "stop": "FAIL_ALL",
+            },
+            routes["choose_audit_fix"],
+        )
+        self.assertIn(["build_audit_fix_input", "audit_fix"], compiled["edges"])
+        self.assertIn(["audit_fix", "finish_audit_fix_stage"], compiled["edges"])
+        self.assertIn(["set_audit_fix_auto", "build_audit_fix_input"], compiled["edges"])
+        self.assertEqual(
+            {
+                "run": "运行 audit 修复",
+                "skip": "跳过 audit 修复",
+                "auto": "开启自动并运行 audit 修复",
+                "stop": "停止整个 wf-post-fix",
+            },
+            nodes["choose_audit_fix"]["config"]["option_labels"],
+        )
+
+        build_contract = nodes["build_audit_fix_input"]["config"]["contract"]
+        self.assertIn("lgwf_wf_post_fix.audit_fix_input", build_contract["writes_state"])
+        self.assertIn(
+            {"root": "workspace", "path": ".lgwf/post_fix_target.json", "type": "file"},
+            build_contract["reads_resources"],
+        )
+
+        skip_contract = nodes["skip_audit_fix"]["config"]["contract"]
+        self.assertIn(
+            {"root": "workspace", "path": ".lgwf/post_fix_decisions.json", "type": "file"},
+            skip_contract["writes_resources"],
+        )
+        self.assertIn(
+            {"root": "workspace", "path": ".lgwf/post_fix_stage_results.json", "type": "file"},
+            skip_contract["writes_resources"],
+        )
+
+        child_contract = nodes["audit_fix"]["config"]["contract"]
+        self.assertEqual(["lgwf_wf_post_fix.audit_fix_input"], child_contract["reads_state"])
+        self.assertEqual("lgwf_wf_post_fix.audit_fix_result", nodes["audit_fix"]["config"]["result_path"])
+
+    def test_audit_fix_stage_declares_local_artifact_boundaries(self) -> None:
+        contract = json.loads((PACKAGE_ROOT / "wf/02_audit_fix/artifact_contracts.json").read_text(encoding="utf-8"))
+
+        self.assertIn(".lgwf/post_fix_target.json", contract["bootstrap_inputs"])
+        self.assertIn(".lgwf/post_fix_decisions.json", contract["bootstrap_inputs"])
+        self.assertIn(".lgwf/post_fix_decisions/audit_fix.json", contract["bootstrap_inputs"])
+        self.assertIn(".lgwf/post_fix_decisions.json", contract["final_outputs"])
+        self.assertIn(".lgwf/post_fix_decisions/audit_fix.json", contract["final_outputs"])
+        self.assertIn(".lgwf/post_fix_stage_results.json", contract["final_outputs"])
+
     def test_prompt_fix_choice_routes_compile_to_named_flow_entry_nodes(self) -> None:
         compiled = self.compile_workflow(PACKAGE_ROOT / "wf/02_prompt_fix/workflow.lgwf")
         routes = {item["from"]: item["branches"] for item in compiled["routes"]}
@@ -241,7 +318,8 @@ class WorkflowShapeTests(unittest.TestCase):
         self.assertEqual([], compiled["routes"])
         self.assertEqual(
             [
-                ["prepare_target", "prompt_fix_stage"],
+                ["prepare_target", "audit_fix_stage"],
+                ["audit_fix_stage", "prompt_fix_stage"],
                 ["prompt_fix_stage", "prompt_upgrade_stage"],
                 ["prompt_upgrade_stage", "e2e_generate_stage"],
                 ["e2e_generate_stage", "route_script_flow_e2e"],
@@ -283,7 +361,7 @@ class StageDecisionTests(unittest.TestCase):
         module = load_module("wf/shared/scripts/post_fix_common.py", "post_fix_common")
 
         decision = module.resolve_stage_decision(
-            stage_id="runtime_fake_e2e",
+            stage_id="audit_fix",
             target={"mode": "manual"},
             decisions={"auto_enabled": True, "stages": []},
         )
@@ -336,6 +414,37 @@ class StageDecisionTests(unittest.TestCase):
 
 
 class MapperTests(unittest.TestCase):
+    def test_audit_fix_input_matches_child_contract_and_scans_wf_dir(self) -> None:
+        module = load_module("wf/02_audit_fix/scripts/build_audit_fix_input.py", "build_audit_fix_input")
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            wf_dir = root / "wf"
+            wf_dir.mkdir()
+            workflow_lgwf = wf_dir / "workflow.lgwf"
+            workflow_lgwf.write_text("WORKFLOW demo;\n", encoding="utf-8")
+
+            payload = module.build_audit_fix_input(
+                {
+                    "target_workflow_lgwf": str(workflow_lgwf),
+                    "target_package_root": str(root),
+                    "target_dirs": [str(root)],
+                }
+            )
+
+        self.assertEqual(
+            {
+                "audit_fix_target": {
+                    "target_paths": [str(wf_dir)],
+                    "allowed_dirs": [str(root)],
+                    "mode": "apply",
+                    "scope_mode": "explicit",
+                    "max_targets": 32,
+                }
+            },
+            payload,
+        )
+
     def test_prompt_fix_input_matches_child_contract(self) -> None:
         module = load_module("wf/02_prompt_fix/scripts/build_prompt_fix_input.py", "build_prompt_fix_input")
 

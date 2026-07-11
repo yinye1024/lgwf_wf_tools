@@ -1,0 +1,48 @@
+{
+  "id": "example-workflow",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/example-workflow/wf/workflow.lgwf",
+  "work_dir": "workflows/example-workflow/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "request"
+    ],
+    "properties": {
+      "request": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "example": {
+      "request": {
+        "message": "hello"
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file for non-trivial payloads.",
+  "auto_human_policy": "forbidden",
+  "target_scope": {
+    "read_scope": "Only the input JSON and files explicitly declared by this workflow.",
+    "write_scope": "Only workflows/example-workflow/ws/.lgwf/."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/example-workflow/ws",
+    "runtime_state": ".lgwf/",
+    "source_root": "workflows/example-workflow/wf"
+  },
+  "outputs": {
+    "summary": ".lgwf/example_summary.json",
+    "reports": []
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

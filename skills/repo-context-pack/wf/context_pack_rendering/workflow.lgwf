@@ -1,0 +1,21 @@
+    WORKFLOW context_pack_rendering;
+    ENTRY render_context_pack_artifacts;
+
+    DEFAULTS {
+      ref_root workflow ".";
+      timeout_seconds 180;
+      result_path "repo_context_pack.context_pack_rendering.{node}";
+    }
+
+    PY render_context_pack_artifacts
+      SCRIPT "scripts/run.py"
+      TIMEOUT 120
+      RESULT state.repo_context_pack.generation
+      UPDATES_STATE
+      CONTRACT {
+        READ workspace file ".lgwf/repo_context_pack_request.json";
+READ workspace file ".lgwf/context_inventory.json";
+WRITE workspace file ".lgwf/context_pack_generation.json";
+      };
+
+    FLOW render_context_pack_artifacts;

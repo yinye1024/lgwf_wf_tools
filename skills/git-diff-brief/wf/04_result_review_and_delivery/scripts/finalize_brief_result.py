@@ -59,20 +59,38 @@ def _string_from_nested(payload: dict[str, Any], keys: list[str]) -> str:
     return ""
 
 
+def resolve_confirmed_delivery_action(review_context: dict[str, Any]) -> dict[str, Any]:
+    action = _string_from_nested(review_context, ["confirmed_commit_action", "selected_commit_action"])
+    message = _string_from_nested(review_context, ["confirmed_commit_message", "selected_commit_message"])
+    allow_root = bool(
+        review_context.get("confirmed_allow_repo_root_write")
+        or review_context.get("selected_allow_repo_root_write")
+    )
+    return {
+        "commit_action": action,
+        "commit_message": message,
+        "allow_repo_root_write": allow_root,
+    }
+
+
 def resolve_commit_message_suggestion(
     review_context: dict[str, Any],
     summary_context: dict[str, Any],
     git_context: dict[str, Any],
 ) -> dict[str, str]:
     message = _string_from_nested(review_context, ["commit_message_suggestion", "suggested_commit_message"])
+    message_zh = _string_from_nested(review_context, ["commit_message_suggestion_zh"])
     rationale = _string_from_nested(review_context, ["commit_message_rationale", "commit_rationale"])
     if not message:
         message = _string_from_nested(summary_context, ["commit_message_suggestion", "suggested_commit_message"])
+    if not message_zh:
+        message_zh = _string_from_nested(summary_context, ["commit_message_suggestion_zh"])
     if not rationale:
         rationale = _string_from_nested(summary_context, ["commit_message_rationale", "commit_rationale"])
     if message:
         return {
             "message": message,
+            "message_zh": message_zh,
             "rationale": rationale or "来自摘要阶段生成的建议提交信息。",
         }
 
@@ -84,6 +102,7 @@ def resolve_commit_message_suggestion(
     fallback = f"chore({scope_name}): summarize scoped git diff changes"
     return {
         "message": fallback,
+        "message_zh": "",
         "rationale": f"未发现摘要阶段提交建议，按当前 Git 作用域 `{relative_scope or '.'}` 生成保守 Conventional Commit。",
     }
 
@@ -91,18 +110,23 @@ def resolve_commit_message_suggestion(
 def normalize_delivery_decision(
     decision: dict[str, Any],
     commit_message_suggestion: str = "",
+    default_commit_action: str = "none",
+    default_commit_message: str = "",
+    default_allow_repo_root_write: bool = False,
 ) -> dict[str, Any]:
     decision_value = decision.get("decision", decision.get("approval", ""))
     changes = decision.get("changes", [])
-    action = str(decision.get("commit_action", "none")).strip().lower() or "none"
+    action = str(decision.get("commit_action") or default_commit_action or "none").strip().lower() or "none"
     return {
         "decision": str(decision_value).strip().lower() or "approve",
         "comment": str(decision.get("comment", "")).strip(),
         "changes": changes if isinstance(changes, list) else [],
         "commit_action": action,
         "stage_scope": str(decision.get("stage_scope", "target_scope")).strip() or "target_scope",
-        "commit_message": str(decision.get("commit_message", "") or commit_message_suggestion).strip(),
-        "allow_repo_root_write": bool(decision.get("allow_repo_root_write")),
+        "commit_message": str(
+            decision.get("commit_message", "") or default_commit_message or commit_message_suggestion
+        ).strip(),
+        "allow_repo_root_write": bool(decision.get("allow_repo_root_write") or default_allow_repo_root_write),
     }
 
 
@@ -270,7 +294,7 @@ def build_final_output(
     commit_message_suggestion = commit_message_suggestion or {"message": "", "rationale": ""}
     normalized_decision = (
         decision
-        if "commit_action" in decision
+    if "commit_action" in decision
         else normalize_delivery_decision(decision, commit_message_suggestion=commit_message_suggestion["message"])
     )
     commit_action_result = commit_action_result or {
@@ -283,6 +307,7 @@ def build_final_output(
         "final_change_brief_markdown": cleaned_markdown,
         "delivery_decision": normalized_decision,
         "commit_message_suggestion": commit_message_suggestion["message"],
+        "commit_message_suggestion_zh": commit_message_suggestion.get("message_zh", ""),
         "commit_message_rationale": commit_message_suggestion["rationale"],
         "commit_action_result": commit_action_result,
         "run_artifact_index": {
@@ -306,9 +331,13 @@ def main() -> None:
         summary_context=summary_context,
         git_context=git_context,
     )
+    confirmed_delivery = resolve_confirmed_delivery_action(review_context)
     decision = normalize_delivery_decision(
         load_delivery_decision(lgwf_dir),
         commit_message_suggestion=commit_suggestion["message"],
+        default_commit_action=confirmed_delivery["commit_action"],
+        default_commit_message=confirmed_delivery["commit_message"],
+        default_allow_repo_root_write=bool(confirmed_delivery["allow_repo_root_write"]),
     )
     commit_plan = build_commit_plan(decision, git_context)
     result = build_final_output(
@@ -323,6 +352,7 @@ def main() -> None:
         "git_diff_brief.final_change_brief_markdown": result["final_change_brief_markdown"],
         "git_diff_brief.delivery_decision": result["delivery_decision"],
         "git_diff_brief.commit_message_suggestion": result["commit_message_suggestion"],
+        "git_diff_brief.commit_message_suggestion_zh": result["commit_message_suggestion_zh"],
         "git_diff_brief.commit_message_rationale": result["commit_message_rationale"],
         "git_diff_brief.commit_plan": commit_plan,
         "git_diff_brief.run_artifact_index": result["run_artifact_index"],

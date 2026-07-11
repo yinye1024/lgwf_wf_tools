@@ -44,31 +44,37 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             (
                 "01_confirm_requirements/workflow.lgwf",
                 "confirm_requirements",
+                "prepare_requirements_revision_confirmation",
                 "apply_confirmed_requirements",
                 ".lgwf/create_requirements_approval.json",
             ),
             (
                 "02_confirm_business_flow/workflow.lgwf",
                 "confirm_business_flow",
+                "prepare_business_flow_revision_confirmation",
                 "apply_confirmed_business_flow",
                 ".lgwf/business_flow_approval.json",
             ),
             (
                 "03_confirm_step_designs/workflow.lgwf",
                 "confirm_step_designs",
+                "prepare_step_design_revision_confirmation",
                 "apply_confirmed_step_designs",
                 ".lgwf/step_design_confirmation_record.json",
             ),
         )
-        for relative, approval, apply_node, persist in expectations:
+        for relative, approval, prepare_revision, apply_node, persist in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn(f"REVIEW {approval}", text)
             self.assertIn('OPTIONS ["approve", "revise", "reject"]', text)
             self.assertIn(f'PERSIST "{persist}"', text)
+            self.assertIn(f"PY {prepare_revision}", text)
             self.assertIn("FLOW {", text)
             self.assertIn(approval, text)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
-            self.assertIn(f'WHEN "revise" THEN {approval}', text)
+            self.assertIn(f'WHEN "revise" THEN {prepare_revision}', text)
+            self.assertIn(f"{prepare_revision}\n  THEN {approval}", text)
+            self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
             self.assertIn('WHEN "reject" THEN FAIL_ALL', text)
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:
@@ -250,7 +256,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             for pattern in stale_patterns:
                 self.assertNotIn(pattern, text, path.as_posix())
 
-    def test_scaffold_plan_includes_confirmation_apply_scripts(self) -> None:
+    def test_scaffold_plan_includes_generic_stage_placeholders(self) -> None:
         module = load_module(
             ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_integrity",
@@ -263,14 +269,18 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             }
         )
         for relative in (
-            "wf/01_confirm_requirements/scripts/apply_confirmed_requirements.py",
-            "wf/02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
-            "wf/03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
-            "wf/shared/scripts/confirmation_io.py",
-            "wf/shared/scripts/review_context.py",
+            "entry_contract.json",
+            "wf/artifact_contracts.json",
+            "wf/01_prepare/workflow.lgwf",
+            "wf/01_prepare/agents/prompt.md",
+            "wf/01_prepare/scripts/run.py",
+            "wf/01_prepare/resources/README.md",
         ):
             self.assertIn(relative, plan["create_files"])
+        self.assertEqual(plan["stage_manifest"][0]["stage_dir"], "01_prepare")
+        self.assertIn("wf/shared/scripts", plan["create_dirs"])
         self.assertNotIn("wf/common/confirmation_io.py", plan["create_files"])
+        self.assertNotIn("wf/01_confirm_requirements/scripts/apply_confirmed_requirements.py", plan["create_files"])
 
     def test_summary_workflow_uses_py_result_and_script_writes_json(self) -> None:
         workflow = (ROOT / "06_summarize_create_result/workflow.lgwf").read_text(encoding="utf-8")
@@ -279,71 +289,25 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertIn("RESULT state.lgwf_wf_create.summary_result", workflow)
         self.assertIn("create_result_summary.json", script)
 
-    def test_created_package_validation_runs_before_summary_and_handoff(self) -> None:
+    def test_implementation_observe_audit_runs_before_summary_and_handoff(self) -> None:
         workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn("PY validate_created_package", workflow)
-        self.assertIn('STEP enrich_contracts_react', workflow)
-        self.assertIn('WORKFLOW "05_enrich_contracts_react/workflow.lgwf"', workflow)
+        implement_workflow = (ROOT / "04_implement_steps_react/workflow.lgwf").read_text(encoding="utf-8")
+        observe_workflow = (ROOT / "04_implement_steps_react/observe_audit.lgwf").read_text(encoding="utf-8")
+        self.assertNotRegex(workflow, r"PY\s+validate_.*package")
+        self.assertNotIn("created_package_" + "validation", workflow)
+        self.assertNotIn("enrich_contracts_react", workflow)
+        self.assertFalse((ROOT / "05_enrich_contracts_react").exists())
         self.assertIn(
             "THEN implement_draft\n"
             "  THEN implement_steps_react\n"
-            "  THEN enrich_contracts_react\n"
-            "  THEN validate_created_package\n"
             "  THEN summarize_create_result",
             workflow,
         )
-        self.assertIn('SCRIPT "scripts/validate_created_package.py"', workflow)
-
-    def test_contract_enrichment_react_runs_audit_before_final_validation(self) -> None:
-        workflow = (ROOT / "05_enrich_contracts_react/workflow.lgwf").read_text(encoding="utf-8")
-        observe_workflow = (ROOT / "05_enrich_contracts_react/observe_audit.lgwf").read_text(encoding="utf-8")
-        spec = (ROOT / "05_enrich_contracts_react/agents/spec.md").read_text(encoding="utf-8")
-        act_prompt = (ROOT / "05_enrich_contracts_react/agents/act.md").read_text(encoding="utf-8")
-
-        self.assertIn("REACT enrich_contracts_react MAX 3", workflow)
-        self.assertIn('SPEC "agents/spec.md"', workflow)
-        self.assertIn('workspace file ".lgwf/create_reference_context/module-contract/module-contract.md"', workflow)
-        self.assertIn('WORKFLOW "observe_audit.lgwf"', workflow)
-        self.assertIn('OUTPUT_JSON ".lgwf/contract_enrichment_result.json"', workflow)
-        self.assertIn('WRITE workspace file ".lgwf/contract_reason.md"', workflow)
-        self.assertIn('WRITE workspace file ".lgwf/contract_enrichment_result.json"', workflow)
-        self.assertIn('WRITE workspace file ".lgwf/contract_observe.json"', workflow)
-        self.assertIn('SCRIPT "scripts/audit_contract_package.py"', observe_workflow)
-        audit_script = (ROOT / "05_enrich_contracts_react/scripts/audit_contract_package.py").read_text(encoding="utf-8")
-        self.assertIn("lgwf.py audit", audit_script)
-        self.assertIn("module-contract.md", spec)
-        self.assertIn("模块定位", act_prompt)
-        self.assertIn("入口", act_prompt)
-        self.assertIn("依赖", act_prompt)
-        self.assertIn("状态边界", act_prompt)
-        self.assertIn("产物", act_prompt)
-        self.assertIn("验证", act_prompt)
-        self.assertIn("禁止事项", act_prompt)
-        for required in (
-            "扫描目标 package 下所有 `workflow.lgwf`",
-            "为所有节点逐个生成或补齐 `CONTRACT`",
-            "`OUTPUT_JSON`、`OUTPUT_FILE` 和 `PERSIST` 必须有同节点 `CONTRACT WRITE workspace file`",
-            "不要把节点内部临时文件、scratch 文件或 helper 缓存写入 `CONTRACT`",
-            "CONTRACT 合法落点",
-            "STEP <id> WORKFLOW",
-            "REACT slot",
-            "不得生成 `STEP <id> CONTRACT",
-        ):
-            self.assertIn(required, spec)
-        for required in (
-            "建立逐节点契约清单",
-            "逐个节点说明应声明的 `CONTRACT READ` 和 `CONTRACT WRITE`",
-            "扫描 prompt、script、`OUTPUT_JSON`、`OUTPUT_FILE`、`PERSIST` 和上下游文件引用",
-            "确认每个待补 `CONTRACT` 的合法落点",
-        ):
-            self.assertIn(required, (ROOT / "05_enrich_contracts_react/agents/reason.md").read_text(encoding="utf-8"))
-        for required in (
-            "逐个修改目标 package 内所有 `workflow.lgwf`",
-            "为每个有外部业务文件 I/O 的节点补齐 `CONTRACT`",
-            "`CONTRACT` 只声明节点外部业务文件输入输出",
-            "按节点类型把 `CONTRACT` 放到 parser 接受的位置",
-        ):
-            self.assertIn(required, act_prompt)
+        self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
+        self.assertIn("PY audit_created_package", observe_workflow)
+        self.assertIn('SCRIPT "scripts/audit_created_package.py"', observe_workflow)
+        self.assertIn('READ workspace file ".lgwf/step_designs.json";', observe_workflow)
+        self.assertIn('WRITE workspace file ".lgwf/implementation_audit_result.json";', observe_workflow)
 
     def test_agents_doc_names_route_back_to_facade_when_out_of_scope(self) -> None:
         text = (PACKAGE_ROOT / "AGENTS.md").read_text(encoding="utf-8")

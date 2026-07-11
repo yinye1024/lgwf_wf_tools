@@ -40,7 +40,7 @@ NODE_RE = re.compile(
 )
 CONTRACT_RE = re.compile(r"\bCONTRACT\s*\{")
 CONTRACT_ENTRY_RE = re.compile(r"\b(READ|WRITE)\s+([^;]+);")
-CONTEXT_RE = re.compile(r'\bCONTEXT\s+workspace\s+(file|dir)\s+"([^"]+)"')
+CONTEXT_RE = re.compile(r'\bCONTEXT\s+(workspace|workflow)\s+(file|dir)\s+"([^"]+)"')
 OUTPUT_RE = re.compile(r'\b(OUTPUT_JSON|OUTPUT_FILE|PERSIST)\s+"([^"]+)"')
 INPUT_STATE_RE = re.compile(r"\bINPUT\s+(state\.[A-Za-z0-9_.]+)")
 READ_STATE_RE = re.compile(r"\bREAD\s+(state\.[A-Za-z0-9_.]+)")
@@ -149,8 +149,8 @@ class WorkflowNodeContractTests(unittest.TestCase):
         for workflow_file in source_lgwf_files():
             for node in parse_nodes(workflow_file):
                 text = "\n".join(node.lines)
-                for context_kind, context_path in CONTEXT_RE.findall(text):
-                    expected = f'READ workspace {context_kind} "{context_path}"'
+                for context_root, context_kind, context_path in CONTEXT_RE.findall(text):
+                    expected = f'READ {context_root} {context_kind} "{context_path}"'
                     if not contract_has(node.contract_entries, expected):
                         failures.append(f"{node.label}: missing {expected}")
                 for _, output_path in OUTPUT_RE.findall(text):
@@ -178,7 +178,7 @@ class WorkflowNodeContractTests(unittest.TestCase):
             for node in parse_nodes(workflow_file):
                 declared_outputs = {path for _, path in OUTPUT_RE.findall("\n".join(node.lines))}
                 for entry in node.contract_entries:
-                    resource_match = re.match(r'(READ|WRITE)\s+workspace\s+(?:file|dir)\s+"([^"]+)"', entry)
+                    resource_match = re.match(r'(READ|WRITE)\s+(?:workspace|workflow)\s+(?:file|dir)\s+"([^"]+)"', entry)
                     if not resource_match:
                         continue
                     action, path_value = resource_match.groups()

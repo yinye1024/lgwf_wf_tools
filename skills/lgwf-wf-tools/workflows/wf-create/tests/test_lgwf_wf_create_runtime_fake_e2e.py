@@ -60,17 +60,17 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
         expected_routes = {
             "confirm_requirements": {
                 "approve": "apply_confirmed_requirements",
-                "revise": "confirm_requirements",
+                "revise": "prepare_requirements_revision_confirmation",
                 "reject": "FAIL_ALL",
             },
             "confirm_business_flow": {
                 "approve": "apply_confirmed_business_flow",
-                "revise": "confirm_business_flow",
+                "revise": "prepare_business_flow_revision_confirmation",
                 "reject": "FAIL_ALL",
             },
             "confirm_step_designs": {
                 "approve": "apply_confirmed_step_designs",
-                "revise": "confirm_step_designs",
+                "revise": "prepare_step_design_revision_confirmation",
                 "reject": "FAIL_ALL",
             },
         }
@@ -97,6 +97,14 @@ class LgwfWfCreateRuntimeFakeE2ETest(unittest.TestCase):
             node_block = child_workflow_text[node_start: next_node if next_node != -1 else len(child_workflow_text)]
             self.assertIn('OPTIONS ["approve", "revise", "reject"]', node_block)
             self.assertIn(f'PERSIST "{persist_path}"', node_block)
+
+        for prepare_node, review_node in (
+            ("prepare_requirements_revision_confirmation", "confirm_requirements"),
+            ("prepare_business_flow_revision_confirmation", "confirm_business_flow"),
+            ("prepare_step_design_revision_confirmation", "confirm_step_designs"),
+        ):
+            self.assertIn(f"PY {prepare_node}", child_workflow_text)
+            self.assertIn(f"{prepare_node}\n  THEN {review_node}", child_workflow_text)
 
     def test_fake_runtime_approval_path_produces_expected_state_and_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

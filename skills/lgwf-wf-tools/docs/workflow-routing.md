@@ -21,13 +21,14 @@ python scripts/list_workflows.py
 | `wf-convert` | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告。 |
 | `wf-prompt-fix` | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足。 |
 | `wf-prompt-upgrade` | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量。 |
+| `wf-audit-fix` | 目标是修复 LGWF authoring audit 静态诊断，包括缺失 `CONTRACT`、读写消费链、DSL 语法或编译问题。 |
 | `e2e-test-generator` | 目标是生成或刷新 workflow 的端到端测试。 |
 | `plan` | 目标是复杂任务规划、先产出计划/验收契约、用户确认后再按 ReAct 闭环执行。 |
 
 ## 证据修正
 
 - 用户说“修复 workflow”，但证据只指向 prompt 基础规范且不需要真实运行目标 workflow：使用 `wf-prompt-fix`。
-- 用户说“修复 workflow audit”或只要求修复 DSL / audit 静态问题，且明确不需要运行目标 workflow：不从本 facade registry 路由，改用独立 `wf-audit-fix` skill。
+- 用户说“修复 workflow audit”或只要求修复 DSL / audit 静态问题，且明确不需要运行目标 workflow：使用内部 `wf-audit-fix`。
 - 用户说“优化 prompt”，但目标 workflow 已经有明确运行失败证据：使用 `wf-fix`。
 - 用户说“生成测试”，但目标 `workflow.lgwf` 不能解析或基础契约明显缺失：报告前置阻塞，并建议转入 `wf-fix` 或 `wf-prompt-fix`。
 - 目标目录还没有可解析的 `workflow.lgwf`，且用户目标是创建新的 LGWF workflow：使用 `wf-create`。

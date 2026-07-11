@@ -94,6 +94,18 @@ REVIEW confirm_requirements
     READ state.lgwf_wf_create.requirements_confirmation_context;
   };
 
+PY prepare_requirements_revision_confirmation
+  SCRIPT "scripts/prepare_requirements_revision_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_requirements_revision_confirmation_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    READ workspace file ".lgwf/create_requirements_approval.json";
+    WRITE state.lgwf_wf_create.requirements_confirmation_context;
+    WRITE state.lgwf_wf_create.requirements_revision_context;
+  };
+
 PY apply_confirmed_requirements
   SCRIPT "scripts/apply_confirmed_requirements.py"
   TIMEOUT 60
@@ -125,6 +137,9 @@ FLOW {
 
   confirm_requirements
     WHEN "approve" THEN apply_confirmed_requirements
-    WHEN "revise" THEN confirm_requirements
+    WHEN "revise" THEN prepare_requirements_revision_confirmation
     WHEN "reject" THEN FAIL_ALL;
+
+  prepare_requirements_revision_confirmation
+  THEN confirm_requirements;
 }

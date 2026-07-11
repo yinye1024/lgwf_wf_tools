@@ -19,6 +19,7 @@
 ## Root Workflow Checklist
 
 - 根 `workflow.lgwf` 可通过 `scripts/lgwf.py audit <package-root>\workflow.lgwf` 做 authoring 阶段机器可读检查；agent 应先读取 JSON diagnostics，修复后重复 audit。
+- audit 会递归检查当前 workflow graph 中可静态解析的子 workflow：`STEP ... WORKFLOW`、`FOREACH WORKFLOW`、`REACT` / `AGENT_LOOP` slot `WORKFLOW`、普通 `RUN_WORKFLOW` 和 `FOREACH RUN_WORKFLOW` 指向的 `.lgwf`。子 workflow 的 diagnostics 保留子文件 location，并作为父 audit 的 error 返回。
 - 根 `workflow.lgwf` 可通过 `scripts/lgwf.py compile` 编译；运行时 facade 在 `<work_dir>\.lgwf\workflow\` snapshot 中自动完成编译。
 - 当前 workflow 可直接声明普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`REACT`、`AGENT_LOOP`、`PARALLEL`。
 - 子 workflow 通过 `STEP ... WORKFLOW` 引用，且父 workflow 不重复声明其内部节点。
@@ -35,6 +36,7 @@
 - `PROMPT`、`SCRIPT`、`CONTEXT file|dir` 必须使用相对文件资源路径。
 - `REACT` sugar 只表达 `subgraph.react`，必须包含 `REASON`、`ACT`、`OBSERVE`、`DECIDE`；slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`，其中 `WORKFLOW` slot 必须声明 `RESULT state.*`。
 - `REACT SPEC "<path>"` 可选；配置后只约束 `REASON`、`ACT`、`OBSERVE`，冲突时以 spec 为准，不传给 `DECIDE PY`。
+- `REACT MAX > 1` 时，`OBSERVE` / `DECIDE` slot 通过 `CONTRACT WRITE state.*` 或 `CONTRACT WRITE workspace file "..."` 明确写出的反馈必须被下一轮 `REASON` 通过 `CONTRACT READ` 或 workspace file context 消费；`state.next` 等路由控制字段除外。缺失时 audit 返回 `LGWF_REACT_REASON_MISSING_OBSERVE_FEEDBACK` 或 `LGWF_REACT_REASON_MISSING_DECIDE_FEEDBACK`。
 - `AGENT_LOOP` sugar 只表达 `subgraph.agent_loop`，必须包含 `OBSERVE`、`DIAGNOSE`、`PLAN`、`ACT`、`VERIFY`、`DECIDE`；runtime 按声明顺序执行 slot。
 - `AGENT_LOOP` slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`VERIFY` 结果必须包含 boolean `passed`；`DECIDE` 结果必须包含 `category` 和 `reason`，可包含 `evidence`、`stop_reason`。
 - `AGENT_LOOP` 默认 `TOKEN_MAX 1000000`，默认 Codex target 授权读取 `state.targets.dirs` 和 `state.targets.files`；slot 内不得覆盖 `TARGET_DIRS` / `TARGET_FILES`。
@@ -47,7 +49,8 @@
 - `PY SCRIPT` 写入 `.lgwf/`、`reports/` 或 `data/` 下的业务 artifact 时，也必须声明 `CONTRACT WRITE workspace file "..."`。audit 会扫描 `Path("...").write_text(...)`、`Path("...").write_bytes(...)`、`open("...", "w|a|x", ...)` 和 `write_json(lgwf_dir / "out.json", payload)`；缺少 contract 时应报 `LGWF_PY_FILE_WRITE_CONTRACT_MISSING`，写出路径未声明时应报 `LGWF_PY_FILE_WRITE_CONTRACT_MISMATCH`。
 - `PY CONTRACT READ` 在脚本执行前校验，`PY CONTRACT WRITE` 在 `RESULT` 和 `UPDATES_STATE` 应用后的最终 state 上校验；修复 audit 报错时不要只补说明文字，必须让 contract 与脚本真实输入输出一致。
 - `RUN_WORKFLOW WORKFLOW` 和 `WORK_DIR` 使用相对路径，不使用绝对路径或 `..`；运行时默认创建轻量隔离 `workspace/work_dir`，`WORK_DIR` 只作为 `declared_work_dir` 记录。
-- `RUN_WORKFLOW RESULT` 应被后续 `PY map_*`、汇总节点或下游 workflow 消费；`RUN_WORKFLOW INPUT` 应来自初始 input 或上游 mapper writer。
+- `RUN_WORKFLOW` 和 `FOREACH RUN_WORKFLOW` 指向的 child `workflow.lgwf` 会在 authoring audit 中递归检查；child 内部 resource、contract、ReAct、AgentLoop 和 Python 文件读写 diagnostics 会阻断父 workflow audit。
+- `RUN_WORKFLOW RESULT` 必须被后续 `PY map_*`、汇总节点或下游 workflow 消费；`RUN_WORKFLOW INPUT` 必须来自初始 input 或上游 mapper writer。重复 `WORK_DIR`、未消费 result、缺少 input writer 和读取 `.lgwf/child-runs` 作为业务数据通道都会作为 error diagnostics 返回。
 - 需要从上游 child 交接业务文件或目录时，优先使用 `HANDOFF_FILES`。`FROM` 指向上游 `RUN_WORKFLOW RESULT`；`COPY_FILE` / `COPY_DIR` 源路径相对上游实际 `work_dir`；`AS` 目标路径相对父 `<work_dir>/.lgwf/handoff/<node_id>/`；`RESULT` 字段值是复制后文件或目录的绝对路径，供下游隔离 child 读取；结果同时包含 `handoff_files` 对象，适合下游 `PY INPUT state.handoff_files`；目录交接默认整体替换目标目录。
 - `.lgwf/child-runs/*.json` 只用于诊断和状态展示，不作为常规业务数据通道；record 中的实际 child `work_dir` 位于 `.lgwf/isolations/run_workflow/<node_id>/work_dir`，child 人工确认由父 status 透传为 `child_human_approval`。
 - workflow 拓扑只使用当前 Authoring DSL v2 声明和 `STEP ... WORKFLOW` 组合；不要新增未在 schema/catalog 中定义的 authoring 结构。
@@ -96,6 +99,7 @@
 - `max_steps` 明确。
 - slot 使用 `WORKFLOW` 时必须声明 `RESULT state.*`，并由子 workflow 写入该 state path。
 - `observe` 输出结构化 review，例如 `passed/issues/summary`。
+- 多轮 `REACT` 的 `reason` 必须读取 `observe` / `decide` 写出的结构化反馈，例如 observation、diagnostics delta、decision 或 retry/no-progress 判断；否则下一轮会重复无效方案，audit 会报错。
 - `decide` 读取 review 结果并输出 `next=continue|exit`。
 - 如果 `decide` 使用 `exec.run_python` 更新 state，新 workflow 优先使用 `UPDATES_STATE { WRITE state.*; }` 显式声明 stdout patch 写入范围；脚本打印 JSON object，key 是 runtime state path。裸 `UPDATES_STATE` 仅作兼容模式。
 

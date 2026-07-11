@@ -158,14 +158,14 @@ workflow 进程会在该节点阻塞等待 response 文件。主 agent 通过 `-
 python <skill-dir>\scripts\lgwf.py approval get --work-dir <work_dir> --request-id <request_id>
 ```
 
-4. 在当前对话展示 `prompt` 和 `context` 摘要，明确说明正在确认什么、approve 后会把什么 `value` 写入 workflow、reject 后 workflow 会失败。
+4. 在当前对话展示 `prompt` 和 `context` 摘要，明确说明正在确认什么、approve 后 workflow 会固化已展示的 request `context`，reject 后 workflow 会失败。
 5. 询问用户选择 `approve` 或 `reject`。不要把模糊回复当成确认。
-6. 用户 approve 时，默认使用 request 的 `context` 作为 `value`；如果用户明确修改字段，则用修改后的 JSON value。
+6. 用户 approve 时，只提交同意决策，不提交业务 `value`。如果用户明确要求修改字段，不要用 `APPROVAL approve` 携带新 JSON；应改用 `REVIEW revise` 流程，或 reject 后让 workflow 重新生成 proposal。
 7. 用户 reject 时，必须写入用户给出的拒绝原因作为 `comment`。
-8. 优先使用 main-agent 高层提交命令。approve 必须传入 `--value-json`，reject 必须传入 `--comment`：
+8. 优先使用 main-agent 高层提交命令。approve 不得传入 `--value-json`，reject 必须传入 `--comment`：
 
 ```powershell
-python <skill-dir>\scripts\lgwf.py approval submit --work-dir <work_dir> --request-id <request_id> --decision approve --value-json "{...}" --comment "user approved"
+python <skill-dir>\scripts\lgwf.py approval submit --work-dir <work_dir> --request-id <request_id> --decision approve --comment "user approved"
 python <skill-dir>\scripts\lgwf.py approval submit --work-dir <work_dir> --request-id <request_id> --decision reject --comment "user rejected"
 ```
 
@@ -190,7 +190,7 @@ running workflow
   -> status phase=waiting_human
   -> get request
   -> show prompt/context summary and ask approve/reject in current chat
-  -> user approve: write payload created_by=main_agent_ask with value
+  -> user approve: write payload created_by=main_agent_ask with decision only
   -> user reject: write payload created_by=main_agent_ask with comment
   -> submit payload immediately
   -> continue polling the same pid

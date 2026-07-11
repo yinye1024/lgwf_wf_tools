@@ -1,0 +1,32 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/target_manifest.json",
+    ".lgwf/target_scope_validation.json"
+  ],
+  "final_outputs": [
+    ".lgwf/target_manifest.json",
+    ".lgwf/target_scope_validation.json",
+    ".lgwf/scope_confirmation_context.json",
+    ".lgwf/scope_approval.json",
+    ".lgwf/foreach/upgrade_each/items/{index}/.lgwf/current_target_context.json",
+    ".lgwf/foreach/upgrade_each/items/{index}/.lgwf/current_target_audit.json",
+    ".lgwf/result_summary.json",
+    "reports/wf-audit-fix/report.md"
+  ],
+  "script_writes": {
+    "collect_targets": [
+      ".lgwf/target_manifest.json",
+      ".lgwf/target_scope_validation.json"
+    ],
+    "prepare_scope_confirmation": [
+      ".lgwf/scope_confirmation_context.json"
+    ],
+    "audit_current_target": [
+      ".lgwf/current_target_audit.json"
+    ],
+    "summarize_upgrade_result": [
+      ".lgwf/result_summary.json",
+      "reports/wf-audit-fix/report.md"
+    ]
+  }
+}

@@ -70,12 +70,25 @@ REVIEW confirm_step_designs
     READ state.lgwf_wf_create.step_design_confirmation_context;
   };
 
+PY prepare_step_design_revision_confirmation
+  SCRIPT "scripts/prepare_step_design_revision_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_step_design_revision_confirmation_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/step_designs_proposal.json";
+    READ workspace file ".lgwf/step_design_confirmation_record.json";
+    WRITE state.lgwf_wf_create.step_design_confirmation_context;
+    WRITE state.lgwf_wf_create.step_design_revision_context;
+  };
+
 PY apply_confirmed_step_designs
   SCRIPT "scripts/apply_confirmed_step_designs.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_create.apply_step_designs_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/step_design_confirmation_record.json";
     WRITE workspace file ".lgwf/step_designs.json";
   };
 
@@ -96,8 +109,11 @@ FLOW {
 
   confirm_step_designs
     WHEN "approve" THEN apply_confirmed_step_designs
-    WHEN "revise" THEN confirm_step_designs
+    WHEN "revise" THEN prepare_step_design_revision_confirmation
     WHEN "reject" THEN FAIL_ALL;
+
+  prepare_step_design_revision_confirmation
+  THEN confirm_step_designs;
 
   apply_confirmed_step_designs THEN prepare_implementation_context;
 }

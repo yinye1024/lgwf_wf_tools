@@ -1,0 +1,36 @@
+WORKFLOW summarize_gate_result;
+ENTRY build_summary;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY build_summary
+  SCRIPT "scripts/build_summary.py"
+  TIMEOUT 120
+  RESULT state.wf_maintenance_gate.build_summary_result
+  UPDATES_STATE {
+    WRITE state.wf_maintenance_gate.maintenance_gate_summary;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/maintenance_gate_request.json";
+    READ workspace file ".lgwf/impact_classification.json";
+    READ workspace file ".lgwf/verification_results.json";
+    READ workspace file ".lgwf/failure_routes.json";
+    WRITE workspace file ".lgwf/maintenance_gate_summary.json";
+  };
+
+PY render_report
+  SCRIPT "scripts/render_report.py"
+  TIMEOUT 120
+  RESULT state.wf_maintenance_gate.render_report_result
+  CONTRACT {
+    READ workspace file ".lgwf/maintenance_gate_summary.json";
+    READ workspace file ".lgwf/verification_results.json";
+    WRITE workspace file "reports/wf-maintenance-gate/report.md";
+  };
+
+FLOW {
+  build_summary THEN render_report;
+}

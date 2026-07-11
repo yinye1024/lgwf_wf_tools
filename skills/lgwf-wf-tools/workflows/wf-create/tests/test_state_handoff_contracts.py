@@ -303,7 +303,7 @@ class StateHandoffContractTest(unittest.TestCase):
         self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff", workflow_text)
         self.assertIn("THEN prepare_post_fix_handoff\n  THEN handoff_wf_post_fix", workflow_text)
 
-    def test_scaffold_plan_lists_confirmation_context_scripts(self) -> None:
+    def test_scaffold_plan_lists_generic_skeleton_files(self) -> None:
         scaffold = load_module(
             ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
             "scaffold_files",
@@ -316,15 +316,20 @@ class StateHandoffContractTest(unittest.TestCase):
             }
         )
         for relative in (
-            "wf/01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
-            "wf/01_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
-            "wf/02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
-            "wf/02_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
-            "wf/03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
-            "wf/03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
-            "wf/shared/scripts/review_context.py",
+            "AGENTS.md",
+            "README.md",
+            "entry_contract.json",
+            "wf/artifact_contracts.json",
+            "wf/workflow.lgwf",
+            "wf/01_prepare/workflow.lgwf",
+            "wf/01_prepare/agents/prompt.md",
+            "wf/01_prepare/scripts/run.py",
+            "wf/01_prepare/resources/README.md",
+            "tests/test_workflow_structure.py",
         ):
             self.assertIn(relative, plan["create_files"])
+        self.assertIn("wf/shared/scripts", plan["create_dirs"])
+        self.assertNotIn("wf/01_confirm_requirements/scripts/prepare_requirements_confirmation.py", plan["create_files"])
 
     def test_prompt_docs_mention_confirmation_context_handoff(self) -> None:
         expectations = (

@@ -20,7 +20,9 @@
 ### 稳定输入
 
 - `.lgwf/step_designs.json` 是已确认步骤设计的权威输入；只消费已由 `confirm_step_designs` approve 后固化的 `.lgwf/step_designs.json` 或等价确认记录。
+- `.lgwf/scaffold_package_result.json` 中的 `scaffold_plan` 是目录、文件和阶段 manifest 的结构事实源；业务 `stage_id` 不等于实际目录名，实际落位必须使用 `stage_manifest.stage_dir` 或 `create_files` 中的 `wf/<stage_dir>/workflow.lgwf`。
 - `.lgwf/implementation_context.json` 是路径权威输入，包含 `workspace_root`、`target_package_root`、`target_package_abs`、`work_dir` 和路径使用规则。
+- `.lgwf/implementation_audit_result.json` 是 OB Python 脚本写出的原始确定性检测结果；下一轮 reason 必须优先读取它。
 - `.lgwf/implementation_observe.json` 是上一轮 observe 反馈；如果 `passed=false` 或 `audit.ok=false`，下一轮必须优先修复 audit 失败，不得扩展新范围。
 - `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/guide.md` 和 `.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md` 是 LGWF DSL 创建、审计和 workflow 拆分规范。
 - `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md` 和 `.lgwf/create_reference_context/scaffold/scaffold_package_template.json` 是 package profile、目录结构和文件计划的脚手架规范。
@@ -40,7 +42,7 @@
 - 禁止从 `work_dir` 使用 `..`、固定层级上跳或拼接 `plugins/...` 来猜测仓库根。
 - 如 `target_package_abs` 不存在，应直接创建该目录；不要先尝试 `work_dir/target_package_root`。
 - 必须先创建目标 package 内的 `wf/docs/steps/`，再复制当前 run 的已批准步骤设计文档；不得只在 `work_dir/docs/steps/` 保留文档。
-- `implementation_result.generated_files` 必须列出每个复制后的 `wf/docs/steps/*.md` 文件，便于 `validate_created_package` 做确定性验收。
+- `implementation_result.generated_files` 必须列出每个复制后的 `wf/docs/steps/*.md` 文件，便于 OB 的 `audit_created_package.py` 做确定性验收。
 - `workflow.lgwf` 只能生成在 `wf/workflow.lgwf` 或 `wf/<stage>/workflow.lgwf`，不得生成在目标 package 根目录。
 - 不得生成 `wf/<stage>/<substage>/workflow.lgwf`。
 - 根 `wf/workflow.lgwf` 只负责编排阶段；多个节点、人工确认、循环或修复逻辑必须下沉到 `wf/<stage>/workflow.lgwf`。
@@ -55,7 +57,7 @@
 
 - 不生成 `CODEX` / `PY` 节点中的裸 `INPUT state.*`，除非当前 DSL reference 明确允许该字段。
 - `observe` 以脚本 audit 结果为准，不重新定义通过标准，不得把脚本 audit 的失败结果改写为通过。
-- `decide` 只根据 `.lgwf/implementation_observe.json` 的 `passed` 决定继续或退出。
+- `decide` 优先根据 `.lgwf/implementation_audit_result.json` 的 `passed` 决定继续或退出，缺少该文件时才回退到 `.lgwf/implementation_observe.json`。
 
 ### 排除范围
 

@@ -54,21 +54,12 @@ STEP implement_steps_react
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
     READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
     READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_audit_result.json";
     WRITE workspace file ".lgwf/implementation_decision.json";
+    WRITE workspace file ".lgwf/implementation_observe.json";
     WRITE workspace file ".lgwf/implementation_result.json";
-  };
-
-STEP enrich_contracts_react
-  WORKFLOW "05_enrich_contracts_react/workflow.lgwf"
-  CONTRACT {
-    READ workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
-    READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/implementation_result.json";
-    WRITE workspace file ".lgwf/contract_audit_result.json";
-    WRITE workspace file ".lgwf/contract_decision.json";
-    WRITE workspace file ".lgwf/contract_enrichment_result.json";
-    WRITE workspace file ".lgwf/contract_observe.json";
   };
 
 STEP summarize_create_result
@@ -76,20 +67,10 @@ STEP summarize_create_result
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/implementation_audit_result.json";
+    READ workspace file ".lgwf/implementation_observe.json";
     READ workspace file ".lgwf/implementation_result.json";
     WRITE state.lgwf_wf_create.summary_result;
-  };
-
-PY validate_created_package
-  SCRIPT "scripts/validate_created_package.py"
-  TIMEOUT 180
-  RESULT state.lgwf_wf_create.created_package_validation
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/implementation_result.json";
-    READ workspace file ".lgwf/step_designs.json";
-    WRITE workspace file ".lgwf/created_package_validation.json";
   };
 
 PY prepare_post_fix_handoff
@@ -98,6 +79,8 @@ PY prepare_post_fix_handoff
   RESULT state.lgwf_wf_create.post_fix_handoff_payload
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/implementation_audit_result.json";
+    READ workspace file ".lgwf/implementation_observe.json";
     READ state.lgwf_wf_create.summary_result;
   };
 
@@ -112,8 +95,6 @@ FLOW define_requirements
   THEN design_structure
   THEN implement_draft
   THEN implement_steps_react
-  THEN enrich_contracts_react
-  THEN validate_created_package
   THEN summarize_create_result
   THEN prepare_post_fix_handoff
   THEN handoff_wf_post_fix;

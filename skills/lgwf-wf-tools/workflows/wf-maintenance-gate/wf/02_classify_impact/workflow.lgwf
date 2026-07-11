@@ -1,0 +1,22 @@
+WORKFLOW classify_impact;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY classify_impact
+  SCRIPT "scripts/classify_impact.py"
+  TIMEOUT 120
+  RESULT state.wf_maintenance_gate.classify_impact_result
+  UPDATES_STATE {
+    WRITE state.wf_maintenance_gate.impact_classification;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/change_context.json";
+    WRITE workspace file ".lgwf/impact_classification.json";
+  };
+
+FLOW main
+  START classify_impact;

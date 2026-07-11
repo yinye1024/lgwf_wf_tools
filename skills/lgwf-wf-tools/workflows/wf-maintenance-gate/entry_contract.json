@@ -1,0 +1,95 @@
+{
+  "id": "wf-maintenance-gate",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "skills/lgwf-wf-tools/workflows/wf-maintenance-gate/wf/workflow.lgwf",
+  "work_dir": "skills/lgwf-wf-tools/workflows/wf-maintenance-gate/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["maintenance_gate_request"],
+    "properties": {
+      "maintenance_gate_request": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "changed_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "target_workflows": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "intent": {
+            "type": "string"
+          },
+          "verification_level": {
+            "type": "string"
+          },
+          "allow_deep_doctor": {
+            "type": "boolean"
+          },
+          "allow_workflow_tests": {
+            "type": "boolean"
+          },
+          "allow_pre_release": {
+            "type": "boolean"
+          },
+          "allow_package_smoke": {
+            "type": "boolean"
+          },
+          "output_zip": {
+            "type": ["string", "null"]
+          }
+        }
+      }
+    },
+    "example": {
+      "maintenance_gate_request": {
+        "scope": "refresh workflow maintenance rules",
+        "changed_files": [
+          "skills/lgwf-wf-tools/workflows/wf-create/wf/workflow.lgwf"
+        ],
+        "target_workflows": ["wf-create"],
+        "intent": "maintenance",
+        "verification_level": "standard",
+        "allow_deep_doctor": false,
+        "allow_workflow_tests": true,
+        "allow_pre_release": false,
+        "allow_package_smoke": false,
+        "output_zip": null
+      }
+    }
+  },
+  "input_file_policy": "When the request contains Chinese, spaces or nested JSON, prefer UTF-8 no BOM --input-json-file.",
+  "auto_human_policy": "forbidden",
+  "target_scope": {
+    "fields": [
+      "maintenance_gate_request.scope",
+      "maintenance_gate_request.changed_files",
+      "maintenance_gate_request.target_workflows",
+      "maintenance_gate_request.output_zip"
+    ],
+    "write_scope": "Writes only to ws/.lgwf and ws/reports inside the wf-maintenance-gate package."
+  },
+  "state_boundary": {
+    "work_dir": "skills/lgwf-wf-tools/workflows/wf-maintenance-gate/ws",
+    "runtime_state": ".lgwf/",
+    "reports": "reports/"
+  },
+  "outputs": {
+    "summary": ".lgwf/maintenance_gate_summary.json",
+    "handoff": "",
+    "reports": [
+      "reports/wf-maintenance-gate/report.md"
+    ]
+  },
+  "resume_policy": "Reuse the same work_dir when a pending review or partial maintenance gate artifacts already exist."
+}

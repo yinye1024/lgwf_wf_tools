@@ -10,8 +10,12 @@ CONTEXT_SET implementation_shared_context {
   workspace dir ".lgwf/create_reference_context/dsl-assist";
   workspace dir ".lgwf/create_reference_context/scaffold";
   workspace dir ".lgwf/create_reference_context/workflow-modular-development";
+  workspace file ".lgwf/implementation_audit_result.json";
   workspace file ".lgwf/implementation_context.json";
+  workspace file ".lgwf/implementation_decision.json";
   workspace file ".lgwf/implementation_observe.json";
+  workspace file ".lgwf/scaffold_package_result.json";
+  workspace file ".lgwf/step_designs.json";
 }
 
 PY initialize_implementation_observe
@@ -20,6 +24,8 @@ PY initialize_implementation_observe
   RESULT state.lgwf_wf_create.initialize_implementation_observe_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/implementation_audit_result.json";
+    WRITE workspace file ".lgwf/implementation_decision.json";
     WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
@@ -41,28 +47,23 @@ REACT implement_steps_react MAX 3
       READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
       READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
       READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
+      READ workspace file ".lgwf/implementation_audit_result.json";
       READ workspace file ".lgwf/implementation_context.json";
+      READ workspace file ".lgwf/implementation_decision.json";
       READ workspace file ".lgwf/implementation_observe.json";
       READ workspace file ".lgwf/implementation_result.json";
+      READ workspace file ".lgwf/scaffold_package_result.json";
       READ workspace file ".lgwf/step_designs.json";
       WRITE workspace file ".lgwf/implementation_reason.md";
     }
-  ACT CODEX
-    PROMPT "agents/act.md"
-    CONTEXT workspace file ".lgwf/implementation_reason.md"
-    OUTPUT_JSON ".lgwf/implementation_result.json"
-    TIMEOUT 3600
+  ACT WORKFLOW implement_units
+    WORKFLOW "act_implement_units.lgwf"
     RESULT state.lgwf_wf_create.implementation_result
     CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
-      READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_observe.json";
       READ workspace file ".lgwf/implementation_reason.md";
+      READ workspace file ".lgwf/scaffold_package_result.json";
       READ workspace file ".lgwf/step_designs.json";
       WRITE workspace file ".lgwf/implementation_result.json";
     }
@@ -70,8 +71,12 @@ REACT implement_steps_react MAX 3
     WORKFLOW "observe_audit.lgwf"
     RESULT state.lgwf_wf_create.implementation_observe_result
     CONTRACT {
+      READ workspace file ".lgwf/implementation_audit_result.json";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_result.json";
+      READ workspace file ".lgwf/scaffold_package_result.json";
+      READ workspace file ".lgwf/step_designs.json";
+      WRITE workspace file ".lgwf/implementation_audit_result.json";
       WRITE workspace file ".lgwf/implementation_observe.json";
     }
   DECIDE PY
@@ -80,6 +85,7 @@ REACT implement_steps_react MAX 3
     RESULT state.lgwf_wf_create.implementation_decide_result
     UPDATES_STATE
     CONTRACT {
+      READ workspace file ".lgwf/implementation_audit_result.json";
       READ workspace file ".lgwf/implementation_observe.json";
       WRITE workspace file ".lgwf/implementation_decision.json";
     };

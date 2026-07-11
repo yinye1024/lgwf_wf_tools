@@ -25,7 +25,7 @@ MODULAR_DEVELOPMENT_REFERENCE_FILES = (
     ("docs/LGWF_WF_MODULAR_DEVELOPMENT.md", "LGWF_WF_MODULAR_DEVELOPMENT.md"),
 )
 MODULE_CONTRACT_REFERENCE_FILES = (
-    ("05_enrich_contracts_react/resources/module-contract.md", "module-contract.md"),
+    ("workflows/01-share/module-contract.md", "module-contract.md"),
 )
 
 
@@ -174,14 +174,14 @@ def prepare_modular_development_context(facade_root: Path, out_dir: Path) -> dic
     }
 
 
-def prepare_module_contract_context(workflow_root: Path, out_dir: Path) -> dict[str, Any]:
+def prepare_module_contract_context(facade_root: Path, out_dir: Path) -> dict[str, Any]:
     context_root = out_dir / MODULE_CONTRACT_CONTEXT_ROOT
     if context_root.exists():
         shutil.rmtree(context_root)
     copied: list[str] = []
     missing: list[str] = []
     for source_rel, dest_rel in MODULE_CONTRACT_REFERENCE_FILES:
-        source = workflow_root / source_rel
+        source = facade_root / source_rel
         dest = context_root / dest_rel
         if not source.is_file():
             missing.append(source_rel)
@@ -206,7 +206,7 @@ def main() -> None:
     result = prepare_reference_context(skill_dir, out_dir)
     scaffold_result = prepare_scaffold_context(workflow_root, out_dir)
     modular_development_result = prepare_modular_development_context(facade_root, out_dir)
-    module_contract_result = prepare_module_contract_context(workflow_root, out_dir)
+    module_contract_result = prepare_module_contract_context(facade_root, out_dir)
     result.update(scaffold_result)
     result.update(modular_development_result)
     result.update(module_contract_result)

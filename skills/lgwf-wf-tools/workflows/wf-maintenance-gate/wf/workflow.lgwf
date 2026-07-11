@@ -1,0 +1,68 @@
+WORKFLOW wf_maintenance_gate;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+STEP collect_change_context
+  WORKFLOW "01_collect_change_context/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/maintenance_gate_request.json";
+    WRITE workspace file ".lgwf/path_context.json";
+    WRITE workspace file ".lgwf/change_context.json";
+  };
+
+STEP classify_impact
+  WORKFLOW "02_classify_impact/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/change_context.json";
+    WRITE workspace file ".lgwf/impact_classification.json";
+  };
+
+STEP plan_verification
+  WORKFLOW "03_plan_verification/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/maintenance_gate_request.json";
+    READ workspace file ".lgwf/change_context.json";
+    READ workspace file ".lgwf/impact_classification.json";
+    WRITE workspace file ".lgwf/verification_plan_proposal.json";
+  };
+
+STEP confirm_verification_plan
+  WORKFLOW "04_confirm_verification_plan/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/change_context.json";
+    READ workspace file ".lgwf/impact_classification.json";
+    READ workspace file ".lgwf/verification_plan_proposal.json";
+    WRITE workspace file ".lgwf/verification_plan_approval.json";
+    WRITE workspace file ".lgwf/verification_plan.json";
+  };
+
+STEP run_verification
+  WORKFLOW "05_run_verification/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/verification_plan.json";
+    WRITE workspace file ".lgwf/verification_results.json";
+    WRITE workspace file ".lgwf/failure_routes.json";
+  };
+
+STEP summarize_gate_result
+  WORKFLOW "06_summarize_gate_result/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/maintenance_gate_request.json";
+    READ workspace file ".lgwf/impact_classification.json";
+    READ workspace file ".lgwf/verification_results.json";
+    READ workspace file ".lgwf/failure_routes.json";
+    WRITE workspace file ".lgwf/maintenance_gate_summary.json";
+    WRITE workspace file "reports/wf-maintenance-gate/report.md";
+  };
+
+FLOW main
+  START collect_change_context
+  THEN classify_impact
+  THEN plan_verification
+  THEN confirm_verification_plan
+  THEN run_verification
+  THEN summarize_gate_result;

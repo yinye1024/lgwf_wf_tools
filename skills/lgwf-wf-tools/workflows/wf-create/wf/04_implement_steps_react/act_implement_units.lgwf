@@ -1,0 +1,76 @@
+WORKFLOW implement_units_act;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "lgwf_wf_create.implementation_units.{node}";
+}
+
+PY prepare_implementation_units
+  SCRIPT "scripts/prepare_implementation_units.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.prepare_implementation_units_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.prepare_implementation_units_result;
+    WRITE state.lgwf_wf_create.implementation_units;
+    WRITE state.lgwf_wf_create.implementation_unit_results;
+    WRITE state.foreach.implement_each_unit.report;
+    WRITE state.foreach.implement_each_unit.status;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_observe.json";
+    READ workspace file ".lgwf/implementation_reason.md";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE state.lgwf_wf_create.prepare_implementation_units_result;
+    WRITE state.lgwf_wf_create.implementation_units;
+    WRITE state.lgwf_wf_create.implementation_unit_results;
+    WRITE state.foreach.implement_each_unit.report;
+    WRITE state.foreach.implement_each_unit.status;
+    WRITE workspace file ".lgwf/implementation_units.json";
+  };
+
+FOREACH implement_each_unit
+  ITEMS state.lgwf_wf_create.implementation_units
+  CURRENT state.lgwf_wf_create.current_implementation_unit
+  INDEX state.lgwf_wf_create.current_implementation_unit_index
+  OUTPUT state.lgwf_wf_create.current_implementation_unit_result
+  RESULTS state.lgwf_wf_create.implementation_unit_results.items
+  FAIL collect
+  CONTRACT {
+    READ state.lgwf_wf_create.implementation_units;
+    WRITE state.lgwf_wf_create.implementation_unit_results.items;
+  }
+  WORKFLOW "implement_one_unit.lgwf"
+  CONTRACT {
+    READ state.lgwf_wf_create.current_implementation_unit;
+    READ state.lgwf_wf_create.current_implementation_unit_index;
+    WRITE state.lgwf_wf_create.current_implementation_unit_result;
+    READ workspace file "implement_one_unit.lgwf";
+  };
+
+PY merge_implementation_results
+  SCRIPT "scripts/merge_implementation_results.py"
+  INPUT state.lgwf_wf_create.implementation_unit_results
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.merge_implementation_results_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.merge_implementation_results_result;
+    WRITE state.lgwf_wf_create.implementation_result;
+  }
+  CONTRACT {
+    READ state.lgwf_wf_create.implementation_unit_results;
+    READ state.lgwf_wf_create.implementation_unit_results.items;
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_units.json";
+    WRITE state.lgwf_wf_create.merge_implementation_results_result;
+    WRITE state.lgwf_wf_create.implementation_result;
+    WRITE workspace file ".lgwf/implementation_result.json";
+  };
+
+FLOW main
+  START prepare_implementation_units
+  THEN implement_each_unit
+  THEN merge_implementation_results;

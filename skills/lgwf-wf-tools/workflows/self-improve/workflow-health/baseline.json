@@ -165,6 +165,47 @@
       "known_blockers": []
     },
     {
+      "id": "wf-audit-fix",
+      "expected_role": "对已授权的 LGWF workflow 执行 authoring audit 静态修复，按 diagnostics 最小改动并复检汇总。",
+      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-audit-fix/wf/workflow.lgwf",
+      "test_command": "python -m unittest discover workflows/wf-audit-fix/tests",
+      "semantic_requirements": [
+        {
+          "id": "non_goal_boundary",
+          "description": "说明只做 audit 静态修复，不运行业务 workflow。",
+          "any_contains": [
+            "不运行业务 workflow",
+            "不得读取或修改未进入 manifest 的文件"
+          ]
+        },
+        {
+          "id": "approval_boundary",
+          "description": "说明目标范围必须人工确认。",
+          "any_contains": [
+            "02_confirm_scope",
+            "人工确认"
+          ]
+        },
+        {
+          "id": "output_contract",
+          "description": "说明固定输出或总结报告。",
+          "any_contains": [
+            ".lgwf/result_summary.json",
+            "reports/wf-audit-fix/report.md"
+          ]
+        },
+        {
+          "id": "facade_route_back",
+          "description": "说明由 facade registry 派发。",
+          "any_contains": [
+            "facade",
+            "registry"
+          ]
+        }
+      ],
+      "known_blockers": []
+    },
+    {
       "id": "e2e-test-generator",
       "expected_role": "为已有目标 workflow 生成脚本级、runtime fake 和真实 Codex 正向三类 E2E 测试，不修目标 workflow。",
       "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/e2e-test-generator/workflow.lgwf",
@@ -402,6 +443,47 @@
         {
           "id": "facade_route_back",
           "description": "说明由 facade/registry 派发。",
+          "any_contains": [
+            "facade",
+            "registry"
+          ]
+        }
+      ],
+      "known_blockers": []
+    },
+    {
+      "id": "skill-packaging",
+      "expected_role": "把带 wf/workflow.lgwf 的 Codex skill 打包为内置 lgwf-client-assist runtime 的自包含 skill。",
+      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/skill-packaging/wf/workflow.lgwf",
+      "test_command": "python -m unittest discover workflows/skill-packaging/tests",
+      "semantic_requirements": [
+        {
+          "id": "non_goal_boundary",
+          "description": "说明当前不负责的范围。",
+          "any_contains": [
+            "当前不负责",
+            "不负责"
+          ]
+        },
+        {
+          "id": "approval_boundary",
+          "description": "说明打包计划 approval 边界。",
+          "any_contains": [
+            "03_confirm_packaging_plan",
+            "只有 `approve` 后才能真实写入打包产物目录"
+          ]
+        },
+        {
+          "id": "output_contract",
+          "description": "说明固定输出和报告。",
+          "any_contains": [
+            ".lgwf/packaging_result_summary.json",
+            "reports/skill-packaging/packaging_result_report.md"
+          ]
+        },
+        {
+          "id": "facade_route_back",
+          "description": "说明由 facade registry 派发。",
           "any_contains": [
             "facade",
             "registry"

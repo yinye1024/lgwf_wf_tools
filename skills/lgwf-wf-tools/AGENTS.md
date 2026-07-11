@@ -61,7 +61,7 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告 | 选择 `wf-convert`。 |
 | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足 | 选择 `wf-prompt-fix`。 |
 | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量 | 选择 `wf-prompt-upgrade`。 |
-| 目标是 LGWF 升级后批量处理旧 workflow 的 DSL 兼容性、语法迁移、静态 audit 诊断和受控升级 | 选择 `wf-dsl-upgrade`。 |
+| 目标是修复 LGWF authoring audit 静态诊断，包括缺失 `CONTRACT`、读写消费链、DSL 语法或编译问题 | 选择 `wf-audit-fix`。 |
 | 目标是生成或刷新 workflow 的端到端测试 | 选择 `e2e-test-generator`。 |
 | 目标是对给定 workflow 做全面校验、升级、优化、生成并运行 E2E 门禁 | 选择 `wf-post-fix`。 |
 | 目标是复杂任务规划、先产出计划/验收契约、用户确认后再执行 | 选择 `plan`。 |
@@ -101,5 +101,5 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 - 不要把内部 workflow 注册为独立 Codex skill。
 - 不要绕过 `workflows/01-share/approval.md` 的人工确认展示模板。
 - 不要在 registry 中保留不存在的 workflow entry。
-- 不要再把静态 audit 修复请求路由到本 facade；这类请求应使用独立 `wf-audit-fix` skill。
+- 静态 audit 修复请求应路由到 registry 内部 `wf-audit-fix`，不要手工直接改目标 DSL。
 - 不要修改 `vendor/` 下的任何文件；该目录是初始化或发布流程覆盖的内置 `lgwf-client-assist` 依赖，只能在用户明确要求刷新 vendor 或执行正式发布同步时变更。
