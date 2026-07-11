@@ -25,10 +25,12 @@
 
 ```powershell
 python workflows\plan\scripts\cleanup_lgwf_plan_runtime.py --package-root workflows\plan\ws
-python vendor\lgwf-client-assist\scripts\lgwf.py run --workflow-lgwf workflows\plan\wf\workflow.lgwf --work-dir workflows\plan\ws --input-json "{}"
+python scripts\run_skill_workflow.py --workflow-id plan --input-json-file D:\tmp\lgwf-plan-input.json --background
 ```
 
 `wf/` 是 workflow package root，`ws/` 是固定 work-dir。两者保持同级，避免运行产物被 `lgwf-client-assist` 复制进 workflow snapshot。
+
+入口 JSON 必须包含 `react_task_request`，并至少声明 `objective`、`request`、`target_type`，以及 `analysis_target_files` 或 `analysis_target_dirs` 之一；完整字段以 `entry_contract.json` 为准。
 
 ## 核心产物
 

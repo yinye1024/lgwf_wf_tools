@@ -41,6 +41,7 @@ facade 应尽量提供结构化 `react_task_request`。最小形态：
 {
   "react_task_request": {
     "objective": "要完成的复杂任务目标",
+    "request": "用户原始请求、执行范围和交付口径",
     "target_type": "modify_artifact",
     "analysis_target_files": ["D:/example/path/to/file.md"],
     "constraints": ["先生成计划和验收契约，用户确认后再修改目标文件"]
@@ -48,7 +49,7 @@ facade 应尽量提供结构化 `react_task_request`。最小形态：
 }
 ```
 
-`target_type` 必须是 `create_artifact`、`modify_artifact`、`execute_process`、`analyze`、`fix` 或 `review` 之一。用户没有给出足够信息时，facade 先主动确认目标、范围、可修改文件、验收口径和是否允许真实执行。
+`objective`、`request`、`target_type` 必填；`target_type` 必须是 `create_artifact`、`modify_artifact`、`execute_process`、`analyze`、`fix` 或 `review` 之一。`analysis_target_files` 和 `analysis_target_dirs` 至少提供一个，目录目标写入 `analysis_target_dirs`。用户没有给出足够信息时，facade 先主动确认目标、范围、可修改文件、验收口径和是否允许真实执行。
 
 ## Approval 边界
 

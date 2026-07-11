@@ -1,0 +1,72 @@
+WORKFLOW confirm_verification_plan;
+ENTRY prepare_verification_plan_confirmation;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_verification_plan_confirmation
+  SCRIPT "scripts/prepare_verification_plan_confirmation.py"
+  TIMEOUT 60
+  RESULT state.wf_maintenance_gate.prepare_verification_plan_confirmation_result
+  UPDATES_STATE {
+    WRITE state.wf_maintenance_gate.verification_plan_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/change_context.json";
+    READ workspace file ".lgwf/impact_classification.json";
+    READ workspace file ".lgwf/verification_plan_proposal.json";
+    WRITE workspace file ".lgwf/verification_plan_confirmation_context.json";
+  };
+
+REVIEW confirm_verification_plan
+  PROMPT_REF "agents/confirm_verification_plan.md"
+  CONTEXT state.wf_maintenance_gate.verification_plan_confirmation_context
+  RESULT state.wf_maintenance_gate.verification_plan_decision_result
+  PERSIST ".lgwf/verification_plan_approval.json"
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    READ state.wf_maintenance_gate.verification_plan_confirmation_context;
+    READ workspace file ".lgwf/verification_plan_confirmation_context.json";
+    WRITE workspace file ".lgwf/verification_plan_approval.json";
+  };
+
+PY prepare_verification_plan_revision_confirmation
+  SCRIPT "scripts/prepare_verification_plan_revision_confirmation.py"
+  TIMEOUT 60
+  RESULT state.wf_maintenance_gate.prepare_verification_plan_revision_confirmation_result
+  UPDATES_STATE {
+    WRITE state.wf_maintenance_gate.verification_plan_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/verification_plan_approval.json";
+    READ workspace file ".lgwf/verification_plan_confirmation_context.json";
+    READ workspace file ".lgwf/verification_plan_proposal.json";
+    WRITE workspace file ".lgwf/verification_plan_confirmation_context.json";
+    WRITE workspace file ".lgwf/verification_plan_proposal.json";
+  };
+
+PY apply_confirmed_verification_plan
+  SCRIPT "scripts/apply_confirmed_verification_plan.py"
+  TIMEOUT 60
+  RESULT state.wf_maintenance_gate.apply_confirmed_verification_plan_result
+  UPDATES_STATE {
+    WRITE state.wf_maintenance_gate.confirmed_verification_plan;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/verification_plan_approval.json";
+    READ workspace file ".lgwf/verification_plan_proposal.json";
+    WRITE workspace file ".lgwf/verification_plan.json";
+  };
+
+FLOW {
+  prepare_verification_plan_confirmation THEN confirm_verification_plan;
+
+  confirm_verification_plan
+    WHEN "approve" THEN apply_confirmed_verification_plan
+    WHEN "revise" THEN prepare_verification_plan_revision_confirmation
+    WHEN "reject" THEN FAIL_ALL;
+
+  prepare_verification_plan_revision_confirmation THEN confirm_verification_plan;
+}

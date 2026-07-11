@@ -16,7 +16,10 @@
           "target_workflow_lgwf": {"type": "string"},
           "target_package_root": {"type": "string"},
           "target_dirs": {"type": "array"},
-          "run_acceptance": {"type": "boolean"}
+          "mode": {
+            "type": "string",
+            "enum": ["manual", "auto"]
+          }
         }
       },
       "request": {"type": "object"}
@@ -26,14 +29,14 @@
         "target_workflow_lgwf": "D:/example/workflow.lgwf",
         "target_package_root": "D:/example",
         "target_dirs": ["D:/example"],
-        "run_acceptance": false
+        "mode": "manual"
       }
     }
   },
   "input_file_policy": "Use UTF-8 no BOM --input-json-file for post_fix_target.",
   "auto_human_policy": "conditional",
   "target_scope": {
-    "fields": ["post_fix_target.target_workflow_lgwf", "post_fix_target.target_dirs"],
+    "fields": ["post_fix_target.target_workflow_lgwf", "post_fix_target.target_dirs", "post_fix_target.mode"],
     "write_scope": "Only target directories confirmed by post_fix_target and downstream contracts."
   },
   "state_boundary": {
