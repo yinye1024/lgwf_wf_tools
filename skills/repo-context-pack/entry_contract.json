@@ -1,0 +1,93 @@
+{
+  "id": "repo-context-pack",
+  "kind": "lgwf_embedded_skill",
+  "version": 1,
+  "workflow_lgwf": "wf/workflow.lgwf",
+  "work_dir": "ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "target_dir"
+    ],
+    "properties": {
+      "target_dir": {
+        "type": "string",
+        "description": "要分析的仓库或模块目录；默认只读。"
+      },
+      "output_dir": {
+        "type": "string",
+        "description": "上下文包输出目录；未指定时使用 target_dir/.local/context-packs/<目录名>。"
+      },
+      "focus": {
+        "type": "string",
+        "enum": [
+          "onboarding",
+          "modification",
+          "review",
+          "workflow-authoring",
+          "handoff"
+        ],
+        "default": "onboarding"
+      },
+      "depth": {
+        "type": "string",
+        "enum": [
+          "light",
+          "normal",
+          "deep"
+        ],
+        "default": "normal"
+      },
+      "max_files": {
+        "type": "integer",
+        "minimum": 1,
+        "default": 1600
+      },
+      "notes": {
+        "type": "string"
+      }
+    },
+    "example": {
+      "target_dir": "D:/repo/example",
+      "output_dir": "D:/repo/example/.local/context-packs/example",
+      "focus": "workflow-authoring",
+      "depth": "normal",
+      "max_files": 1600
+    }
+  },
+  "input_file_policy": "包含中文、空格或嵌套 JSON 时使用 UTF-8 no BOM --input-json-file。",
+  "auto_human_policy": "not_required",
+  "target_scope": {
+    "fields": [
+      "target_dir",
+      "output_dir",
+      "focus",
+      "depth",
+      "max_files"
+    ],
+    "read_scope": "target_dir",
+    "write_scope": "output_dir"
+  },
+  "state_boundary": {
+    "work_dir": "ws",
+    "runtime_state": ".lgwf/",
+    "target_dir_access": "read_only",
+    "target_writes": "none",
+    "output_writes": [
+      "repo_context_pack.md",
+      "agent_handoff.md",
+      "module_map.json",
+      "command_inventory.json",
+      "risk_register.md",
+      "read_order.md",
+      "summary.json"
+    ]
+  },
+  "outputs": {
+    "summary": ".lgwf/repo_context_pack_summary.json",
+    "report": "reports/repo-context-pack/report.md",
+    "context_pack": "request.output_dir"
+  },
+  "resume_policy": "同一请求可复用 ws/.lgwf；重新运行会覆盖 output_dir 中同名上下文包产物。"
+}

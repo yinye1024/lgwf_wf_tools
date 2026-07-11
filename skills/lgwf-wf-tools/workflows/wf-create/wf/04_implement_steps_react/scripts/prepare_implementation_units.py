@@ -70,6 +70,14 @@ def target_dir(target_abs: Path, relative: str) -> str:
     return str((target_abs / normalize_package_path(relative)).resolve())
 
 
+def package_contract_files(implementation_context: dict[str, Any], target_abs: Path) -> list[str]:
+    files = ["AGENTS.md", "README.md", "entry_contract.json", "wf/artifact_contracts.json", "ws/README.md"]
+    package_profile = str(implementation_context.get("package_profile", "")).strip()
+    if package_profile == "skill_wrapped_workflow" or (target_abs / "SKILL.md").is_file():
+        files.insert(0, "SKILL.md")
+    return files
+
+
 def source_stage_ids(step_designs: dict[str, Any]) -> list[str]:
     confirmed = confirmed_payload(step_designs)
     result: list[str] = []
@@ -161,9 +169,9 @@ def all_units(
         unit_payload(
             unit_id="package_contracts",
             unit_type="package",
-            objective="生成或修复目标 package 入口文档、入口契约和 artifact contract。",
+            objective="生成或修复目标 package 入口文档、入口契约、Codex skill 入口和 artifact contract。",
             target_abs=target_abs,
-            package_relative_files=["AGENTS.md", "README.md", "entry_contract.json", "wf/artifact_contracts.json"],
+            package_relative_files=package_contract_files(implementation_context, target_abs),
             package_relative_dirs=[".", "wf"],
             implementation_context=implementation_context,
             implementation_reason=implementation_reason,
@@ -221,6 +229,7 @@ def all_units(
             package_relative_files=[
                 "tests/README.md",
                 "tests/test_workflow_structure.py",
+                "wf/shared/scripts/repo_context_runtime.py",
                 "wf/shared/scripts/README.md",
             ],
             package_relative_dirs=["tests", "wf/shared", "wf/shared/scripts"],

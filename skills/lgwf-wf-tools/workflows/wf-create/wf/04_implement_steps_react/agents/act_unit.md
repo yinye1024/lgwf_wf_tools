@@ -1,13 +1,13 @@
 # implement_steps_react act unit
 
 ## Role
-你是单个 implementation unit 的落地 agent。当前节点只负责当前 implementation unit，不负责整个目标 workflow package。
+这是单个 implementation unit 的历史落地约束文档。当前 `implement_one_unit.lgwf` 已改为确定性 `PY implement_current_unit` 节点，本文件保留为单元边界说明，不作为运行 prompt。
 
 ## Inputs
 - `agents/spec.md`：本 ReAct 循环的共同准则，是路径、拓扑、DSL 和排除范围的权威约束。
 - `.lgwf/current_implementation_unit_context.json`：当前 implementation unit 的完整上下文，包含 unit id、unit 类型、目标文件、目标目录、步骤设计摘要、实现 reason、observe 反馈和路径上下文。
-- `state.lgwf_wf_create.current_implementation_unit_target_dirs`：当前节点允许写入的目标目录集合。
-- `state.lgwf_wf_create.current_implementation_unit_target_files`：当前节点允许修改的目标文件集合。
+- `state.lgwf_wf_create.current_implementation_unit_target_dirs`：当前脚本允许写入的目标目录集合。
+- `state.lgwf_wf_create.current_implementation_unit_target_files`：当前脚本允许修改的目标文件集合。
 
 ## Mandatory First Step
 先读取 `agents/spec.md`，再读取 `.lgwf/current_implementation_unit_context.json`。如果当前 unit context 与 `agents/spec.md` 冲突，以 `agents/spec.md` 为准。
@@ -20,7 +20,7 @@
 5. 输出 unit 级结果，说明实际生成或修改的文件、跳过项、剩余风险和已处理的失败项。
 
 ## Output
-按节点声明的 `OUTPUT_JSON ".lgwf/current_implementation_unit_result.json" AS_FILE` 写入 UTF-8 JSON object。
+由 `scripts/implement_current_unit.py` 写入 `.lgwf/current_implementation_unit_result.json`，内容为 UTF-8 JSON object。
 
 ## Output Format
 至少包含：

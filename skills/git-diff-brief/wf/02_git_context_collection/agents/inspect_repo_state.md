@@ -26,4 +26,4 @@
 
 - 不重新执行 Git 命令。
 - 只审计事实完整性，不生成最终 Markdown 摘要。
-- 只读取 compact 上下文；完整 diff 只作为 `.lgwf/git_context_snapshot.json` 追溯产物存在，不应进入本节点上下文。
+- 只读取 compact 上下文；完整 diff 只作为追溯产物存在，不应进入本节点上下文。

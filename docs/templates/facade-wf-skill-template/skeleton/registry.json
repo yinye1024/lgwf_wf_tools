@@ -1,0 +1,21 @@
+{
+  "workflows": [
+    {
+      "id": "example-workflow",
+      "kind": "lgwf",
+      "description": "示例 LGWF runtime workflow，用于展示 registry、entry_contract 和固定 work_dir。",
+      "workflow_lgwf": "workflows/example-workflow/wf/workflow.lgwf",
+      "work_dir": "workflows/example-workflow/ws",
+      "agents_md": "workflows/example-workflow/AGENTS.md",
+      "entry_contract": "workflows/example-workflow/entry_contract.json"
+    },
+    {
+      "id": "example-tool-workflow",
+      "kind": "tool-workflow",
+      "description": "示例脚本型内部 workflow，用于展示不走 LGWF runtime 的 registry 条目。",
+      "entry": "workflows/example-tool-workflow/scripts/example_tool.py",
+      "agents_md": "workflows/example-tool-workflow/AGENTS.md",
+      "entry_contract": "workflows/example-tool-workflow/entry_contract.json"
+    }
+  ]
+}

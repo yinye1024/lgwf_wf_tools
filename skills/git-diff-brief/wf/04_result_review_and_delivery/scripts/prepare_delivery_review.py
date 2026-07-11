@@ -283,11 +283,20 @@ def main() -> None:
     runtime_input = load_runtime_input()
     delivery_input = build_delivery_review_input(review, summary, markdown, runtime_input)
     auto_decision = build_auto_delivery_decision(runtime_input, delivery_input)
-    if isinstance(auto_decision.get("decision"), dict):
-        Path(".lgwf/delivery_decision.json").write_text(
-            json.dumps(auto_decision["decision"], ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+    decision = auto_decision.get("decision")
+    if not isinstance(decision, dict):
+        decision = {
+            "decision": "pending_review",
+            "commit_action": "none",
+            "stage_scope": "target_scope",
+            "commit_message": str(delivery_input.get("commit_message_suggestion", "")).strip(),
+            "comment": "等待人工确认；此占位决策应由 REVIEW 节点覆盖。",
+            "changes": [],
+        }
+    Path(".lgwf/delivery_decision.json").write_text(
+        json.dumps(decision, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     payload = {
         "git_diff_brief.delivery_review_input": delivery_input,
         "__route__route_delivery_review": auto_decision["route"],
@@ -296,6 +305,7 @@ def main() -> None:
             "source_file": ".lgwf/delivery_review_context.json",
             "route": auto_decision["route"],
             "auto_decision_file": ".lgwf/delivery_decision.json" if auto_decision.get("decision") else "",
+            "decision_file": ".lgwf/delivery_decision.json",
         },
     }
     print(json.dumps(payload, ensure_ascii=False))

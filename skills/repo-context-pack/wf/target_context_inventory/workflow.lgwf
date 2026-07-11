@@ -1,0 +1,20 @@
+    WORKFLOW target_context_inventory;
+    ENTRY collect_target_context;
+
+    DEFAULTS {
+      ref_root workflow ".";
+      timeout_seconds 180;
+      result_path "repo_context_pack.target_context_inventory.{node}";
+    }
+
+    PY collect_target_context
+      SCRIPT "scripts/run.py"
+      TIMEOUT 120
+      RESULT state.repo_context_pack.context_inventory
+      UPDATES_STATE
+      CONTRACT {
+        READ workspace file ".lgwf/repo_context_pack_request.json";
+WRITE workspace file ".lgwf/context_inventory.json";
+      };
+
+    FLOW collect_target_context;

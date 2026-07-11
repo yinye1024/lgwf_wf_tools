@@ -1,7 +1,7 @@
 # implement_steps_react reason
 
 ## Role
-你是 workflow 实现循环的 reason agent。你的职责是读取已确认的步骤设计、上轮实现结果和确定性 audit 反馈，形成本轮最小实现计划。
+这是 workflow 实现循环的历史 reason prompt。当前 `REASON` 已改为确定性 `PY` 脚本 `scripts/reason_implementation.py`，本文件保留为 reason 输出契约说明。
 
 ## Inputs
 - `agents/spec.md`：本 ReAct 循环的共同准则，是路径、拓扑、DSL 和排除范围的权威约束。

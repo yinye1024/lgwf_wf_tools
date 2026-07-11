@@ -1,0 +1,43 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/request_scope_capture.json"
+  ],
+  "final_outputs": [
+    ".lgwf/request_scope_capture.json",
+    ".lgwf/request_scope_confirmation.json",
+    ".lgwf/git_context_snapshot.json",
+    ".lgwf/git_context_compact.json",
+    ".lgwf/git_context_review.json",
+    ".lgwf/change_summary_context.json",
+    ".lgwf/change_brief_markdown.json",
+    ".lgwf/delivery_review_context.json",
+    ".lgwf/delivery_decision.json",
+    ".lgwf/commit_plan.json",
+    ".lgwf/commit_action_result.json",
+    ".lgwf/token_usage_by_node.json"
+  ],
+  "script_writes": {
+    "capture_request_context": [
+      ".lgwf/request_scope_capture.json"
+    ],
+    "collect_git_context": [
+      ".lgwf/git_context_snapshot.json",
+      ".lgwf/git_context_compact.json"
+    ],
+    "present_brief": [
+      ".lgwf/delivery_review_context.json"
+    ],
+    "route_delivery_review": [
+      ".lgwf/delivery_decision.json"
+    ],
+    "finalize_output": [
+      ".lgwf/commit_plan.json"
+    ],
+    "execute_commit_action": [
+      ".lgwf/commit_action_result.json"
+    ],
+    "write_token_usage_by_node": [
+      ".lgwf/token_usage_by_node.json"
+    ]
+  }
+}

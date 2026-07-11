@@ -10,12 +10,24 @@ PY execute_commit_action
   SCRIPT "scripts/execute_commit_action.py"
   TIMEOUT 60
   RESULT state.git_diff_brief.execute_commit_action_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/commit_plan.json";
+    WRITE state.git_diff_brief.commit_action_result;
+    WRITE state.git_diff_brief.execute_commit_action_result;
+    WRITE workspace file ".lgwf/commit_action_result.json";
+  };
 
 PY write_token_usage_by_node
   SCRIPT "scripts/write_token_usage_by_node.py"
   TIMEOUT 60
   RESULT state.git_diff_brief.token_usage_by_node_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace dir ".lgwf/codex";
+    WRITE state.git_diff_brief.token_usage_by_node;
+    WRITE state.git_diff_brief.token_usage_by_node_result;
+    WRITE workspace file ".lgwf/token_usage_by_node.json";
+  };
 
 FLOW execute_commit_action THEN write_token_usage_by_node;

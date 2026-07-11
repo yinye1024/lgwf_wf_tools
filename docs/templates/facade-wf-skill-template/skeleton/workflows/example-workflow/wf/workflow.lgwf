@@ -1,0 +1,19 @@
+WORKFLOW example_workflow;
+ENTRY finish;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 60;
+  result_path "example_workflow.results.{node}";
+}
+
+PY finish
+  SCRIPT "scripts/finish.py"
+  RESULT state.example_workflow.summary
+  UPDATES_STATE
+  CONTRACT {
+    WRITE workspace file ".lgwf/example_summary.json";
+    WRITE state.example_workflow.summary;
+  };
+
+FLOW finish;

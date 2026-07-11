@@ -10,13 +10,32 @@ PY collect_git_context
   SCRIPT "scripts/collect_git_context.py"
   TIMEOUT 120
   RESULT state.git_diff_brief.git_context_collection_result
-  UPDATES_STATE;
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/request_scope_capture.json";
+    READ workspace file ".lgwf/request_scope_confirmation.json";
+    WRITE state.git_diff_brief.git_context_snapshot;
+    WRITE state.git_diff_brief.git_context_compact;
+    WRITE state.git_diff_brief.git_diff_snapshot;
+    WRITE state.git_diff_brief.latest_commit_context;
+    WRITE state.git_diff_brief.changed_files_index;
+    WRITE state.git_diff_brief.git_collection_log;
+    WRITE state.git_diff_brief.git_context_collection_result;
+    WRITE workspace file ".lgwf/git_context_snapshot.json";
+    WRITE workspace file ".lgwf/git_context_compact.json";
+  };
 
 CODEX inspect_repo_state
   PROMPT "agents/inspect_repo_state.md"
   CONTEXT workflow file "resources/git_context_contract.md"
   CONTEXT workspace file ".lgwf/git_context_compact.json"
   OUTPUT_JSON ".lgwf/git_context_review.json"
-  RESULT state.git_diff_brief.git_context_review_result;
+  RESULT state.git_diff_brief.git_context_review_result
+  CONTRACT {
+    READ workspace file ".lgwf/git_context_compact.json";
+    READ workspace file "resources/git_context_contract.md";
+    WRITE state.git_diff_brief.git_context_review_result;
+    WRITE workspace file ".lgwf/git_context_review.json";
+  };
 
 FLOW collect_git_context THEN inspect_repo_state;

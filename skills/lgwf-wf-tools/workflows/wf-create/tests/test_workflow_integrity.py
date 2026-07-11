@@ -227,13 +227,18 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
     def test_step_design_and_implementation_use_dsl_assist_context(self) -> None:
         parent_workflow = (ROOT / "03_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("PY prepare_dsl_reference_context", parent_workflow)
+        self.assertIn("PY design_steps_react", parent_workflow)
+        self.assertIn('SCRIPT "scripts/design_steps_react.py"', parent_workflow)
         self.assertIn("prepare_dsl_reference_context THEN design_steps_react", parent_workflow)
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
+        design_writes = contracts["script_writes"]["design_steps_react"]
 
         text = (ROOT / "03_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"', text)
-        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context/workflow-modular-development"', text)
+        self.assertIn('READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md"', text)
+        self.assertIn('READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md"', text)
+        self.assertIn(".lgwf/step_designs_proposal.json", design_writes)
+        self.assertIn("docs/steps", design_writes)
         for _ in (0,):
             for reference in (
                 ".lgwf/create_reference_context/dsl-assist/guide.md",
@@ -243,6 +248,226 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 ".lgwf/create_reference_context/module-contract/module-contract.md",
             ):
                 self.assertIn(reference, script_writes)
+
+    def test_deterministic_step_design_script_writes_proposal_and_docs(self) -> None:
+        module = load_module(
+            ROOT / "03_confirm_step_designs/scripts/design_steps_react.py",
+            "design_steps_react_script",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            lgwf_dir.mkdir()
+            (lgwf_dir / "business_flow.json").write_text(
+                json.dumps(
+                    {
+                        "confirmed": {
+                            "workflow_name": "demo",
+                            "target_package_root": "skills/demo",
+                            "stages": [
+                                {
+                                    "stage_id": "collect_context",
+                                    "stage_name": "收集上下文",
+                                    "key_nodes": ["collect_target_context"],
+                                    "outputs": ["上下文采集结果"],
+                                }
+                            ],
+                            "downstream_step_inputs": [
+                                {
+                                    "step_slug": "collect-target-context",
+                                    "consumes": [".lgwf/business_flow.json"],
+                                    "expected_artifacts": ["module_map.json"],
+                                }
+                            ],
+                        }
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (lgwf_dir / "scaffold_package_result.json").write_text(
+                json.dumps(
+                    {
+                        "lgwf_wf_create.scaffold_package_result": {
+                            "scaffold_plan": {
+                                "workflow_name": "demo",
+                                "target_package_root": "skills/demo",
+                                "package_profile": "skill_wrapped_workflow",
+                                "create_dirs": ["wf"],
+                                "create_files": ["wf/workflow.lgwf"],
+                            }
+                        }
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = module.build_step_designs(root)
+            proposal_path = lgwf_dir / "step_designs_proposal.json"
+            doc_path = root / "docs" / "steps" / "collect-target-context.md"
+            self.assertEqual(result["step_count"], 1)
+            self.assertTrue(proposal_path.is_file())
+            self.assertTrue(doc_path.is_file())
+            proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+            self.assertEqual(proposal["generation_mode"], "deterministic_python")
+            self.assertEqual(proposal["step_designs"][0]["stage_id"], "collect_context")
+
+    def test_skill_wrapped_target_keeps_skill_entry_in_implementation_units(self) -> None:
+        context_module = load_module(
+            ROOT / "03_confirm_step_designs/scripts/prepare_implementation_context.py",
+            "prepare_implementation_context_skill_profile",
+        )
+        units_module = load_module(
+            ROOT / "04_implement_steps_react/scripts/prepare_implementation_units.py",
+            "prepare_implementation_units_skill_profile",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            workspace = Path(temp) / "workspace"
+            work_dir = workspace / "workflows" / "wf-create" / "ws"
+            target = workspace / "skills" / "demo"
+            lgwf_dir = work_dir / ".lgwf"
+            target.mkdir(parents=True)
+            work_dir.mkdir(parents=True)
+            lgwf_dir.mkdir()
+            (target / "SKILL.md").write_text("# demo\n", encoding="utf-8")
+            (lgwf_dir / "create_requirements.json").write_text(
+                json.dumps(
+                    {
+                        "confirmed": {
+                            "workflow_name": "demo",
+                            "target_package_root": "skills/demo",
+                            "package_profile": "internal_workflow_package",
+                        }
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            context = context_module.build_implementation_context(work_dir)
+            self.assertEqual(context["package_profile"], "skill_wrapped_workflow")
+            package_files = units_module.package_contract_files(context, target)
+            self.assertIn("SKILL.md", package_files)
+
+    def test_deterministic_implementation_unit_script_writes_result_file(self) -> None:
+        module = load_module(
+            ROOT / "04_implement_steps_react/scripts/implement_current_unit.py",
+            "implement_current_unit_script",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp) / "work"
+            target = Path(temp) / "skills" / "repo-context-pack"
+            lgwf_dir = work_dir / ".lgwf"
+            lgwf_dir.mkdir(parents=True)
+            (lgwf_dir / "current_implementation_unit_context.json").write_text(
+                json.dumps(
+                    {
+                        "current_implementation_unit": {
+                            "unit_id": "shared_helpers_tests",
+                            "unit_type": "support",
+                            "target_package_abs": str(target),
+                            "target_package_root": "skills/repo-context-pack",
+                            "package_relative_files": [
+                                "tests/README.md",
+                                "tests/test_workflow_structure.py",
+                                "wf/shared/scripts/repo_context_runtime.py",
+                                "wf/shared/scripts/README.md",
+                            ],
+                            "repair_focus": [],
+                        }
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = module.implement_current_unit(work_dir)
+            result_path = lgwf_dir / "current_implementation_unit_result.json"
+            self.assertEqual(result["status"], "ok")
+            self.assertTrue(result_path.is_file())
+            self.assertTrue((target / "wf" / "shared" / "scripts" / "repo_context_runtime.py").is_file())
+            self.assertIn(
+                {"path": "wf/shared/scripts/repo_context_runtime.py"},
+                result["generated_files"],
+            )
+
+    def test_deterministic_observe_script_expands_audit_diagnostics(self) -> None:
+        module = load_module(
+            ROOT / "04_implement_steps_react/scripts/observe_implementation.py",
+            "observe_implementation_script",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            lgwf_dir.mkdir()
+            audit_stdout = {
+                "diagnostics": [
+                    {
+                        "code": "LGWF_CONTRACT_WRITE_UNCONSUMED",
+                        "message": "workflow_summary_handoff writes reports/repo-context-pack/report.md",
+                        "suggestion": "list it in artifact_contracts.json final_outputs",
+                    }
+                ]
+            }
+            (lgwf_dir / "implementation_audit_result.json").write_text(
+                json.dumps(
+                    {
+                        "passed": False,
+                        "audit": {"ok": False, "stdout": json.dumps(audit_stdout)},
+                        "failures": ["lgwf.py audit 未通过"],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            observe = module.build_observe(work_dir)
+            self.assertFalse(observe["passed"])
+            self.assertTrue((lgwf_dir / "implementation_observe.json").is_file())
+            self.assertTrue(any("artifact_contracts.json" in item for item in observe["failures"]))
+            self.assertEqual(observe["next_action_hint"], observe["failures"])
+
+    def test_deterministic_reason_script_targets_contract_repair(self) -> None:
+        module = load_module(
+            ROOT / "04_implement_steps_react/scripts/reason_implementation.py",
+            "reason_implementation_script",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            lgwf_dir.mkdir()
+            (lgwf_dir / "implementation_context.json").write_text(
+                json.dumps(
+                    {
+                        "target_package_root": "skills/repo-context-pack",
+                        "target_package_abs": str(work_dir / "skills" / "repo-context-pack"),
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            (lgwf_dir / "step_designs.json").write_text(
+                json.dumps({"confirmed": {"source_business_flow_stages": []}}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (lgwf_dir / "implementation_observe.json").write_text(
+                json.dumps(
+                    {
+                        "passed": False,
+                        "failures": [
+                            "list it in artifact_contracts.json final_outputs",
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = module.build_reason(work_dir)
+            self.assertEqual(result["repair_files"], ["wf/artifact_contracts.json"])
+            reason = (lgwf_dir / "implementation_reason.md").read_text(encoding="utf-8")
+            self.assertIn("wf/artifact_contracts.json", reason)
 
     def test_docs_no_longer_describe_confirmed_artifacts_as_future_only(self) -> None:
         stale_patterns = (
@@ -310,11 +535,19 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertIn('SPEC "agents/spec.md"', workflow)
         self.assertIn('workspace file ".lgwf/create_reference_context/module-contract/module-contract.md"', workflow)
         self.assertIn('WORKFLOW "observe_audit.lgwf"', workflow)
-        self.assertIn('OUTPUT_JSON ".lgwf/contract_enrichment_result.json"', workflow)
+        self.assertIn('REASON PY', workflow)
+        self.assertIn('SCRIPT "scripts/reason_contract_enrichment.py"', workflow)
+        self.assertIn('ACT WORKFLOW contract_enrichment', workflow)
+        self.assertIn('WORKFLOW "act_contract_enrichment.lgwf"', workflow)
+        self.assertNotIn("REASON CODEX", workflow)
+        self.assertNotIn("ACT CODEX", workflow)
         self.assertIn('WRITE workspace file ".lgwf/contract_reason.md"', workflow)
         self.assertIn('WRITE workspace file ".lgwf/contract_enrichment_result.json"', workflow)
         self.assertIn('WRITE workspace file ".lgwf/contract_observe.json"', workflow)
         self.assertIn('SCRIPT "scripts/audit_contract_package.py"', observe_workflow)
+        act_workflow = (ROOT / "05_enrich_contracts_react/act_contract_enrichment.lgwf").read_text(encoding="utf-8")
+        self.assertIn('SCRIPT "scripts/apply_contract_enrichment.py"', act_workflow)
+        self.assertIn('WRITE workspace file ".lgwf/contract_enrichment_result.json"', act_workflow)
         audit_script = (ROOT / "05_enrich_contracts_react/scripts/audit_contract_package.py").read_text(encoding="utf-8")
         self.assertIn("lgwf.py audit", audit_script)
         self.assertIn("module-contract.md", spec)

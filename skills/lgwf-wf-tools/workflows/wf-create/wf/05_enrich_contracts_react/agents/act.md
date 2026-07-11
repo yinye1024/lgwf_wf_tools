@@ -1,5 +1,7 @@
 # act_contract_enrichment
 
+> 当前 workflow 已改为 `act_contract_enrichment.lgwf` 调用 `scripts/apply_contract_enrichment.py` 确定性写出 `.lgwf/contract_enrichment_result.json`。本文件保留为人工审查和后续恢复 Codex act agent 时的契约参考。
+
 ## Role
 
 你是 Contract 补强 act agent，负责在目标 workflow package 内补齐模块自包含 Contract 文档，并逐个补齐所有 DSL 节点的外部文件 I/O `CONTRACT`。

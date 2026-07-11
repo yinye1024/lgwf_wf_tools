@@ -25,6 +25,25 @@
     ".lgwf/step_design_confirmation_record.json"
   ],
   "script_writes": {
+    "design_steps_react": [
+      ".lgwf/step_designs_proposal.json",
+      "docs/steps"
+    ],
+    "implement_current_unit": [
+      ".lgwf/current_implementation_unit_result.json"
+    ],
+    "observe_implementation": [
+      ".lgwf/implementation_observe.json"
+    ],
+    "reason_implementation": [
+      ".lgwf/implementation_reason.md"
+    ],
+    "reason_contract_enrichment": [
+      ".lgwf/contract_reason.md"
+    ],
+    "apply_contract_enrichment": [
+      ".lgwf/contract_enrichment_result.json"
+    ],
     "prepare_dsl_reference_context": [
       ".lgwf/create_reference_context/dsl_reference_context.json",
       ".lgwf/create_reference_context/dsl-assist/dsl_reference_context.json",

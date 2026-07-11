@@ -1,0 +1,43 @@
+WORKFLOW repo_context_pack;
+ENTRY entry_scope_resolution;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+  result_path "repo_context_pack.results.{node}";
+}
+
+STEP entry_scope_resolution
+  WORKFLOW "entry_scope_resolution/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/repo_context_pack_request.json";
+  };
+
+STEP target_context_inventory
+  WORKFLOW "target_context_inventory/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/repo_context_pack_request.json";
+    WRITE workspace file ".lgwf/context_inventory.json";
+  };
+
+STEP context_pack_rendering
+  WORKFLOW "context_pack_rendering/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/repo_context_pack_request.json";
+    READ workspace file ".lgwf/context_inventory.json";
+    WRITE workspace file ".lgwf/context_pack_generation.json";
+  };
+
+STEP workflow_summary_handoff
+  WORKFLOW "workflow_summary_handoff/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/repo_context_pack_request.json";
+    READ workspace file ".lgwf/context_pack_generation.json";
+    WRITE workspace file ".lgwf/repo_context_pack_summary.json";
+    WRITE workspace file "reports/repo-context-pack/report.md";
+  };
+
+FLOW entry_scope_resolution
+  THEN target_context_inventory
+  THEN context_pack_rendering
+  THEN workflow_summary_handoff;

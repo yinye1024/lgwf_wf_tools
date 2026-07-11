@@ -1,0 +1,9 @@
+{
+  "repo_path": "D:/allen/github/lgwf_wf_tools/skills/lgwf-wf-tools",
+  "requested_extensions": [],
+  "summary_scope": {
+    "baseline": "worktree git diff + latest commit",
+    "requested_extensions": []
+  },
+  "notes": "目标由用户指定：D:/allen/github/lgwf_wf_tools/skills/lgwf-wf-tools；仅生成摘要，默认不执行 stage 或 commit。"
+}

@@ -1,0 +1,37 @@
+{
+  "id": "example-tool-workflow",
+  "kind": "tool-workflow",
+  "version": 1,
+  "entry": "workflows/example-tool-workflow/scripts/example_tool.py",
+  "input_mode": "tool_args",
+  "input_schema": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "message": {
+        "type": "string"
+      },
+      "output": {
+        "type": "string"
+      }
+    },
+    "example": {
+      "message": "hello",
+      "output": ".local/example-tool-workflow/result.json"
+    }
+  },
+  "input_file_policy": "Tool arguments are accepted by the script; use files for complex payloads.",
+  "auto_human_policy": "not_applicable",
+  "target_scope": {
+    "read_scope": "Only explicit CLI arguments.",
+    "write_scope": "Only the --output path selected by the caller."
+  },
+  "state_boundary": {
+    "runtime_state": ".local/example-tool-workflow/",
+    "source_root": "workflows/example-tool-workflow"
+  },
+  "outputs": {
+    "result": "The JSON file passed through --output."
+  },
+  "resume_policy": "Rerun the script with the same arguments; no LGWF runtime state is used."
+}

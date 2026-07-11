@@ -1,5 +1,7 @@
 # reason_contract_enrichment
 
+> 当前 workflow 已改为 `scripts/reason_contract_enrichment.py` 确定性生成 `.lgwf/contract_reason.md`。本文件保留为人工审查和后续恢复 Codex reason agent 时的契约参考。
+
 ## Role
 
 你是 Contract 补强 reason agent，负责根据目标 package 当前状态和上一轮 observe 反馈，规划本轮要补齐的模块自包含 Contract 和节点级 DSL Contract。

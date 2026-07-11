@@ -28,22 +28,14 @@ REACT implement_steps_react MAX 3
   CONTEXT implementation_shared_context
   CONTRACT {
   }
-  REASON CODEX
-    PROMPT "agents/reason.md"
-    OUTPUT_FILE ".lgwf/implementation_reason.md"
-    TIMEOUT 1200
+  REASON PY
+    SCRIPT "scripts/reason_implementation.py"
+    TIMEOUT 30
     RESULT state.lgwf_wf_create.implementation_reason_result
+    UPDATES_STATE
     CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
-      READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_observe.json";
-      READ workspace file ".lgwf/implementation_result.json";
       READ workspace file ".lgwf/step_designs.json";
       WRITE workspace file ".lgwf/implementation_reason.md";
     }

@@ -31,12 +31,11 @@ REACT enrich_contracts_react MAX 3
   CONTEXT contract_shared_context
   CONTRACT {
   }
-  REASON CODEX
-    PROMPT "agents/reason.md"
-    TARGET_DIRS state.lgwf_wf_create.contract_target_dirs
-    OUTPUT_FILE ".lgwf/contract_reason.md"
-    TIMEOUT 1200
+  REASON PY
+    SCRIPT "scripts/reason_contract_enrichment.py"
+    TIMEOUT 30
     RESULT state.lgwf_wf_create.contract_reason_result
+    UPDATES_STATE
     CONTRACT {
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_result.json";
@@ -44,12 +43,8 @@ REACT enrich_contracts_react MAX 3
       READ workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
       WRITE workspace file ".lgwf/contract_reason.md";
     }
-  ACT CODEX
-    PROMPT "agents/act.md"
-    CONTEXT workspace file ".lgwf/contract_reason.md"
-    TARGET_DIRS state.lgwf_wf_create.contract_target_dirs
-    OUTPUT_JSON ".lgwf/contract_enrichment_result.json" AS_FILE
-    TIMEOUT 1800
+  ACT WORKFLOW contract_enrichment
+    WORKFLOW "act_contract_enrichment.lgwf"
     RESULT state.lgwf_wf_create.contract_enrichment_result
     CONTRACT {
       READ workspace file ".lgwf/implementation_context.json";

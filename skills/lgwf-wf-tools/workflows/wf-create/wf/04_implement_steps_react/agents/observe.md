@@ -1,7 +1,7 @@
 # implement_steps_react observe
 
 ## Role
-你是实现验收 observe agent，负责基于确定性 audit 结果形成本轮 REACT 的 observe 反馈。
+这是实现验收 observe 的历史 prompt。当前 `observe_implementation` 已改为确定性 Python 脚本，本文件保留为 observe 输出契约说明。
 
 ## Inputs
 - `agents/spec.md`：由 observe 子工作流通过 `CONTEXT workflow file "agents/spec.md"` 直接传入的共同准则，用于判断 audit 反馈是否覆盖共同边界。
@@ -21,7 +21,7 @@
 5. 不修改目标 package 文件；本节点只写 `.lgwf/implementation_observe.json`。
 
 ## Output
-按节点声明的 `OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE` 写入 UTF-8 JSON。
+由 `scripts/observe_implementation.py` 写入 `.lgwf/implementation_observe.json`，内容为 UTF-8 JSON。
 
 ## Output Format
 必须输出 JSON object，至少包含：
