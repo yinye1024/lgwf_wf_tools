@@ -1,5 +1,7 @@
 {
   "bootstrap_inputs": [
+    ".lgwf/post_fix_decisions.json",
+    ".lgwf/post_fix_decisions/audit_fix.json",
     ".lgwf/post_fix_decisions/e2e_generate.json",
     ".lgwf/post_fix_decisions/prompt_fix.json",
     ".lgwf/post_fix_decisions/prompt_upgrade.json",
@@ -12,6 +14,7 @@
     ".lgwf/isolations/run_workflow/e2e_generate/work_dir/reports/e2e-test-generator/report.json"
   ],
   "final_outputs": [
+    ".lgwf/post_fix_decisions/audit_fix.json",
     ".lgwf/post_fix_decisions/e2e_generate.json",
     ".lgwf/post_fix_decisions/prompt_fix.json",
     ".lgwf/post_fix_decisions/prompt_upgrade.json",
@@ -26,6 +29,10 @@
     "reports/wf-post-fix/report.md"
   ],
   "script_writes": {
+    "build_audit_fix_input": [
+      ".lgwf/post_fix_decisions.json",
+      ".lgwf/post_fix_stage_results.json"
+    ],
     "build_e2e_generate_input": [
       ".lgwf/post_fix_decisions.json",
       ".lgwf/post_fix_stage_results.json"
@@ -37,6 +44,9 @@
     "build_prompt_upgrade_input": [
       ".lgwf/post_fix_decisions.json",
       ".lgwf/post_fix_stage_results.json"
+    ],
+    "choose_audit_fix": [
+      ".lgwf/post_fix_decisions/audit_fix.json"
     ],
     "choose_e2e_generate": [
       ".lgwf/post_fix_decisions/e2e_generate.json"
@@ -86,6 +96,10 @@
     "run_wf_fix_positive_e2e": [
       ".lgwf/post_fix_decisions.json",
       ".lgwf/post_fix_stage_results.json"
+    ],
+    "set_audit_fix_auto": [
+      ".lgwf/post_fix_decisions/audit_fix.json",
+      ".lgwf/post_fix_decisions.json"
     ],
     "set_e2e_generate_auto": [
       ".lgwf/post_fix_decisions/e2e_generate.json",

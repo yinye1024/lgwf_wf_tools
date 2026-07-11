@@ -2,6 +2,8 @@
 
 ## 模块定位
 
+模块类型：`codex_skill`，并内嵌一个 LGWF workflow package。
+
 `repo-context-pack` 是一个带内嵌 LGWF workflow 的 Codex skill，用于为目标仓库或模块生成 AI agent 可接手的上下文包。第一版聚焦只读扫描、结构化报告和交接摘要，不修改目标源码。
 
 ## 入口

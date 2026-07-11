@@ -1,7 +1,7 @@
 # implement_steps_react observe
 
 ## Role
-这是实现验收 observe 的历史 prompt。当前 `observe_implementation` 已改为确定性 Python 脚本，本文件保留为 observe 输出契约说明。
+你是实现验收 observe agent，负责基于确定性 audit 结果形成本轮 REACT 的 observe 反馈。
 
 ## Inputs
 - `agents/spec.md`：由 observe 子工作流通过 `CONTEXT workflow file "agents/spec.md"` 直接传入的共同准则，用于判断 audit 反馈是否覆盖共同边界。
@@ -9,6 +9,7 @@
 - `.lgwf/implementation_context.json`：目标 package 路径上下文。
 - `.lgwf/implementation_result.json`：ACT 阶段声明的生成结果。
 - `.lgwf/implementation_observe.json`：上一个节点 `audit_created_package` 已写入的确定性 audit 结果文件，必须与 `.lgwf/implementation_audit_result.json` 互相校验。
+- `.lgwf/scaffold_package_result.json`：上游确定性脚手架计划，是目录和文件结构验收的事实来源。
 
 ## Mandatory First Step
 先读取 `agents/spec.md`，再读取 `.lgwf/implementation_audit_result.json` 和 `.lgwf/implementation_observe.json` 交叉校验。后两者都是同一 observe 子工作流内脚本 audit 的输出，包含 `passed`、`checks`、`audit` 和 `failures`。
@@ -16,12 +17,13 @@
 ## Task
 1. 以 `.lgwf/implementation_audit_result.json` 的脚本 audit 结果为准，不重新定义通过标准。
 2. 如果 `passed=false` 或 `audit.ok=false`，保留失败结论，并把 `failures` 转写为 ACT 下一轮可执行的修复反馈。
-3. 对照 `agents/spec.md` 检查 audit 输出是否覆盖共同准则中的关键边界；发现 audit 已暴露的 spec 相关缺口时，把缺口保留在 `failures` 或 `next_action_hint` 中。
-4. 如果 `passed=true`，保留通过结论，并补充简短的验收摘要。
-5. 不修改目标 package 文件；本节点只写 `.lgwf/implementation_observe.json`。
+3. 保留脚本 audit 对 `scaffold_plan.create_dirs`、`scaffold_plan.create_files` 和 `stage_manifest` 的结构失败，不要把目录缺失或文件缺失改写为通过。
+4. 对照 `agents/spec.md` 检查 audit 输出是否覆盖共同准则中的关键边界；发现 audit 已暴露的 spec 相关缺口时，把缺口保留在 `failures` 或 `next_action_hint` 中。
+5. 如果 `passed=true`，保留通过结论，并补充简短的验收摘要。
+6. 不修改目标 package 文件；本节点只写 `.lgwf/implementation_observe.json`。
 
 ## Output
-由 `scripts/observe_implementation.py` 写入 `.lgwf/implementation_observe.json`，内容为 UTF-8 JSON。
+按节点声明的 `OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE` 写入 UTF-8 JSON。
 
 ## Output Format
 必须输出 JSON object，至少包含：

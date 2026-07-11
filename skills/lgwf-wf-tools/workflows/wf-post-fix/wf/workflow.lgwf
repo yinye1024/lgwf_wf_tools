@@ -15,6 +15,14 @@ STEP prepare_target
     WRITE workspace file ".lgwf/post_fix_stage_results.json";
   };
 
+STEP audit_fix_stage
+  WORKFLOW "02_audit_fix/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/post_fix_target.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
+    WRITE workspace file ".lgwf/post_fix_stage_results.json";
+  };
+
 STEP prompt_fix_stage
   WORKFLOW "02_prompt_fix/workflow.lgwf"
   CONTRACT {
@@ -87,6 +95,7 @@ STEP finish
 
 FLOW main
   START prepare_target
+  THEN audit_fix_stage
   THEN prompt_fix_stage
   THEN prompt_upgrade_stage
   THEN e2e_generate_stage

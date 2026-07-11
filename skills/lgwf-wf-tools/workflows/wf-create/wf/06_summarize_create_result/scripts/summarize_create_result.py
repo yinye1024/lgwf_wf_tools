@@ -42,6 +42,9 @@ DEFAULT_RUNTIME_ARTIFACTS = [
     ".lgwf/business_flow.json",
     ".lgwf/step_designs_proposal.json",
     ".lgwf/step_design_confirmation_record.json",
+    ".lgwf/implementation_audit_result.json",
+    ".lgwf/implementation_observe.json",
+    ".lgwf/implementation_decision.json",
     ".lgwf/step_designs.json",
     ".lgwf/implementation_result.json",
     ".lgwf/create_result_summary.json",
@@ -108,6 +111,8 @@ def payload_from_implementation_result(root: Path) -> dict[str, Any]:
     implementation = load_json(root / ".lgwf" / "implementation_result.json")
     if not implementation:
         return {}
+    audit_result = load_json(root / ".lgwf" / "implementation_audit_result.json")
+    observe_result = load_json(root / ".lgwf" / "implementation_observe.json")
     package_root = str(implementation.get("target_package_root", "")).strip()
     workflow_name = str(implementation.get("workflow_name", "")).strip()
     if not package_root or not workflow_name:
@@ -142,6 +147,20 @@ def payload_from_implementation_result(root: Path) -> dict[str, Any]:
         payload["produced_files"] = produced_files
     if validation_entry:
         payload["validation_entry"] = validation_entry
+    if audit_result:
+        payload["implementation_audit"] = {
+            "passed": audit_result.get("passed"),
+            "status": audit_result.get("status"),
+            "needs_post_fix": bool(audit_result.get("needs_post_fix")),
+            "failures": audit_result.get("failures", []),
+        }
+    elif observe_result:
+        payload["implementation_audit"] = {
+            "passed": observe_result.get("passed"),
+            "status": observe_result.get("status"),
+            "needs_post_fix": bool(observe_result.get("needs_post_fix")),
+            "failures": observe_result.get("failures", []),
+        }
     return payload
 
 
@@ -205,17 +224,30 @@ def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
         raise TypeError("runtime_artifacts 必须是路径字符串数组")
     runtime_artifacts = [normalize_runtime_artifact_path(str(path)) for path in runtime_artifacts]
 
+    implementation_audit = payload.get("implementation_audit", {})
+    if not isinstance(implementation_audit, dict):
+        implementation_audit = {}
+    audit_status = str(implementation_audit.get("status") or "").strip()
+    needs_post_fix = bool(implementation_audit.get("needs_post_fix"))
+    status = "draft_structure_ready"
+    if needs_post_fix:
+        status = "draft_needs_post_fix"
+    elif audit_status and audit_status != "passed":
+        status = "draft_needs_implementation_repair"
+
     return {
         "workflow_name": workflow_name or "lgwf-wf-create",
         "target_package_root": package_root,
         "summary_version": 1,
         "result_kind": "workflow_package_draft_summary",
-        "status": "draft_structure_ready",
+        "status": status,
         "produced_files": produced_files,
         "runtime_artifacts": runtime_artifacts,
+        "implementation_audit": implementation_audit,
         "validation": {
             "minimal_command": validation_entry,
             "checks": [
+                "implement_steps_react observe 确定性检测",
                 "workflow 结构性 audit",
                 "关键文件存在性",
                 "resource path 相对路径规则",
@@ -243,6 +275,7 @@ def write_report(root: Path, summary: dict[str, Any]) -> Path:
         f"- workflow：`{summary['workflow_name']}`",
         f"- 状态：`{summary['status']}`",
         f"- 最小验证：`{summary['validation']['minimal_command']}`",
+        f"- 实现验收：`{summary.get('implementation_audit', {}).get('status', 'unknown')}`",
         "",
         "## 产物",
         "",

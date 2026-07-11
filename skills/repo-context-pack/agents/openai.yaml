@@ -1,4 +1,0 @@
-interface:
-  display_name: "Repo Context Pack"
-  short_description: "为 AI agent 生成阅读顺序、模块地图和交接上下文包"
-  default_prompt: "Use $repo-context-pack to generate an AI-agent handoff context pack for this repository."

@@ -24,24 +24,30 @@ PY prepare_dsl_reference_context
     WRITE workspace file ".lgwf/create_reference_context/dsl_reference_context.json";
   };
 
-PY design_steps_react
-  SCRIPT "scripts/design_steps_react.py"
-  TIMEOUT 60
+CODEX design_steps_react
+  PROMPT "agents/design_steps_react.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"
+  CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"
+  CONTEXT workspace dir ".lgwf/create_reference_context/workflow-modular-development"
+  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
+  TARGET_FILES state.lgwf_wf_create.creation_context_files
+  OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
+  TIMEOUT 900
   RESULT state.lgwf_wf_create.step_design_result
-  UPDATES_STATE
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/business_flow_proposal.json";
-    READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
     READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
     READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
     READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
     READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
+    READ workspace file ".lgwf/step_designs.json";
     WRITE workspace file ".lgwf/step_designs_proposal.json";
-    WRITE workspace dir "docs/steps";
+    READ workspace dir ".lgwf/create_reference_context/dsl-assist";
+    READ workspace dir ".lgwf/create_reference_context/scaffold";
+    READ workspace dir ".lgwf/create_reference_context/workflow-modular-development";
   };
 
 PY prepare_step_design_confirmation

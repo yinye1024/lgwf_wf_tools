@@ -20,15 +20,21 @@ def write_json(path: Path, data: Any) -> None:
 
 
 def decide(work_dir: Path) -> dict[str, Any]:
-    observe = read_json(work_dir / ".lgwf" / "implementation_observe.json")
-    passed = observe.get("passed") is True
+    lgwf_dir = work_dir / ".lgwf"
+    audit = read_json(lgwf_dir / "implementation_audit_result.json")
+    observe = read_json(lgwf_dir / "implementation_observe.json")
+    source = audit if audit else observe
+    passed = source.get("passed") is True
     result = {
         "next": "exit" if passed else "continue",
         "passed": passed,
         "reason": "authoring audit passed" if passed else "authoring audit failed; continue implementation repair",
-        "failures": observe.get("failures", []),
+        "source": "implementation_audit_result.json" if audit else "implementation_observe.json",
+        "status": source.get("status", "passed" if passed else "failed"),
+        "needs_post_fix": bool(source.get("needs_post_fix")),
+        "failures": source.get("failures", []),
     }
-    write_json(work_dir / ".lgwf" / "implementation_decision.json", result)
+    write_json(lgwf_dir / "implementation_decision.json", result)
     return result
 
 

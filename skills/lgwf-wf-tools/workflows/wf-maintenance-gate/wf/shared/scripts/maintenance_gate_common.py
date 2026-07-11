@@ -193,8 +193,8 @@ COMMAND_TEMPLATES = {
 }
 
 FAILURE_ROUTE_RULES = {
-    "dsl_audit": {"route": "wf-dsl-upgrade", "reason": "DSL 结构或运行拓扑失败"},
-    "workflow_compile": {"route": "wf-dsl-upgrade", "reason": "workflow 编译失败"},
+    "dsl_audit": {"route": "wf-audit-fix", "reason": "DSL 结构或运行拓扑失败"},
+    "workflow_compile": {"route": "wf-audit-fix", "reason": "workflow 编译失败"},
     "prompt_contract": {"route": "wf-prompt-fix", "reason": "prompt 输入输出契约不满足"},
     "prompt_quality": {"route": "wf-prompt-upgrade", "reason": "prompt 质量需要升级"},
     "entry_contract": {"route": "wf-fix", "reason": "入口或 facade 健康检查失败"},

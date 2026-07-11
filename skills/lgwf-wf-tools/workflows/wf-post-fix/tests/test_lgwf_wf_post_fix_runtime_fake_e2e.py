@@ -392,6 +392,7 @@ class LgwfWfPostFixRuntimeFakeE2ETest(unittest.TestCase):
             decisions = read_json(work_dir / ".lgwf" / "post_fix_decisions.json")
             self.assertTrue(decisions["auto_enabled"])
             decision_routes = {item["stage_id"]: item["route"] for item in decisions["stages"]}
+            self.assertEqual(decision_routes["audit_fix"], "run")
             self.assertEqual(decision_routes["prompt_fix"], "run")
             self.assertEqual(decision_routes["prompt_upgrade"], "run")
             self.assertEqual(decision_routes["e2e_generate"], "run")
@@ -402,7 +403,12 @@ class LgwfWfPostFixRuntimeFakeE2ETest(unittest.TestCase):
 
             trace_path = work_dir / ".lgwf-test" / "run_workflow_trace.jsonl"
             traces = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
-            self.assertEqual([item["node_id"] for item in traces], ["prompt_fix", "prompt_upgrade", "e2e_generate"])
+            self.assertEqual(
+                [item["node_id"] for item in traces],
+                ["audit_fix", "prompt_fix", "prompt_upgrade", "e2e_generate"],
+            )
+            audit_child = next(item for item in traces if item["node_id"] == "audit_fix")
+            self.assertIn("audit_fix_target", audit_child["input"])
             e2e_child = next(item for item in traces if item["node_id"] == "e2e_generate")
             self.assertEqual(e2e_child["input"]["test_types"], ["script_flow", "runtime_fake"])
             self.assertNotIn("real_positive", e2e_child["input"]["test_types"])

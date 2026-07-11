@@ -25,14 +25,16 @@ PY prepare_current_implementation_unit
     WRITE workspace file ".lgwf/current_implementation_unit_context.json";
   };
 
-PY implement_current_unit
-  SCRIPT "scripts/implement_current_unit.py"
-  TIMEOUT 120
+CODEX implement_current_unit
+  PROMPT "agents/act_unit.md"
+  CONTEXT workflow file "agents/spec.md"
+  CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"
+  TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs
+  OUTPUT_JSON ".lgwf/current_implementation_unit_result.json" AS_FILE
+  TIMEOUT 1200
   RESULT state.lgwf_wf_create.current_implementation_unit_result
-  UPDATES_STATE {
-    WRITE state.lgwf_wf_create.current_implementation_unit_result;
-  }
   CONTRACT {
+    READ workflow file "agents/spec.md";
     READ state.lgwf_wf_create.current_implementation_unit;
     READ state.lgwf_wf_create.current_implementation_unit_target_dirs;
     READ state.lgwf_wf_create.current_implementation_unit_target_files;

@@ -42,7 +42,7 @@ python tests\lgwf_wf_create_real_positive_e2e.py
 - 验证入口会检查 `README.md`、`AGENTS.md`、`tests/README.md` 和 `summarize_create_result` 脚本能够以 UTF-8 正常读取，且中文说明可读。
 - 验证入口会检查 `wf/06_summarize_create_result/scripts/summarize_create_result.py` 已定义第一版结果汇总接口，不暗示后续 workflow 已集成。
 - 如需单独验证脚手架规则函数，可额外执行 `python -m unittest tests.test_scaffold_package_rules`。
-- 确定性运行时 E2E 会创建临时 package，校验生成出的 `workflow.lgwf`、阶段子 workflow、`created_package_validation.json`、`implementation_result.json`、`create_result_summary.json` 和 `post_fix_handoff_input.json`，并确认 fake Codex 至少覆盖需求、业务流、步骤设计、实现、修复和合约阶段。
+- 确定性运行时 E2E 会创建临时 package，校验生成出的 `workflow.lgwf`、阶段子 workflow、`implementation_audit_result.json`、`implementation_observe.json`、`implementation_result.json`、`create_result_summary.json` 和 `post_fix_handoff_input.json`，并确认 fake Codex 至少覆盖需求、业务流、步骤设计、实现和 observe audit 阶段。
 - 调试确定性运行时 E2E 时，可以设置 `LGWF_WF_CREATE_RUNTIME_E2E_KEEP_WORKDIR=1` 保留临时目录。
 
 未覆盖范围：

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
+import re
 import sys
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -83,6 +84,77 @@ def normalize_relative_path(raw_path: str) -> str:
     return normalized
 
 
+def unique(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        if item and item not in seen:
+            seen.add(item)
+            result.append(item)
+    return result
+
+
+def slugify_id(raw_value: str, fallback: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", raw_value.strip()).strip("_")
+    return cleaned or fallback
+
+
+def strip_numeric_prefix(stage_id: str) -> str:
+    return re.sub(r"^\d+[_-]+", "", stage_id).strip("_-")
+
+
+def numbered_stage_dir(index: int, stage_id: str) -> str:
+    suffix = strip_numeric_prefix(stage_id) or f"stage_{index:02d}"
+    return f"{index:02d}_{suffix}"
+
+
+def build_stage_manifest(stages: Any, fallback_step_dirs: list[str]) -> list[dict[str, Any]]:
+    source_items: list[dict[str, Any]] = []
+    if isinstance(stages, list):
+        source_items = [item for item in stages if isinstance(item, dict)]
+    if not source_items:
+        source_items = [{"stage_id": strip_numeric_prefix(step_dir)} for step_dir in fallback_step_dirs]
+
+    manifest: list[dict[str, Any]] = []
+    used_dirs: set[str] = set()
+    for index, stage in enumerate(source_items, start=1):
+        raw_stage_id = str(stage.get("stage_id") or stage.get("id") or stage.get("name") or "").strip()
+        stage_id = slugify_id(strip_numeric_prefix(raw_stage_id), f"stage_{index:02d}")
+        stage_dir = numbered_stage_dir(index, stage_id)
+        if stage_dir in used_dirs:
+            stage_dir = f"{stage_dir}_{index:02d}"
+        used_dirs.add(stage_dir)
+        manifest.append(
+            {
+                "stage_id": stage_id,
+                "stage_dir": stage_dir,
+                "workflow_ref": f"wf/{stage_dir}/workflow.lgwf",
+                "doc_path": f"wf/docs/steps/{stage_id.replace('_', '-')}.md",
+                "key_nodes": stage.get("key_nodes", []),
+                "human_approval": bool(stage.get("human_approval", False)),
+            }
+        )
+    return manifest
+
+
+def stage_dirs_from_manifest(stage_manifest: list[dict[str, Any]]) -> list[str]:
+    return unique([str(item.get("stage_dir", "")).strip() for item in stage_manifest])
+
+
+def stage_placeholder_files(stage_dirs: list[str]) -> list[str]:
+    files: list[str] = []
+    for stage_dir in stage_dirs:
+        files.extend(
+            [
+                f"wf/{stage_dir}/workflow.lgwf",
+                f"wf/{stage_dir}/agents/prompt.md",
+                f"wf/{stage_dir}/scripts/run.py",
+                f"wf/{stage_dir}/resources/README.md",
+            ]
+        )
+    return files
+
+
 def validate_plan_paths(plan: dict[str, Any]) -> bool:
     """校验脚手架计划内的文件和目录路径仍满足包内相对路径规则。"""
 
@@ -120,6 +192,8 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
     stages = business_flow.get("stages", [])
     step_dirs = require_string_list(template.get("step_dirs", []), "template.step_dirs")
     step_private_dirs = require_string_list(template.get("step_private_dirs", []), "template.step_private_dirs")
+    stage_manifest = build_stage_manifest(stages, step_dirs)
+    stage_dirs = stage_dirs_from_manifest(stage_manifest)
 
     plan = {
         "workflow_name": workflow_name or "unnamed-workflow",
@@ -143,26 +217,33 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
                 "运行状态边界仍归 `ws/.lgwf`",
             ],
         },
-        "create_dirs": [
+        "stage_manifest": stage_manifest,
+        "create_dirs": unique(
+            [
             *require_string_list(template.get("root_dirs", []), "template.root_dirs"),
-            *[f"wf/{step_dir}" for step_dir in step_dirs],
-            *[f"wf/{step_dir}/{private_dir}" for step_dir in step_dirs for private_dir in step_private_dirs],
-        ],
-        "create_files": [
+            *[f"wf/{stage_dir}" for stage_dir in stage_dirs],
+            *[f"wf/{stage_dir}/{private_dir}" for stage_dir in stage_dirs for private_dir in step_private_dirs],
+            ]
+        ),
+        "create_files": unique(
+            [
             *require_string_list(profile.get("root_files", []), f"template.profiles.{package_profile}.root_files"),
-            *[f"wf/{step_dir}/workflow.lgwf" for step_dir in step_dirs],
+            "entry_contract.json",
             *require_string_list(template.get("workflow_files", []), "template.workflow_files"),
-            "wf/shared/scripts/review_context.py",
+            *stage_placeholder_files(stage_dirs),
             *require_string_list(template.get("test_files", []), "template.test_files"),
-        ],
+            ]
+        ),
         "placeholders": template.get("placeholders", {}),
         "derived_from_business_flow": [
             {
                 "stage_id": stage.get("stage_id", ""),
+                "stage_dir": stage_manifest[index]["stage_dir"] if index < len(stage_manifest) else "",
                 "key_nodes": stage.get("key_nodes", []),
                 "human_approval": bool(stage.get("human_approval", False)),
             }
-            for stage in stages
+            for index, stage in enumerate(stages if isinstance(stages, list) else [])
+            if isinstance(stage, dict)
         ],
     }
     validate_plan_paths(plan)

@@ -25,7 +25,6 @@
 - `docs/steps/*.md` 的字段模板、命名约定和实现阶段输入契约。
 - `confirm_step_designs` 的确认模板与决策结构示例。
 - `04_implement_steps_react` 的 ReAct 实现循环、ACT FOREACH 拆分、audit observe 和边界说明。
-- `05_enrich_contracts_react` 的 Contract 补强 ReAct 循环、Contract 文档检查和 audit observe。
 - `dsl-assist` 创建与审计规范的运行时参考上下文。
 - 中文 UTF-8 说明文档。
 
@@ -58,8 +57,7 @@
 7. `design_steps_react`
 8. `confirm_step_designs`
 9. `implement_steps_react`
-10. `enrich_contracts_react`
-11. `summarize_create_result`
+10. `summarize_create_result`
 
 其中需求阶段已经补齐以下契约：
 
@@ -79,8 +77,7 @@
 - `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，同时写入根级和 `dsl-assist` 目录下的 `dsl_reference_context.json` 元数据；从 facade docs 复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供后续 Codex 节点读取。
 - `design_steps_react`：定义输出为 `docs/steps/*.md` 的可确认步骤设计文档草案，要求覆盖目标、输入、输出、依赖和实现建议。
 - `confirm_step_designs`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分设计草案审阅与 confirm 后固化。
-- `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；其中 ACT 通过 `act_implement_units.lgwf` 拆成 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results`，每个 unit 由 `implement_one_unit.lgwf` 独立执行；`observe` 执行 authoring audit check，失败反馈回下一轮修复，同时明确不负责 prompt 修复、agent 化和自动修复。
-- `enrich_contracts_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环补齐目标 package 的模块 Contract；`observe` 同时检查 Contract 必备段落并运行 `lgwf.py audit`，只有全部通过才进入最终 package validation。
+- `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；其中 ACT 通过 `act_implement_units.lgwf` 拆成 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results`，每个 unit 由 `implement_one_unit.lgwf` 独立执行；`observe` 通过 `audit_created_package.py` 执行 scaffold 文件结构、已批准 step 文档、ACT 自报生成文件和 `lgwf.py audit` 的确定性检测，失败反馈回下一轮 reason，同时明确不负责 prompt 修复、agent 化和自动修复。
 
 ## 需求阶段边界
 
@@ -127,16 +124,9 @@
 - ACT 不再由单个 Codex 负责整包创建；`prepare_implementation_units` 会根据首轮或 observe 失败项生成 package、root workflow、stage 和 shared/test units，`FOREACH implement_each_unit` 对每个 unit 调用 `implement_one_unit.lgwf`，最后由 `merge_implementation_results` 写出 `.lgwf/implementation_result.json`。
 - `implement_one_unit.lgwf` 内部 Codex 必须显式读取 `agents/spec.md`，并通过当前 unit 的 `TARGET_DIRS` / `TARGET_FILES` 限制写入范围。
 - 必须按 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md` 规范保持根 workflow 薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，并保证所有子 workflow 可被递归审计。
-- `observe` 必须执行 `lgwf.py audit` 类 authoring audit check，并把失败 stderr 写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
-- `decide` 只根据 observe 的 audit 结果决定 `continue` 或 `exit`。
-
-`enrich_contracts_react` 当前是独立 Contract 补强子 workflow，重点约束：
-
-- 只补目标 package 的 `AGENTS.md`、`README.md` 等入口文档 Contract，不新增业务阶段或实现能力。
-- Contract 必须覆盖模块定位、入口、依赖、状态边界、产物、验证和禁止事项。
-- `observe` 必须执行 Contract 文档检查和 `lgwf.py audit`，失败时反馈给下一轮 Contract 修复。
-- Contract 补强通过后，仍由 `validate_created_package` 执行最终确定性验收。
-- 不负责 `lgwf-wf-prompt-fix` 自动调用、生成出的目标 workflow 自动接入 facade 路由、自动修复或端到端运行保证。
+- `observe` 必须执行 `audit_created_package.py`，并把原始检测结果写入 `.lgwf/implementation_audit_result.json`，再把归纳结果写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
+- `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`，不得只依赖 ACT 自报成功。
+- `decide` 优先根据 `.lgwf/implementation_audit_result.json` 的 `passed` 决定 `continue` 或 `exit`，缺少该文件时才回退到 observe 结果。
 
 ## 文档与编码
 
@@ -167,7 +157,7 @@ python -m unittest discover skills\lgwf-wf-tools\workflows\wf-create\tests
 - `scaffold_package` 规则和测试会拒绝绝对路径、盘符路径与 `..`，并明确不向目标 package 根目录写入 `.lgwf`。
 - 步骤设计文档模板定义 `goal`、`inputs`、`outputs`、`dependencies`、`implementation_suggestions` 等字段，并与 `implement_steps_react` 输入契约一致。
 - `confirm_step_designs` 模板支持三类决策。
-- `implement_steps_react` 通过 `04_implement_steps_react/workflow.lgwf` 的 ReAct 循环生成 workflow 初稿；ACT 阶段使用 `act_implement_units.lgwf` 的 FOREACH 拆分小任务，并把 authoring audit 失败反馈给下一轮只重跑相关 unit；它仍不把 prompt 修复、agent 化和自动修复纳入当前范围。
+- `implement_steps_react` 通过 `04_implement_steps_react/workflow.lgwf` 的 ReAct 循环生成 workflow 初稿；ACT 阶段使用 `act_implement_units.lgwf` 的 FOREACH 拆分小任务，OBSERVE 阶段用 `audit_created_package.py` 做确定性检测并把失败反馈给下一轮 reason；它仍不把 prompt 修复、agent 化和自动修复纳入当前范围。
 - `summarize_create_result` 已定义未来运行时结果汇总接口，汇总内容只指向第一版结构性产物与验证入口，不宣称后续 workflow 已集成。
 - `README.md` 与 `AGENTS.md` 明确写出 `wf/`、`ws/.lgwf` 边界，以及“不自动调用 `lgwf-wf-prompt-fix` / 不自动把生成出的目标 workflow 接入 facade 路由”。
 - `README.md`、`AGENTS.md`、`tests/README.md` 和结果汇总脚本可按 UTF-8 正常读取，中文说明无乱码。

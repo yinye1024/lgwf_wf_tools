@@ -481,20 +481,6 @@ def implement_current_unit(output_path: pathlib.Path | None) -> dict[str, Any]:
     return result
 
 
-def contract_result(output_path: pathlib.Path | None) -> dict[str, Any]:
-    context = json.loads((current_work_dir() / ".lgwf" / "implementation_context.json").read_text(encoding="utf-8-sig"))
-    result = {
-        "status": "ok",
-        "target_package_root": context["target_package_root"],
-        "target_package_abs": context["target_package_abs"],
-        "updated_files": ["AGENTS.md", "README.md", "entry_contract.json", "wf/artifact_contracts.json"],
-        "remaining_risks": [],
-    }
-    if output_path is not None:
-        write_json(output_path, result)
-    return result
-
-
 def observe_result(output_path: pathlib.Path | None) -> dict[str, Any]:
     audit_path = current_work_dir() / ".lgwf" / "implementation_audit_result.json"
     audit = json.loads(audit_path.read_text(encoding="utf-8-sig")) if audit_path.exists() else {"passed": True}
@@ -525,13 +511,6 @@ def response_for(key: str, output_path: pathlib.Path | None) -> Any:
         return implement_current_unit(output_path)
     elif key.endswith("04_implement_steps_react/agents/observe.md"):
         return observe_result(output_path)
-    elif key.endswith("05_enrich_contracts_react/agents/reason.md"):
-        text = "Contract 文档已包含模块定位、入口、依赖、状态边界、产物、验证和禁止事项。\n"
-        if output_path is not None:
-            write_text(output_path, text)
-        return {"status": "ok", "summary": text}
-    elif key.endswith("05_enrich_contracts_react/agents/act.md"):
-        return contract_result(output_path)
     else:
         payload = {
             "error": "unmatched fake codex prompt",
@@ -575,6 +554,12 @@ def prepare_temp_workspace(temp_root: Path) -> Path:
     shutil.copyfile(
         FACADE_ROOT / "docs" / "LGWF_WF_MODULAR_DEVELOPMENT.md",
         docs_target / "LGWF_WF_MODULAR_DEVELOPMENT.md",
+    )
+    share_target = facade_target / "workflows" / "01-share"
+    share_target.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(
+        FACADE_ROOT / "workflows" / "01-share" / "module-contract.md",
+        share_target / "module-contract.md",
     )
     return temp_root / "work"
 
@@ -631,6 +616,12 @@ class LgwfWfCreateRuntimePackageE2ETest(unittest.TestCase):
                     f"STDOUT:\n{completed.stdout}",
                     f"STDERR:\n{completed.stderr}",
                     f"work_dir={work_dir}",
+                    "FAKE_CODEX_CALLS:\n"
+                    + (
+                        (work_dir / ".lgwf" / "fake_codex_calls.jsonl").read_text(encoding="utf-8")
+                        if (work_dir / ".lgwf" / "fake_codex_calls.jsonl").is_file()
+                        else "<missing>"
+                    ),
                 ]
             )
             self.assertEqual(completed.returncode, 0, diagnostic)
@@ -645,10 +636,13 @@ class LgwfWfCreateRuntimePackageE2ETest(unittest.TestCase):
                 self.assertTrue((target_root / "wf" / stage / "scripts").is_dir(), stage)
                 self.assertTrue((target_root / "wf" / stage / "resources").is_dir(), stage)
 
-            validation = read_json(work_dir / ".lgwf" / "created_package_validation.json")
-            self.assertEqual(validation["status"], "passed")
-            self.assertTrue(validation["audit"]["ok"])
-            self.assertEqual(validation["stage_ids"], STAGES)
+            audit_result = read_json(work_dir / ".lgwf" / "implementation_audit_result.json")
+            observe_result = read_json(work_dir / ".lgwf" / "implementation_observe.json")
+            self.assertEqual(audit_result["status"], "passed")
+            self.assertTrue(audit_result["passed"])
+            self.assertTrue(audit_result["audit"]["ok"])
+            self.assertEqual(audit_result["stage_dirs"], STAGES)
+            self.assertTrue(observe_result["passed"])
 
             implementation = read_json(work_dir / ".lgwf" / "implementation_result.json")
             self.assertEqual(implementation["status"], "ok")
@@ -662,6 +656,7 @@ class LgwfWfCreateRuntimePackageE2ETest(unittest.TestCase):
             summary = read_json(work_dir / ".lgwf" / "create_result_summary.json")
             self.assertEqual(summary["status"], "draft_structure_ready")
             self.assertEqual(summary["target_package_root"], TARGET_PACKAGE_ROOT)
+            self.assertEqual(summary["implementation_audit"]["status"], "passed")
             self.assertTrue((work_dir / ".lgwf" / "post_fix_handoff_input.json").is_file())
             self.assertTrue((work_dir / ".lgwf" / "fake_codex_calls.jsonl").is_file())
             self.assertTrue(output_file.is_file(), diagnostic)

@@ -39,9 +39,8 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `business_flow_proposal`：业务流转草案。
 - `step_designs_proposal`：步骤设计草案。
 - `implementation_result`：按已确认设计生成的 workflow 初稿说明。
-- `implementation_observe`：实现 ReAct observe 阶段的 authoring audit check 结果，失败时反馈给下一轮实现修复。
-- `contract_enrichment_result`：Contract 补强 ReAct 阶段的文档补齐结果。
-- `contract_observe`：Contract 补强 observe 阶段的 Contract 文档检查和 authoring audit check 结果，失败时反馈给下一轮 Contract 修复。
+- `implementation_audit_result`：实现 ReAct observe 阶段的 Python 确定性检测结果，是下一轮 reason 的修复事实来源。
+- `implementation_observe`：实现 ReAct observe 阶段对确定性检测结果的归纳，失败时反馈给下一轮实现修复。
 
 所有目标 package 路径和 resource path 只允许使用包内相对路径，禁止绝对路径、盘符路径和 `..`。
 
@@ -52,11 +51,10 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
-- `validate_created_package` 在实现阶段之后确定性校验目标 package：目标目录必须存在，`wf/workflow.lgwf` 必须存在，已批准 stage 必须有 `wf/<stage>/workflow.lgwf` 以及 `agents/`、`scripts/`、`resources/`，且 `lgwf.py audit` 必须通过；失败时终止，不进入 summary 或 handoff。
 - `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；其中 ACT 是 `ACT WORKFLOW implement_units`，内部通过 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results` 拆分实现任务，避免单个 Codex 负责整包创建。
 - `04_implement_steps_react` 的每个 ACT unit 由 `implement_one_unit.lgwf` 独立执行，并显式读取 `agents/spec.md`；unit 只能在当前 `TARGET_DIRS` / `TARGET_FILES` 范围内落地。超时时应把已落盘目标 package 视为可续写草稿；resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
-- `04_implement_steps_react` 的 `observe` 必须执行 authoring audit check，把 `.lgwf/implementation_observe.json` 作为下一轮反馈，不得只依赖 ACT 自报成功。
-- `05_enrich_contracts_react` 是 Contract 补强子 workflow，位于实现阶段之后、最终 package validation 之前；它只补目标 package 的入口文档 Contract，不新增业务能力，`observe` 必须检查 Contract 必备段落并执行 authoring audit check。
+- `04_implement_steps_react` 的 `observe` 必须执行 `audit_created_package.py` 确定性检测，检查 scaffold 文件结构、已批准 step 文档、ACT 自报生成文件和 `lgwf.py audit`，并写出 `.lgwf/implementation_audit_result.json` 与 `.lgwf/implementation_observe.json`。
+- `04_implement_steps_react` 的 `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`；可修复问题必须在 ReAct 内回流，不得留到 root validation 节点。
 - `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
 - `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
 
@@ -90,14 +88,9 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/implementation_result.json`
 - `.lgwf/implementation_units.json`
 - `.lgwf/implementation_reason.md`
+- `.lgwf/implementation_audit_result.json`
 - `.lgwf/implementation_observe.json`
 - `.lgwf/implementation_decision.json`
-- `.lgwf/contract_reason.md`
-- `.lgwf/contract_enrichment_result.json`
-- `.lgwf/contract_audit_result.json`
-- `.lgwf/contract_observe.json`
-- `.lgwf/contract_decision.json`
-- `.lgwf/created_package_validation.json`
 - `.lgwf/post_fix_handoff_input.json`
 - `reports/create-workflow/create_result_report.md`
 

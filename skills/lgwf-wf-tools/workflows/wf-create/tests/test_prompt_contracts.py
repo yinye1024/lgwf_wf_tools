@@ -58,7 +58,7 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("优先使用 `source_business_contract`", requirements_prompt)
         self.assertIn("优先使用 `conversion_mapping`", business_prompt)
 
-    def test_creation_context_targets_are_available_to_codex_design_stages(self) -> None:
+    def test_creation_context_targets_are_available_to_three_design_stages(self) -> None:
         entry_contract = (ROOT.parent / "entry_contract.json").read_text(encoding="utf-8")
         raw_prompt = read("01_confirm_requirements/confirm_raw_intent.md")
         raw_contract = read("01_confirm_requirements/resources/raw_intent_contract.md")
@@ -67,6 +67,7 @@ class PromptContractTest(unittest.TestCase):
         step_workflow = read("03_confirm_step_designs/workflow.lgwf")
         requirements_prompt = read("01_confirm_requirements/agents/propose_requirements_react.md")
         business_prompt = read("02_confirm_business_flow/agents/propose_business_flow_react.md")
+        step_prompt = read("03_confirm_step_designs/agents/design_steps_react.md")
 
         self.assertIn('"target_dir"', entry_contract)
         self.assertIn('"target_file"', entry_contract)
@@ -80,12 +81,12 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("creation_context_files", requirements_prompt)
         self.assertIn("creation_context_dirs", business_prompt)
         self.assertIn("creation_context_files", business_prompt)
+        self.assertIn("creation_context_dirs", step_prompt)
+        self.assertIn("creation_context_files", step_prompt)
 
-        for workflow in (requirements_workflow, business_workflow):
+        for workflow in (requirements_workflow, business_workflow, step_workflow):
             self.assertIn("TARGET_DIRS state.lgwf_wf_create.creation_context_dirs", workflow)
             self.assertIn("TARGET_FILES state.lgwf_wf_create.creation_context_files", workflow)
-        self.assertIn("PY design_steps_react", step_workflow)
-        self.assertNotIn("TARGET_DIRS state.lgwf_wf_create.creation_context_dirs", step_workflow)
 
     def test_revision_prompts_are_revision_approval_prompts(self) -> None:
         for relative in (
@@ -142,20 +143,23 @@ class PromptContractTest(unittest.TestCase):
         self.assertTrue((ROOT / "04_implement_steps_react/agents/spec.md").exists())
         self.assertFalse((ROOT / "03_confirm_step_designs/agents/implement_steps_react_spec.md").exists())
         self.assertIn('workspace file ".lgwf/implementation_context.json"', implement_workflow)
+        self.assertIn('workspace file ".lgwf/implementation_audit_result.json"', implement_workflow)
         self.assertIn('workspace file ".lgwf/implementation_observe.json"', implement_workflow)
+        self.assertIn('workspace file ".lgwf/scaffold_package_result.json"', implement_workflow)
         self.assertIn("target_package_abs", spec)
         self.assertIn("target_package_root` 是 `workspace_root` 相对路径", spec)
         self.assertIn("禁止从 `work_dir` 使用 `..`", spec)
         self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
         self.assertIn("scripts/audit_created_package.py", observe_workflow)
-        self.assertIn("PY observe_implementation", observe_workflow)
-        self.assertIn('SCRIPT "scripts/observe_implementation.py"', observe_workflow)
-        self.assertNotIn("CODEX observe_implementation", observe_workflow)
-        self.assertNotIn('workflow file "agents/spec.md"', observe_workflow)
-        self.assertNotIn('READ workflow file "agents/spec.md";', observe_workflow)
+        self.assertIn("CODEX observe_implementation", observe_workflow)
+        self.assertIn('workflow file "agents/spec.md"', observe_workflow)
+        self.assertIn('READ workflow file "agents/spec.md";', observe_workflow)
         self.assertNotIn("INSTRUCTION state.lgwf_wf_create.implementation_audit_result", observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_workflow)
+        self.assertIn(".lgwf/scaffold_package_result.json", observe_workflow)
+        self.assertIn('READ workspace file ".lgwf/step_designs.json";', observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_prompt)
+        self.assertIn(".lgwf/scaffold_package_result.json", observe_prompt)
         self.assertIn('CONTEXT workflow file "agents/spec.md"', observe_prompt)
         self.assertIn("脚本 audit", observe_prompt)
         act_workflow = read("04_implement_steps_react/act_implement_units.lgwf")
@@ -168,15 +172,15 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn('WORKFLOW "implement_one_unit.lgwf"', act_workflow)
         self.assertNotIn('RUN_WORKFLOW "implement_one_unit.lgwf"', act_workflow)
         self.assertIn("RESULTS state.lgwf_wf_create.implementation_unit_results.items", act_workflow)
-        self.assertIn("PY implement_current_unit", unit_workflow)
-        self.assertIn('SCRIPT "scripts/implement_current_unit.py"', unit_workflow)
-        self.assertNotIn("CODEX implement_current_unit", unit_workflow)
-        self.assertNotIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
-        self.assertNotIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
-        self.assertNotIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
+        self.assertIn("CODEX implement_current_unit", unit_workflow)
+        self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
+        self.assertIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
         self.assertNotIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
         self.assertIn("当前 implementation unit", unit_prompt)
         self.assertIn("current_implementation_unit_context.json", unit_prompt)
+        self.assertIn("stage_dir", unit_prompt)
+        self.assertIn("workflow_ref", unit_prompt)
 
     def test_implementation_react_shared_rules_live_in_spec(self) -> None:
         spec = read("04_implement_steps_react/agents/spec.md")
@@ -216,29 +220,16 @@ class PromptContractTest(unittest.TestCase):
         workflow = read("04_implement_steps_react/workflow.lgwf")
         act_workflow = read("04_implement_steps_react/act_implement_units.lgwf")
         act_prompt = read("04_implement_steps_react/agents/act.md")
-        reason_block = re.search(r"REASON PY.*?ACT WORKFLOW", workflow, re.S)
+        reason_block = re.search(r"REASON CODEX.*?ACT WORKFLOW", workflow, re.S)
         act_block = re.search(r"ACT WORKFLOW.*?OBSERVE WORKFLOW", workflow, re.S)
         self.assertIsNotNone(reason_block)
         self.assertIsNotNone(act_block)
-        self.assertIn('SCRIPT "scripts/reason_implementation.py"', reason_block.group(0))
-        self.assertRegex(reason_block.group(0), r"TIMEOUT\s+30")
+        self.assertRegex(reason_block.group(0), r"TIMEOUT\s+1200")
         self.assertIn("PY prepare_implementation_units", act_workflow)
         self.assertIn("PY merge_implementation_results", act_workflow)
         self.assertIn("已存在的目标 package", act_prompt)
         self.assertIn("续写草稿", act_prompt)
         self.assertIn("先补齐缺失的必需文件", act_prompt)
-
-    def test_contract_enrichment_react_uses_deterministic_reason_and_act(self) -> None:
-        workflow = read("05_enrich_contracts_react/workflow.lgwf")
-        reason_block = re.search(r"REASON PY.*?ACT WORKFLOW", workflow, re.S)
-        act_block = re.search(r"ACT WORKFLOW.*?OBSERVE WORKFLOW", workflow, re.S)
-        self.assertIsNotNone(reason_block)
-        self.assertIsNotNone(act_block)
-        self.assertIn('SCRIPT "scripts/reason_contract_enrichment.py"', reason_block.group(0))
-        self.assertRegex(reason_block.group(0), r"TIMEOUT\s+30")
-        self.assertIn('WORKFLOW "act_contract_enrichment.lgwf"', act_block.group(0))
-        self.assertNotIn("REASON CODEX", workflow)
-        self.assertNotIn("ACT CODEX", workflow)
 
 
 if __name__ == "__main__":

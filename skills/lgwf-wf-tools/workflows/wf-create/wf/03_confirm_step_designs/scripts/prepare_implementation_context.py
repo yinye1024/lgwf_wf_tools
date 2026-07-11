@@ -84,16 +84,13 @@ def build_implementation_context(root: Path) -> dict[str, Any]:
         target_abs.relative_to(workspace_root)
     except ValueError as exc:
         raise ValueError("target_package_abs 必须位于 workspace_root 内") from exc
-    package_profile = target["package_profile"]
-    if package_profile == "internal_workflow_package" and (target_abs / "SKILL.md").is_file():
-        package_profile = "skill_wrapped_workflow"
     context = {
         "workflow_name": target["workflow_name"],
         "target_package_root": target["target_package_root"],
         "target_package_abs": str(target_abs),
         "workspace_root": str(workspace_root),
         "work_dir": str(root.resolve()),
-        "package_profile": package_profile,
+        "package_profile": target["package_profile"],
         "path_contract": {
             "target_package_root_semantics": "workspace_root 相对路径",
             "implementation_rule": "读写目标包时必须使用 target_package_abs，禁止从 work_dir 通过 .. 猜测仓库根",

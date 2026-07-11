@@ -6,20 +6,23 @@
 
 ## step_name
 
-上下文包产物生成
+上下文包渲染
 
 ## goal
 
-为 `repo-context-pack-embedded-workflow` 的 `context_pack_rendering` 阶段定义可实现、可审阅的 workflow 步骤设计，确保后续实现只在 `skills/repo-context-pack` 内生成 package 文件，并保持 `ws/.lgwf` 作为唯一运行状态边界。
+为 `repo-context-pack` 的 `context_pack_rendering` 阶段定义可实现、可审阅的 workflow 步骤设计，确保后续实现只在 `skills/repo-context-pack` 内生成 package 文件，并保持 `ws/.lgwf` 作为唯一运行状态边界。
 
 ## inputs
 
 - 上游阶段或节点：
   - `context_pack_rendering` 来源于已确认业务流。
 - 依赖文件或状态：
-  - `固定输出产物集合`
-  - `Markdown 与 JSON 必须 UTF-8 no BOM 的编码要求`
-  - ``repo_context_pack.md`、`agent_handoff.md`、`module_map.json`、`command_inventory.json`、`risk_register.md`、`read_order.md` 的职责划分`
+  - `structure_inventory`
+  - `command_candidates`
+  - `key_file_notes`
+  - `risk_findings`
+  - `read_order_candidates`
+  - `固定产物清单`
 - 关键约束：
   - 遵守 `wf/` 唯一 workflow root。
   - 阶段目录必须是第一层 `wf/<stage>/`，不得创建孙级 workflow。
@@ -27,14 +30,18 @@
 
 ## outputs
 
-- 产物渲染步骤设计
-- 产物写入顺序与覆盖策略
-- 产物完整性检查约定
+- repo_context_pack.md
+- agent_handoff.md
+- module_map.json
+- command_inventory.json
+- risk_register.md
+- read_order.md
+- summary.json
 
 ## dependencies
 
-- target_context_inventory -> context_pack_rendering：入口文件、模块地图种子、命令候选、风险候选、推荐阅读顺序和扫描统计。
-- context_pack_rendering -> workflow_summary_handoff：固定上下文包产物路径、产物摘要、运行统计和需要写入 workflow 本地状态的完成信息。
+- target_context_inventory -> context_pack_rendering：结构映射、命令入口、关键文件、阅读顺序候选、风险与未知项等结构化盘点结果。
+- context_pack_rendering -> workflow_summary_handoff：已渲染的 Markdown/JSON 交付物集合，以及各产物之间的覆盖范围、重点和风险一致性检查结果。
 
 ## implementation_suggestions
 

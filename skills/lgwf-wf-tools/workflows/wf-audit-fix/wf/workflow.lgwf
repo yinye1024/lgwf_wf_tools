@@ -1,0 +1,77 @@
+WORKFLOW wf_audit_fix;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "wf_audit_fix.results.{node}";
+}
+
+STEP collect_targets
+  WORKFLOW "01_collect_targets/workflow.lgwf"
+  CONTRACT {
+    READ state.audit_fix_target;
+    WRITE state.wf_audit_fix.targets;
+    WRITE state.wf_audit_fix.collect_targets_result;
+    WRITE workspace file ".lgwf/target_manifest.json";
+    WRITE workspace file ".lgwf/target_scope_validation.json";
+  };
+
+STEP confirm_scope
+  WORKFLOW "02_confirm_scope/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ state.wf_audit_fix.targets;
+    WRITE state.wf_audit_fix.scope_route;
+    WRITE state.wf_audit_fix.scope_approval;
+    WRITE state.wf_audit_fix.scope_confirmation_context;
+    WRITE workspace file ".lgwf/scope_confirmation_context.json";
+    WRITE workspace file ".lgwf/scope_approval.json";
+  };
+
+FOREACH upgrade_each
+  ITEMS state.wf_audit_fix.targets
+  CURRENT state.wf_audit_fix.current_target
+  INDEX state.wf_audit_fix.current_index
+  OUTPUT state.wf_audit_fix.current_result
+  RESULTS state.wf_audit_fix.target_results
+  FAIL collect
+  CONTRACT {
+    READ state.wf_audit_fix.targets;
+    WRITE state.wf_audit_fix.target_results;
+  }
+  RUN_WORKFLOW "03_upgrade_one_target/workflow.lgwf"
+  WORK_DIR ".lgwf/foreach/upgrade_each/items/{index}"
+  CONTRACT {
+    READ state.wf_audit_fix.current_target;
+    READ state.wf_audit_fix.current_index;
+    WRITE state.wf_audit_fix.current_result;
+    READ workspace file "03_upgrade_one_target/workflow.lgwf";
+    WRITE workspace dir ".lgwf/foreach/upgrade_each/items/{index}";
+  };
+
+STEP summarize_upgrade_result
+  WORKFLOW "04_summarize_upgrade_result/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ workspace file ".lgwf/scope_confirmation_context.json";
+    READ workspace file ".lgwf/scope_approval.json";
+    READ state.wf_audit_fix.target_results;
+    WRITE workspace file ".lgwf/result_summary.json";
+    WRITE workspace file "reports/wf-audit-fix/report.md";
+  };
+
+ROUTE select_scope_branch READ state.wf_audit_fix.scope_route
+  WHEN "run" THEN upgrade_followup
+  WHEN "summary" THEN summarize_upgrade_result;
+
+FLOW main
+  START collect_targets
+  THEN confirm_scope
+  THEN select_scope_branch;
+
+FLOW upgrade_followup
+  START upgrade_each
+  THEN summarize_upgrade_result;

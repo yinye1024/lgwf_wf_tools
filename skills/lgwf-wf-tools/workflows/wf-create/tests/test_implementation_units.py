@@ -56,20 +56,75 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                 "confirmed": {
                     "workflow_name": "demo_workflow",
                     "source_business_flow_stages": [
-                        {"stage_id": "01_collect_context"},
-                        {"stage_id": "02_run_checks"},
+                        {"stage_id": "collect_context"},
+                        {"stage_id": "run_checks"},
                     ],
                     "step_designs": [
                         {
                             "step_slug": "collect_context",
-                            "stage_id": "01_collect_context",
+                            "stage_id": "collect_context",
                             "doc_path": "docs/steps/collect-context.md",
                         },
                         {
                             "step_slug": "run_checks",
-                            "stage_id": "02_run_checks",
+                            "stage_id": "run_checks",
                             "doc_path": "docs/steps/run-checks.md",
                         },
+                    ],
+                }
+            },
+        )
+        write_json(
+            lgwf_dir / "scaffold_package_result.json",
+            {
+                "scaffold_plan": {
+                    "workflow_name": "demo_workflow",
+                    "target_package_root": "skills/demo-workflow",
+                    "package_profile": "internal_workflow_package",
+                    "stage_manifest": [
+                        {
+                            "stage_id": "collect_context",
+                            "stage_dir": "01_collect_context",
+                            "workflow_ref": "wf/01_collect_context/workflow.lgwf",
+                        },
+                        {
+                            "stage_id": "run_checks",
+                            "stage_dir": "02_run_checks",
+                            "workflow_ref": "wf/02_run_checks/workflow.lgwf",
+                        },
+                    ],
+                    "create_dirs": [
+                        "scripts",
+                        "tests",
+                        "ws",
+                        "wf",
+                        "wf/shared/scripts",
+                        "wf/docs/steps",
+                        "wf/01_collect_context",
+                        "wf/01_collect_context/agents",
+                        "wf/01_collect_context/scripts",
+                        "wf/01_collect_context/resources",
+                        "wf/02_run_checks",
+                        "wf/02_run_checks/agents",
+                        "wf/02_run_checks/scripts",
+                        "wf/02_run_checks/resources",
+                    ],
+                    "create_files": [
+                        "AGENTS.md",
+                        "README.md",
+                        "entry_contract.json",
+                        "wf/artifact_contracts.json",
+                        "wf/workflow.lgwf",
+                        "wf/01_collect_context/workflow.lgwf",
+                        "wf/01_collect_context/agents/prompt.md",
+                        "wf/01_collect_context/scripts/run.py",
+                        "wf/01_collect_context/resources/README.md",
+                        "wf/02_run_checks/workflow.lgwf",
+                        "wf/02_run_checks/agents/prompt.md",
+                        "wf/02_run_checks/scripts/run.py",
+                        "wf/02_run_checks/resources/README.md",
+                        "tests/README.md",
+                        "tests/test_workflow_structure.py",
                     ],
                 }
             },
@@ -101,6 +156,11 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertIn("stage_01_collect_context", unit_ids)
             self.assertIn("stage_02_run_checks", unit_ids)
             self.assertIn("shared_helpers_tests", unit_ids)
+            stage_unit = next(unit for unit in units if unit["unit_id"] == "stage_01_collect_context")
+            self.assertEqual(stage_unit["stage_id"], "collect_context")
+            self.assertEqual(stage_unit["stage_dir"], "01_collect_context")
+            self.assertEqual(stage_unit["workflow_ref"], "wf/01_collect_context/workflow.lgwf")
+            self.assertIn("wf/01_collect_context/scripts/run.py", stage_unit["planned_files"])
 
             all_files = [path for unit in units for path in unit["target_files"]]
             self.assertEqual(len(all_files), len(set(all_files)))

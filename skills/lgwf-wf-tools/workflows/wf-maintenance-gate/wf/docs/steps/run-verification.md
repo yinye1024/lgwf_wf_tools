@@ -42,7 +42,7 @@
   - `wf/05_run_verification/resources/`
 - 交付给下游的结构片段：
   - 每条命令的 return code、stdout 摘要、stderr 摘要、超时状态、耗时和关键产物路径
-  - 失败项到 `wf-fix`、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-dsl-upgrade`、`e2e-test-generator`、`self-improve` 等路由建议
+  - 失败项到 `wf-fix`、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-audit-fix`、`e2e-test-generator`、`self-improve` 等路由建议
   - 对 zip smoke、deep doctor 和 pre-release 的跳过原因
 
 ## dependencies
@@ -60,7 +60,7 @@
 - 用确定性 runner 脚本顺序执行命令，统一捕获 return code、stdout/stderr 摘要、开始结束时间、超时状态和关键 JSON/报告路径。
 - 对允许继续的失败项继续记录后续命令结果；对标记 short-circuit 的高风险失败应按计划提前停止，并把提前停止原因写入结果。
 - package smoke 执行前要再次校验输出 zip 目标是否符合已确认路径和覆盖策略，不能在脚本里偷偷改路径或清空目标目录。
-- `failure_routes.json` 不负责修复，只给出“失败类型 -> 建议 workflow”映射及其原因，例如 DSL audit 问题建议 `wf-dsl-upgrade` 或 `wf-fix`，prompt/契约问题建议 `wf-prompt-fix`。
+- `failure_routes.json` 不负责修复，只给出“失败类型 -> 建议 workflow”映射及其原因，例如 DSL audit 问题建议 `wf-audit-fix` 或 `wf-fix`，prompt/契约问题建议 `wf-prompt-fix`。
 - 资源目录可放命令执行结果 schema、stdout/stderr 摘要模板和失败路由映射表，减少脚本中的硬编码。
 
 ## 修订补充：执行结果 schema 与失败路由
@@ -107,7 +107,7 @@ stdout/stderr 摘要规则：
 
 | failure_type | 建议 route | reason |
 | --- | --- | --- |
-| `dsl_audit`、`workflow_compile` | `wf-dsl-upgrade` 或 `wf-fix` | DSL 结构或运行拓扑失败 |
+| `dsl_audit`、`workflow_compile` | `wf-audit-fix` 或 `wf-fix` | DSL 结构或运行拓扑失败 |
 | `prompt_contract` | `wf-prompt-fix` | prompt 输入输出或审核规则不满足 |
 | `prompt_quality` | `wf-prompt-upgrade` | prompt 可维护性或质量需要升级 |
 | `entry_contract`、`registry`、`artifact_contract` | `wf-fix` | package 契约、registry 或 artifact 声明不一致 |

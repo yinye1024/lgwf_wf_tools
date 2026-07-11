@@ -64,8 +64,12 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         self.assertIn("不向目标 package 根目录写入 `.lgwf`", plan["rules"]["state_boundary"])
         self.assertIn("wf/workflow.lgwf", plan["create_files"])
         self.assertIn("AGENTS.md", plan["create_files"])
+        self.assertIn("entry_contract.json", plan["create_files"])
         self.assertNotIn("SKILL.md", plan["create_files"])
         self.assertIn("wf/docs/steps", plan["create_dirs"])
+        self.assertEqual(plan["stage_manifest"][0]["stage_id"], "package_scaffold")
+        self.assertEqual(plan["stage_manifest"][0]["stage_dir"], "01_package_scaffold")
+        self.assertIn("wf/01_package_scaffold/workflow.lgwf", plan["create_files"])
 
     def test_build_scaffold_plan_enforces_two_layer_workflow_paths(self) -> None:
         plan = self.module.build_scaffold_plan(
@@ -76,8 +80,8 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
             }
         )
         all_paths = [*plan["create_dirs"], *plan["create_files"]]
-        self.assertIn("wf/01_confirm_requirements/workflow.lgwf", plan["create_files"])
-        self.assertNotIn("wf/01_confirm_requirements/00_collect_raw_intent/workflow.lgwf", all_paths)
+        self.assertIn("wf/01_prepare/workflow.lgwf", plan["create_files"])
+        self.assertNotIn("wf/01_prepare/00_collect_raw_intent/workflow.lgwf", all_paths)
         self.assertFalse(any(path.startswith("wf/tests") for path in all_paths))
         self.assertFalse(
             any(
@@ -135,6 +139,7 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
             [
                 {
                     "stage_id": "package_scaffold",
+                    "stage_dir": "01_package_scaffold",
                     "key_nodes": ["scaffold_package", "summarize_create_result"],
                     "human_approval": False,
                 }

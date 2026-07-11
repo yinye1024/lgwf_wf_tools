@@ -14,5 +14,7 @@ PY summarize_create_result
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/implementation_audit_result.json";
+    READ workspace file ".lgwf/implementation_observe.json";
     READ workspace file ".lgwf/implementation_result.json";
   };

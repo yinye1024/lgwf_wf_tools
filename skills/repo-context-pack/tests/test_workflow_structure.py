@@ -37,12 +37,10 @@ class RepoContextPackWorkflowStructureTests(unittest.TestCase):
 
     def test_root_workflow_references_four_stage_workflows(self) -> None:
         text = (WORKFLOW_ROOT / "workflow.lgwf").read_text(encoding="utf-8")
-        for stage in (
-            "entry_scope_resolution",
-            "target_context_inventory",
-            "context_pack_rendering",
-            "workflow_summary_handoff",
-        ):
+        stages = re.findall(r'WORKFLOW "([^"]+)/workflow\.lgwf"', text)
+        self.assertEqual(len(stages), 4)
+        self.assertEqual(len(set(stages)), 4)
+        for stage in stages:
             self.assertIn(f'WORKFLOW "{stage}/workflow.lgwf"', text)
             self.assertTrue((WORKFLOW_ROOT / stage / "workflow.lgwf").is_file(), stage)
             self.assertTrue((WORKFLOW_ROOT / stage / "agents" / "prompt.md").is_file(), stage)

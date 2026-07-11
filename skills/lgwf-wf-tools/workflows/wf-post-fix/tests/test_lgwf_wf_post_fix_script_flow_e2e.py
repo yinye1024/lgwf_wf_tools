@@ -68,6 +68,7 @@ class LgwfWfPostFixScriptFlowE2ETest(unittest.TestCase):
 
     def test_target_mapper_e2e_request_and_summary_do_not_request_real_happy_tests(self) -> None:
         normalize = load_module("01_prepare_target/scripts/normalize_post_fix_target.py", "post_fix_e2e_normalize")
+        build_audit_fix = load_module("02_audit_fix/scripts/build_audit_fix_input.py", "post_fix_e2e_audit_fix")
         build_prompt_fix = load_module("02_prompt_fix/scripts/build_prompt_fix_input.py", "post_fix_e2e_prompt_fix")
         build_prompt_upgrade = load_module(
             "03_prompt_upgrade/scripts/build_prompt_upgrade_input.py",
@@ -86,6 +87,11 @@ class LgwfWfPostFixScriptFlowE2ETest(unittest.TestCase):
 
                 self.assertEqual(normalized, target)
                 self.assertFalse(read_json(Path(".lgwf/post_fix_decisions.json"))["auto_enabled"])
+                audit_input = build_audit_fix.build_audit_fix_input(normalized)
+                self.assertEqual([target["target_workflow_lgwf"]], audit_input["audit_fix_target"]["target_paths"])
+                self.assertIn(target["target_package_root"], audit_input["audit_fix_target"]["allowed_dirs"])
+                self.assertEqual("apply", audit_input["audit_fix_target"]["mode"])
+                self.assertEqual("explicit", audit_input["audit_fix_target"]["scope_mode"])
                 self.assertEqual(
                     {
                         "prompt_fix_target": {

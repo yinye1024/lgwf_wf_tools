@@ -46,13 +46,13 @@
       "entry_contract": "workflows/wf-prompt-upgrade/entry_contract.json"
     },
     {
-      "id": "wf-dsl-upgrade",
+      "id": "wf-audit-fix",
       "kind": "lgwf",
-      "description": "对已授权的 LGWF workflow 执行 DSL 兼容性升级：批量 audit、分类诊断、生成升级计划、人工确认、受控应用和复检总结。",
-      "workflow_lgwf": "workflows/wf-dsl-upgrade/wf/workflow.lgwf",
-      "work_dir": "workflows/wf-dsl-upgrade/ws",
-      "agents_md": "workflows/wf-dsl-upgrade/AGENTS.md",
-      "entry_contract": "workflows/wf-dsl-upgrade/entry_contract.json"
+      "description": "对已授权的 LGWF workflow 执行 audit 静态修复：批量 audit、分类诊断、按 diagnostics 最小修复、人工确认、受控应用和复检总结。",
+      "workflow_lgwf": "workflows/wf-audit-fix/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-audit-fix/ws",
+      "agents_md": "workflows/wf-audit-fix/AGENTS.md",
+      "entry_contract": "workflows/wf-audit-fix/entry_contract.json"
     },
     {
       "id": "e2e-test-generator",

@@ -1,7 +1,7 @@
 # implement_steps_react act
 
 ## Role
-你是步骤实现 ACT 子流程的总说明。本阶段已拆为 `ACT WORKFLOW implement_units`：先由脚本准备 implementation units，再通过 `FOREACH` 调用确定性单 unit 脚本，最后由脚本合并为 `.lgwf/implementation_result.json`。
+你是步骤实现 ACT 子流程的总说明。本阶段已拆为 `ACT WORKFLOW implement_units`：先由脚本准备 implementation units，再通过 `FOREACH` 调用单 unit Codex，最后由脚本合并为 `.lgwf/implementation_result.json`。
 
 ## Inputs
 - `agents/spec.md`：本 ReAct 循环的共同准则，是路径、拓扑、DSL 和排除范围的权威约束。
@@ -21,7 +21,7 @@
 
 ## Task
 1. `prepare_implementation_units.py` 读取 `agents/spec.md` 之外的运行上下文，将已确认步骤设计拆成互不重叠的 implementation units。
-2. `FOREACH implement_each_unit` 对每个 unit 启动 `implement_one_unit.lgwf`，由 `scripts/implement_current_unit.py` 按 unit context 生成或修复当前单元文件。
+2. `FOREACH implement_each_unit` 对每个 unit 启动 `implement_one_unit.lgwf`，由 `agents/act_unit.md` 约束单个 Codex 的实际写入范围。
 3. 如果 `.lgwf/implementation_observe.json` 存在且 audit 失败，本轮只生成与失败项相关的 units；无法归因时才回退到根编排和阶段 unit。
 4. `merge_implementation_results.py` 合并每个 unit 的结果，记录本轮实际生成的文件、目录、步骤设计文档副本、占位内容、剩余风险和本轮处理的 audit 反馈。
 

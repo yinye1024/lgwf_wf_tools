@@ -70,6 +70,7 @@ some_workflow/
 
 - 当前 workflow 可以直接声明其普通 step 对应的 `PY`、`CODEX`、`APPROVAL`、`REVIEW`、`REACT`、`AGENT_LOOP`、`PARALLEL` 节点。
 - 多个 ReAct Codex slot 共用稳定业务规则时，在 `REACT` 中声明可选 `SPEC "<path>"`；它约束 `REASON`、`ACT`、`OBSERVE`，不传给 `DECIDE PY`。
+- 多轮 `REACT` 中，`OBSERVE` / `DECIDE` 如果通过 contract 写出 observation、diagnostics、decision 或反馈文件，下一轮 `REASON` 必须通过 `CONTRACT READ` 或 workspace file context 读取这些反馈；`state.next` 只作为路由控制，不要求给 `REASON` 消费。
 - 工程化长程循环使用 `AGENT_LOOP`，按声明顺序执行六个必填 slot：`OBSERVE`、`DIAGNOSE`、`PLAN`、`ACT`、`VERIFY`、`DECIDE`。循环 slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`CODEX` slot 使用 `PROMPT_REF`，`VERIFY` 结果必须包含 `passed: true|false`，`DECIDE` 结果必须包含 `category` 和 `reason`。
 - 只有出现独立拓扑、复用或嵌套编排需求时才创建子 workflow。
 - 子 workflow 的内部节点只由它自己的 `workflow.lgwf` 声明；父 workflow 不复制这些节点。
@@ -200,7 +201,7 @@ print(json.dumps({"pipeline.prompt_upgrade_input": payload}, ensure_ascii=False)
 
 不要把 `.lgwf/child-runs/*.json` 作为常规业务数据通道；它是父 workflow 的 child 运行摘要，适合诊断和状态展示。`RUN_WORKFLOW` 中 child 的人工确认会通过父 workflow status 暴露为 `pending_action.type="child_human_approval"`，父侧 approval 提交后继续等待 child 完成。
 
-`RUN_WORKFLOW + PY map_*` 串联会在 authoring audit 中做基础 handoff check：`WORKFLOW` 和 `WORK_DIR` 必须是安全相对路径，重复 `WORK_DIR`、未被消费的 child result、缺少上游 writer 的 child input 会出现在 diagnostics 中。mapper 是 state shape adapter，不默认复制文件；复杂 mapper 仍可把 `target_dir`、`report_path`、`artifact_paths` 等字段写入下游 payload。如果只需要从上游 child 交接业务文件或目录，优先使用 `HANDOFF_FILES`，不要手写拷贝脚本。不要直接读取 `.lgwf/child-runs/*.json` 作为下游数据来源。
+`RUN_WORKFLOW + PY map_*` 串联会在 authoring audit 中做基础 handoff check：`WORKFLOW` 和 `WORK_DIR` 必须是安全相对路径，child `workflow.lgwf` 会递归 audit，重复 `WORK_DIR`、未被消费的 child result、缺少上游 writer 的 child input 会作为 error diagnostics 返回。mapper 是 state shape adapter，不默认复制文件；复杂 mapper 仍可把 `target_dir`、`report_path`、`artifact_paths` 等字段写入下游 payload。如果只需要从上游 child 交接业务文件或目录，优先使用 `HANDOFF_FILES`，不要手写拷贝脚本。不要直接读取 `.lgwf/child-runs/*.json` 作为下游数据来源。
 
 `RUN_WORKFLOW` 的实际 child 运行目录位于父 `<work_dir>/.lgwf/isolations/run_workflow/<node_id>/work_dir`，隔离 workspace 位于同级 `workspace`。child run record 会同时记录 `declared_work_dir`、`workspace` 和实际 `work_dir`，排障和人工确认转发应优先使用 record 中的实际 `work_dir`。
 
