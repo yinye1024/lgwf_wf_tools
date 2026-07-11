@@ -77,21 +77,29 @@ REACT repair_target MAX 3
       READ workspace file ".lgwf/current_target_context.json";
       WRITE state.wf_dsl_upgrade.repair_action;
     }
-  OBSERVE CODEX
-    PROMPT "agents/observe.md"
-    TARGET_FILES state.wf_dsl_upgrade.target_files
+  OBSERVE PY
+    SCRIPT "scripts/observe_repair.py"
+    INPUT state.wf_dsl_upgrade.current_target
+    TIMEOUT 120
     RESULT state.wf_dsl_upgrade.repair_observation
+    UPDATES_STATE {
+      WRITE state.wf_dsl_upgrade.current_audit;
+      WRITE state.wf_dsl_upgrade.repair_observation;
+    }
     CONTRACT {
       READ state.wf_dsl_upgrade.current_target;
       READ state.wf_dsl_upgrade.current_audit;
       READ state.wf_dsl_upgrade.repair_action;
       READ state.wf_dsl_upgrade.target_files;
       READ workspace file ".lgwf/current_target_context.json";
+      WRITE state.wf_dsl_upgrade.current_audit;
       WRITE state.wf_dsl_upgrade.repair_observation;
+      WRITE workspace file ".lgwf/current_target_audit.json";
+      WRITE workspace file ".lgwf/repair_observation.json";
     }
   DECIDE PY
     SCRIPT "scripts/decide_next.py"
-    INPUT state.wf_dsl_upgrade.current_target
+    INPUT state.wf_dsl_upgrade.repair_observation
     TIMEOUT 30
     RESULT state.wf_dsl_upgrade.decide_next_result
     UPDATES_STATE {
@@ -100,11 +108,14 @@ REACT repair_target MAX 3
       WRITE state.wf_dsl_upgrade.repair_decision;
     }
     CONTRACT {
-      READ state.wf_dsl_upgrade.current_target;
+      READ state.wf_dsl_upgrade.current_audit;
+      READ state.wf_dsl_upgrade.repair_observation;
       WRITE state.next;
       WRITE state.wf_dsl_upgrade.current_audit;
       WRITE state.wf_dsl_upgrade.repair_decision;
+      READ workspace file ".lgwf/current_target_audit.json";
       WRITE workspace file ".lgwf/current_target_audit.json";
+      READ workspace file ".lgwf/repair_observation.json";
     };
 
 PY finalize_target

@@ -25,6 +25,7 @@ APPROVAL confirm_scope
   PROMPT_REF "agents/confirm_scope.md"
   READ state.wf_dsl_upgrade.scope_confirmation_context
   WRITE state.wf_dsl_upgrade.scope_approval
+  ROUTE_ON_DECISION
   RESULT state.wf_dsl_upgrade.confirm_scope_result
   PERSIST ".lgwf/scope_approval.json"
   CONTRACT {
@@ -35,12 +36,14 @@ APPROVAL confirm_scope
 
 PY prepare_scope_route
   SCRIPT "scripts/route_scope_decision.py"
+  INPUT state.wf_dsl_upgrade.confirm_scope_result
   TIMEOUT 30
   RESULT state.wf_dsl_upgrade.prepare_scope_route_result
   UPDATES_STATE {
     WRITE state.wf_dsl_upgrade.scope_route;
   }
   CONTRACT {
+    READ state.wf_dsl_upgrade.confirm_scope_result;
     READ workspace file ".lgwf/target_manifest.json";
     READ workspace file ".lgwf/target_scope_validation.json";
     READ workspace file ".lgwf/scope_approval.json";

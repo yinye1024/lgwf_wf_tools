@@ -1,14 +1,12 @@
-# 执行当前目标的最小 DSL 修复
+# 执行当前目标的 DSL 修复
 
-请根据上一轮分析和当前 audit diagnostics 修改目标 `.lgwf`。每处改动对应一个明确的 diagnostic 或上一轮 reason 中说明的最小修复点。
+请执行 reason 给出的修正方案，只修改 `TARGET_FILES` 中的当前 `.lgwf` 文件。
 
 要求：
 
-- 只修改 `TARGET_FILES` 中的当前 `.lgwf` 文件。
-- 优先修复 audit 明确指出的问题。
-- 补 `CONTRACT` 时只声明真实跨节点状态或 workspace artifact 边界；没有业务 I/O 的节点写 `CONTRACT {}`。
-- 保持原 workflow 业务顺序、节点 id、脚本和 prompt 引用不变，除非 audit 明确要求。
-- 不要修改运行态 `.lgwf/`、`ws/`、`reports/` 文件，也不要生成临时文件。
-- 如果无法把改动精确对应到 diagnostic，不要猜测修复；保留现状并说明需要人工处理。
-
-完成后简要说明改了什么和为什么。
+- 每处改动都必须对应当前 audit diagnostic 或 reason 中合并后的节点级方案。
+- `LGWF_CONTRACT_REQUIRED_MISSING` 必须通过补齐对应节点 `CONTRACT` 修复；没有业务 I/O 的节点写 `CONTRACT {}`。
+- 保持原 workflow 业务顺序、节点 id、脚本和 prompt 引用不变。
+- 不要修改运行态 `.lgwf/`、`ws/`、`reports/` 文件。
+- 不要生成临时文件、报告或额外说明文件。
+- 完成后简要说明执行 reason 的哪些修正方案，以及对应的 diagnostic code。

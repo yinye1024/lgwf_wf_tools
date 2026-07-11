@@ -45,6 +45,7 @@
   - `upgrade-one-target`
 - 依赖节点：
   - `state.wf_dsl_upgrade.target_results`
+  - `state.wf_dsl_upgrade`，作为 `exec.run_python INPUT` 的对象输入；不要把 `INPUT` 直接指向列表型 `state.wf_dsl_upgrade.target_results`
 - 需要人工确认的位置：
   - 当前阶段不新增人工确认
 

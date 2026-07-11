@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import os
 import py_compile
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -44,6 +49,39 @@ class ScriptFlowE2ETest(unittest.TestCase):
             with self.subTest(script=script_path.relative_to(PACKAGE_ROOT)):
                 py_compile.compile(str(script_path), doraise=True)
 
+    def test_per_target_scripts_import_from_standalone_child_package(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = WF_ROOT / "03_upgrade_one_target"
+            child_root = Path(temp_dir) / "03_upgrade_one_target"
+            shutil.copytree(source, child_root, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            code = r'''
+import importlib.util
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+scripts = sorted(path for path in (root / "scripts").glob("*.py") if path.name != "__init__.py")
+for index, script in enumerate(scripts):
+    spec = importlib.util.spec_from_file_location(f"standalone_child_script_{index}", script)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+print(f"imported {len(scripts)} scripts")
+'''
+            env = dict(os.environ)
+            env.pop("PYTHONPATH", None)
+            completed = subprocess.run(
+                [sys.executable, "-c", code, str(child_root)],
+                cwd=temp_dir,
+                env=env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
     def test_nested_workflow_and_prompt_refs_are_package_relative(self) -> None:
         for workflow in self.workflow_files():
             text = workflow.read_text(encoding="utf-8")
@@ -71,8 +109,15 @@ class ScriptFlowE2ETest(unittest.TestCase):
     def test_scope_gate_persists_scope_approval(self) -> None:
         text = (WF_ROOT / "02_confirm_scope" / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("APPROVAL confirm_scope", text)
+        self.assertIn("ROUTE_ON_DECISION", text)
         self.assertIn('PERSIST ".lgwf/scope_approval.json"', text)
+        self.assertIn("RESULT state.wf_dsl_upgrade.confirm_scope_result", text)
         self.assertIn("WRITE state.wf_dsl_upgrade.scope_approval", text)
+
+    def test_summary_receives_object_input_not_target_results_list(self) -> None:
+        text = (WF_ROOT / "04_summarize_upgrade_result" / "workflow.lgwf").read_text(encoding="utf-8")
+        self.assertIn("INPUT state.wf_dsl_upgrade", text)
+        self.assertNotIn("INPUT state.wf_dsl_upgrade.target_results", text)
 
     def test_source_tree_has_no_generated_isolation_or_local_absolute_paths(self) -> None:
         local_repo_root = PACKAGE_ROOT.parents[3]

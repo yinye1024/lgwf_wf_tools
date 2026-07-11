@@ -1,12 +1,10 @@
-# 观察修复结果
+# OBSERVE PY 复检说明
 
-请对刚才的修改做人工可读观察，不要继续改文件。
+当前 workflow 的 observe slot 使用 `OBSERVE PY`，不调用 Codex prompt。实际复检由 `scripts/observe_repair.py` 执行。
 
-关注：
+`observe_repair.py` 的职责：
 
-- 文件是否仍保持原业务流程。
-- 修改是否只覆盖当前 audit diagnostics。
-- 是否出现越界写入、明显无关改动或过度重构。
-- 是否改动了 `TARGET_FILES` 之外的文件，或触碰了 `.lgwf/`、`ws/`、`reports/`。
-
-不复跑 audit；真正的复检 audit 由后续 `DECIDE PY` 执行。本 slot 只输出观察说明。
+- 复跑当前目标 `.lgwf` 的 audit check。
+- 写入 `.lgwf/current_target_audit.json`。
+- 写入 `.lgwf/repair_observation.json`，记录 changed、diagnostic_count、diagnostic_delta 和 diagnostic identities。
+- 把 audit check 的 diagnostics 返回给后续 `DECIDE PY`，由 decide 控制继续或退出。

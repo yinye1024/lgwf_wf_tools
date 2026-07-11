@@ -31,6 +31,7 @@ class WorkflowStructureTest(unittest.TestCase):
             "wf/workflow.lgwf",
             "wf/artifact_contracts.json",
             "wf/shared/scripts/dsl_upgrade_common.py",
+            "wf/03_upgrade_one_target/scripts/dsl_upgrade_common.py",
         ):
             with self.subTest(relative=relative):
                 self.assertTrue((PACKAGE_ROOT / relative).exists(), relative)
@@ -71,7 +72,9 @@ class WorkflowStructureTest(unittest.TestCase):
         self.assertIn("PY prepare_repair_context", text)
         self.assertIn("PY audit_current_target", text)
         self.assertIn("REACT repair_target MAX 3", text)
-        self.assertIn("OBSERVE CODEX", text)
+        self.assertIn("OBSERVE PY", text)
+        self.assertIn('SCRIPT "scripts/observe_repair.py"', text)
+        self.assertNotIn("OBSERVE CODEX", text)
         self.assertIn("DECIDE PY", text)
         self.assertIn("PY finalize_target", text)
 
@@ -116,20 +119,34 @@ class WorkflowStructureTest(unittest.TestCase):
                 "TARGET_FILES",
                 "current_target",
                 "dry_run",
-                "needs_manual_review",
+                "第 0 次 audit check",
                 "CONTRACT {}",
                 ".lgwf/",
                 "ws/",
                 "reports/",
+                "LGWF_CONTRACT_REQUIRED_MISSING",
             ],
-            "reason": ["不修改文件", "诊断归因", "人工处理"],
-            "act": ["每处改动对应", "diagnostic", "TARGET_FILES", "不要生成临时文件"],
-            "observe": ["不复跑 audit", "越界", "过度重构"],
+            "reason": ["不修改文件", "逐条 diagnostics", "修正方案", "LGWF_CONTRACT_REQUIRED_MISSING"],
+            "act": ["执行 reason", "diagnostic", "TARGET_FILES", "不要生成临时文件"],
+            "observe": ["OBSERVE PY", "audit check", "observe_repair.py"],
         }
         for prompt_name, terms in required_terms.items():
             for term in terms:
                 with self.subTest(prompt=prompt_name, term=term):
                     self.assertIn(term, prompts[prompt_name])
+
+        forbidden_terms = [
+            "语义上下文不足",
+            "保留现状",
+            "人工处理",
+            "不要猜测修复",
+            "需要人工处理",
+            "needs_manual_review",
+        ]
+        for prompt_name in ("repair_spec", "reason", "act"):
+            for term in forbidden_terms:
+                with self.subTest(prompt=prompt_name, forbidden=term):
+                    self.assertNotIn(term, prompts[prompt_name])
 
 
 if __name__ == "__main__":

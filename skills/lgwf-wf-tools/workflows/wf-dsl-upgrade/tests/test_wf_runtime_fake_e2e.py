@@ -73,7 +73,7 @@ class RuntimeFakeE2ETest(unittest.TestCase):
             self.scope_prepare.build_scope_confirmation_context(root)
             write_json(root / ".lgwf" / "scope_approval.json", {"decision": "reject"})
 
-            route = self.scope_route.choose_scope_route(root)
+            route = self.scope_route.choose_scope_route(root, {"decision": "reject"})
             summary = self.summary.build_result_summary(root, {"target_results": []})
 
             self.assertEqual(route, "summary")
@@ -97,7 +97,7 @@ class RuntimeFakeE2ETest(unittest.TestCase):
             current_target = collect_result["state_updates"]["wf_dsl_upgrade.targets"][0]
             self.scope_prepare.build_scope_confirmation_context(root)
             write_json(root / ".lgwf" / "scope_approval.json", {"decision": "approve"})
-            self.assertEqual(self.scope_route.choose_scope_route(root), "run")
+            self.assertEqual(self.scope_route.choose_scope_route(root, {"decision": "approve"}), "run")
 
             context = self.repair_prepare.build_repair_context(root, current_target)
             original_audit = self.audit.run_lgwf_audit

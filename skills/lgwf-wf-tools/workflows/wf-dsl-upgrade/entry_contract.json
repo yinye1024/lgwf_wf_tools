@@ -1,7 +1,7 @@
 {
   "id": "wf-dsl-upgrade",
   "kind": "lgwf",
-  "version": 2,
+  "version": 1,
   "workflow_lgwf": "workflows/wf-dsl-upgrade/wf/workflow.lgwf",
   "work_dir": "workflows/wf-dsl-upgrade/ws",
   "input_mode": "input_json_required",
@@ -14,12 +14,14 @@
       "dsl_upgrade_target": {
         "type": "object",
         "required": [
-          "target_paths"
+          "target_paths",
+          "allowed_dirs"
         ],
         "properties": {
           "target_paths": {
             "type": "array",
             "description": "显式授权的目标路径，可以是 .lgwf 文件，也可以是需要递归扫描 .lgwf 文件的目录。",
+            "minItems": 1,
             "items": {
               "type": "string"
             }
@@ -33,6 +35,8 @@
           },
           "allowed_dirs": {
             "type": "array",
+            "description": "显式授权的可读写边界目录；dry_run 和 apply 都需要它来证明目标没有越界。",
+            "minItems": 1,
             "items": {
               "type": "string"
             }

@@ -53,6 +53,12 @@ def _clean_target_results(value: Any) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)]
 
 
+def _approval_decision(scope_approval: Any) -> str:
+    if not isinstance(scope_approval, dict):
+        return ""
+    return str(scope_approval.get("decision", "")).strip().lower()
+
+
 def build_result_summary(root: Path, provided_context: dict[str, Any] | None = None) -> dict[str, Any]:
     context = _load_context(root)
     if provided_context:
@@ -63,6 +69,9 @@ def build_result_summary(root: Path, provided_context: dict[str, Any] | None = N
     if not request and isinstance(manifest.get("request"), dict):
         request = manifest["request"]
     scope_approval = context.get("scope_approval", {}) if isinstance(context.get("scope_approval", {}), dict) else {}
+    confirm_scope_result = (
+        context.get("confirm_scope_result", {}) if isinstance(context.get("confirm_scope_result", {}), dict) else {}
+    )
     approval_comment = str(scope_approval.get("comment", "")).strip()
     approval_changes = _clean_changes(scope_approval.get("changes", []))
     target_results = _clean_target_results(context.get("target_results", []))
@@ -70,17 +79,20 @@ def build_result_summary(root: Path, provided_context: dict[str, Any] | None = N
     passed_target_count = sum(1 for item in target_results if item.get("passed"))
     manual_target_count = sum(1 for item in target_results if item.get("status") == "needs_manual_review")
     dry_run_failed_count = sum(1 for item in target_results if item.get("status") == "dry_run_failed")
+    failed_target_count = sum(1 for item in target_results if item.get("status") == "failed")
     remaining_diagnostic_count = sum(
         int(item.get("diagnostic_count", 0) or 0) for item in target_results if not item.get("passed")
     )
 
     mode = str(request.get("mode", "dry_run")).strip().lower()
-    decision = str(scope_approval.get("decision", "")).strip().lower()
+    decision = _approval_decision(confirm_scope_result) or _approval_decision(scope_approval)
     status = "failed"
     if not validation.get("passed", False):
         status = "failed"
     elif target_results:
-        if manual_target_count or dry_run_failed_count:
+        if failed_target_count:
+            status = "failed"
+        elif manual_target_count or dry_run_failed_count:
             status = "partial"
         elif repaired_target_count:
             status = "applied"
@@ -100,6 +112,8 @@ def build_result_summary(root: Path, provided_context: dict[str, Any] | None = N
         remaining_risks.append("FOREACH 结果中仍有目标需要人工处理。")
     if dry_run_failed_count:
         remaining_risks.append("dry_run 发现未通过 audit 的目标，但未写入修复。")
+    if failed_target_count:
+        remaining_risks.append("FOREACH 结果中存在执行失败目标。")
     if remaining_diagnostic_count:
         remaining_risks.append("FOREACH 结果中仍有未通过 audit 的 diagnostics。")
 
@@ -137,6 +151,7 @@ def build_result_summary(root: Path, provided_context: dict[str, Any] | None = N
         "passed_target_count": passed_target_count,
         "manual_review_count": manual_target_count,
         "dry_run_failed_count": dry_run_failed_count,
+        "failed_target_count": failed_target_count,
         "remaining_diagnostic_count": remaining_diagnostic_count,
         "target_results": target_results,
         "remaining_risks": remaining_risks,
@@ -160,6 +175,7 @@ def render_report(summary: dict[str, Any]) -> str:
         f"- audit 通过目标数：`{summary['passed_target_count']}`",
         f"- 需要人工处理目标数：`{summary['manual_review_count']}`",
         f"- dry_run 未通过目标数：`{summary['dry_run_failed_count']}`",
+        f"- 执行失败目标数：`{summary['failed_target_count']}`",
         "",
         "## 审批反馈",
         "",
@@ -209,7 +225,12 @@ def main() -> None:
     root = Path.cwd()
     ensure_runtime_dirs(root)
     stdin_payload = _read_stdin_json()
-    provided_context = {"target_results": stdin_payload} if isinstance(stdin_payload, list) else None
+    if isinstance(stdin_payload, list):
+        provided_context = {"target_results": stdin_payload}
+    elif isinstance(stdin_payload, dict):
+        provided_context = stdin_payload
+    else:
+        provided_context = None
     summary = build_result_summary(root, provided_context)
     report_text = render_report(summary)
     write_json(root / ".lgwf" / "result_summary.json", summary)

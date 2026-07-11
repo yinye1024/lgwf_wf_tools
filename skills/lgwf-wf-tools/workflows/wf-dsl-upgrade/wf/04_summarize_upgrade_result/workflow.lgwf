@@ -8,7 +8,7 @@ DEFAULTS {
 
 PY summarize_upgrade_result
   SCRIPT "scripts/summarize_upgrade_result.py"
-  INPUT state.wf_dsl_upgrade.target_results
+  INPUT state.wf_dsl_upgrade
   TIMEOUT 120
   RESULT state.wf_dsl_upgrade.summarize_upgrade_result
   UPDATES_STATE {

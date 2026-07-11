@@ -13,11 +13,28 @@ if str(SHARED_SCRIPTS) not in sys.path:
 from dsl_upgrade_common import load_json
 
 
-def choose_scope_route(root: Path) -> str:
+def _read_stdin_json() -> dict[str, Any]:
+    raw = sys.stdin.read().strip()
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _decision_from(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    return str(value.get("decision", "")).strip().lower()
+
+
+def choose_scope_route(root: Path, approval_result: dict[str, Any] | None = None) -> str:
     approval = load_json(root / ".lgwf" / "scope_approval.json", {})
     validation = load_json(root / ".lgwf" / "target_scope_validation.json", {})
     manifest = load_json(root / ".lgwf" / "target_manifest.json", {})
-    decision = str(approval.get("decision", "") if isinstance(approval, dict) else "").strip().lower()
+    decision = _decision_from(approval_result) or _decision_from(approval)
     target_count = len(manifest.get("authorized_targets", []) if isinstance(manifest, dict) else [])
     validation_passed = bool(validation.get("passed")) if isinstance(validation, dict) else False
     if decision == "approve" and validation_passed and target_count > 0:
@@ -28,7 +45,7 @@ def choose_scope_route(root: Path) -> str:
 
 
 def main() -> None:
-    route = choose_scope_route(Path.cwd())
+    route = choose_scope_route(Path.cwd(), _read_stdin_json())
     print(json.dumps({"wf_dsl_upgrade.scope_route": route}, ensure_ascii=False, indent=2))
 
 

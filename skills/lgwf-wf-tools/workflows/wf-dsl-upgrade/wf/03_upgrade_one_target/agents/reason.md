@@ -1,12 +1,13 @@
-# 分析当前 DSL audit diagnostics
+# 生成当前 DSL audit 修正方案
 
-请分析当前目标 `.lgwf` 的 audit 结果，输出诊断归因和修复判断。本 slot 不修改文件，只说明下一步是否可以安全做最小修复。
+本 slot 不修改文件。请读取当前目标 `.lgwf`、`state.wf_dsl_upgrade.current_audit.diagnostics` 和 `.lgwf/current_target_context.json`，逐条 diagnostics 生成 act 可直接执行的修正方案。
 
-关注：
+输出要求：
 
-- diagnostics 的 code、message 和 location。
-- 当前文件中缺失或位置错误的 `CONTRACT`，以及该诊断是否能从当前文件内证实。
-- 最小可行修复，不扩大到无关格式化、批量迁移或重构。
-- 如果缺少足够语义上下文，明确说明需要人工处理的原因，后续应让 `finalize_target` 标记 `needs_manual_review`。
+- 逐条列出 diagnostic 的 code、location、message。
+- 对每条 diagnostic 给出具体修正方案，说明要修改哪个节点、添加或移动哪段 DSL。
+- 遇到 `LGWF_CONTRACT_REQUIRED_MISSING` 时，方案必须是补齐对应节点的 `CONTRACT`；没有业务 I/O 的节点使用 `CONTRACT {}`。
+- 如果多条 diagnostics 指向同一节点，合并成一次节点级修改方案。
+- 不修改文件，不新增文件，不运行命令。
 
-不修改文件，不新增文件，不运行额外命令。本 slot 只产出分析结果。
+修正方案必须保持原 workflow 的节点 id、节点顺序、脚本路径、prompt 路径和业务流程。

@@ -38,13 +38,15 @@ python $lgwfPy run --workflow-lgwf skills\lgwf-wf-tools\workflows\wf-dsl-upgrade
 ```
 
 - `scope_mode=explicit` 支持在 `target_paths` 中传入 `.lgwf` 文件或目录；目录会递归扫描所有 `.lgwf` 文件并写入 manifest，同时输出 `state.wf_dsl_upgrade.targets` 供 `FOREACH` 消费。
+- `allowed_dirs` 必填，用于在 `dry_run` 和 `apply` 下统一证明目标范围已授权；缺少可用授权目录时入口校验会失败。
 - 第一版保留 `scope_mode=registry` 契约和显式 unsupported 行为，不会静默降级为 `explicit`。
 
 ## 依赖
 
 - 依赖 `skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py` 执行真实 `audit`。
 - 依赖 `workflows/01-share/` 的模块契约、dispatch、monitor、approval 和 artifacts 共享规则。
-- 依赖 `wf/shared/scripts/dsl_upgrade_common.py` 统一处理 UTF-8 JSON、路径授权、hash、audit 调用和诊断键归一化。
+- 依赖 `wf/shared/scripts/dsl_upgrade_common.py` 统一处理 package 级 UTF-8 JSON、路径授权、hash、audit 调用和诊断键归一化。
+- `03_upgrade_one_target` 作为 `RUN_WORKFLOW` 子包执行时使用阶段内 `scripts/dsl_upgrade_common.py`，确保子包快照不依赖父级 `wf/shared`。
 - 依赖 `02_confirm_scope` 作为目标范围人工确认闸门；后续 `FOREACH` 不得绕过该阶段。
 - 依赖 LGWF runtime 支持 authoring DSL `FOREACH` / runtime `subgraph.foreach`。当前仓库 bundled `vendor/lgwf-client-assist` 若仍是旧 wheel，需要先刷新后才能实际运行本 workflow。
 
@@ -52,7 +54,7 @@ python $lgwfPy run --workflow-lgwf skills\lgwf-wf-tools\workflows\wf-dsl-upgrade
 
 - 运行状态只允许写入 `ws/.lgwf/` 和 `ws/reports/`。
 - workflow 源码树只保存 `wf/`、`tests/`、`scripts/`、入口文档和静态资源，不保存运行态 `.lgwf/`、`__pycache__/` 或临时输出。
-- 目标文件写入只允许发生在 `mode=apply` 且 `.lgwf/scope_approval.json.decision=approve` 时，并且当前 item 必须同时位于 `target_manifest.json` 与 `allowed_dirs` 内。
+- 目标文件写入只允许发生在 `mode=apply` 且 `state.wf_dsl_upgrade.confirm_scope_result.decision=approve` 时；`.lgwf/scope_approval.json` 保存已批准的业务范围 context，不作为控制分支的 decision 来源。当前 item 必须同时位于 `target_manifest.json` 与 `allowed_dirs` 内。
 - 每轮 Codex 修复只通过 `TARGET_FILES state.wf_dsl_upgrade.target_files` 暴露当前 `.lgwf` 文件，不暴露整个目标仓库。
 - `dry_run` 只运行 audit、记录 diagnostics 和报告，不进入写入式修复。
 - package 内资源路径、`workflow.lgwf` 引用路径和文档示例路径必须使用包内相对路径，禁止绝对路径、盘符路径和 `..`。
@@ -73,7 +75,7 @@ python $lgwfPy run --workflow-lgwf skills\lgwf-wf-tools\workflows\wf-dsl-upgrade
 1. `01_collect_targets`：解析入口输入、递归展开目录内 `.lgwf` 文件、校验 `allowed_dirs` 和 `scope_mode`，生成 `target_manifest.json`。
 2. `02_confirm_scope`：展示授权目标、mode、校验结果和影响范围，使用 `APPROVAL` 收集 `approve` / `reject`。
 3. `FOREACH upgrade_each`：按 `state.wf_dsl_upgrade.targets` 逐项运行 `03_upgrade_one_target`，`FAIL collect`，单个目标失败不阻塞后续目标。
-4. `03_upgrade_one_target`：对当前 `.lgwf` 先 audit；若 `mode=apply` 且 audit 失败，进入 `REACT repair_target MAX 3`，由 Codex 做最小修复，`DECIDE PY` 复跑 audit 并决定继续或退出。
+4. `03_upgrade_one_target`：对当前 `.lgwf` 先做第 0 次 audit check；若 `mode=apply` 且 audit 失败，进入 `REACT repair_target MAX 3`，由 Codex 生成并执行最小修复，`OBSERVE PY` 复跑 audit check，`DECIDE PY` 根据结构化观察决定继续或退出。
 5. `04_summarize_upgrade_result`：消费 `state.wf_dsl_upgrade.target_results`，输出机器可读 summary 和中文报告。
 
 ## 验证
@@ -86,7 +88,7 @@ $env:PYTHONPATH = "$lgwfRepo\src"
 ```
 
 - 只修改文档时，至少确认文件为 UTF-8、命令路径仍与 `wf/` 和 `ws/` 语义一致。
-- bundled `vendor/lgwf-client-assist` 刷新到支持 `FOREACH` 后，再恢复使用 facade 标准 audit 命令。
+- bundled `vendor/lgwf-client-assist` 必须刷新到支持 `FOREACH`、`RUN_WORKFLOW` 源 workflow root 解析和 `REACT OBSERVE PY` 后，再使用 facade 标准 audit / run 命令。
 
 ## 禁止事项
 

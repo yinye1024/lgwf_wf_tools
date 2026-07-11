@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 
-SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
-if str(SHARED_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SHARED_SCRIPTS))
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 from dsl_upgrade_common import run_lgwf_audit, write_json
 
