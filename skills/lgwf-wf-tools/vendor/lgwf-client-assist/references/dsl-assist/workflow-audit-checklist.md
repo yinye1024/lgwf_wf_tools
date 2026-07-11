@@ -41,7 +41,7 @@
 - `AGENT_LOOP` 不依赖顶层 `SANDBOX`，每轮自动使用 sandbox；失败、blocked、retry 或验证失败轮次只归档，不 promote。
 - `RUN_WORKFLOW + PY map_*` 用于串联独立 workflow package；mapper 只做 state shape adapter，不默认复制文件。
 - 有可审计文件副作用的 `PY` 必须声明 `CONTRACT`；`CONTRACT` 不用于声明 stdout state patch。
-- `RESULT state.*` 和 `UPDATES_STATE { WRITE state.*; }` 已经各自声明 state 写入，不得在 `CONTRACT WRITE state.*` 中重复声明；重复时 audit 应报 `LGWF_CONTRACT_RESULT_WRITE_REDUNDANT` 或 `LGWF_CONTRACT_UPDATES_STATE_WRITE_REDUNDANT`。
+- `RESULT state.*`、`UPDATES_STATE { WRITE state.*; }` 和 `CONTRACT WRITE state.*` 分别服务执行结果、stdout state patch 和业务契约边界；三者是独立系统，可以声明同一个 state path。
 - `PY` 需要让 workflow 上可见 stdout state patch 写入范围时，使用 `UPDATES_STATE { WRITE state.*; }` 覆盖脚本 stdout 会写入的最终 state path；裸 `UPDATES_STATE` 保持兼容模式，不检查具体 path。
 - `PY SCRIPT` 读取 `.lgwf/`、`reports/` 或 `data/` 下的业务 artifact 时，必须声明 `CONTRACT READ workspace file "..."`。audit 会扫描 `Path("...").read_text(...)`、`Path("...").read_bytes(...)`、`open("...", "r")`、`open("...")`、`load_json(root / ".lgwf" / "file.json")` 和 `read_json(...)`；缺少 contract 时应报 `LGWF_PY_FILE_READ_CONTRACT_MISSING`，读取路径未声明时应报 `LGWF_PY_FILE_READ_CONTRACT_MISMATCH`。
 - `PY SCRIPT` 写入 `.lgwf/`、`reports/` 或 `data/` 下的业务 artifact 时，也必须声明 `CONTRACT WRITE workspace file "..."`。audit 会扫描 `Path("...").write_text(...)`、`Path("...").write_bytes(...)`、`open("...", "w|a|x", ...)` 和 `write_json(lgwf_dir / "out.json", payload)`；缺少 contract 时应报 `LGWF_PY_FILE_WRITE_CONTRACT_MISSING`，写出路径未声明时应报 `LGWF_PY_FILE_WRITE_CONTRACT_MISMATCH`。

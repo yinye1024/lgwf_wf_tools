@@ -1,8 +1,33 @@
 {
-  "bootstrap_inputs": [],
+  "bootstrap_inputs": [
+    ".lgwf/business_flow.json",
+    ".lgwf/contract_observe.json",
+    ".lgwf/create_requirements.json",
+    ".lgwf/implementation_context.json",
+    ".lgwf/implementation_observe.json",
+    ".lgwf/implementation_result.json",
+    ".lgwf/step_designs.json"
+  ],
+  "final_outputs": [
+    ".lgwf/business_flow_approval.json",
+    ".lgwf/contract_audit_result.json",
+    ".lgwf/contract_decision.json",
+    ".lgwf/contract_enrichment_result.json",
+    ".lgwf/contract_observe.json",
+    ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
+    ".lgwf/create_reference_context/dsl-assist/dsl_reference_context.json",
+    ".lgwf/create_reference_context/dsl-assist/guide.md",
+    ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",
+    ".lgwf/create_reference_context/dsl_reference_context.json",
+    ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md",
+    ".lgwf/created_package_validation.json",
+    ".lgwf/implementation_decision.json",
+    ".lgwf/step_design_confirmation_record.json"
+  ],
   "script_writes": {
     "prepare_dsl_reference_context": [
       ".lgwf/create_reference_context/dsl_reference_context.json",
+      ".lgwf/create_reference_context/dsl-assist/dsl_reference_context.json",
       ".lgwf/create_reference_context/dsl-assist/guide.md",
       ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
       ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",

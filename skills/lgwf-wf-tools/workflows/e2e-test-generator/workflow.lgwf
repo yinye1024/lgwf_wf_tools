@@ -13,26 +13,40 @@ PY prepare_target_request_context
   RESULT state.lgwf_e2e.prepare_target_request_context_result
   UPDATES_STATE
   CONTRACT {
+    WRITE state.lgwf_e2e.target_request;
+    WRITE state.lgwf_e2e.target_request_context;
   };
 
 APPROVAL collect_target_request
   PROMPT_REF "01_inspect_target/00_collect_target_request/confirm_target_request.md"
-  READ state.lgwf_e2e.target_request_context
+  READ state.lgwf_e2e.target_request
   WRITE state.lgwf_e2e.target_request
   RESULT state.lgwf_e2e.target_request_result
   PERSIST ".lgwf/e2e_target_request.json"
   POLL 1
   CONTRACT {
     WRITE workspace file ".lgwf/e2e_target_request.json";
-    READ state.lgwf_e2e.target_request_context;
+    READ state.lgwf_e2e.target_request;
     WRITE state.lgwf_e2e.target_request;
   };
 
 STEP inspect_target
-  WORKFLOW "01_inspect_target/workflow.lgwf";
+  WORKFLOW "01_inspect_target/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_target_request.json";
+    WRITE workspace file ".lgwf/e2e_target_request.normalized.json";
+    WRITE workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_business_flow_summary.json";
+  };
 
 STEP derive_coverage_matrix
-  WORKFLOW "02_derive_coverage_matrix/workflow.lgwf";
+  WORKFLOW "02_derive_coverage_matrix/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_business_flow_summary.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_coverage_matrix.json";
+  };
 
 PY route_script_flow_selection
   SCRIPT "00_route_selection/scripts/route_script_flow_selection.py"
@@ -44,7 +58,14 @@ PY route_script_flow_selection
   };
 
 STEP script_flow_e2e
-  WORKFLOW "03_script_flow_e2e/workflow.lgwf";
+  WORKFLOW "03_script_flow_e2e/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_script_flow_generation.json";
+    WRITE workspace file ".lgwf/e2e_script_flow_observe.json";
+  };
 
 PY route_runtime_fake_selection
   SCRIPT "00_route_selection/scripts/route_runtime_fake_selection.py"
@@ -56,7 +77,14 @@ PY route_runtime_fake_selection
   };
 
 STEP runtime_fake_e2e
-  WORKFLOW "04_runtime_fake_e2e/workflow.lgwf";
+  WORKFLOW "04_runtime_fake_e2e/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_runtime_fake_generation.json";
+    WRITE workspace file ".lgwf/e2e_runtime_fake_observe.json";
+  };
 
 PY route_real_positive_selection
   SCRIPT "00_route_selection/scripts/route_real_positive_selection.py"
@@ -68,7 +96,16 @@ PY route_real_positive_selection
   };
 
 STEP real_positive_e2e
-  WORKFLOW "05_real_positive_e2e/workflow.lgwf";
+  WORKFLOW "05_real_positive_e2e/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_business_flow_summary.json";
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_real_positive_design.json";
+    WRITE workspace file ".lgwf/e2e_real_positive_generation.json";
+    WRITE workspace file ".lgwf/e2e_real_positive_observe.json";
+  };
 
 PY route_wf_fix_positive_selection
   SCRIPT "00_route_selection/scripts/route_wf_fix_positive_selection.py"
@@ -80,10 +117,32 @@ PY route_wf_fix_positive_selection
   };
 
 STEP wf_fix_positive_e2e
-  WORKFLOW "06_wf_fix_positive_e2e/workflow.lgwf";
+  WORKFLOW "06_wf_fix_positive_e2e/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_real_positive_design.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
+    WRITE workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
+  };
 
 STEP finish
-  WORKFLOW "07_finish/workflow.lgwf";
+  WORKFLOW "07_finish/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_real_positive_generation.json";
+    READ workspace file ".lgwf/e2e_real_positive_observe.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_observe.json";
+    READ workspace file ".lgwf/e2e_script_flow_generation.json";
+    READ workspace file ".lgwf/e2e_script_flow_observe.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
+    READ workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
+    WRITE workspace file "reports/e2e-test-generator/report.json";
+    WRITE workspace file "reports/e2e-test-generator/report.md";
+  };
 
 FLOW prepare_target_request_context
   THEN collect_target_request

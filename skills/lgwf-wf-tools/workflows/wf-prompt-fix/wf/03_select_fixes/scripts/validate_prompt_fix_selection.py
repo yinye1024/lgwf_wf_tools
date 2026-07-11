@@ -10,6 +10,25 @@ sys.path.insert(0, str(ROOT / "shared"))
 from prompt_fix_common import lgwf_dir, output_state, read_json, write_json
 
 
+def _decision_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip().lower()
+    if isinstance(value, dict):
+        for key in ("value", "approval", "decision", "route"):
+            decision = _decision_value(value.get(key))
+            if decision:
+                return decision
+    return ""
+
+
+def review_decision(review: dict[str, Any]) -> str:
+    for key in ("approval", "decision", "route"):
+        decision = _decision_value(review.get(key))
+        if decision:
+            return decision
+    return ""
+
+
 def _issue_ids(audit: dict[str, Any]) -> list[str]:
     issues = audit.get("issues") if isinstance(audit.get("issues"), list) else []
     ids = []
@@ -29,7 +48,7 @@ def normalize_selection(raw: dict[str, Any], audit: dict[str, Any]) -> dict[str,
         skip_fix = True
     elif raw.get("fix_all"):
         selected = ids
-        skip_fix = False
+        skip_fix = not selected
     else:
         selected = [str(item) for item in selected_raw if str(item) in ids]
         skip_fix = not selected
@@ -53,11 +72,16 @@ def choose_route(selection: dict[str, Any], audit: dict[str, Any]) -> str:
 def main() -> None:
     root = lgwf_dir() / "prompt_acceptance"
     audit = read_json(root / "audit.json", {})
-    raw = read_json(root / "fix_selection.json", {})
+    review = read_json(root / "fix_selection_review.json", {})
+    raw = read_json(root / "fix_selection_review_context.json", {})
     if not isinstance(audit, dict):
         audit = {}
+    if not isinstance(review, dict):
+        review = {}
     if not isinstance(raw, dict):
         raw = {}
+    if review_decision(review) != "approve":
+        raise ValueError("prompt 修复选择必须先通过 REVIEW approve")
     selection = normalize_selection(raw, audit)
     write_json(root / "fix_selection.json", selection)
     output_state({"prompt_fix_selection": selection})

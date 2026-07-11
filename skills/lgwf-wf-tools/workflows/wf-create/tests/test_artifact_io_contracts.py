@@ -33,10 +33,12 @@ class ArtifactIOContractsTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
 
-    def run_script(self, relative_script: str) -> dict:
+    def run_script(self, relative_script: str, stdin_payload: dict | None = None) -> dict:
+        input_text = "" if stdin_payload is None else json.dumps(stdin_payload, ensure_ascii=False)
         completed = subprocess.run(
             [sys.executable, str(self.workflow_root / relative_script)],
             cwd=self.work_dir,
+            input=input_text,
             text=True,
             encoding="utf-8",
             env={**os.environ, "PYTHONIOENCODING": "utf-8"},
@@ -51,6 +53,31 @@ class ArtifactIOContractsTest(unittest.TestCase):
         result = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
 
         self.assertEqual(result["lgwf_wf_create.raw_intent_request"]["raw_intent"], "创建 git-diff-brief")
+
+    def test_prepare_and_apply_raw_intent_confirmation_preserves_start_input(self) -> None:
+        input_state = {
+            "raw_intent": "创建 skill-packaging workflow",
+            "request": {
+                "target_file": "D:/allen/github/lgwf_wf_tools/docs_tmp/skill-packaging-wf-create-intent-design.md"
+            },
+        }
+
+        prepared = self.run_script("01_confirm_requirements/scripts/prepare_raw_intent_confirmation.py", input_state)
+        write_json(
+            self.work_dir / ".lgwf" / "raw_intent_approval.json",
+            {"decision": "approve", "approval": "approve", "comment": ""},
+        )
+        applied = self.run_script("01_confirm_requirements/scripts/apply_confirmed_raw_intent.py")
+        finished = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
+
+        proposal = prepared["lgwf_wf_create.raw_intent_confirmation_context"]["proposal"]
+        self.assertEqual(proposal["raw_intent"], "创建 skill-packaging workflow")
+        self.assertEqual(
+            proposal["creation_context_files"],
+            ["D:/allen/github/lgwf_wf_tools/docs_tmp/skill-packaging-wf-create-intent-design.md"],
+        )
+        self.assertEqual(applied["lgwf_wf_create.raw_intent_request"]["raw_intent"], "创建 skill-packaging workflow")
+        self.assertEqual(finished["lgwf_wf_create.raw_intent_request"]["raw_intent"], "创建 skill-packaging workflow")
 
     def test_finish_raw_intent_exports_creation_context_targets(self) -> None:
         write_json(

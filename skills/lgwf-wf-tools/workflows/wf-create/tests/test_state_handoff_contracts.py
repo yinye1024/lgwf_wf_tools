@@ -203,6 +203,22 @@ class StateHandoffContractTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             helper.require_approve({"decision": {"value": "revise"}})
 
+    def test_unwrap_approval_treats_null_value_as_absent(self) -> None:
+        helper = load_module(ROOT / "shared/scripts/confirmation_io.py", "confirmation_io_null_value")
+
+        approval = helper.unwrap_approval(
+            {
+                "approval": "approve",
+                "decision": "approve",
+                "comment": "confirmed",
+                "value": None,
+            },
+            "create_requirements_approval",
+        )
+
+        self.assertEqual(approval["approval"], "approve")
+        self.assertEqual(approval["decision"], "approve")
+
     def test_summary_rejects_invalid_runtime_artifact_paths(self) -> None:
         summary = load_module(ROOT / "06_summarize_create_result/scripts/summarize_create_result.py", "summary_handoff")
         with self.assertRaises(ValueError):

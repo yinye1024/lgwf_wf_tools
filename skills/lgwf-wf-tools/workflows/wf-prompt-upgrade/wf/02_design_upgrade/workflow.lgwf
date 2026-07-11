@@ -28,6 +28,8 @@ CONTEXT_SET design_prompt_upgrade_analysis_context {
 REACT design_prompt_upgrade MAX 3
   SPEC "agents/spec.md"
   CONTEXT design_prompt_upgrade_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "agents/reason.md"
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal_review.json"

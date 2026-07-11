@@ -1,5 +1,15 @@
 {
-  "bootstrap_inputs": [],
+  "bootstrap_inputs": [
+    ".lgwf/prompt_workflow_inspection.json",
+    ".lgwf/prompt_workflow_inspection_observe.json",
+    ".lgwf/wf_create_input_observe.json",
+    ".lgwf/wf_create_input_proposal.json"
+  ],
+  "final_outputs": [
+    ".lgwf/business_parity_report.json",
+    ".lgwf/wf_create_input_approval.json",
+    ".lgwf/wf_create_input_for_wf_create.json"
+  ],
   "script_writes": {
     "act_codex_42": [
       ".lgwf/prompt_workflow_inspection.json"

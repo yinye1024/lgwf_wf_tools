@@ -45,7 +45,7 @@ workflow 会先执行 `init_prompt_fix_target`，等待主 agent 在当前对话
 - `.lgwf/prompt_fix_target.json`
 - `.lgwf/prompt_acceptance/environment_check.json`
 - `.lgwf/prompt_acceptance/reference_context/AGENTS.md`
-- `.lgwf/prompt_acceptance/reference_context/prompt-assist/*.md`
+- `.lgwf/prompt_acceptance/reference_context/prompt-assist/`
 - `.lgwf/prompt_acceptance/inventory.json`
 - `.lgwf/prompt_acceptance/audit.json`
 - `.lgwf/prompt_acceptance/fix_selection.json`

@@ -1,0 +1,39 @@
+WORKFLOW summarize_packaging_result;
+ENTRY summarize_packaging_result;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY summarize_packaging_result
+  SCRIPT "scripts/summarize_packaging_result.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.summarize_packaging_result_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.summary_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/confirmed_packaging_plan.json";
+    READ workspace file ".lgwf/materialized_package.json";
+    READ workspace file ".lgwf/package_validation.json";
+  };
+
+PY emit_packaging_result_report
+  SCRIPT "scripts/emit_packaging_result_report.py"
+  INPUT state.skill_packaging.summary_context
+  TIMEOUT 60
+  RESULT state.skill_packaging.emit_packaging_result_report_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.summary_result;
+  }
+  CONTRACT {
+    READ state.skill_packaging.summary_context;
+    WRITE workspace file ".lgwf/packaging_result_summary.json";
+    WRITE workspace file "reports/skill-packaging/packaging_result_report.md";
+  };
+
+FLOW {
+  summarize_packaging_result THEN emit_packaging_result_report;
+}
+

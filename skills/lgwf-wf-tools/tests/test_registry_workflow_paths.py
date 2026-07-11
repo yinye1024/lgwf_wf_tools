@@ -65,14 +65,14 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertNotIn("workflow_lgwf", workflows["self-improve-seed"])
         self.assertNotIn("work_dir", workflows["self-improve-seed"])
 
-        self.assertEqual("tool-workflow", workflows["skill-packaging"]["kind"])
+        self.assertEqual("lgwf", workflows["skill-packaging"]["kind"])
         self.assertEqual("workflows/skill-packaging/AGENTS.md", workflows["skill-packaging"]["agents_md"])
-        self.assertEqual("scripts/package_lgwf_skill.py", workflows["skill-packaging"]["entry"])
-        self.assertNotIn("workflow_lgwf", workflows["skill-packaging"])
-        self.assertNotIn("work_dir", workflows["skill-packaging"])
+        self.assertEqual("workflows/skill-packaging/wf/workflow.lgwf", workflows["skill-packaging"]["workflow_lgwf"])
+        self.assertEqual("workflows/skill-packaging/ws", workflows["skill-packaging"]["work_dir"])
+        self.assertNotIn("entry", workflows["skill-packaging"])
 
         for workflow_id, workflow in workflows.items():
-            if workflow_id in {"self-improve", "target-run", "self-improve-seed", "skill-packaging"}:
+            if workflow_id in {"self-improve", "target-run", "self-improve-seed"}:
                 continue
             self.assertEqual("lgwf", workflow["kind"], workflow_id)
 
@@ -95,15 +95,17 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertTrue(readme.is_file())
         readme_text = readme.read_text(encoding="utf-8")
         agents_text = agents.read_text(encoding="utf-8")
-        self.assertIn("tool_workflow", readme_text)
-        self.assertIn("不是 LGWF runtime workflow", readme_text)
-        self.assertIn("scripts/package_lgwf_skill.py", readme_text)
-        self.assertIn("--source-skill", readme_text)
-        self.assertIn("--output-parent", readme_text)
+        self.assertIn("lgwf_workflow_package", readme_text)
+        self.assertIn("LGWF workflow package", readme_text)
+        self.assertIn("wf/workflow.lgwf", readme_text)
+        self.assertIn("packaging_request", readme_text)
+        self.assertIn("module-contract.md", agents_text)
         self.assertIn("README.md", agents_text)
-        self.assertEqual(["source_skill", "output_parent"], contract["input_schema"]["required"])
-        self.assertIn("runtime_source", contract["input_schema"]["properties"])
-        self.assertIn("force", contract["input_schema"]["properties"])
+        self.assertEqual(["packaging_request"], contract["input_schema"]["required"])
+        request_schema = contract["input_schema"]["properties"]["packaging_request"]
+        self.assertEqual(["source_skill", "output_parent"], request_schema["required"])
+        self.assertIn("runtime_source", request_schema["properties"])
+        self.assertIn("force", request_schema["properties"])
 
     def test_registry_entry_contracts_exist_and_match_workflows(self) -> None:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
@@ -148,6 +150,10 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertEqual("input_json_required", by_id["wf-post-fix"]["input_mode"])
         self.assertEqual("conditional", by_id["wf-post-fix"]["auto_human_policy"])
         self.assertIn("post_fix_target", by_id["wf-post-fix"]["required_fields"])
+
+        self.assertEqual("input_json_required", by_id["e2e-test-generator"]["input_mode"])
+        self.assertEqual("conditional", by_id["e2e-test-generator"]["auto_human_policy"])
+        self.assertEqual(["workflow_lgwf"], by_id["e2e-test-generator"]["required_fields"])
 
     def test_registered_lgwf_workflows_have_self_improve_modules(self) -> None:
         registry = json.loads(REGISTRY.read_text(encoding="utf-8"))

@@ -2,22 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from route_selection_common import route_payload
 
 
 def main() -> None:
-    request = json.loads(Path(".lgwf/e2e_target_request.normalized.json").read_text(encoding="utf-8-sig"))
-    selected = set(request.get("selected_test_types") or [])
-    next_route = "run" if "script_flow" in selected else "skip"
-    print(
-        json.dumps(
-            {
-                "__route__route_script_flow_selection": next_route,
-                "next": next_route,
-                "selected": next_route == "run",
-            },
-            ensure_ascii=False,
-        )
-    )
+    print(json.dumps(route_payload("route_script_flow_selection", "script_flow"), ensure_ascii=False))
 
 
 if __name__ == "__main__":

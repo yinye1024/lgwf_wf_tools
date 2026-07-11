@@ -1,0 +1,29 @@
+WORKFLOW summarize_upgrade_result;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY summarize_upgrade_result
+  SCRIPT "scripts/summarize_upgrade_result.py"
+  INPUT state.wf_dsl_upgrade
+  TIMEOUT 120
+  RESULT state.wf_dsl_upgrade.summarize_upgrade_result
+  UPDATES_STATE {
+    WRITE state.wf_dsl_upgrade.result_summary;
+  }
+  CONTRACT {
+    READ state.wf_dsl_upgrade.target_results;
+    READ workspace file ".lgwf/target_manifest.json";
+    READ workspace file ".lgwf/target_scope_validation.json";
+    READ workspace file ".lgwf/scope_confirmation_context.json";
+    READ workspace file ".lgwf/scope_approval.json";
+    WRITE state.wf_dsl_upgrade.result_summary;
+    WRITE workspace file ".lgwf/result_summary.json";
+    WRITE workspace file "reports/wf-dsl-upgrade/report.md";
+  };
+
+FLOW main
+  START summarize_upgrade_result;

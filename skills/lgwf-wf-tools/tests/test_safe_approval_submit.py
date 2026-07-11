@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import argparse
 from pathlib import Path
 from unittest import mock
 
@@ -24,42 +25,22 @@ def load_script():
 
 
 class SafeApprovalSubmitTests(unittest.TestCase):
-    def test_approval_submit_reads_utf8_value_file_and_passes_ascii_json_argv(self) -> None:
+    def test_approval_approve_value_file_is_rejected(self) -> None:
         module = load_script()
-        calls: list[list[str]] = []
-        with tempfile.TemporaryDirectory() as tmp:
-            value_path = Path(tmp) / "value.json"
-            value_path.write_text(
-                json.dumps({"approval": "approve", "comment": "确认提交"}, ensure_ascii=False),
-                encoding="utf-8",
+        args = argparse.Namespace(
+            kind="approval",
+            work_dir="ws",
+            request_id="human-1",
+            decision="approve",
+            route=None,
+            comment="",
+        )
+
+        with self.assertRaisesRegex(ValueError, "approval approve does not accept value-json"):
+            module.build_command(
+                args,
+                {"approval": "approve", "comment": "确认提交"},
             )
-
-            def fake_run(args: list[str], **kwargs):
-                calls.append(args)
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout='{"ok":true}', stderr="")
-
-            with mock.patch.object(module.subprocess, "run", fake_run):
-                exit_code = module.main(
-                    [
-                        "--kind",
-                        "approval",
-                        "--work-dir",
-                        "ws",
-                        "--request-id",
-                        "human-1",
-                        "--decision",
-                        "approve",
-                        "--value-file",
-                        str(value_path),
-                    ]
-                )
-
-        self.assertEqual(0, exit_code)
-        self.assertEqual("approval", calls[0][2])
-        self.assertEqual("submit", calls[0][3])
-        value_json = calls[0][calls[0].index("--value-json") + 1]
-        self.assertTrue(value_json.isascii())
-        self.assertEqual("确认提交", json.loads(value_json)["comment"])
 
     def test_review_submit_reads_utf8_base64_and_uses_route(self) -> None:
         module = load_script()

@@ -9,6 +9,7 @@ import textwrap
 import time
 import unittest
 from contextlib import ExitStack
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -210,11 +211,11 @@ class LgwfWfPostFixRuntimeFakeE2ETest(unittest.TestCase):
         raise AssertionError(f"workflow status timeout: {last}")
 
     def request_id(self, status: dict[str, Any]) -> str:
-        if status.get("human_request_id"):
-            return str(status["human_request_id"])
         pending = status.get("pending_human_requests") or []
         if pending:
             return str(pending[0]["request_id"])
+        if status.get("human_request_id"):
+            return str(status["human_request_id"])
         pending_action = status.get("pending_action")
         if isinstance(pending_action, dict):
             candidate = pending_action.get("request_id") or pending_action.get("child_request_id")
@@ -240,8 +241,6 @@ class LgwfWfPostFixRuntimeFakeE2ETest(unittest.TestCase):
                 request_id,
                 "--decision",
                 "approve",
-                "--value-json",
-                json.dumps(value, ensure_ascii=False),
                 "--comment",
                 "runtime fake approval",
             ],
@@ -257,22 +256,17 @@ class LgwfWfPostFixRuntimeFakeE2ETest(unittest.TestCase):
         request_id: str,
         route: str,
     ) -> None:
-        submit = run_lgwf(
-            [
-                "review",
-                "submit",
-                "--work-dir",
-                str(work_dir),
-                "--request-id",
-                request_id,
-                "--route",
-                route,
-                "--comment",
-                f"runtime fake selected {route}",
-            ],
-            env=env,
-        )
-        self.assertEqual(submit.returncode, 0, submit.stderr + submit.stdout)
+        from lgwf import human_approval
+
+        payload = {
+            "request_id": request_id,
+            "decision": "approve",
+            "value": {"decision": route, "reason": f"runtime fake selected {route}"},
+            "created_by": "main_agent_ask",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        human_approval.write_controller_payload(work_dir, request_id, payload)
+        human_approval.submit_controller_payload(work_dir, request_id, final_user_confirmed=True)
 
     def wait_for_request_change(
         self,
@@ -289,6 +283,13 @@ class LgwfWfPostFixRuntimeFakeE2ETest(unittest.TestCase):
             status = self.wait_status(pid=pid, work_dir=work_dir, env=env, timeout_seconds=5)
             last = status
             if status.get("running") is False or status.get("phase") in {"completed", "failed"}:
+                return
+            pending_ids = [
+                item.get("request_id")
+                for item in status.get("pending_human_requests", [])
+                if isinstance(item, dict) and item.get("request_id")
+            ]
+            if pending_ids and previous_request_id not in pending_ids:
                 return
             try:
                 current_request_id = self.request_id(status)

@@ -13,7 +13,9 @@ PY run_target_workflow
   RESULT state.lgwf_wf_fix.run_target_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/self_fix_target.json";
     WRITE workspace file ".lgwf/self_fix_target.json";
+    WRITE workspace file ".lgwf/target_repair/current/run.json";
     READ workspace file ".lgwf/target_workflow_input.json";
   };
 
@@ -24,6 +26,7 @@ PY observe_target_run
   UPDATES_STATE
   CONTRACT {
     WRITE workspace file ".lgwf/self_fix_target.json";
+    WRITE workspace file ".lgwf/target_repair/current/observation.json";
   };
 
 APPROVAL proxy_target_approval
@@ -54,6 +57,7 @@ PY route_after_observe
   RESULT state.lgwf_wf_fix.route_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/target_repair/current/workspace.json";
   };
 
 PY prepare_repair_agent_loop
@@ -151,6 +155,12 @@ AGENT_LOOP repair_target MAX_ITERATIONS 5 ARTIFACTS ".lgwf/loops/repair_target" 
     RESULT state.lgwf_wf_fix.target_repair_current_verification
     CONTRACT {
       READ workspace file "05_fix_target/verify_repair_candidate_workflow.lgwf";
+      READ workspace file ".lgwf/target_repair/current/apply.json";
+      READ workspace file ".lgwf/target_repair/current/diagnosis.json";
+      READ workspace file ".lgwf/target_repair/current/observation.json";
+      READ workspace file ".lgwf/target_repair/current/plan.json";
+      WRITE workspace file ".lgwf/target_repair/current/change_audit.json";
+      WRITE workspace file ".lgwf/target_repair/current/verification.json";
     };
   DECIDE PY decide_repair_loop
     SCRIPT "05_fix_target/scripts/decide_repair_loop.py"
@@ -187,6 +197,7 @@ PY record_fix_attempt
   UPDATES_STATE
   CONTRACT {
     WRITE workspace file ".lgwf/self_fix_target.json";
+    WRITE workspace file ".lgwf/self_fix_history.json";
   };
 
 PY finish_self_fix

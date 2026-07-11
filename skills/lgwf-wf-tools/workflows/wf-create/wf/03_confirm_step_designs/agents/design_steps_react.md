@@ -11,7 +11,7 @@
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_template_spec.md` 镜像而来，定义 workflow packaged skill 的结构规范、profile 语义和路径边界。
 - scaffold context file `.lgwf/create_reference_context/scaffold/scaffold_result_contract.md`：由 workflow resource `02_confirm_business_flow/resources/scaffold_result_contract.md` 镜像而来，定义 `scaffold_plan` 输出字段契约。
 - workflow 模块化创建指引 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：由 `prepare_dsl_reference_context` 镜像而来，是 workflow、子 workflow、复杂 step、目录边界、状态隔离和验证入口的总纲。
-- `.lgwf/create_reference_context/dsl-assist/*.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
+- `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/guide.md`、`.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md`：facade 内置 bundled client 的 DSL 创建、审计和 workflow 拆分规范。
 - `docs/steps/`：当前步骤设计草案目录；若已有草案，可作为增量整理或覆盖参考范围。
 - `state.lgwf_wf_create.creation_context_dirs` / `state.lgwf_wf_create.creation_context_files`：通过 `TARGET_DIRS` / `TARGET_FILES` 暴露给当前 Codex 节点的只读创建资料目录和文件，可能包含主 agent 确认后的 workflow 开发计划、验收说明或补充约束。
 

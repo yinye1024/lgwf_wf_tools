@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -37,6 +38,7 @@ class RegistryContractTests(unittest.TestCase):
                 "workflow_lgwf": "workflows/wf-post-fix/wf/workflow.lgwf",
                 "work_dir": "workflows/wf-post-fix/ws",
                 "agents_md": "workflows/wf-post-fix/AGENTS.md",
+                "entry_contract": "workflows/wf-post-fix/entry_contract.json",
             },
             workflows["wf-post-fix"],
         )
@@ -72,7 +74,8 @@ class WorkflowShapeTests(unittest.TestCase):
         self.assertIn("ENTRY NODE prompt_fix_auto_route", prompt_fix_text)
         self.assertIn("ROUTE prompt_fix_auto_route", prompt_fix_text)
         self.assertIn("READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled", prompt_fix_text)
-        self.assertIn("WHEN true THEN run_prompt_fix_flow", prompt_fix_text)
+        self.assertIn("WHEN true THEN auto_prompt_fix_flow", prompt_fix_text)
+        self.assertNotIn("WHEN true THEN run_prompt_fix_flow", prompt_fix_text)
         self.assertIn("WHEN false THEN choose_prompt_fix", prompt_fix_text)
         self.assertIn("CHOICE choose_prompt_fix", prompt_fix_text)
         self.assertNotIn("ROUTES {", prompt_fix_text)
@@ -90,7 +93,8 @@ class WorkflowShapeTests(unittest.TestCase):
         prompt_upgrade_text = (PACKAGE_ROOT / "wf/03_prompt_upgrade/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("ENTRY NODE prompt_upgrade_auto_route", prompt_upgrade_text)
         self.assertIn("ROUTE prompt_upgrade_auto_route", prompt_upgrade_text)
-        self.assertIn("WHEN true THEN run_prompt_upgrade_flow", prompt_upgrade_text)
+        self.assertIn("WHEN true THEN auto_prompt_upgrade_flow", prompt_upgrade_text)
+        self.assertNotIn("WHEN true THEN run_prompt_upgrade_flow", prompt_upgrade_text)
         self.assertIn("CHOICE choose_prompt_upgrade", prompt_upgrade_text)
         self.assertNotIn("ROUTES {", prompt_upgrade_text)
         self.assertIn('OPTION run LABEL "运行 prompt 升级" THEN run_prompt_upgrade_flow', prompt_upgrade_text)
@@ -105,7 +109,8 @@ class WorkflowShapeTests(unittest.TestCase):
         e2e_text = (PACKAGE_ROOT / "wf/04_e2e_generate/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("ENTRY NODE e2e_generate_auto_route", e2e_text)
         self.assertIn("ROUTE e2e_generate_auto_route", e2e_text)
-        self.assertIn("WHEN true THEN run_e2e_generate_flow", e2e_text)
+        self.assertIn("WHEN true THEN auto_e2e_generate_flow", e2e_text)
+        self.assertNotIn("WHEN true THEN run_e2e_generate_flow", e2e_text)
         self.assertIn("CHOICE choose_e2e_generate", e2e_text)
         self.assertNotIn("ROUTES {", e2e_text)
         self.assertIn('OPTION run LABEL "生成 E2E 测试" THEN run_e2e_generate_flow', e2e_text)
@@ -116,10 +121,13 @@ class WorkflowShapeTests(unittest.TestCase):
         self.assertNotIn("ROUTE prepare_e2e_generate_decision", e2e_text)
         self.assertIn("RUN_WORKFLOW e2e_generate", e2e_text)
         self.assertIn('WORKFLOW "workflows/e2e-test-generator/workflow.lgwf"', e2e_text)
+        self.assertIn('WRITE workspace file ".lgwf/post_fix_generated_tests.materialized.json"', e2e_text)
 
         script_flow_text = (PACKAGE_ROOT / "wf/05_run_generated_tests/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("ENTRY NODE script_flow_e2e_auto_route", script_flow_text)
         self.assertIn("ROUTE script_flow_e2e_auto_route", script_flow_text)
+        self.assertIn("WHEN true THEN auto_script_flow_e2e_flow", script_flow_text)
+        self.assertNotIn("WHEN true THEN run_script_flow_e2e_flow", script_flow_text)
         self.assertNotIn("ROUTES {", script_flow_text)
         self.assertIn('OPTION skip LABEL "跳过 script_flow E2E" THEN skip_script_flow_e2e_flow', script_flow_text)
         self.assertIn('OPTION auto LABEL "开启自动并运行 script_flow E2E" THEN auto_script_flow_e2e_flow', script_flow_text)
@@ -129,6 +137,8 @@ class WorkflowShapeTests(unittest.TestCase):
         runtime_fake_text = (PACKAGE_ROOT / "wf/06_runtime_fake_e2e/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("ENTRY NODE runtime_fake_e2e_auto_route", runtime_fake_text)
         self.assertIn("ROUTE runtime_fake_e2e_auto_route", runtime_fake_text)
+        self.assertIn("WHEN true THEN auto_runtime_fake_e2e_flow", runtime_fake_text)
+        self.assertNotIn("WHEN true THEN run_runtime_fake_e2e_flow", runtime_fake_text)
         self.assertNotIn("ROUTES {", runtime_fake_text)
         self.assertIn('OPTION skip LABEL "跳过 runtime_fake E2E" THEN skip_runtime_fake_e2e_flow', runtime_fake_text)
         self.assertIn('OPTION auto LABEL "开启自动并运行 runtime_fake E2E" THEN auto_runtime_fake_e2e_flow', runtime_fake_text)
@@ -159,7 +169,7 @@ class WorkflowShapeTests(unittest.TestCase):
         nodes = {item["id"]: item for item in compiled["nodes"]}
 
         self.assertEqual(
-            {"True": "build_prompt_fix_input", "False": "choose_prompt_fix"},
+            {"true": "set_prompt_fix_auto", "false": "choose_prompt_fix"},
             routes["prompt_fix_auto_route"],
         )
         self.assertEqual(
@@ -193,7 +203,7 @@ class WorkflowShapeTests(unittest.TestCase):
 
         child_contract = nodes["prompt_fix"]["config"]["contract"]
         self.assertEqual(["lgwf_wf_post_fix.prompt_fix_input"], child_contract["reads_state"])
-        self.assertEqual(["lgwf_wf_post_fix.prompt_fix_result"], child_contract["writes_state"])
+        self.assertEqual("lgwf_wf_post_fix.prompt_fix_result", nodes["prompt_fix"]["config"]["result_path"])
 
     def test_prepare_and_finish_contracts_compile_to_node_configs(self) -> None:
         prepare = self.compile_workflow(PACKAGE_ROOT / "wf/01_prepare_target/workflow.lgwf")
@@ -301,6 +311,28 @@ class StageDecisionTests(unittest.TestCase):
 
         self.assertEqual("auto", parsed["decision"])
         self.assertEqual("后续自动跑", parsed["reason"])
+
+    def test_enable_auto_for_stage_writes_stage_decision_file(self) -> None:
+        module = load_module("wf/shared/scripts/post_fix_common.py", "post_fix_common_auto_file")
+
+        current = Path.cwd()
+        with tempfile.TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            try:
+                decision = module.enable_auto_for_stage("prompt_upgrade")
+            finally:
+                os.chdir(current)
+
+            stage_decision = json.loads(
+                (Path(tmp) / ".lgwf/post_fix_decisions/prompt_upgrade.json").read_text(encoding="utf-8")
+            )
+            decisions = json.loads((Path(tmp) / ".lgwf/post_fix_decisions.json").read_text(encoding="utf-8"))
+
+        self.assertEqual({"decision": "auto", "reason": "用户选择 auto"}, stage_decision)
+        self.assertEqual("prompt_upgrade", decision["stage_id"])
+        self.assertEqual("run", decision["route"])
+        self.assertEqual("auto", decision["source"])
+        self.assertEqual([decision], decisions["stages"])
 
 
 class MapperTests(unittest.TestCase):

@@ -428,11 +428,54 @@ class LgwfWfPromptUpgradeScriptFlowE2ETest(unittest.TestCase):
             for relative in (".lgwf/prompt_upgrade/summary.json", ".lgwf/target_prompt_upgrade_summary.json"):
                 assert_json_file_matches_subset(
                     workspace / relative,
-                    {
-                        "status": "upgraded",
-                        "approved_upgrade_ids": ["upgrade_design", "upgrade_apply"],
-                    },
-                )
+                {
+                    "status": "upgraded",
+                    "approved_upgrade_ids": ["upgrade_design", "upgrade_apply"],
+                },
+            )
+
+    def test_case_review_approve_defaults_to_all_upgrades(self) -> None:
+        with isolated_workspace_cwd() as workspace:
+            write_utf8_json_fixture(
+                workspace,
+                ".lgwf/prompt_upgrade/proposal.json",
+                {
+                    "prompt_upgrades": [
+                        {"id": "upgrade_design"},
+                        {"id": "upgrade_apply"},
+                    ]
+                },
+            )
+            write_utf8_json_fixture(
+                workspace,
+                ".lgwf/prompt_upgrade/decision_review.json",
+                {
+                    "approval": "approve",
+                    "decision": "approve",
+                    "value": None,
+                    "comment": "确认全部升级",
+                },
+            )
+
+            validate_payload, _, validate_error = run_script_main(
+                "03_confirm_upgrade/scripts/validate_prompt_upgrade_decision.py",
+                "case_review_approve_defaults_to_all_upgrades_validate",
+            )
+
+            self.assertIsNone(validate_error)
+            normalized_decision = validate_payload["lgwf_wf_prompt_upgrade.prompt_upgrade_decision"]
+            self.assertTrue(normalized_decision["approve"])
+            self.assertFalse(normalized_decision["reject"])
+            self.assertEqual(normalized_decision["approved_upgrade_ids"], ["upgrade_design", "upgrade_apply"])
+            assert_json_file_matches_subset(
+                workspace / ".lgwf" / "prompt_upgrade" / "decision.json",
+                {
+                    "approve": True,
+                    "reject": False,
+                    "approved_upgrade_ids": ["upgrade_design", "upgrade_apply"],
+                    "comment": "确认全部升级",
+                },
+            )
 
     def test_case_reject_routes_to_fail_all_without_summary(self) -> None:
         with isolated_workspace_cwd() as workspace:

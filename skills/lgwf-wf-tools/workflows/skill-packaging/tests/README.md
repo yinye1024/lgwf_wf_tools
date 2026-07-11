@@ -1,11 +1,16 @@
 # tests
 
-当前最小验证聚焦脚手架边界：
+当前最小测试只覆盖 workflow package 自身的结构约束：
 
-- 根目录没有 `workflow.lgwf`
+- 根目录没有可运行 `workflow.lgwf`
 - 存在 `wf/workflow.lgwf`
-- 四个第一层阶段目录齐全且自包含
-- 不生成根 `SKILL.md`
-- 已批准 `wf/docs/steps/*.md` 已复制到目标 package
+- 六个第一层阶段目录自包含 `workflow.lgwf`、`agents/`、`scripts/`、`resources/`
+- 不存在孙级 workflow
+- `internal_workflow_package` 不生成根 `SKILL.md`
+- 已批准的 `wf/docs/steps/*.md` 副本已经复制到目标 package
 
-后续可继续补充脚本契约测试和 audit smoke 测试。
+运行方式：
+
+```powershell
+python -m unittest discover skills\lgwf-wf-tools\workflows\skill-packaging\tests
+```

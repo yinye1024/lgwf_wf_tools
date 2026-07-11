@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "required": ["source_skill", "output_parent"],
+  "properties": {
+    "source_skill": {
+      "type": "string"
+    },
+    "output_parent": {
+      "type": "string"
+    },
+    "runtime_source": {
+      "type": "string"
+    },
+    "force": {
+      "type": "boolean",
+      "default": false
+    },
+    "audit_smoke": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

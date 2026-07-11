@@ -76,7 +76,7 @@
 
 步骤设计和实现阶段当前已补齐以下契约：
 
-- `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，从 facade docs 复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供后续 Codex 节点读取。
+- `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，同时写入根级和 `dsl-assist` 目录下的 `dsl_reference_context.json` 元数据；从 facade docs 复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供后续 Codex 节点读取。
 - `design_steps_react`：定义输出为 `docs/steps/*.md` 的可确认步骤设计文档草案，要求覆盖目标、输入、输出、依赖和实现建议。
 - `confirm_step_designs`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分设计草案审阅与 confirm 后固化。
 - `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；`observe` 执行 authoring audit check，失败反馈回下一轮修复，同时明确不负责 prompt 修复、agent 化和自动修复。
@@ -155,11 +155,11 @@ python -m unittest discover skills\lgwf-wf-tools\workflows\wf-create\tests
 - `lgwf-wf-create` 的外层文件、`wf/`、`ws/`、测试目录和阶段目录存在。
 - 根目录不包含 `workflow.lgwf` 或 `SKILL.md`，真实 workflow 入口只在 `wf/workflow.lgwf`。
 - `wf/workflow.lgwf` 通过结构性 audit：只使用包内相对路径，并能观察到固定阶段顺序。
-- `wf/artifact_contracts.json` 声明 `prepare_dsl_reference_context` 复制出的 `dsl-assist` workspace context 文件。
+- `wf/artifact_contracts.json` 声明 `prepare_dsl_reference_context` 复制出的 `dsl-assist` workspace context 文件和 `dsl_reference_context.json` 元数据文件。
 - 三个 approval 节点使用 `ROUTE_ON_DECISION`、`PERSIST` 和 `approve/revise/reject` 业务路由。
 - proposal/实现阶段的 Codex 节点声明 `OUTPUT_JSON`，并与 prompt 输出契约一致。
 - 三类确认后固化脚本会生成 `.lgwf/create_requirements.json`、`.lgwf/business_flow.json` 和 `.lgwf/step_designs.json`。
-- `prepare_dsl_reference_context` 会复制 `dsl-assist` 的 `guide.md`、`create-workflow.md` 和 `workflow-audit-checklist.md`，设计和实现 Codex 节点显式读取这些规范。
+- `prepare_dsl_reference_context` 会复制 `dsl-assist` 的 `guide.md`、`create-workflow.md` 和 `workflow-audit-checklist.md`，并写入 `dsl_reference_context.json` 元数据；设计和实现 Codex 节点显式读取这些规范。
 - 需求阶段文档允许从原始意图进入，定义 proposal 字段和三类 approval 决策。
 - 业务流转文档定义阶段、依赖、下游输入和三类 approval 决策。
 - `scaffold_package` 规则和测试会拒绝绝对路径、盘符路径与 `..`，并明确不向目标 package 根目录写入 `.lgwf`。

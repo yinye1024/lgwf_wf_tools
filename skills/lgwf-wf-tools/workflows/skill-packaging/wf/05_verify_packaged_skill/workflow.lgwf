@@ -1,0 +1,88 @@
+WORKFLOW verify_packaged_skill;
+ENTRY validate_output_structure;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+}
+
+PY validate_output_structure
+  SCRIPT "scripts/validate_output_structure.py"
+  TIMEOUT 120
+  RESULT state.skill_packaging.validate_output_structure_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.package_validation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/confirmed_packaging_plan.json";
+    READ workspace file ".lgwf/materialized_package.json";
+    READ workspace file "<output_parent>/<source-skill-name>/";
+    READ workspace file "<output_parent>/<source-skill-name>/wf/workflow.lgwf";
+    READ workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/scripts/lgwf.py";
+    READ workspace file "<output_parent>/<source-skill-name>/scripts/run_local_lgwf_workflow.py";
+    READ workspace file "<output_parent>/<source-skill-name>/PACKAGING_MANIFEST.json";
+    READ workspace file "<output_parent>/<source-skill-name>/wf/docs/steps/";
+    READ workspace file "<output_parent>/<source-skill-name>/ws/";
+  };
+
+PY validate_packaging_manifest
+  SCRIPT "scripts/validate_packaging_manifest.py"
+  INPUT state.skill_packaging.package_validation_context
+  TIMEOUT 60
+  RESULT state.skill_packaging.validate_packaging_manifest_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.package_validation_context;
+  }
+  CONTRACT {
+    READ state.skill_packaging.package_validation_context;
+    READ workspace file "<output_parent>/<source-skill-name>/PACKAGING_MANIFEST.json";
+  };
+
+PY validate_embedded_runtime
+  SCRIPT "scripts/validate_embedded_runtime.py"
+  INPUT state.skill_packaging.package_validation_context
+  TIMEOUT 60
+  RESULT state.skill_packaging.validate_embedded_runtime_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.package_validation_context;
+  }
+  CONTRACT {
+    READ state.skill_packaging.package_validation_context;
+    READ workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/";
+    READ workspace file "<output_parent>/<source-skill-name>/scripts/run_local_lgwf_workflow.py";
+  };
+
+PY run_authoring_audit_smoke
+  SCRIPT "scripts/run_authoring_audit_smoke.py"
+  INPUT state.skill_packaging.package_validation_context
+  TIMEOUT 120
+  RESULT state.skill_packaging.run_authoring_audit_smoke_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.package_validation_context;
+  }
+  CONTRACT {
+    READ state.skill_packaging.package_validation_context;
+    READ workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/scripts/lgwf.py";
+    READ workspace file "<output_parent>/<source-skill-name>/wf/workflow.lgwf";
+  };
+
+PY record_package_validation
+  SCRIPT "scripts/record_package_validation.py"
+  INPUT state.skill_packaging.package_validation_context
+  TIMEOUT 60
+  RESULT state.skill_packaging.record_package_validation_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.package_validation;
+  }
+  CONTRACT {
+    READ state.skill_packaging.package_validation_context;
+    WRITE workspace file ".lgwf/package_validation.json";
+  };
+
+FLOW {
+  validate_output_structure
+  THEN validate_packaging_manifest
+  THEN validate_embedded_runtime
+  THEN run_authoring_audit_smoke
+  THEN record_package_validation;
+}

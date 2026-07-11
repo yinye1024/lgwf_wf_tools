@@ -13,6 +13,9 @@ PY prepare_react_task_review
   RESULT state.lgwf_plan.prepare_task_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/react_acceptance_plan.json";
+    READ workspace file ".lgwf/react_task_plan.json";
+    WRITE workspace file ".lgwf/react_task_context.json";
   };
 
 PY validate_execute_codex_inputs
@@ -30,6 +33,8 @@ CONTEXT_SET implement_react_task_shared_context {
 REACT implement_react_task MAX 3
   SPEC "01_implement_task/agents/spec.md"
   CONTEXT implement_react_task_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "01_implement_task/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_acceptance_plan.json"
@@ -128,6 +133,7 @@ PY resolve_max_attempt_decision
   RESULT state.lgwf_plan.max_attempt_resolution_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/react_task_max_attempt_decision.json";
   };
 
 PY finish_react_task_review

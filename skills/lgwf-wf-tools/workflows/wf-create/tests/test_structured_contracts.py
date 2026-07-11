@@ -202,7 +202,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
 
     def test_persisted_decision_files_have_contract_writes(self) -> None:
         expectations = (
-            ("01_confirm_requirements/workflow.lgwf", ".lgwf/raw_intent_request.json"),
+            ("01_confirm_requirements/workflow.lgwf", ".lgwf/raw_intent_approval.json"),
             ("01_confirm_requirements/workflow.lgwf", ".lgwf/create_requirements_approval.json"),
             ("02_confirm_business_flow/workflow.lgwf", ".lgwf/business_flow_approval.json"),
             ("03_confirm_step_designs/workflow.lgwf", ".lgwf/step_design_confirmation_record.json"),

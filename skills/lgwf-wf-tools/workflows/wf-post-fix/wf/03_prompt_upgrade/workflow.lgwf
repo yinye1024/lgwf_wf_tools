@@ -9,7 +9,7 @@ DEFAULTS {
 
 ROUTE prompt_upgrade_auto_route
   READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled
-  WHEN true THEN run_prompt_upgrade_flow
+  WHEN true THEN auto_prompt_upgrade_flow
   WHEN false THEN choose_prompt_upgrade;
 
 CHOICE choose_prompt_upgrade
@@ -79,6 +79,8 @@ PY set_prompt_upgrade_auto
   RESULT state.lgwf_wf_post_fix.set_prompt_upgrade_auto_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/prompt_upgrade.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
   };
 
 PY skip_prompt_upgrade

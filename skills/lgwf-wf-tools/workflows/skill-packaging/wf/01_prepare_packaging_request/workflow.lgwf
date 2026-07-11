@@ -1,0 +1,57 @@
+WORKFLOW prepare_packaging_request;
+ENTRY normalize_packaging_request;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY normalize_packaging_request
+  SCRIPT "scripts/normalize_packaging_request.py"
+  TIMEOUT 60
+  RESULT state.skill_packaging.prepare_request_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.packaging_request;
+    WRITE state.skill_packaging.path_context;
+  }
+  CONTRACT {
+    WRITE workspace file ".lgwf/packaging_request.json";
+    WRITE workspace file ".lgwf/packaging_path_context.json";
+  };
+
+PY resolve_runtime_source
+  SCRIPT "scripts/resolve_runtime_source.py"
+  INPUT state.skill_packaging.packaging_request
+  TIMEOUT 60
+  RESULT state.skill_packaging.runtime_resolution_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.packaging_request;
+    WRITE state.skill_packaging.runtime_resolution;
+  }
+  CONTRACT {
+    READ state.skill_packaging.packaging_request;
+    READ workspace file ".lgwf/packaging_request.json";
+    WRITE workspace file ".lgwf/runtime_source_resolution.json";
+    WRITE workspace file ".lgwf/packaging_request.json";
+  };
+
+PY freeze_write_scope
+  SCRIPT "scripts/freeze_write_scope.py"
+  INPUT state.skill_packaging.packaging_request
+  TIMEOUT 60
+  RESULT state.skill_packaging.freeze_write_scope_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.path_context;
+    WRITE state.skill_packaging.write_scope;
+  }
+  CONTRACT {
+    READ state.skill_packaging.packaging_request;
+    READ workspace file ".lgwf/packaging_path_context.json";
+    READ workspace file ".lgwf/packaging_request.json";
+    READ workspace file ".lgwf/runtime_source_resolution.json";
+    WRITE workspace file ".lgwf/packaging_write_scope.json";
+  };
+
+FLOW {
+  normalize_packaging_request THEN resolve_runtime_source THEN freeze_write_scope;
+}

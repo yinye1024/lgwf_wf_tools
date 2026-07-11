@@ -20,17 +20,43 @@ PY prepare_prompt_fix_selection_context
     READ workspace file ".lgwf/prompt_acceptance/audit.json";
   };
 
-APPROVAL select_prompt_fixes
-  PROMPT_REF "select_prompt_fixes.md"
-  READ state.lgwf_wf_prompt_fix.prompt_fix_selection_context
-  WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection
-  RESULT state.lgwf_wf_prompt_fix.prompt_fix_selection_result
-  PERSIST ".lgwf/prompt_acceptance/fix_selection.json"
-  POLL 1
+PY prepare_prompt_fix_selection_review
+  SCRIPT "scripts/prepare_prompt_fix_selection_review.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prepare_prompt_selection_review_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context;
+  }
   CONTRACT {
-    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection.json";
-    READ state.lgwf_wf_prompt_fix.prompt_fix_selection_context;
-    WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection;
+    READ workspace file ".lgwf/prompt_acceptance/selection_context.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection_review_context.json";
+    WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context;
+  };
+
+REVIEW select_prompt_fixes
+  PROMPT_REF "select_prompt_fixes.md"
+  CONTEXT state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context
+  RESULT state.lgwf_wf_prompt_fix.prompt_fix_selection_result
+  PERSIST ".lgwf/prompt_acceptance/fix_selection_review.json"
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    READ state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context;
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection_review_context.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection_review.json";
+  };
+
+PY prepare_prompt_fix_selection_revision
+  SCRIPT "scripts/prepare_prompt_fix_selection_revision.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_prompt_fix.prepare_prompt_selection_revision_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection_review.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection_review_context.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection_review_context.json";
+    WRITE state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context;
   };
 
 PY validate_prompt_fix_selection
@@ -40,10 +66,20 @@ PY validate_prompt_fix_selection
   UPDATES_STATE
   CONTRACT {
     WRITE workspace file ".lgwf/prompt_acceptance/fix_selection.json";
-    READ workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection_review.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection_review_context.json";
     READ workspace file ".lgwf/prompt_acceptance/audit.json";
   };
 
-FLOW prepare_prompt_fix_selection_context
-  THEN select_prompt_fixes
-  THEN validate_prompt_fix_selection;
+FLOW {
+  prepare_prompt_fix_selection_context
+  THEN prepare_prompt_fix_selection_review
+  THEN select_prompt_fixes;
+
+  select_prompt_fixes
+    WHEN "approve" THEN validate_prompt_fix_selection
+    WHEN "revise" THEN prepare_prompt_fix_selection_revision
+    WHEN "reject" THEN FAIL_ALL;
+
+  prepare_prompt_fix_selection_revision THEN select_prompt_fixes;
+}

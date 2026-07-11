@@ -13,4 +13,8 @@ PY build_coverage_matrix
   RESULT state.lgwf_e2e.coverage_matrix_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/e2e_business_flow_summary.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_workflow_graph.json";
+    WRITE workspace file ".lgwf/e2e_coverage_matrix.json";
   };

@@ -18,7 +18,7 @@ python <skill-dir>\scripts\lgwf.py run --workflow-json <workflow_json> --work-di
 python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json "{}"
 ```
 
-需要让本次 run 的 `APPROVAL`、`REVIEW` 和 `CHOICE` 全部自动走正向分支时，显式追加 `--auto-human`。该参数是 run-level human gate 策略，会由 `RUN_WORKFLOW` 子 workflow 继承；`CHOICE` 优先选择 `run`，没有 `run` 时选择 `approve`。它不影响 handoff、`subgraph.react on_max` 或 agent loop 的 `waiting_human`：
+需要让本次 run 的 `APPROVAL`、`REVIEW` 和 `CHOICE` 全部自动走正向分支时，显式追加 `--auto-human`。该参数会设置 run-level `human_gate_policy.auto=true`，并由 `RUN_WORKFLOW` 子 workflow 继承；`CHOICE` 优先选择 `run`，没有 `run` 时选择 `approve`。它不影响 handoff、`subgraph.react on_max` 或 agent loop 的 `waiting_human`：
 
 ```powershell
 python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json "{}" --auto-human

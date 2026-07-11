@@ -8,19 +8,79 @@ DEFAULTS {
 }
 
 STEP prepare_target
-  WORKFLOW "01_prepare_target/workflow.lgwf";
+  WORKFLOW "01_prepare_target/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/prompt_fix_target.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/environment_check.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/inventory.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/draft-prompt.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/action-prompt.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/audit-prompt.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/normal-prompt.md";
+  };
 
 STEP audit_prompts
-  WORKFLOW "02_audit_prompts/workflow.lgwf";
+  WORKFLOW "02_audit_prompts/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_fix_target.json";
+    READ workspace file ".lgwf/prompt_acceptance/environment_check.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/draft-prompt.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/action-prompt.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/audit-prompt.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/normal-prompt.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/audit.json";
+  };
 
 STEP select_fixes
-  WORKFLOW "03_select_fixes/workflow.lgwf";
+  WORKFLOW "03_select_fixes/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/selection_context.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection_review_context.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection_review.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/react_history.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/repair_review.json";
+  };
 
 STEP repair_loop
-  WORKFLOW "04_repair_loop/workflow.lgwf";
+  WORKFLOW "04_repair_loop/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_fix_target.json";
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
+    READ workspace file ".lgwf/prompt_acceptance/environment_check.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    READ workspace file ".lgwf/prompt_acceptance/react_history.json";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
+    WRITE workspace file ".lgwf/prompt_acceptance/repair_review.json";
+  };
 
 STEP summary
-  WORKFLOW "05_summary/workflow.lgwf";
+  WORKFLOW "05_summary/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_acceptance/audit.json";
+    READ workspace file ".lgwf/prompt_acceptance/fix_selection.json";
+    READ workspace file ".lgwf/prompt_acceptance/inventory.json";
+    READ workspace file ".lgwf/prompt_acceptance/react_history.json";
+    READ workspace file ".lgwf/prompt_acceptance/repair_review.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/confirmation.json";
+    WRITE workspace file ".lgwf/prompt_acceptance/summary.json";
+    WRITE workspace file ".lgwf/target_prompt_acceptance_summary.json";
+  };
 
 FLOW prepare_target
   THEN audit_prompts

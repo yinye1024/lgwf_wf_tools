@@ -52,11 +52,10 @@ def find_workspace_root(start: Path) -> Path:
 
 
 def load_confirmed_target(lgwf_dir: Path) -> dict[str, Any]:
-    implementation = load_json(lgwf_dir / "implementation_context.json")
     requirements = load_json(lgwf_dir / "create_requirements.json").get("confirmed", {})
     business_flow = load_json(lgwf_dir / "business_flow.json").get("confirmed", {})
     scaffold = load_json(lgwf_dir / "scaffold_package_result.json").get("scaffold_plan", {})
-    sources = [implementation, scaffold, requirements, business_flow]
+    sources = [scaffold, requirements, business_flow]
     target_package_root = next(
         (source.get("target_package_root") for source in sources if isinstance(source.get("target_package_root"), str)),
         "",

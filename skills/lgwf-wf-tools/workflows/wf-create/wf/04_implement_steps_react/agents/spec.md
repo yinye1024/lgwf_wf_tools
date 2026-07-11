@@ -22,7 +22,7 @@
 - `.lgwf/step_designs.json` 是已确认步骤设计的权威输入；只消费已由 `confirm_step_designs` approve 后固化的 `.lgwf/step_designs.json` 或等价确认记录。
 - `.lgwf/implementation_context.json` 是路径权威输入，包含 `workspace_root`、`target_package_root`、`target_package_abs`、`work_dir` 和路径使用规则。
 - `.lgwf/implementation_observe.json` 是上一轮 observe 反馈；如果 `passed=false` 或 `audit.ok=false`，下一轮必须优先修复 audit 失败，不得扩展新范围。
-- `.lgwf/create_reference_context/dsl-assist/*.md` 是 LGWF DSL 创建、审计和 workflow 拆分规范。
+- `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/guide.md` 和 `.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md` 是 LGWF DSL 创建、审计和 workflow 拆分规范。
 - `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md` 和 `.lgwf/create_reference_context/scaffold/scaffold_package_template.json` 是 package profile、目录结构和文件计划的脚手架规范。
 - `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md` 是 workflow、子 workflow、复杂 step、目录边界、状态隔离和验证入口的总纲。
 - 不要从 `ws/02_confirm_business_flow/resources/...` 读取 scaffold 资源；Codex 子进程的 workspace root 是 `ws/`，scaffold 资源已由 `prepare_dsl_reference_context` 镜像到 `.lgwf/create_reference_context/scaffold/`。

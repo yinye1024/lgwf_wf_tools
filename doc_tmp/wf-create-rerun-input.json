@@ -1,3 +1,0 @@
-{
-    "raw_intent":  "创建一个名为 wf-audit-fix 的 LGWF workflow。目标是对用户指定的旧 LGWF workflow.lgwf 反复运行 lgwf.py audit；如果 audit 失败，则根据 audit stdout/stderr 在隔离 candidate 目录中修复目标 workflow package；candidate audit 通过后 promote 回真实目标目录；然后再次 audit 真实目标；直到 audit 成功或达到 max_attempts。该 workflow 不运行目标 workflow，不收集目标 workflow 的业务 input-json，不处理目标 workflow approval，只修复静态 DSL/audit 问题。需要接入 lgwf-wf-tools facade registry 和 AGENTS 路由，workflow id 为 wf-audit-fix，kind 为 lgwf，target_package_root 固定为 skills/lgwf-wf-tools/workflows/wf-audit-fix。输入应包含 target_workflow_lgwf 和可选 max_attempts，默认 5。应保留人工确认边界：需求、业务流和步骤设计由 wf-create 正常 approval。"
-}

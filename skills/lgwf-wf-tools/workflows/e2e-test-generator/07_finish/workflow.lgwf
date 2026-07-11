@@ -13,4 +13,16 @@ PY generate_final_report
   RESULT state.lgwf_e2e.final_report_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/e2e_coverage_matrix.json";
+    READ workspace file ".lgwf/e2e_real_positive_generation.json";
+    READ workspace file ".lgwf/e2e_real_positive_observe.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_generation.json";
+    READ workspace file ".lgwf/e2e_runtime_fake_observe.json";
+    READ workspace file ".lgwf/e2e_script_flow_generation.json";
+    READ workspace file ".lgwf/e2e_script_flow_observe.json";
+    READ workspace file ".lgwf/e2e_target_request.normalized.json";
+    READ workspace file ".lgwf/e2e_wf_fix_positive_generation.json";
+    READ workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
+    WRITE workspace file "reports/e2e-test-generator/report.json";
+    WRITE workspace file "reports/e2e-test-generator/report.md";
   };

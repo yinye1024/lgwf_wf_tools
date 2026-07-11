@@ -13,7 +13,13 @@ CODEX audit_target_prompts
   CONTEXT workspace file ".lgwf/prompt_acceptance/environment_check.json"
   CONTEXT workspace file ".lgwf/prompt_acceptance/inventory.json"
   CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md"
-  CONTEXT workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/draft-prompt.md"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/action-prompt.md"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/audit-prompt.md"
+  CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/normal-prompt.md"
   TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
   OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE
   RESULT state.lgwf_wf_prompt_fix.prompt_audit_result
@@ -21,7 +27,13 @@ CODEX audit_target_prompts
     READ workspace file ".lgwf/prompt_acceptance/environment_check.json";
     READ workspace file ".lgwf/prompt_acceptance/inventory.json";
     READ workspace file ".lgwf/prompt_acceptance/reference_context/AGENTS.md";
-    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/*.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/guide.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/prompt-audit-checklist.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/shared-rules.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/draft-prompt.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/action-prompt.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/audit-prompt.md";
+    READ workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/normal-prompt.md";
     READ workspace file ".lgwf/prompt_fix_target.json";
     READ workspace dir ".lgwf/prompt_acceptance/reference_context/prompt-assist";
     WRITE workspace file ".lgwf/prompt_acceptance/audit.json";

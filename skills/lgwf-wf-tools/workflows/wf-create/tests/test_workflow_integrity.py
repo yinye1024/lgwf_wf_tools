@@ -73,9 +73,15 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:
         text = (ROOT / "01_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn('PERSIST ".lgwf/raw_intent_request.json"', text)
-        self.assertIn("APPROVAL collect_raw_intent", text)
-        self.assertIn("collect_raw_intent", text)
+        self.assertNotIn("APPROVAL collect_raw_intent", text)
+        self.assertIn("PY prepare_raw_intent_confirmation", text)
+        self.assertIn("REVIEW confirm_raw_intent", text)
+        self.assertIn('PERSIST ".lgwf/raw_intent_approval.json"', text)
+        self.assertIn("PY apply_confirmed_raw_intent", text)
+        self.assertIn('WRITE workspace file ".lgwf/raw_intent_request.json"', text)
+        self.assertIn("prepare_raw_intent_confirmation", text)
+        self.assertIn("THEN confirm_raw_intent", text)
+        self.assertIn('WHEN "approve" THEN apply_confirmed_raw_intent', text)
         self.assertIn("THEN finish_raw_intent", text)
 
     def test_apply_scripts_reject_non_approve_decisions(self) -> None:

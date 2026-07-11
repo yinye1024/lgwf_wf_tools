@@ -32,7 +32,8 @@ class PromptFixScriptsTest(unittest.TestCase):
             ("repair_loop", "04_repair_loop/workflow.lgwf"),
             ("summary", "05_summary/workflow.lgwf"),
         ):
-            self.assertIn(f"STEP {step_id}\n  WORKFLOW \"{workflow_path}\";", source)
+            self.assertIn(f"STEP {step_id}", source)
+            self.assertIn(f'WORKFLOW "{workflow_path}"', source)
             self.assertTrue((ROOT / "wf" / workflow_path).is_file())
         self.assertNotIn("CODEX audit_target_prompts", source)
         self.assertNotIn("REACT repair_target_prompts", source)
@@ -64,7 +65,7 @@ class PromptFixScriptsTest(unittest.TestCase):
     def test_prompt_fix_workflow_uses_owned_namespace_and_react(self) -> None:
         source = (ROOT / "wf" / "workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("WORKFLOW lgwf_wf_prompt_fix;", source)
-        self.assertIn("lgwf_wf_prompt_fix.prompt_acceptance.instructions.{node}", source)
+        self.assertIn("lgwf_wf_prompt_fix.prompt_acceptance.results.{node}", source)
         prepare_source = (ROOT / "wf" / "01_prepare_target" / "workflow.lgwf").read_text(encoding="utf-8")
         select_source = (ROOT / "wf" / "03_select_fixes" / "workflow.lgwf").read_text(encoding="utf-8")
         repair_source = (ROOT / "wf" / "04_repair_loop" / "workflow.lgwf").read_text(encoding="utf-8")
@@ -89,7 +90,8 @@ class PromptFixScriptsTest(unittest.TestCase):
             combined = "\n".join([source, prepare_source, select_source, repair_source, summary_source])
             self.assertIn(artifact, combined)
         self.assertNotIn(".lgwf/prompt_acceptance/fix_notes.md", "\n".join([source, prepare_source, select_source, repair_source, summary_source]))
-        self.assertIn("APPROVAL select_prompt_fixes", select_source)
+        self.assertIn("REVIEW select_prompt_fixes", select_source)
+        self.assertIn('PERSIST ".lgwf/prompt_acceptance/fix_selection_review.json"', select_source)
         self.assertNotIn("route_after_prompt_selection", source)
         self.assertIn("PY route_repair_loop_entry", repair_source)
         self.assertIn('WHEN "fix" THEN repair_target_prompts', repair_source)
@@ -129,6 +131,36 @@ class PromptFixScriptsTest(unittest.TestCase):
             contract["script_writes"]["build_prompt_inventory"],
             [".lgwf/prompt_acceptance/inventory.json"],
         )
+
+    def test_prompt_fix_contracts_do_not_use_wildcard_file_paths(self) -> None:
+        for path in (ROOT / "wf").rglob("*"):
+            if path.suffix not in {".lgwf", ".md"}:
+                continue
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn(
+                'workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/*.md"',
+                source,
+                path.as_posix(),
+            )
+            self.assertNotIn(
+                ".lgwf/prompt_acceptance/reference_context/prompt-assist/*.md",
+                source,
+                path.as_posix(),
+            )
+
+    def test_select_fixes_uses_review_with_explicit_consumption_chain(self) -> None:
+        source = (ROOT / "wf" / "03_select_fixes" / "workflow.lgwf").read_text(encoding="utf-8")
+
+        self.assertIn("PY prepare_prompt_fix_selection_review", source)
+        self.assertIn("REVIEW select_prompt_fixes", source)
+        self.assertNotIn("APPROVAL select_prompt_fixes", source)
+        self.assertIn("CONTEXT state.lgwf_wf_prompt_fix.prompt_fix_selection_review_context", source)
+        self.assertIn('PERSIST ".lgwf/prompt_acceptance/fix_selection_review.json"', source)
+        self.assertNotIn('PERSIST ".lgwf/prompt_acceptance/fix_selection.json"', source)
+        self.assertIn('WHEN "approve" THEN validate_prompt_fix_selection', source)
+        self.assertIn('WHEN "revise" THEN prepare_prompt_fix_selection_revision', source)
+        self.assertIn('WHEN "reject" THEN FAIL_ALL', source)
+        self.assertIn("prepare_prompt_fix_selection_revision THEN select_prompt_fixes", source)
 
     def test_environment_check_detects_missing_and_present_skill(self) -> None:
         check_mod = load_module(
@@ -289,6 +321,73 @@ class PromptFixScriptsTest(unittest.TestCase):
         self.assertTrue(skipped["skip_fix"])
         self.assertEqual(selection_mod.choose_route(skipped, audit), "summarize")
         self.assertEqual(selection_mod.choose_route({"selected_issue_ids": ["p1"]}, audit), "fix")
+
+    def test_prompt_fix_selection_does_not_treat_empty_control_approval_as_fix_all(self) -> None:
+        selection_mod = load_module(
+            "03_select_fixes/scripts/validate_prompt_fix_selection.py",
+            "prompt_selection_empty_control_approval",
+        )
+        audit = {"issues": [{"id": "p1"}, {"id": "p2"}]}
+
+        selection = selection_mod.normalize_selection({}, audit)
+
+        self.assertFalse(selection["fix_all"])
+        self.assertTrue(selection["skip_fix"])
+        self.assertEqual(selection["selected_issue_ids"], [])
+
+    def test_prompt_fix_selection_review_defaults_to_fix_all_business_context(self) -> None:
+        review_mod = load_module(
+            "03_select_fixes/scripts/prepare_prompt_fix_selection_review.py",
+            "prompt_selection_review_context",
+        )
+        selection_context = {
+            "artifact_root": ".lgwf/prompt_acceptance",
+            "audit_passed": False,
+            "prompt_count": 2,
+            "files_with_issues": [{"prompt_path": "agents/failed.md", "issue_ids": ["p1"]}],
+            "files_passed": [{"prompt_path": "agents/passed.md"}],
+            "issues": [{"id": "p1", "severity": "high"}],
+        }
+
+        review = review_mod.build_review_context(selection_context)
+
+        self.assertTrue(review["fix_all"])
+        self.assertFalse(review["skip_fix"])
+        self.assertEqual(review["selected_issue_ids"], [])
+        self.assertEqual(review["source_context_file"], ".lgwf/prompt_acceptance/selection_context.json")
+        self.assertEqual(review["issues"], selection_context["issues"])
+        self.assertEqual(review["files_with_issues"], selection_context["files_with_issues"])
+
+    def test_prompt_fix_selection_revision_requires_review_value_object(self) -> None:
+        revision_mod = load_module(
+            "03_select_fixes/scripts/prepare_prompt_fix_selection_revision.py",
+            "prompt_selection_revision",
+        )
+        previous = {
+            "fix_all": True,
+            "selected_issue_ids": [],
+            "skip_fix": False,
+            "comment": "",
+            "issues": [{"id": "p1"}],
+        }
+        approval = {
+            "approval": "revise",
+            "decision": "revise",
+            "value": {
+                "fix_all": False,
+                "selected_issue_ids": ["p1"],
+                "skip_fix": False,
+                "comment": "只修一个问题",
+                "issues": [{"id": "p1"}],
+            },
+        }
+
+        revised = revision_mod.resolve_revised_context(approval, previous)
+
+        self.assertFalse(revised["fix_all"])
+        self.assertEqual(revised["selected_issue_ids"], ["p1"])
+        self.assertEqual(revised["comment"], "只修一个问题")
+
 
     def test_prompt_fix_selection_context_groups_file_results_and_issues(self) -> None:
         context_mod = load_module(

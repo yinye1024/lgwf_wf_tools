@@ -12,6 +12,7 @@ PY prepare_wf_fix_positive_observe_feedback
   RESULT state.lgwf_e2e.wf_fix_positive_observe_feedback_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/e2e_wf_fix_positive_observe.json";
   };
 
 CONTEXT_SET wf_fix_positive_e2e_shared_context {
@@ -28,6 +29,8 @@ CONTEXT_SET wf_fix_positive_e2e_design_context {
 REACT wf_fix_positive_e2e_react MAX 3
   SPEC "01_design/agents/spec.md"
   CONTEXT wf_fix_positive_e2e_shared_context
+  CONTRACT {
+  }
   REASON CODEX
     PROMPT "01_design/agents/reason.md"
     CONTEXT workspace file ".lgwf/e2e_wf_fix_positive_observe.json"

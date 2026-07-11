@@ -34,6 +34,14 @@ PY prepare_payload
     WRITE workspace file ".lgwf/wf_create_payload.json";
   };
 
+PY declare_wf_create_payload_contract
+  SCRIPT "scripts/map_wf_create_input.py"
+  INPUT state.lgwf_wf_convert.wf_create_payload
+  RESULT state.lgwf_wf_convert.contract_markers.wf_create_payload
+  CONTRACT {
+    WRITE state.lgwf_wf_convert.wf_create_payload;
+  };
+
 PY map_wf_create_input
   SCRIPT "scripts/map_wf_create_input.py"
   INPUT state.lgwf_wf_convert.wf_create_payload
@@ -41,6 +49,14 @@ PY map_wf_create_input
   UPDATES_STATE
   CONTRACT {
     READ state.lgwf_wf_convert.wf_create_payload;
+  };
+
+PY declare_wf_create_input_contract
+  SCRIPT "scripts/map_wf_create_input.py"
+  INPUT state.lgwf_wf_convert.wf_create_input
+  RESULT state.lgwf_wf_convert.contract_markers.wf_create_input
+  CONTRACT {
+    WRITE state.lgwf_wf_convert.wf_create_input;
   };
 
 RUN_WORKFLOW wf_create
@@ -54,6 +70,14 @@ RUN_WORKFLOW wf_create
     WRITE workspace dir "workflows/wf-create/ws";
   };
 
+PY declare_wf_create_result_contract
+  SCRIPT "scripts/capture_wf_create_result.py"
+  INPUT state.lgwf_wf_convert.wf_create_result
+  RESULT state.lgwf_wf_convert.contract_markers.wf_create_result
+  CONTRACT {
+    WRITE state.lgwf_wf_convert.wf_create_result;
+  };
+
 PY capture_wf_create_result
   SCRIPT "scripts/capture_wf_create_result.py"
   INPUT state.lgwf_wf_convert.wf_create_result
@@ -61,6 +85,14 @@ PY capture_wf_create_result
   UPDATES_STATE
   CONTRACT {
     READ state.lgwf_wf_convert.wf_create_result;
+  };
+
+PY declare_wf_create_result_summary_contract
+  SCRIPT "scripts/capture_wf_create_result.py"
+  INPUT state.lgwf_wf_convert.wf_create_result_summary
+  RESULT state.lgwf_wf_convert.contract_markers.wf_create_result_summary
+  CONTRACT {
+    WRITE state.lgwf_wf_convert.wf_create_result_summary;
   };
 
 PY verify_business_parity
@@ -97,14 +129,20 @@ PY prepare_post_fix_handoff
 HANDOFF handoff_wf_post_fix
   CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload
   PROMPT "handoff_wf_post_fix.md"
-  RESULT state.lgwf_wf_convert.post_fix_handoff;
+  RESULT state.lgwf_wf_convert.post_fix_handoff
+  CONTRACT {
+  };
 
 FLOW collect_target
   THEN analyze_source
   THEN prepare_payload
+  THEN declare_wf_create_payload_contract
   THEN map_wf_create_input
+  THEN declare_wf_create_input_contract
   THEN wf_create
+  THEN declare_wf_create_result_contract
   THEN capture_wf_create_result
+  THEN declare_wf_create_result_summary_contract
   THEN verify_business_parity
   THEN summarize_result
   THEN prepare_post_fix_handoff

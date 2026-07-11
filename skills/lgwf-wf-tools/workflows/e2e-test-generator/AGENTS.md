@@ -33,7 +33,7 @@
 
 ## 输入契约
 
-入口 `collect_target_request` approval 接收 JSON object：
+入口运行输入接收 JSON object，`collect_target_request` approval 只确认或修订该对象：
 
 ```json
 {
@@ -50,21 +50,26 @@
 - `test_output_dir` 可省略，默认由 workflow 推导；通常是目标 workflow package 下的 `tests`。
 - `test_name_prefix` 可省略，默认由目标 workflow 名称推导。
 - `test_types` 可省略或为空数组，默认生成全部四类；可选值为 `script_flow`、`runtime_fake`、`real_positive`、`wf_fix_positive`。
+- `--auto-human` 只允许在输入已经包含 `workflow_lgwf` 时使用；auto approve 会确认输入对象，不得把 approval metadata 或确认说明上下文写入 `.lgwf/e2e_target_request.json`。
 - workflow package 内部引用 `SCRIPT`、`PROMPT`、`CONTEXT workflow` 时仍必须使用相对路径，不允许绝对路径或 `..`。
 
 ## 业务流程
 
-1. `prepare_target_request_context`：准备 approval 所需上下文，提示用户提交目标 workflow 信息。
-2. `collect_target_request`：人工确认目标 workflow、输出目录和测试命名前缀。
-3. `inspect_target`：校验输入，扫描目标 package，解析 workflow graph，并总结业务流。
+1. `prepare_target_request_context`：从运行输入准备目标 workflow 请求和 approval 所需上下文。
+2. `collect_target_request`：人工确认或修订目标 workflow、输出目录和测试命名前缀。
+3. `inspect_target`：校验输入，扫描目标 package，解析 workflow graph，并通过确定性脚本总结业务流。
 4. `derive_coverage_matrix`：根据目标 graph 和资源文件生成覆盖矩阵，明确每类测试要覆盖的节点、分支、输入输出和断言。
-5. `script_flow_e2e`：通过 `REACT` 循环设计、生成、校验脚本级 E2E 测试；不启动目标 LGWF runtime。
-6. `runtime_fake_e2e`：通过 `REACT` 循环设计、生成、校验 runtime fake E2E 测试；启动真实 LGWF runtime，但 Codex runner 使用 Python fake。
+5. `script_flow_e2e`：通过确定性 `PY` 脚本设计、生成、校验脚本级 E2E 测试；不启动目标 LGWF runtime，也不调用真实 Codex。
+6. `runtime_fake_e2e`：通过确定性 `PY` 脚本设计、生成、校验 runtime fake 合约 E2E 测试；保留 `lgwf.py run --workflow-lgwf`、`--prompt-file`、`status` 和 approval 命令契约，使用 Python fake Codex，不调用真实 Codex。
 7. `real_positive_e2e`：通过 `REACT` 循环设计、生成、校验真实 Codex 正向测试；该测试作为人工验收入口，文件名不使用 `test_` 前缀，默认不进入自动回归集合。
 8. `wf_fix_positive_e2e`：通过 `REACT` 循环设计、生成、校验 wf-fix 正向修复入口；该入口复用真实正向场景启动 `wf-fix`，默认不进入自动回归集合。
 9. `finish`：生成最终报告，汇总生成文件、覆盖范围、验证结果和后续风险。
 
-四个生成阶段都采用 `REACT MAX 3`：先设计测试，再落地文件，最后观察校验结果；如果观察不通过，由对应 `decide_*` 脚本决定是否继续修复循环。
+`script_flow_e2e` 采用确定性脚本链：先从 coverage matrix 和 workflow graph 生成 `.lgwf/e2e_script_flow_design.json`，再生成 `test_<workflow>_script_flow_e2e.py`，最后用 `py_compile` 和 `unittest` 验收并写入 `.lgwf/e2e_script_flow_observe.json`。该阶段不得启动目标 runtime 或真实 Codex，避免脚本级测试生成被模型采样超时阻塞。
+
+`runtime_fake_e2e` 也采用确定性脚本链：先生成 `.lgwf/e2e_runtime_fake_design.json`，再生成 `test_<workflow>_runtime_fake_e2e.py`，最后编译并执行该最小合约测试，静态验收 run/status/approval/prompt-file 契约和业务分支覆盖。该阶段不再依赖 Codex REACT 生成，避免 fake runtime 测试生成被长上下文或模型采样阻塞。
+
+剩余两个生成阶段仍采用 `REACT MAX 3`：先设计测试，再落地文件，最后观察校验结果；如果观察不通过，由对应 `decide_*` 脚本决定是否继续修复循环。
 
 ## 固定输出
 
@@ -96,15 +101,15 @@ reports/e2e-test-generator/report.md
 ## 测试生成约束
 
 - 固定生成四类测试，不提供裁剪开关；如用户只想要其中一类，应先说明该 workflow 当前不支持局部生成。
-- `script_flow_e2e` 关注目标 scripts、内置 tool 调用、输入输出文件和分支断言，不应启动目标 workflow runtime。
-- `runtime_fake_e2e` 必须使用 Python fake Codex，prompt 必须通过 `--prompt-file` 传递，避免长 prompt 走命令行参数。
-- `runtime_fake_e2e` 应验证 LGWF runtime 编排、state/result 文件、approval 或 fake response 契约，不依赖真实 Codex。
+- `script_flow_e2e` 关注目标 scripts、输入输出文件和分支断言；该阶段由本 package 脚本确定性生成，不应启动目标 workflow runtime 或真实 Codex。
+- `runtime_fake_e2e` 必须由本 package 的确定性脚本生成，使用 Python fake Codex，prompt 必须通过 `--prompt-file` 传递，避免长 prompt 走命令行参数。
+- `runtime_fake_e2e` 应验证 runtime 驱动命令、state/result 文件、approval 或 fake response 契约，不依赖真实 Codex；自动回归中的最小合约测试不真实启动目标 runtime。
 - `real_positive_e2e` 必须保持人工显式执行语义，生成文件名必须不以 `test_` 开头，默认不纳入 `unittest discover` 回归集合。
 - `real_positive_e2e` 不使用环境变量作为是否运行真实 Codex 的门禁；人工直接执行该文件时即运行真实正向链路。
 - `real_positive_e2e` 生成后可以作为 `wf-fix` 的目标 workflow 显式运行或诊断对象，但不要把它接入常规回归入口；若真实正向链路失败，应把失败产物和该手动入口路径交给 `wf-fix`。
 - `wf_fix_positive_e2e` 必须复用或对齐 `real_positive_e2e` 的固定业务场景，启动 `wf-fix` 修复原始目标 `workflow.lgwf`，默认不纳入 `unittest discover` 回归集合。
 - `wf_fix_positive_e2e` 默认提交 `max_attempts=5` 和 `ask_main_agent_for_target_approvals=true`，并自动处理目标 approval。
-- 未被 `test_types` 选中的测试类型必须跳过对应生成阶段，不得生成或修改目标测试文件；最终报告中标记为 `skipped`。
+- 未被 `test_types` 选中的测试类型必须跳过对应生成阶段，不得生成或修改目标测试文件；route selection 会写出对应 `generation/observe` skipped 占位产物，供 `finish` 汇总消费链稳定读取，最终报告中标记为 `skipped`。
 - 生成测试时优先复用目标 workflow 已有测试工具、fixture 和命名风格；没有现成模式时再创建最小必要 helper。
 - 生成内容必须保持 UTF-8；中文说明、JSON 示例和报告不允许写成本地 ANSI/GBK。
 

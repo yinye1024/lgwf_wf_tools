@@ -2,6 +2,12 @@
   "bootstrap_inputs": [
     ".lgwf/prompt_upgrade/react_history.json"
   ],
+  "final_outputs": [
+    ".lgwf/prompt_upgrade/confirmation_context.json",
+    ".lgwf/prompt_upgrade/environment_check.json",
+    ".lgwf/prompt_upgrade/summary.json",
+    ".lgwf/target_prompt_upgrade_summary.json"
+  ],
   "script_writes": {
     "check_lgwf_client_assist": [
       ".lgwf/prompt_upgrade/environment_check.json"

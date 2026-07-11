@@ -9,7 +9,7 @@ DEFAULTS {
 
 ROUTE script_flow_e2e_auto_route
   READ state.lgwf_wf_post_fix.post_fix_decisions.auto_enabled
-  WHEN true THEN run_script_flow_e2e_flow
+  WHEN true THEN auto_script_flow_e2e_flow
   WHEN false THEN choose_script_flow_e2e;
 
 CHOICE choose_script_flow_e2e
@@ -52,6 +52,8 @@ PY set_script_flow_e2e_auto
   RESULT state.lgwf_wf_post_fix.set_script_flow_e2e_auto_result
   UPDATES_STATE
   CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_decisions/script_flow_e2e.json";
+    WRITE workspace file ".lgwf/post_fix_decisions.json";
   };
 
 PY skip_script_flow_e2e

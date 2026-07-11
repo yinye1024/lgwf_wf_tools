@@ -1,0 +1,80 @@
+WORKFLOW materialize_packaged_skill;
+ENTRY copy_source_skill_tree;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+}
+
+PY copy_source_skill_tree
+  SCRIPT "scripts/copy_source_skill_tree.py"
+  TIMEOUT 120
+  RESULT state.skill_packaging.copy_source_skill_tree_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.materialization_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/confirmed_packaging_plan.json";
+    READ workspace file ".lgwf/packaging_preflight.json";
+    WRITE workspace file "<output_parent>/<source-skill-name>/";
+  };
+
+PY embed_bundled_runtime
+  SCRIPT "scripts/embed_bundled_runtime.py"
+  INPUT state.skill_packaging.materialization_context
+  TIMEOUT 120
+  RESULT state.skill_packaging.embed_bundled_runtime_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.materialization_context;
+  }
+  CONTRACT {
+    READ state.skill_packaging.materialization_context;
+    WRITE workspace file "<output_parent>/<source-skill-name>/vendor/lgwf-client-assist/";
+  };
+
+PY generate_local_runner
+  SCRIPT "scripts/generate_local_runner.py"
+  INPUT state.skill_packaging.materialization_context
+  TIMEOUT 120
+  RESULT state.skill_packaging.generate_local_runner_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.materialization_context;
+  }
+  CONTRACT {
+    READ state.skill_packaging.materialization_context;
+    WRITE workspace file "<output_parent>/<source-skill-name>/scripts/run_local_lgwf_workflow.py";
+  };
+
+PY write_packaging_manifest
+  SCRIPT "scripts/write_packaging_manifest.py"
+  INPUT state.skill_packaging.materialization_context
+  TIMEOUT 120
+  RESULT state.skill_packaging.write_packaging_manifest_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.materialization_context;
+  }
+  CONTRACT {
+    READ state.skill_packaging.materialization_context;
+    WRITE workspace file "<output_parent>/<source-skill-name>/PACKAGING_MANIFEST.json";
+  };
+
+PY record_materialization_summary
+  SCRIPT "scripts/record_materialization_summary.py"
+  INPUT state.skill_packaging.materialization_context
+  TIMEOUT 120
+  RESULT state.skill_packaging.record_materialization_summary_result
+  UPDATES_STATE {
+    WRITE state.skill_packaging.materialized_package;
+  }
+  CONTRACT {
+    READ state.skill_packaging.materialization_context;
+    WRITE workspace file ".lgwf/materialized_package.json";
+  };
+
+FLOW {
+  copy_source_skill_tree
+  THEN embed_bundled_runtime
+  THEN generate_local_runner
+  THEN write_packaging_manifest
+  THEN record_materialization_summary;
+}
