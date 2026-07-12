@@ -24,6 +24,14 @@ python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-di
 python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json "{}" --auto-human
 ```
 
+## Codex handoff 节点边界
+
+runtime 生成 Codex `prompt.txt` / `handoff_prompt.txt` 时会自动注入系统级节点边界，不要求每个 workflow prompt 重复手写。该边界包含：
+
+- `contract-first`：当前 LGWF node contract 和 handoff 是本次 Codex 调用的最高优先级执行范围，workflow prompt、`AGENTS.md`、skill、plugin 和 reference docs 不能扩大或覆盖该范围。
+- `reference-only`：spec、reference context、analysis targets、`target_file` / `target_files`、`target_dir` / `target_dirs` 默认只是参考材料；除非当前节点 contract、声明输出或主 prompt 明确授权，不得据此执行外部计划、通用插件流程或无关本地 skill 流程。
+- `output-file-required`：节点声明 Codex-written `OUTPUT_JSON ... AS_FILE` 或 `OUTPUT_FILE` 时，Codex 必须在结束前实际写入指定文件；runtime-managed JSON output 则必须返回单个 JSON object，不能只返回叙述性回复。
+
 复制按文件字节执行，不转换文本编码或换行。`.git/`、`__pycache__/`、`.lgwf-compiled-*` 和 package 内部的整个 work dir 不进入 snapshot；symlink、junction 或其他 reparse point 会使启动失败。snapshot 会保留到下一次 rerun，由现有 work-dir 清理流程删除。
 
 安装策略由打包时生成的 `assets/package-profile.json` 决定：
