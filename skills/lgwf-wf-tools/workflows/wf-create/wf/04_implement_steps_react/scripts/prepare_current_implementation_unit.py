@@ -27,23 +27,27 @@ def string_list(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
-def ensure_target_dirs(target_dirs: list[str], target_files: list[str]) -> None:
+def ensure_target_paths(target_dirs: list[str], target_files: list[str]) -> None:
     for raw_dir in target_dirs:
         Path(raw_dir).mkdir(parents=True, exist_ok=True)
     for raw_file in target_files:
-        Path(raw_file).parent.mkdir(parents=True, exist_ok=True)
+        path = Path(raw_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text("", encoding="utf-8")
 
 
 def build_current_implementation_unit_context(root: Path, unit: dict[str, Any]) -> dict[str, Any]:
     target_files = string_list(unit.get("target_files", []))
     target_dirs = string_list(unit.get("target_dirs", []))
-    ensure_target_dirs(target_dirs, target_files)
+    ensure_target_paths(target_dirs, target_files)
     context = {
         "current_implementation_unit": unit,
         "current_implementation_unit_target_files": target_files,
         "current_implementation_unit_target_dirs": target_dirs,
         "instructions": [
-            "只处理 current_implementation_unit 指定的目标目录和文件。",
+            "只处理 current_implementation_unit 指定的目标文件；TARGET_FILES 是允许生成或修改的目标文件清单。",
+            "TARGET_DIRS 只表示当前 unit 的目录边界，不授权修改 TARGET_FILES 之外的文件。",
             "优先处理 current_implementation_unit.repair_focus 中的 observe 失败项。",
             "如果目标实现需要扩大到其他 unit，输出 blocked_reason，不要擅自修改。",
         ],

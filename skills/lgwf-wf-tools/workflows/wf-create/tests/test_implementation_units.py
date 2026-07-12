@@ -156,11 +156,33 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertIn("stage_01_collect_context", unit_ids)
             self.assertIn("stage_02_run_checks", unit_ids)
             self.assertIn("shared_helpers_tests", unit_ids)
+            package_unit = next(unit for unit in units if unit["unit_id"] == "package_contracts")
+            root_unit = next(unit for unit in units if unit["unit_id"] == "root_workflow")
             stage_unit = next(unit for unit in units if unit["unit_id"] == "stage_01_collect_context")
+            support_unit = next(unit for unit in units if unit["unit_id"] == "shared_helpers_tests")
+            self.assertEqual(
+                package_unit["package_relative_files"],
+                ["AGENTS.md", "README.md", "entry_contract.json", "wf/artifact_contracts.json"],
+            )
+            self.assertEqual(package_unit["package_relative_dirs"], [".", "wf"])
+            self.assertNotIn("scripts", package_unit["package_relative_dirs"])
+            self.assertNotIn("ws", package_unit["package_relative_dirs"])
+            self.assertNotIn("tests", package_unit["package_relative_dirs"])
+            self.assertEqual(
+                root_unit["package_relative_files"],
+                ["wf/workflow.lgwf", "wf/docs/steps/collect-context.md", "wf/docs/steps/run-checks.md"],
+            )
+            self.assertEqual(root_unit["package_relative_dirs"], ["wf", "wf/docs/steps"])
             self.assertEqual(stage_unit["stage_id"], "collect_context")
             self.assertEqual(stage_unit["stage_dir"], "01_collect_context")
             self.assertEqual(stage_unit["workflow_ref"], "wf/01_collect_context/workflow.lgwf")
             self.assertIn("wf/01_collect_context/scripts/run.py", stage_unit["planned_files"])
+            self.assertNotIn("wf", stage_unit["package_relative_dirs"])
+            self.assertEqual(support_unit["package_relative_files"], ["tests/README.md", "tests/test_workflow_structure.py"])
+            self.assertIn("scripts", support_unit["package_relative_dirs"])
+            self.assertIn("ws", support_unit["package_relative_dirs"])
+            self.assertIn("wf/shared/scripts", support_unit["package_relative_dirs"])
+            self.assertNotIn("wf/01_collect_context", support_unit["package_relative_dirs"])
 
             all_files = [path for unit in units for path in unit["target_files"]]
             self.assertEqual(len(all_files), len(set(all_files)))
@@ -171,11 +193,14 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
     def test_prepare_uses_observe_failures_to_select_affected_units(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
+            target_package = self.seed_context(root)
+            missing_stage_workflow = target_package / "wf" / "02_run_checks" / "workflow.lgwf"
+            failure = f"{missing_stage_workflow}:3:1 触发 DSL 语法错误"
             self.seed_context(
                 root,
                 {
                     "passed": False,
-                    "failures": ["wf\\02_run_checks\\workflow.lgwf 不存在"],
+                    "failures": [failure],
                 },
             )
 
@@ -185,6 +210,40 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertEqual(result["selection_mode"], "repair")
             self.assertIn("stage_02_run_checks", unit_ids)
             self.assertNotIn("stage_01_collect_context", unit_ids)
+
+    def test_prepare_selects_root_workflow_without_package_contracts_for_root_workflow_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(
+                root,
+                {
+                    "passed": False,
+                    "failures": ["wf\\workflow.lgwf:3:1 触发 DSL 语法错误：Expected ';'。"],
+                },
+            )
+
+            result = self.prepare_units.build_implementation_units(root)
+            unit_ids = [unit["unit_id"] for unit in result["implementation_units"]]
+
+            self.assertEqual(result["selection_mode"], "repair")
+            self.assertEqual(unit_ids, ["root_workflow"])
+
+    def test_prepare_selects_support_unit_for_unallocated_scaffold_dir_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(
+                root,
+                {
+                    "passed": False,
+                    "failures": ["scaffold_plan create_dir scripts 不存在"],
+                },
+            )
+
+            result = self.prepare_units.build_implementation_units(root)
+            unit_ids = [unit["unit_id"] for unit in result["implementation_units"]]
+
+            self.assertEqual(result["selection_mode"], "repair")
+            self.assertEqual(unit_ids, ["shared_helpers_tests"])
 
     def test_merge_records_foreach_collected_failures_with_unit_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -242,6 +301,7 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             unit = {
                 "unit_id": "stage_01_collect_context",
                 "unit_type": "stage",
+                "target_package_abs": str(target_package.resolve()),
                 "target_files": [str((target_package / "wf" / "01_collect_context" / "workflow.lgwf").resolve())],
                 "target_dirs": [str((target_package / "wf" / "01_collect_context").resolve())],
             }
@@ -250,6 +310,7 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
 
             self.assertEqual(result["current_implementation_unit"]["unit_id"], "stage_01_collect_context")
             self.assertEqual(result["current_implementation_unit_target_files"], unit["target_files"])
+            self.assertTrue((target_package / "wf" / "01_collect_context" / "workflow.lgwf").is_file())
             self.assertTrue((root / ".lgwf" / "current_implementation_unit_context.json").is_file())
 
     def test_merge_preserves_validation_and_summary_contracts(self) -> None:

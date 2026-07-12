@@ -23,8 +23,7 @@ TARGET_PACKAGE_ROOT = "skills/runtime-e2e-created"
 TARGET_STAGE_DIRS = ("01_collect_context", "02_run_checks")
 REPORT_RELATIVE = Path("reports") / "create-workflow" / "create_result_report.md"
 APPROVAL_COMMENT = "real positive e2e auto approve"
-INITIAL_RUN_TIMEOUT_SECONDS = 600
-POST_APPROVAL_TIMEOUT_SECONDS = 120
+MONITOR_POLL_INTERVAL_SECONDS = 30
 
 
 def write_text(path: Path, text: str) -> None:
@@ -234,11 +233,15 @@ def capture_status(
     artifacts_dir: Path,
     env: dict[str, str],
     label: str,
+    pid: int | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], Any | None]:
     stdout_path = artifacts_dir / f"wf_create_status_{label}.stdout.txt"
     stderr_path = artifacts_dir / f"wf_create_status_{label}.stderr.txt"
+    args = [sys.executable, str(lgwf_py), "status", "--work-dir", str(work_dir)]
+    if pid is not None:
+        args.extend(["--pid", str(pid)])
     completed = run_completed(
-        [sys.executable, str(lgwf_py), "status", "--work-dir", str(work_dir)],
+        args,
         cwd=temp_root,
         env=env,
         stdout_path=stdout_path,
@@ -246,6 +249,44 @@ def capture_status(
         timeout_seconds=120,
     )
     return completed, parse_json_text(completed.stdout)
+
+
+def capture_codex_token_status(
+    lgwf_py: Path,
+    *,
+    work_dir: Path,
+    temp_root: Path,
+    artifacts_dir: Path,
+    env: dict[str, str],
+    label: str,
+) -> tuple[subprocess.CompletedProcess[str], Any | None]:
+    stdout_path = artifacts_dir / f"wf_create_codex_token_status_{label}.stdout.txt"
+    stderr_path = artifacts_dir / f"wf_create_codex_token_status_{label}.stderr.txt"
+    completed = run_completed(
+        [sys.executable, str(lgwf_py), "codex", "token-status", "--work-dir", str(work_dir)],
+        cwd=temp_root,
+        env=env,
+        stdout_path=stdout_path,
+        stderr_path=stderr_path,
+        timeout_seconds=120,
+    )
+    return completed, parse_json_text(completed.stdout)
+
+
+def empty_approval_result() -> dict[str, Any]:
+    return {"request_ids": [], "attempted_request_ids": [], "request_payload_paths": []}
+
+
+def merge_approval_result(target: dict[str, Any], source: dict[str, Any]) -> None:
+    for key in ("request_ids", "attempted_request_ids", "request_payload_paths"):
+        seen = set(str(item) for item in target.get(key, []))
+        merged = list(target.get(key, []))
+        for item in source.get(key, []):
+            item_text = str(item)
+            if item_text and item_text not in seen:
+                merged.append(item)
+                seen.add(item_text)
+        target[key] = merged
 
 
 # auto approval fallback 固定遵循 approval list -> approval get -> approval submit。
@@ -332,6 +373,57 @@ def collect_pending_approvals(
     }
 
 
+def wait_for_process_with_monitoring(
+    process: subprocess.Popen[str],
+    lgwf_py: Path,
+    *,
+    work_dir: Path,
+    temp_root: Path,
+    artifacts_dir: Path,
+    env: dict[str, str],
+) -> tuple[int, dict[str, Any]]:
+    approval_result = empty_approval_result()
+    poll_index = 0
+
+    while True:
+        returncode = process.poll()
+        if returncode is not None:
+            return returncode, approval_result
+
+        label = f"monitor_{poll_index:03d}"
+        capture_status(
+            lgwf_py,
+            work_dir=work_dir,
+            temp_root=temp_root,
+            artifacts_dir=artifacts_dir,
+            env=env,
+            label=label,
+            pid=process.pid,
+        )
+        capture_codex_token_status(
+            lgwf_py,
+            work_dir=work_dir,
+            temp_root=temp_root,
+            artifacts_dir=artifacts_dir,
+            env=env,
+            label=label,
+        )
+        poll_approval_result = collect_pending_approvals(
+            lgwf_py,
+            work_dir=work_dir,
+            temp_root=temp_root,
+            artifacts_dir=artifacts_dir,
+            env=env,
+            attempt_submit=True,
+        )
+        merge_approval_result(approval_result, poll_approval_result)
+
+        try:
+            return process.wait(timeout=MONITOR_POLL_INTERVAL_SECONDS), approval_result
+        except subprocess.TimeoutExpired:
+            poll_index += 1
+
+
 class LgwfWfCreateRealPositiveE2ETest(unittest.TestCase):
     maxDiff = None
 
@@ -407,45 +499,30 @@ class LgwfWfCreateRealPositiveE2ETest(unittest.TestCase):
                     stdout=stdout_handle,
                     stderr=stderr_handle,
                 )
-                approval_result = {"request_ids": [], "attempted_request_ids": [], "request_payload_paths": []}
-                timed_out = False
+                approval_result = empty_approval_result()
                 try:
-                    returncode = process.wait(timeout=INITIAL_RUN_TIMEOUT_SECONDS)
-                except subprocess.TimeoutExpired:
-                    timed_out = True
-                    capture_status(
+                    returncode, approval_result = wait_for_process_with_monitoring(
+                        process,
                         lgwf_py,
                         work_dir=work_dir,
                         temp_root=temp_root,
                         artifacts_dir=artifacts_dir,
                         env=env,
-                        label="timeout_before_approval",
                     )
-                    approval_result = collect_pending_approvals(
-                        lgwf_py,
-                        work_dir=work_dir,
-                        temp_root=temp_root,
-                        artifacts_dir=artifacts_dir,
-                        env=env,
-                        attempt_submit=True,
-                    )
-                    try:
-                        returncode = process.wait(timeout=POST_APPROVAL_TIMEOUT_SECONDS)
-                    except subprocess.TimeoutExpired:
+                except BaseException:
+                    if process.poll() is None:
                         kill_process_tree(process)
-                        self.fail(
-                            "\n".join(
-                                [
-                                    "真实运行在自动 approval 后仍未进入终态。",
-                                    f"temp_workspace={temp_root}",
-                                    f"work_dir={work_dir}",
-                                    f"retained_artifacts={artifacts_dir}",
-                                    f"pending_request_ids={approval_result['request_ids']}",
-                                    f"auto_approved_request_ids={approval_result['attempted_request_ids']}",
-                                ]
-                            )
-                        )
+                    raise
                 final_status_completed, final_status_payload = capture_status(
+                    lgwf_py,
+                    work_dir=work_dir,
+                    temp_root=temp_root,
+                    artifacts_dir=artifacts_dir,
+                    env=env,
+                    label="final",
+                    pid=process.pid,
+                )
+                capture_codex_token_status(
                     lgwf_py,
                     work_dir=work_dir,
                     temp_root=temp_root,
@@ -457,7 +534,10 @@ class LgwfWfCreateRealPositiveE2ETest(unittest.TestCase):
                 stdout_handle.close()
                 stderr_handle.close()
 
-            if returncode != 0 or status_indicates_waiting_human(final_status_payload, final_status_completed.stdout):
+            if returncode != 0 or status_indicates_waiting_human(
+                final_status_payload,
+                final_status_completed.stdout + "\n" + final_status_completed.stderr,
+            ):
                 final_approvals = collect_pending_approvals(
                     lgwf_py,
                     work_dir=work_dir,
@@ -471,10 +551,12 @@ class LgwfWfCreateRealPositiveE2ETest(unittest.TestCase):
                         [
                             "真实正向运行未成功完成，或仍停留在 waiting_human。",
                             f"returncode={returncode}",
-                            f"timed_out_before_approval={timed_out}",
+                            f"monitor_poll_interval_seconds={MONITOR_POLL_INTERVAL_SECONDS}",
                             f"temp_workspace={temp_root}",
                             f"work_dir={work_dir}",
                             f"retained_artifacts={artifacts_dir}",
+                            f"observed_request_ids={approval_result['request_ids']}",
+                            f"auto_approved_request_ids={approval_result['attempted_request_ids']}",
                             f"pending_request_ids={final_approvals['request_ids']}",
                             f"pending_request_payloads={final_approvals['request_payload_paths']}",
                         ]

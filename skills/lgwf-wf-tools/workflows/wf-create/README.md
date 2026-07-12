@@ -128,7 +128,7 @@
 - 只按已确认设计文档生成 workflow 初稿文件与目录。
 - 设计文档字段必须能被实现阶段直接消费，避免接口脱节。
 - ACT 不再由单个 Codex 负责整包创建；`prepare_implementation_units` 会根据首轮或 observe 失败项生成 package、root workflow、stage 和 shared/test units，`FOREACH implement_each_unit` 对每个 unit 调用 `implement_one_unit.lgwf`，最后由 `merge_implementation_results` 写出 `.lgwf/implementation_result.json`。
-- `implement_one_unit.lgwf` 内部 Codex 必须显式读取 `agents/spec.md`，并通过当前 unit 的 `TARGET_DIRS` / `TARGET_FILES` 限制写入范围。
+- `implement_one_unit.lgwf` 内部 Codex 必须显式读取 `agents/spec.md`；`TARGET_FILES` 是当前 unit 允许生成或修改的目标文件清单，`TARGET_DIRS` 只表示当前 unit 的最小目录边界。范围约束由 Codex handoff prompt 和节点目标声明表达，不做额外文件系统快照校验。
 - 必须按 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md` 规范保持根 workflow 薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，并保证所有子 workflow 可被递归审计。
 - `observe` 必须执行 `audit_created_package.py`，并把原始检测结果写入 `.lgwf/implementation_audit_result.json`，再把归纳结果写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
 - `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`，不得只依赖 ACT 自报成功。

@@ -265,7 +265,7 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
         self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
         self.assertIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
-        self.assertNotIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
+        self.assertIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
         self.assertIn("当前 implementation unit", unit_prompt)
         self.assertIn("current_implementation_unit_context.json", unit_prompt)
         self.assertIn("stage_dir", unit_prompt)

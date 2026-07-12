@@ -249,7 +249,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
         self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
         self.assertIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
-        self.assertNotIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
+        self.assertIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
         self.assertIn('OUTPUT_JSON ".lgwf/current_implementation_unit_result.json" AS_FILE', unit_workflow)
         observe_workflow = (ROOT / "04_implement_steps_react/observe_audit.lgwf").read_text(encoding="utf-8")
         self.assertIn("PY audit_created_package", observe_workflow)

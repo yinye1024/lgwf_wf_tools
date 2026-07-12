@@ -438,8 +438,7 @@ def write_stage(target: pathlib.Path, stage_id: str) -> list[str]:
 def write_support(target: pathlib.Path) -> list[str]:
     write_text(target / "tests" / "README.md", "# tests\n\n最小结构测试。\n")
     write_text(target / "tests" / "test_workflow_structure.py", test_file())
-    write_text(target / "wf" / "shared" / "scripts" / "README.md", "# shared scripts\n")
-    return ["tests/README.md", "tests/test_workflow_structure.py", "wf/shared/scripts/README.md"]
+    return ["tests/README.md", "tests/test_workflow_structure.py"]
 
 
 def unit_result(unit_id: str, generated: list[str]) -> dict[str, Any]:

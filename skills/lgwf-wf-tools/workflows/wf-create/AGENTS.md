@@ -53,7 +53,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
 - `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；其中 ACT 是 `ACT WORKFLOW implement_units`，内部通过 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results` 拆分实现任务，避免单个 Codex 负责整包创建。
-- `04_implement_steps_react` 的每个 ACT unit 由 `implement_one_unit.lgwf` 独立执行，并显式读取 `agents/spec.md`；unit 只能在当前 `TARGET_DIRS` / `TARGET_FILES` 范围内落地。超时时应把已落盘目标 package 视为可续写草稿；resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
+- `04_implement_steps_react` 的每个 ACT unit 由 `implement_one_unit.lgwf` 独立执行，并显式读取 `agents/spec.md`；`TARGET_FILES` 是当前 unit 允许生成或修改的目标文件清单，`TARGET_DIRS` 只表示当前 unit 的最小目录边界。超时时应把已落盘目标 package 视为可续写草稿；resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
 - `04_implement_steps_react` 的 `observe` 必须执行 `audit_created_package.py` 确定性检测，检查 scaffold 文件结构、已批准 step 文档、ACT 自报生成文件和 `lgwf.py audit`，并写出 `.lgwf/implementation_audit_result.json` 与 `.lgwf/implementation_observe.json`。
 - `04_implement_steps_react` 的 `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`；可修复问题必须在 ReAct 内回流，不得留到 root validation 节点。
 - `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
