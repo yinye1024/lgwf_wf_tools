@@ -174,10 +174,10 @@ Codex runner 会在 runtime 进程内读取 Codex CLI JSONL，解析每个已完
 - `current_instruction_id`：当前或最近一个 Codex instruction，例如 `implement_steps_react:codex_prompt`。
 - `turn_count`：已解析到 `turn.completed.usage` 的 turn 数；同一个 Codex 节点多轮时会递增。
 - `token_usage`：当前 instruction 内按 turn 累加后的 token。
-- `health`：包含 `phase`、`stale`、`seconds_since_update`，用于判断 Codex 是否还在推进。
+- `health`：包含 `phase` 和 `seconds_since_update`；`phase` 只反映 live status 快照中的真实状态，`seconds_since_update` 只表示该快照最后写入距今多久，不代表节点超时或失败。
 - `over_token_limit`：传入 `--token-max` 时，根据当前 `token_usage.total_tokens` 判断是否超限。
 
-该接口不停止进程；如果 `over_token_limit=true` 或 `health.phase=stale`，主 agent 可再调用：
+该接口不停止进程；如果 `over_token_limit=true`，主 agent 可再结合 runtime status、节点 timeout 和用户确认决定是否调用：
 
 ```powershell
 python <skill-dir>\scripts\lgwf.py stop --pid <pid>
