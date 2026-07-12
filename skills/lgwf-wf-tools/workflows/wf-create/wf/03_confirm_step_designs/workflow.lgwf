@@ -53,6 +53,20 @@ CODEX design_steps_react
     WRITE workspace dir "docs/steps";
   };
 
+PY validate_step_designs_proposal
+  SCRIPT "scripts/validate_step_designs_proposal.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.step_designs_proposal_quality_gate
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs_proposal.json";
+    WRITE workspace file ".lgwf/step_designs_proposal_quality_gate.json";
+  };
+
 PY prepare_step_design_confirmation
   SCRIPT "scripts/prepare_step_design_confirmation.py"
   TIMEOUT 30
@@ -108,7 +122,7 @@ PY prepare_implementation_context
   };
 
 FLOW {
-  prepare_dsl_reference_context THEN design_steps_react THEN prepare_step_design_confirmation THEN confirm_step_designs;
+  prepare_dsl_reference_context THEN design_steps_react THEN validate_step_designs_proposal THEN prepare_step_design_confirmation THEN confirm_step_designs;
 
   confirm_step_designs
     WHEN "approve" THEN apply_confirmed_step_designs

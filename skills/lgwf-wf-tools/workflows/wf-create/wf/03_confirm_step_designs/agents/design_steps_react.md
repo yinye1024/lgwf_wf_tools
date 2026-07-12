@@ -45,6 +45,7 @@
 
 ## Output Format
 - `.lgwf/step_designs_proposal.json` 必须列出每个 `docs/steps/*.md` 草案的路径、`step_slug` 和确认要点。
+- `.lgwf/step_designs_proposal.json` 必须包含当前目标的 `workflow_id`、`workflow_name` 和 `target_package_root`；这些值必须沿用已确认业务流或 scaffold plan，不得来自旧草案或只读参考资料中的其他目标。
 - `docs/steps/*.md` 文件名使用 kebab-case，并与步骤 `step_slug` 保持一致，例如 `docs/steps/prepare-package-layout.md`。
 - 每份文档至少覆盖以下字段：
   - `step_slug`

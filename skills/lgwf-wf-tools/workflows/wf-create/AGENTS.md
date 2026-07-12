@@ -47,6 +47,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 ## 状态交接
 
 - `prepare_dsl_reference_context` 复制 facade 内置 bundled client 的 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，复制 scaffold 规范到 `.lgwf/create_reference_context/scaffold/`，复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，并复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，供步骤设计、实现和 Contract 补强阶段读取。
+- `validate_requirements_proposal`、`validate_business_flow_proposal` 和 `validate_step_designs_proposal` 在 REVIEW 前执行 proposal 质量闸；无论是否启用 `--auto-human`，都必须先确认 proposal 文件存在、JSON 可解析、包含当前目标的 `workflow_id` / `workflow_name` 与 `target_package_root`，且未明显落后于当前上游输入。
 - `prepare_requirements_confirmation` 读取 `.lgwf/create_requirements_proposal.json`，输出 `requirements_confirmation_context`。
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
@@ -64,6 +65,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `confirm_business_flow` 只确认业务流转；`approve` 后才能写 `.lgwf/business_flow.json`。
 - `confirm_step_designs` 只确认步骤设计；`approve` 后才能写 `.lgwf/step_designs.json`。
 - 当前确认节点固定使用 `approve`、`revise`、`reject` 三选项；`revise` 必须携带完整 JSON 决策记录，并重新进入同一个 REVIEW 节点展示修订后的确认上下文。
+- REVIEW 前的 proposal 质量闸是所有模式的共同前置条件；`--auto-human` 只能在质量闸通过后继续走自动 approve，不允许因为存在 pending approval 就跳过 proposal 校验。
 - `approve` 后由固定 proposal 文件固化 confirmed artifact，禁止把 human decision record 当作业务对象写入 `confirmed`。
 - `revise` 只触发确认上下文重入，不直接生成 confirmed artifact，也不能绕过主 agent 对用户修改需求的整理。
 - `reject` 表示整体不通过，通过 DSL `FAIL_ALL` 终止整个 run，不继续进入下游阶段。
@@ -72,12 +74,15 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 ## 固定产物
 
 - `.lgwf/create_requirements_proposal.json`
+- `.lgwf/create_requirements_proposal_quality_gate.json`
 - `.lgwf/create_requirements_approval.json`
 - `.lgwf/create_requirements.json`
 - `.lgwf/business_flow_proposal.json`
+- `.lgwf/business_flow_proposal_quality_gate.json`
 - `.lgwf/business_flow_approval.json`
 - `.lgwf/business_flow.json`
 - `.lgwf/step_designs_proposal.json`
+- `.lgwf/step_designs_proposal_quality_gate.json`
 - `.lgwf/step_design_confirmation_record.json`
 - `.lgwf/step_designs.json`
 - `.lgwf/create_reference_context/dsl-assist/*.md`

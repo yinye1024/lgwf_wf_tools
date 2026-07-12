@@ -101,6 +101,52 @@ class PromptContractTest(unittest.TestCase):
         ):
             self.assertIn(required, prompt)
 
+    def test_all_proposal_reviews_have_quality_gate_before_review(self) -> None:
+        cases = (
+            (
+                "01_confirm_requirements/workflow.lgwf",
+                "propose_requirements_react",
+                "validate_requirements_proposal",
+                "prepare_requirements_confirmation",
+                "confirm_requirements",
+                ".lgwf/create_requirements_proposal_quality_gate.json",
+            ),
+            (
+                "02_confirm_business_flow/workflow.lgwf",
+                "propose_business_flow_react",
+                "validate_business_flow_proposal",
+                "prepare_business_flow_confirmation",
+                "confirm_business_flow",
+                ".lgwf/business_flow_proposal_quality_gate.json",
+            ),
+            (
+                "03_confirm_step_designs/workflow.lgwf",
+                "design_steps_react",
+                "validate_step_designs_proposal",
+                "prepare_step_design_confirmation",
+                "confirm_step_designs",
+                ".lgwf/step_designs_proposal_quality_gate.json",
+            ),
+        )
+        for relative, codex_node, gate_node, prepare_node, review_node, gate_file in cases:
+            workflow = read(relative)
+            self.assertIn(f"PY {gate_node}", workflow)
+            self.assertIn(gate_file, workflow)
+            self.assertRegex(
+                workflow,
+                rf"{codex_node}\s+THEN\s+{gate_node}\s+THEN\s+{prepare_node}\s+THEN\s+{review_node}",
+            )
+
+    def test_all_proposal_prompts_require_current_target_identity(self) -> None:
+        for relative in (
+            "01_confirm_requirements/agents/propose_requirements_react.md",
+            "02_confirm_business_flow/agents/propose_business_flow_react.md",
+            "03_confirm_step_designs/agents/design_steps_react.md",
+        ):
+            prompt = read(relative)
+            self.assertIn("workflow_id", prompt, relative)
+            self.assertIn("target_package_root", prompt, relative)
+
     def test_all_codex_prompt_nodes_have_contract_boundary_coverage(self) -> None:
         expected_nodes = {
             "01_confirm_requirements/workflow.lgwf:propose_requirements_react",
