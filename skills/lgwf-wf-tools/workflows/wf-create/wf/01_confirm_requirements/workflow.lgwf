@@ -72,6 +72,17 @@ CODEX propose_requirements_react
     WRITE workspace file ".lgwf/create_requirements_proposal.json";
   };
 
+PY validate_requirements_proposal
+  SCRIPT "scripts/validate_requirements_proposal.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.create_requirements_proposal_quality_gate
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/raw_intent_request.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+  };
+
 PY prepare_requirements_confirmation
   SCRIPT "scripts/prepare_requirements_confirmation.py"
   TIMEOUT 30
@@ -132,6 +143,7 @@ FLOW {
   apply_confirmed_raw_intent
   THEN finish_raw_intent
   THEN propose_requirements_react 
+  THEN validate_requirements_proposal
   THEN prepare_requirements_confirmation 
   THEN confirm_requirements;
 

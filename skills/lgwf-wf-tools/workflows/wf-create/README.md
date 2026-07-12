@@ -91,6 +91,8 @@
 
 如果入口提供 `request.target_dir`、`request.target_file`、`request.target_dirs` 或 `request.target_files`，需求阶段会把这些资料目标整理为 `creation_context_dirs` 和 `creation_context_files`，并由后续 Codex 设计节点通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考。它们用于补充创建背景，例如主 agent 确认后的开发计划；它们不表示生成出的 workflow package 目录，输出目录仍由 `target_package_root` 确认。
 
+`validate_requirements_proposal` 会在 `confirm_requirements` 前执行质量闸：proposal 文件必须存在、是 JSON object、包含 `workflow_id` 或 `workflow_name`，并包含 `target_package_root`；如果上游 raw intent 已带当前目标标识，proposal 不得偏离该目标。
+
 ## 业务流转与脚手架边界
 
 业务流转阶段也明确区分三类对象：
@@ -100,6 +102,8 @@
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/business_flow.json`，对应“确认后固化”产物。
 
 `approve` 后会把确认结果固化为 `.lgwf/business_flow.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_business_flow` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游脚手架和步骤设计阶段。
+
+`validate_business_flow_proposal` 会在 `confirm_business_flow` 前执行质量闸，使用 `.lgwf/create_requirements.json` 和 `.lgwf/create_requirements_proposal.json` 作为当前目标来源，拒绝缺失 proposal、JSON 不可解析、`workflow_id` / `workflow_name` 缺失、`target_package_root` 缺失、目标不匹配或明显旧于上游输入的草案。
 
 `scaffold_package` 当前输出的是确定性规则和计划接口，重点约束：
 
@@ -116,6 +120,8 @@
 - `confirmed artifact`：未来运行时在用户确认后固化的 `.lgwf/step_designs.json`，对应“确认后固化”产物。
 
 `approve` 后会把确认结果固化为 `.lgwf/step_designs.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_step_designs` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入实现阶段。
+
+`validate_step_designs_proposal` 会在 `confirm_step_designs` 前执行质量闸，使用已确认业务流、业务流 proposal、已确认需求和 scaffold plan 校验当前目标；auto-human 也不能绕过该节点。
 
 `implement_steps_react` 当前是独立 ReAct 子 workflow，重点约束：
 
@@ -150,6 +156,7 @@ python -m unittest discover skills\lgwf-wf-tools\workflows\wf-create\tests
 - `wf/artifact_contracts.json` 声明 `prepare_dsl_reference_context` 复制出的 `dsl-assist` workspace context 文件和 `dsl_reference_context.json` 元数据文件。
 - 三个 approval 节点使用 `ROUTE_ON_DECISION`、`PERSIST` 和 `approve/revise/reject` 业务路由。
 - proposal/实现阶段的 Codex 节点声明 `OUTPUT_JSON`，并与 prompt 输出契约一致。
+- 三个 proposal quality gate 在 REVIEW 前执行，缺失 proposal、目标不匹配或旧草案会停在可诊断状态，并写出 `.lgwf/*_proposal_quality_gate.json`。
 - 三类确认后固化脚本会生成 `.lgwf/create_requirements.json`、`.lgwf/business_flow.json` 和 `.lgwf/step_designs.json`。
 - `prepare_dsl_reference_context` 会复制 `dsl-assist` 的 `guide.md`、`create-workflow.md` 和 `workflow-audit-checklist.md`，并写入 `dsl_reference_context.json` 元数据；设计和实现 Codex 节点显式读取这些规范。
 - 需求阶段文档允许从原始意图进入，定义 proposal 字段和三类 approval 决策。

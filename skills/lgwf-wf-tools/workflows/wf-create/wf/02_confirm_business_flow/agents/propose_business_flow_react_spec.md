@@ -13,6 +13,7 @@
 
 ## 必含字段
 
+- `workflow_id`
 - `workflow_name`
 - `target_package_root`
 - `business_goal`

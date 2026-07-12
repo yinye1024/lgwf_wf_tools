@@ -18,6 +18,9 @@ def write_process_status(pid: int, work_dir: str | None, stdout: TextIO, support
         latest_run = latest_run_record(pathlib.Path(metadata["work_dir"]), support)
         if latest_run:
             status["latest_run"] = latest_run
+        codex_status = latest_codex_status(pathlib.Path(metadata["work_dir"]), support)
+        if codex_status:
+            status["codex"] = codex_status
         status["main_agent_status"] = build_main_agent_status(pid, pathlib.Path(metadata["work_dir"]), metadata)
     status.update(build_display_status(status))
     support.json_io.write_json_line(stdout, status, sort_keys=False)
@@ -149,6 +152,7 @@ def build_display_status(status: dict) -> dict:
         "current": {
             "node": current_node,
             "capability": current_capability,
+            "codex": codex_display(status.get("codex")),
         },
         "waiting_for": waiting_for,
         "human_request_id": human_request_id,
@@ -192,6 +196,11 @@ def format_status_line(display: dict) -> str:
     waiting_for = display.get("waiting_for")
     if waiting_for:
         parts.append(f"等待：{waiting_for}")
+    codex = current.get("codex")
+    if isinstance(codex, dict) and codex.get("instruction_id"):
+        parts.append(f"Codex：{codex.get('instruction_id')}")
+        if codex.get("output_json_path"):
+            parts.append(f"输出：{codex.get('output_json_path')}")
     human_request_id = display.get("human_request_id")
     if human_request_id:
         parts.append(f"确认请求：{human_request_id}")
@@ -220,6 +229,19 @@ def format_status_text(display: dict) -> str:
     waiting_for = display.get("waiting_for")
     if waiting_for:
         lines.append(f"正在等待：{waiting_for}")
+    codex = current.get("codex")
+    if isinstance(codex, dict) and codex.get("instruction_id"):
+        lines.append(f"Codex instruction：{codex.get('instruction_id')}")
+        if codex.get("track_dir"):
+            lines.append(f"Codex track：{codex.get('track_dir')}")
+        if codex.get("stdout_path"):
+            lines.append(f"Codex stdout：{codex.get('stdout_path')}")
+        if codex.get("stderr_path"):
+            lines.append(f"Codex stderr：{codex.get('stderr_path')}")
+        if codex.get("output_json_path"):
+            lines.append(f"Codex output JSON：{codex.get('output_json_path')}")
+        if codex.get("last_file_update_unix") is not None:
+            lines.append(f"Codex 最后文件更新时间：{codex.get('last_file_update_unix')}")
     human_request_id = display.get("human_request_id")
     if human_request_id:
         lines.append(f"确认请求：{human_request_id}")
@@ -390,6 +412,53 @@ def latest_run_record(work_dir: pathlib.Path, support: RuntimeSupport) -> dict |
         "has_trace": support.workspace_layout.run_trace_path(work_dir, data.get("run_id")).is_file()
         if isinstance(data.get("run_id"), str)
         else False,
+    }
+
+
+def latest_codex_status(work_dir: pathlib.Path, support: RuntimeSupport) -> dict | None:
+    path = support.workspace_layout.codex_status_path(work_dir)
+    if not path.is_file():
+        return None
+    try:
+        data = support.file_ops.read_json_object(path, label="codex status")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return with_codex_process_liveness(data, support)
+
+
+def with_codex_process_liveness(data: dict, support: RuntimeSupport) -> dict:
+    enriched = dict(data)
+    for key in ("runtime_process", "codex_process"):
+        process = enriched.get(key)
+        if not isinstance(process, dict):
+            continue
+        pid = process.get("pid")
+        if isinstance(pid, int) and pid > 0:
+            process = dict(process)
+            process["alive"] = support.process_execution.is_process_running(pid)
+            enriched[key] = process
+    return enriched
+
+
+def codex_display(codex: object) -> dict | None:
+    if not isinstance(codex, dict):
+        return None
+    track_files = codex.get("track_files") if isinstance(codex.get("track_files"), dict) else {}
+    stdout = track_files.get("stdout") if isinstance(track_files.get("stdout"), dict) else {}
+    stderr = track_files.get("stderr") if isinstance(track_files.get("stderr"), dict) else {}
+    output_json = codex.get("output_json") if isinstance(codex.get("output_json"), dict) else {}
+    codex_process = codex.get("codex_process") if isinstance(codex.get("codex_process"), dict) else {}
+    return {
+        "status": codex.get("status"),
+        "instruction_id": codex.get("current_instruction_id"),
+        "track_dir": codex.get("track_dir"),
+        "stdout_path": stdout.get("path") if isinstance(stdout, dict) else None,
+        "stderr_path": stderr.get("path") if isinstance(stderr, dict) else None,
+        "output_json_path": output_json.get("path") if isinstance(output_json, dict) else None,
+        "last_file_update_unix": codex.get("last_file_update_unix"),
+        "codex_process_alive": codex_process.get("alive") if isinstance(codex_process, dict) else None,
     }
 
 

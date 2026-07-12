@@ -33,6 +33,7 @@
 
 ```json
 {
+  "workflow_id": "目标 workflow 稳定标识",
   "workflow_name": "目标 workflow 名称",
   "target_package_root": "目标 package 相对目录",
   "business_goal": "业务流转要解决的问题",
@@ -69,6 +70,7 @@
 
 ## Constraints
 - 只写入 `.lgwf/business_flow_proposal.json`。
+- `workflow_id` / `workflow_name` 和 `target_package_root` 必须沿用已确认需求或需求 proposal 的当前目标，不得改成参考资料中的其他目标。
 - `stages` 必须体现业务阶段，而不是只重复需求摘要。
 - `depends_on`、`stage_dependencies` 和 `downstream_step_inputs` 需要写清依赖与交付，不能只写“见上文”。
 - `human_approval` 只标记确实需要人工确认的阶段或节点。

@@ -20,6 +20,18 @@ CODEX propose_business_flow_react
     WRITE workspace file ".lgwf/business_flow_proposal.json";
   };
 
+PY validate_business_flow_proposal
+  SCRIPT "scripts/validate_business_flow_proposal.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.business_flow_proposal_quality_gate
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    WRITE workspace file ".lgwf/business_flow_proposal_quality_gate.json";
+  };
+
 PY prepare_business_flow_confirmation
   SCRIPT "scripts/prepare_business_flow_confirmation.py"
   TIMEOUT 30
@@ -74,7 +86,7 @@ PY scaffold_package
   };
 
 FLOW {
-  propose_business_flow_react THEN prepare_business_flow_confirmation THEN confirm_business_flow;
+  propose_business_flow_react THEN validate_business_flow_proposal THEN prepare_business_flow_confirmation THEN confirm_business_flow;
 
   confirm_business_flow
     WHEN "approve" THEN apply_confirmed_business_flow

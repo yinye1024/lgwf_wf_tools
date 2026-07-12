@@ -193,6 +193,11 @@ Codex runner 会在 runtime 进程内读取 Codex CLI JSONL，解析每个已完
 
 - `status`：当前 Codex instruction 的 `running` / `completed` / `failed` / `unavailable`。
 - `current_instruction_id`：当前或最近一个 Codex instruction，例如 `implement_steps_react:codex_prompt`。
+- `current_instruction`：当前 Codex instruction 的 id、capability 和 timeout 摘要。
+- `track_dir` / `track_files`：当前 Codex track 目录，以及 `prompt.txt`、`handoff_prompt.txt`、`stdout.txt`、`stderr.txt`、`metadata.json` 路径和 stdout/stderr 的大小、mtime。
+- `output_json` / `output_file`：声明输出的路径、模式、是否存在、大小和 mtime；`OUTPUT_JSON ... AS_FILE` 缺失时可直接看到目标 JSON 路径。
+- `activity`：即使 token 仍为 0，也会显示 stdout/stderr 是否已有更新时间、最后文件更新时间和距今秒数。
+- `process`：runtime 进程和 Codex CLI 子进程 pid 及存活状态。
 - `turn_count`：已解析到 `turn.completed.usage` 的 turn 数；同一个 Codex 节点多轮时会递增。
 - `token_usage`：当前 instruction 内按 turn 累加后的 token。
 - `health`：包含 `phase`、`stale`、`seconds_since_update`，用于判断 Codex 是否还在推进。
@@ -203,6 +208,8 @@ Codex runner 会在 runtime 进程内读取 Codex CLI JSONL，解析每个已完
 ```powershell
 python <skill-dir>\scripts\lgwf.py stop --pid <pid>
 ```
+
+`lgwf.py status` 也会读取同一个 live status 快照，在 `codex` 字段和 `status_text` 中显示当前 instruction、track dir、stdout/stderr、output JSON 和最后文件更新时间。Codex 节点退出或超时后，如果声明的 Codex-written output JSON / output file 缺失，track `metadata.json` 会写入结构化 `failure`，包含 `reason`、缺失文件路径、节点名、track dir、stdout/stderr 路径和尾部摘要。
 
 ## Minimal Workflow
 

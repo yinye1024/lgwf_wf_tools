@@ -32,6 +32,7 @@
 
 ```json
 {
+  "workflow_id": "目标 workflow 稳定标识",
   "workflow_name": "目标 workflow 名称",
   "target_package_root": "目标 package 相对目录",
   "purpose": "workflow 目的",
@@ -47,7 +48,7 @@
 
 ## Constraints
 - 只写入 `.lgwf/create_requirements_proposal.json`。
-- `workflow_name` 必须可读、稳定，适合后续目录和文档引用。
+- `workflow_id` / `workflow_name` 必须可读、稳定，适合后续目录和文档引用；若上游未提供独立 `workflow_id`，可使用与 `workflow_name` 相同的稳定值。
 - `target_package_root` 优先使用相对路径语义。
 - `expected_inputs` 与 `expected_outputs` 必须足以支撑下游业务流转设计，不能只写宽泛自然语言。
 - `human_approval_points` 只记录未来需要人工拍板的位置，不写实现细节。
