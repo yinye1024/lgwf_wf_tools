@@ -27,6 +27,7 @@ MODULAR_DEVELOPMENT_REFERENCE_FILES = (
 MODULE_CONTRACT_REFERENCE_FILES = (
     ("workflows/01-share/module-contract.md", "module-contract.md"),
 )
+STEP_DESIGN_DRAFT_DIR = Path("docs") / "steps"
 
 
 def lgwf_dir(root: Path) -> Path:
@@ -197,16 +198,31 @@ def prepare_module_contract_context(facade_root: Path, out_dir: Path) -> dict[st
     }
 
 
+def reset_step_design_drafts(work_dir: Path) -> dict[str, Any]:
+    draft_dir = work_dir / STEP_DESIGN_DRAFT_DIR
+    removed = draft_dir.exists()
+    if removed:
+        shutil.rmtree(draft_dir)
+    draft_dir.mkdir(parents=True, exist_ok=True)
+    return {
+        "step_design_draft_dir": STEP_DESIGN_DRAFT_DIR.as_posix(),
+        "step_design_draft_dir_reset": True,
+        "removed_previous_step_design_drafts": removed,
+    }
+
+
 def main() -> None:
     root = Path.cwd()
     out_dir = lgwf_dir(root) / "create_reference_context"
     skill_dir = find_bundled_client_dir(Path(__file__), root)
     workflow_root = find_workflow_root(Path(__file__))
     facade_root = find_facade_root(Path(__file__), root)
+    draft_result = reset_step_design_drafts(root)
     result = prepare_reference_context(skill_dir, out_dir)
     scaffold_result = prepare_scaffold_context(workflow_root, out_dir)
     modular_development_result = prepare_modular_development_context(facade_root, out_dir)
     module_contract_result = prepare_module_contract_context(facade_root, out_dir)
+    result.update(draft_result)
     result.update(scaffold_result)
     result.update(modular_development_result)
     result.update(module_contract_result)

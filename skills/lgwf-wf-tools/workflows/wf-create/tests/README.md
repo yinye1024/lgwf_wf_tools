@@ -6,6 +6,9 @@
 
 - `python -m unittest discover tests` 作为最小验证入口，集中检查 `wf/` workflow 结构性 audit、关键文件存在性、相对路径规则、`ws/.lgwf` 工作目录边界和中文 UTF-8 文档基线。
 - `lgwf_wf_create_real_positive_e2e.py` 是真实 Codex 正向 E2E 的手动入口，文件名不以 `test_` 开头，因此不会进入 `unittest discover` 默认测试集。
+  该入口会先对原始 `wf/workflow.lgwf` 执行 `lgwf.py audit`，再在隔离临时 workspace 中启动真实 `lgwf.py run --auto-human`；如果 unresolved approval、超时或失败，会保留 `fixtures/`、`artifacts/`、`work/.lgwf/` 和已生成目标包，供后续 `wf-fix` 或人工诊断。
+- `lgwf_wf_create_real_positive_e2e_for_wf_fix.py` 是 `wf-fix` 正向 E2E 的手动入口，文件名不以 `test_` 开头，因此不会进入 `unittest discover` 默认测试集。
+  该入口复用普通真实正向 fixture，先对原始 `wf/workflow.lgwf` 执行 `lgwf.py audit`，再以 `skills/lgwf-wf-tools/workflows/wf-fix/wf/workflow.lgwf` 启动 `wf-fix`；即使 pre-run audit 提前失败，也会先保留 `wf_fix_run.stdout.txt`、`wf_fix_run.stderr.txt` 和 `wf_fix_failure_summary.json` 占位，再连同 `wf-fix` work dir、`target_runs/attempt-*`、fixture 和最后一轮 target run 的目标包一起留给后续诊断。
 - `test_lgwf_wf_create_runtime_package_e2e.py` 是确定性运行时 E2E：使用真实 LGWF runtime、临时 workspace 和 fake Codex，完整跑通 wf-create 从需求确认到实现、audit、汇总、handoff 的主链路。
 - 关键文件与目录存在性。
 - workflow resource path 只使用相对路径。
@@ -34,6 +37,16 @@ python -m unittest tests.test_lgwf_wf_create_runtime_package_e2e
 ```powershell
 python tests\lgwf_wf_create_real_positive_e2e.py
 ```
+
+该入口会自动写入最小 `raw_intent` fixture，固定验证生成 `skills/runtime-e2e-created` 两阶段 package；成功时清理临时 workspace，失败时保留完整工作区。
+
+如需手动运行 `wf-fix` 正向 E2E，可单独执行：
+
+```powershell
+python tests\lgwf_wf_create_real_positive_e2e_for_wf_fix.py
+```
+
+该入口会自动提交 `target_workflow_lgwf`、`target_workflow_input`、`max_attempts=5` 和 `ask_main_agent_for_target_approvals=true`，并在最后一轮 target run 上复验 `create_result_summary.json`、`create_result_report.md`、authoring audit 和 `python -m unittest discover tests`；如果失败，会在 `artifacts/wf_fix_failure_summary.json` 中汇总失败阶段、关键输入和保留路径。
 
 预期结果：
 

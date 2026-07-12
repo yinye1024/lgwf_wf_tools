@@ -88,6 +88,19 @@ class PromptContractTest(unittest.TestCase):
             self.assertIn("TARGET_DIRS state.lgwf_wf_create.creation_context_dirs", workflow)
             self.assertIn("TARGET_FILES state.lgwf_wf_create.creation_context_files", workflow)
 
+    def test_step_design_prompt_stays_inside_design_node_contract(self) -> None:
+        prompt = read("03_confirm_step_designs/agents/design_steps_react.md")
+
+        for required in (
+            "不是开放式创意设计",
+            "不要调用或遵循外部 brainstorming",
+            "只读取本 prompt 的 Inputs",
+            "不要读取 `wf/04_implement_steps_react/`",
+            "不得生成 `docs/superpowers/`",
+            "唯一目标是把已确认输入确定性转换",
+        ):
+            self.assertIn(required, prompt)
+
     def test_all_codex_prompt_nodes_have_contract_boundary_coverage(self) -> None:
         expected_nodes = {
             "01_confirm_requirements/workflow.lgwf:propose_requirements_react",

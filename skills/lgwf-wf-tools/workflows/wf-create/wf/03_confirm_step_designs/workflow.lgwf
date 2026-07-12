@@ -22,6 +22,7 @@ PY prepare_dsl_reference_context
     WRITE workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
     WRITE workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl_reference_context.json";
+    WRITE workspace dir "docs/steps";
   };
 
 CODEX design_steps_react
@@ -48,6 +49,8 @@ CODEX design_steps_react
     READ workspace dir ".lgwf/create_reference_context/dsl-assist";
     READ workspace dir ".lgwf/create_reference_context/scaffold";
     READ workspace dir ".lgwf/create_reference_context/workflow-modular-development";
+    READ workspace dir "docs/steps";
+    WRITE workspace dir "docs/steps";
   };
 
 PY prepare_step_design_confirmation

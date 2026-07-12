@@ -121,6 +121,19 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         )
         self.assertFalse((self.workflow_root / ".lgwf").exists())
 
+    def test_prepare_dsl_reference_context_resets_stale_step_design_drafts(self) -> None:
+        stale_doc = self.work_dir / "docs" / "steps" / "old-workflow.md"
+        stale_doc.parent.mkdir(parents=True)
+        stale_doc.write_text("stale workflow draft", encoding="utf-8")
+
+        result = self.run_script("03_confirm_step_designs/scripts/prepare_dsl_reference_context.py")
+
+        context = result["lgwf_wf_create.dsl_reference_context"]
+        self.assertEqual(context["step_design_draft_dir"], "docs/steps")
+        self.assertTrue(context["removed_previous_step_design_drafts"])
+        self.assertFalse(stale_doc.exists())
+        self.assertTrue(stale_doc.parent.is_dir())
+
     def test_prepare_implementation_context_resolves_target_from_repo_root_not_run_cwd(self) -> None:
         write_json(
             self.work_dir / ".lgwf" / "scaffold_package_result.json",
