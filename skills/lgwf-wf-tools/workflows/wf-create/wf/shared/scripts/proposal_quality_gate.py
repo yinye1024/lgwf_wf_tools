@@ -12,7 +12,8 @@ from typing import Any
 
 
 WORKFLOW_ID_KEYS = ("workflow_id", "target_workflow_id", "workflow_name", "name")
-TARGET_ROOT_KEYS = ("target_package_root", "package_root", "target_package_hint")
+TARGET_ROOT_KEYS = ("target_package_root", "package_root")
+TARGET_HINT_KEYS = ("target_package_hint",)
 
 
 def run_quality_gate(
@@ -110,6 +111,7 @@ def evaluate_quality_gate(
         "proposal_file": relative_to_lgwf(lgwf_dir, proposal_path),
         "expected_identity": expected,
         "actual_identity": actual,
+        "reference_hints": reference_hints(input_paths),
         "checks": checks,
         "parse_error": parse_error,
     }
@@ -125,6 +127,17 @@ def expected_identity(input_paths: list[Path]) -> dict[str, str]:
     return {
         "workflow_id": first_identity_value(candidates, WORKFLOW_ID_KEYS),
         "target_package_root": first_identity_value(candidates, TARGET_ROOT_KEYS),
+    }
+
+
+def reference_hints(input_paths: list[Path]) -> dict[str, str]:
+    candidates: list[dict[str, Any]] = []
+    for path in input_paths:
+        data = load_json_object_if_exists(path)
+        if data:
+            candidates.extend(identity_candidates(data))
+    return {
+        "target_package_hint": first_identity_value(candidates, TARGET_HINT_KEYS),
     }
 
 

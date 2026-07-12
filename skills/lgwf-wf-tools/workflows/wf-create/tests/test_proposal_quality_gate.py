@@ -71,6 +71,28 @@ class ProposalQualityGateTest(unittest.TestCase):
             self.assertFalse(result["passed"])
             self.assertIn("proposal_exists", [check["name"] for check in result["checks"] if not check["passed"]])
 
+    def test_requirements_gate_treats_target_package_hint_as_reference_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(lgwf_dir / "raw_intent_request.json", {"target_package_hint": "demo workflow"})
+            write_json(
+                lgwf_dir / "create_requirements_proposal.json",
+                {
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "requirements": [],
+                },
+            )
+
+            completed = run_script(work_dir, "01_confirm_requirements/scripts/validate_requirements_proposal.py")
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads((lgwf_dir / "create_requirements_proposal_quality_gate.json").read_text(encoding="utf-8"))
+            self.assertTrue(result["passed"])
+            self.assertEqual(result["expected_identity"]["target_package_root"], "")
+            self.assertEqual(result["reference_hints"]["target_package_hint"], "demo workflow")
+
     def test_business_flow_gate_rejects_target_package_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             work_dir = Path(temp)

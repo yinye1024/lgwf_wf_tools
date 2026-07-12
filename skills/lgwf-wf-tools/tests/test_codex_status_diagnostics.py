@@ -7,7 +7,9 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -193,6 +195,64 @@ class CodexStatusDiagnosticsTest(unittest.TestCase):
                 self.assertEqual(metadata["failure"]["track_dir"], str(track_dir))
                 self.assertIn("final response without file", metadata["failure"]["stdout_tail"])
                 self.assertIn("warning line", metadata["failure"]["stderr_tail"])
+
+    def test_output_validation_failure_updates_live_status_to_failed(self) -> None:
+        with ExtractedWheel():
+            runner_module = importlib.import_module("lgwf_client.runners.codex_runner.runner")
+            json_output = importlib.import_module("lgwf_client.runners.codex_runner.json_output")
+
+            with tempfile.TemporaryDirectory() as temp:
+                work_dir = Path(temp)
+                missing_output = work_dir / ".lgwf" / "create_requirements_proposal.json"
+                instruction = {
+                    "id": "propose_requirements_react:codex_prompt",
+                    "capability": "exec.codex_prompt",
+                    "timeout_seconds": 30,
+                }
+                runner = runner_module.CodexRunner(workspace_root=work_dir)
+
+                class FakeProcess:
+                    pid = os.getpid()
+
+                    def __init__(self) -> None:
+                        self.stdout = StringIO("")
+                        self.stderr = StringIO("")
+                        self.stdin = StringIO()
+
+                    def wait(self, timeout=None) -> int:
+                        return 0
+
+                    def kill(self) -> None:
+                        return None
+
+                with patch.object(
+                    runner_module.process_execution_module,
+                    "popen_cli_command",
+                    return_value=FakeProcess(),
+                ):
+                    with self.assertRaises(json_output.MissingOutputError):
+                        runner._run_direct(
+                            instruction,
+                            work_dir,
+                            "prompt",
+                            [],
+                            "exec",
+                            None,
+                            [],
+                            [],
+                            [],
+                            missing_output,
+                            "file",
+                            0,
+                            0,
+                            None,
+                            runner._token_budget(None),
+                        )
+
+                status = json.loads((work_dir / ".lgwf" / "codex" / "status.json").read_text(encoding="utf-8"))
+                self.assertEqual(status["status"], "failed")
+                self.assertEqual(status["reason"], "missing_output_json")
+                self.assertEqual(status["output_json"]["path"], str(missing_output))
 
 
 if __name__ == "__main__":
