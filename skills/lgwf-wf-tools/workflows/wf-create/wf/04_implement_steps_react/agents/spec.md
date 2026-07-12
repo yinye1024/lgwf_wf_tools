@@ -37,11 +37,12 @@
 
 ### 路径与拓扑
 
-- 读写目标包时必须使用 `.lgwf/implementation_context.json` 中的 `target_package_abs` 作为唯一目标包写入根目录。
+- `.lgwf/implementation_context.json` 中的 `target_package_abs` 是最终目标包根目录，只供确定性脚本发布和 audit 使用；单 unit Codex 不直接写该目录。
 - `target_package_root` 是 `workspace_root` 相对路径，不是当前运行目录 `work_dir` 相对路径。
 - 禁止从 `work_dir` 使用 `..`、固定层级上跳或拼接 `plugins/...` 来猜测仓库根。
-- 如 `target_package_abs` 不存在，应直接创建该目录；不要先尝试 `work_dir/target_package_root`。
-- 必须先创建目标 package 内的 `wf/docs/steps/`，再复制当前 run 的已批准步骤设计文档；不得只在 `work_dir/docs/steps/` 保留文档。
+- 单 unit Codex 必须写入 `.lgwf/current_implementation_unit_context.json` 中的 `unit_output_dir`，并只生成 `workspace_output_files` 列出的 staging 文件。
+- 发布脚本会把 `unit_output_dir` 下的 package-relative 文件复制到 `target_package_abs`；不要先尝试 `work_dir/target_package_root` 或直接写最终目标目录。
+- 必须通过 root workflow unit 的 staging 输出生成 `wf/docs/steps/` 下的已批准步骤设计文档；不得只在 `work_dir/docs/steps/` 保留文档。
 - `implementation_result.generated_files` 必须列出每个复制后的 `wf/docs/steps/*.md` 文件，便于 OB 的 `audit_created_package.py` 做确定性验收。
 - `workflow.lgwf` 只能生成在 `wf/workflow.lgwf` 或 `wf/<stage>/workflow.lgwf`，不得生成在目标 package 根目录。
 - 不得生成 `wf/<stage>/<substage>/workflow.lgwf`。

@@ -318,7 +318,10 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
     def test_real_positive_manual_entry_declares_runtime_fixture_audit_and_approval_flow(self) -> None:
         text = (PACKAGE_ROOT / "tests" / "lgwf_wf_create_real_positive_e2e.py").read_text(encoding="utf-8")
         for snippet in (
-            "runtime_e2e_created",
+            "repo_context_pack",
+            "repo-context-pack",
+            "target_package_hint",
+            "target_dir",
             "real_positive_create_request.json",
             "target_workflow_audit.stdout.txt",
             "wf_create_run.stdout.txt",
@@ -328,7 +331,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "approval submit",
             "create_result_report.md",
             "python -m unittest discover tests",
-            "lgwf.py audit",
+            "generated_package_audit.stdout.txt",
         ):
             self.assertIn(snippet, text)
 

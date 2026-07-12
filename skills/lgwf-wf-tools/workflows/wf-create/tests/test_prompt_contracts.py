@@ -60,6 +60,8 @@ class PromptContractTest(unittest.TestCase):
 
     def test_creation_context_targets_are_available_to_three_design_stages(self) -> None:
         entry_contract = (ROOT.parent / "entry_contract.json").read_text(encoding="utf-8")
+        agents_md = (ROOT.parent / "AGENTS.md").read_text(encoding="utf-8")
+        readme = (ROOT.parent / "README.md").read_text(encoding="utf-8")
         raw_prompt = read("01_confirm_requirements/confirm_raw_intent.md")
         raw_contract = read("01_confirm_requirements/resources/raw_intent_contract.md")
         requirements_workflow = read("01_confirm_requirements/workflow.lgwf")
@@ -73,8 +75,10 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn('"target_file"', entry_contract)
         self.assertIn('"target_dirs"', entry_contract)
         self.assertIn('"target_files"', entry_contract)
+        self.assertIn("read_scope", entry_contract)
         self.assertIn("request.target_dir", raw_prompt)
         self.assertIn("request.target_file", raw_prompt)
+        self.assertIn("workflow 目的和使用场景", raw_prompt)
         self.assertIn("creation_context_dirs", raw_contract)
         self.assertIn("creation_context_files", raw_contract)
         self.assertIn("creation_context_dirs", requirements_prompt)
@@ -87,6 +91,21 @@ class PromptContractTest(unittest.TestCase):
         for workflow in (requirements_workflow, business_workflow, step_workflow):
             self.assertIn("TARGET_DIRS state.lgwf_wf_create.creation_context_dirs", workflow)
             self.assertIn("TARGET_FILES state.lgwf_wf_create.creation_context_files", workflow)
+
+        for text in (agents_md, readme, raw_contract):
+            self.assertIn("执行计划", text)
+            self.assertIn("不得执行", text)
+        for text in (raw_prompt, requirements_prompt, business_prompt, step_prompt):
+            self.assertIn("执行计划", text)
+            self.assertIn("不作为", text)
+
+        self.assertIn("目的、使用场景", requirements_prompt)
+        self.assertIn("参考路径作为证据来源", requirements_prompt)
+        self.assertIn("业务工作流", business_prompt)
+        self.assertIn("结合 raw intent", business_prompt)
+        self.assertIn("step 拆分", step_prompt)
+        self.assertIn("结合 raw intent", step_prompt)
+        self.assertIn("参考资料如何支撑该设计", step_prompt)
 
     def test_step_design_prompt_stays_inside_design_node_contract(self) -> None:
         prompt = read("03_confirm_step_designs/agents/design_steps_react.md")
@@ -264,10 +283,12 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("CODEX implement_current_unit", unit_workflow)
         self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
         self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
-        self.assertIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
-        self.assertIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
+        self.assertNotIn("TARGET_DIRS state.lgwf_wf_create.current_implementation_unit_target_dirs", unit_workflow)
+        self.assertNotIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
+        self.assertIn('WRITE workspace dir ".lgwf/implementation_stage";', unit_workflow)
         self.assertIn("当前 implementation unit", unit_prompt)
         self.assertIn("current_implementation_unit_context.json", unit_prompt)
+        self.assertIn("workspace_output_files", unit_prompt)
         self.assertIn("stage_dir", unit_prompt)
         self.assertIn("workflow_ref", unit_prompt)
 

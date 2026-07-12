@@ -18,9 +18,28 @@ VENDOR_ROOT = FACADE_ROOT / "vendor" / "lgwf-client-assist"
 DOCS_SOURCE = FACADE_ROOT / "docs" / "LGWF_WF_MODULAR_DEVELOPMENT.md"
 MODULE_CONTRACT_SOURCE = FACADE_ROOT / "workflows" / "01-share" / "module-contract.md"
 
-WORKFLOW_NAME = "runtime_e2e_created"
-TARGET_PACKAGE_ROOT = "skills/runtime-e2e-created"
-TARGET_STAGE_DIRS = ("01_collect_context", "02_run_checks")
+WORKFLOW_NAME = "repo_context_pack"
+TARGET_PACKAGE_ROOT = "skills/repo-context-pack"
+RAW_INTENT = """我想创建一个 repo-context-pack 工作流。
+
+这个工作流用于帮助 AI agent 在接手一个陌生仓库或某个模块目录之前，快速生成一份可阅读、可交接的上下文包。用户提供一个本地目录作为输入，目录可以是完整仓库，也可以是仓库中的某个模块。
+
+工作流需要只读扫描这个目标目录，识别关键入口文件、模块目录、常见开发命令、测试入口、风险标记和推荐阅读顺序，然后生成一组上下文产物，帮助后续 agent 更快理解这个目标：它是什么、从哪里读起、有哪些命令、有哪些风险、修改前需要注意什么。
+
+核心输出应该包括：
+- 一份面向 agent 的主上下文报告。
+- 一份 handoff 摘要，方便下一个 agent 接手。
+- 一份模块地图，列出入口文件和重要目录。
+- 一份命令清单，汇总从文档、脚本和配置中发现的常用命令。
+- 一份风险清单，汇总 TODO、FIXME、manual、approval、risk 等风险候选。
+- 一份推荐阅读顺序。
+- 一份结构化 summary，记录扫描参数、产物索引和是否发生截断。
+
+这个工作流的第一版重点是确定性、只读和可交接：扫描和渲染应由 Python 脚本完成，不依赖 Codex prompt 直接理解整个仓库；不得修改被扫描目录源码，不修复目标仓库问题，不执行 Git 写操作，不发布、不部署、不注册到 facade registry。
+
+用户可以指定扫描用途，例如 onboarding、modification、review、workflow-authoring 或 handoff；也可以指定扫描深度和最大文件数。对于大型目录，工作流应该有扫描上限，并在报告中明确标记截断状态。
+
+生成的上下文包可以写入用户指定的输出目录；如果用户没有指定，则写入目标目录下的本地 context-packs 输出位置。工作流自身的运行状态必须与目标源码分离，不应把运行缓存写进被分析源码目录。"""
 REPORT_RELATIVE = Path("reports") / "create-workflow" / "create_result_report.md"
 APPROVAL_COMMENT = "real positive e2e auto approve"
 MONITOR_POLL_INTERVAL_SECONDS = 30
@@ -206,23 +225,14 @@ def prepare_temp_workspace(temp_root: Path) -> dict[str, Path]:
 
 
 def real_positive_fixture() -> dict[str, Any]:
-    raw_intent = "\n".join(
-        [
-            "创建一个 internal LGWF workflow package。",
-            f"workflow_name={WORKFLOW_NAME}",
-            f"target_package_root={TARGET_PACKAGE_ROOT}",
-            "package_profile=internal_workflow_package",
-            "固定只包含两个阶段：01_collect_context 和 02_run_checks。",
-            "目标包必须生成 README.md、AGENTS.md、entry_contract.json、wf/workflow.lgwf。",
-            "每个阶段目录必须包含 workflow.lgwf、agents/、scripts/、resources/。",
-            "必须生成 wf/docs/steps/collect-context.md、wf/docs/steps/run-checks.md 和 tests/test_workflow_structure.py。",
-            "目标包不接外部网络服务，不接 facade registry，不接 prompt-fix，不接 self-improve。",
-            "运行状态只允许写入 ws/.lgwf，不得在目标包根目录写入 .lgwf。",
-            "目标包最终要能通过 python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py audit wf/workflow.lgwf。",
-            "目标包最终要能通过 python -m unittest discover tests。",
-        ]
-    )
-    return {"raw_intent": raw_intent}
+    return {
+        "raw_intent": RAW_INTENT,
+        "target_package_hint": (
+            f"workflow_name={WORKFLOW_NAME}; "
+            f"target_package_root={TARGET_PACKAGE_ROOT}; "
+            "package_profile=internal_workflow_package"
+        ),
+    }
 
 
 def capture_status(
@@ -427,7 +437,7 @@ def wait_for_process_with_monitoring(
 class LgwfWfCreateRealPositiveE2ETest(unittest.TestCase):
     maxDiff = None
 
-    def test_real_positive_minimal_runtime_e2e_created_flow(self) -> None:
+    def test_real_positive_repo_context_pack_flow(self) -> None:
         self.assertTrue(WORKFLOW_LGWF.is_file(), f"workflow missing: {WORKFLOW_LGWF}")
         self.assertIsNotNone(shutil.which("codex"), "PATH 中缺少 codex，无法运行真实 Codex 正向 E2E。")
 
@@ -572,20 +582,43 @@ class LgwfWfCreateRealPositiveE2ETest(unittest.TestCase):
                     self.assertTrue(file_path.is_file(), f"missing file: {file_path}")
                     file_path.read_text(encoding="utf-8")
 
-            for stage_dir in TARGET_STAGE_DIRS:
-                stage_root = target_root / "wf" / stage_dir
-                with self.subTest(stage=stage_dir):
-                    self.assertTrue((stage_root / "workflow.lgwf").is_file(), stage_root)
-                    self.assertTrue((stage_root / "agents").is_dir(), stage_root)
-                    self.assertTrue((stage_root / "scripts").is_dir(), stage_root)
-                    self.assertTrue((stage_root / "resources").is_dir(), stage_root)
+            stage_workflows = sorted(
+                path
+                for path in (target_root / "wf").glob("*/workflow.lgwf")
+                if path.parent.name not in {"docs", "shared"}
+            )
+            self.assertGreaterEqual(len(stage_workflows), 2, f"missing stage workflows under {target_root / 'wf'}")
+            for workflow_path in stage_workflows:
+                with self.subTest(stage=workflow_path.parent.name):
+                    self.assertTrue((workflow_path.parent / "scripts").is_dir(), workflow_path.parent)
 
-            for relative_path in (
-                "wf/docs/steps/collect-context.md",
-                "wf/docs/steps/run-checks.md",
-                "tests/test_workflow_structure.py",
+            nested_workflows = [
+                path
+                for path in (target_root / "wf").glob("*/*/workflow.lgwf")
+                if path.parent.parent.name not in {"docs", "shared"}
+            ]
+            self.assertEqual(nested_workflows, [], f"unexpected nested workflow files: {nested_workflows}")
+
+            self.assertTrue((target_root / "tests").is_dir(), f"missing tests dir: {target_root / 'tests'}")
+            self.assertTrue(
+                list((target_root / "tests").glob("test_*.py")),
+                f"missing generated unittest file under {target_root / 'tests'}",
+            )
+
+            package_docs = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in (target_root / "README.md", target_root / "AGENTS.md", target_root / "entry_contract.json")
+                if path.is_file()
+            ).casefold()
+            for expected_text in (
+                "repo-context-pack",
+                "target_dir",
+                "output_dir",
+                "context",
+                "handoff",
+                "只读",
             ):
-                self.assertTrue((target_root / relative_path).is_file(), f"missing generated artifact: {relative_path}")
+                self.assertIn(expected_text.casefold(), package_docs)
 
             created_package_audit = run_completed(
                 [sys.executable, str(lgwf_py), "audit", str(target_root / "wf" / "workflow.lgwf")],

@@ -77,14 +77,6 @@ def unique(items: list[str]) -> list[str]:
     return result
 
 
-def target_file(target_abs: Path, relative: str) -> str:
-    return str((target_abs / normalize_package_path(relative)).resolve())
-
-
-def target_dir(target_abs: Path, relative: str) -> str:
-    return str((target_abs / normalize_package_path(relative)).resolve())
-
-
 def direct_parent_dirs_for_files(files: list[str]) -> list[str]:
     """从目标文件反推当前 unit 的最小直接父目录。"""
 
@@ -276,7 +268,6 @@ def unit_payload(
     unit_id: str,
     unit_type: str,
     objective: str,
-    target_abs: Path,
     package_relative_files: list[str],
     package_relative_dirs: list[str],
     implementation_context: dict[str, Any],
@@ -297,8 +288,8 @@ def unit_payload(
         "workspace_root": implementation_context.get("workspace_root", ""),
         "package_relative_files": package_relative_files,
         "package_relative_dirs": package_relative_dirs,
-        "target_files": [target_file(target_abs, path) for path in package_relative_files],
-        "target_dirs": [target_dir(target_abs, path) for path in package_relative_dirs],
+        "output_files": package_relative_files,
+        "output_dirs": package_relative_dirs,
         "implementation_reason": implementation_reason,
         "observe": observe,
         "repair_focus": repair_focus,
@@ -317,7 +308,6 @@ def all_units(
     observe: dict[str, Any],
     repair_focus: list[str],
 ) -> list[dict[str, Any]]:
-    target_abs = Path(str(implementation_context.get("target_package_abs", ""))).resolve()
     items = step_design_items(step_designs_payload)
     docs = step_doc_paths(items)
     fallback_stage_ids = source_stage_ids(step_designs_payload)
@@ -333,7 +323,6 @@ def all_units(
             unit_id="package_contracts",
             unit_type="package",
             objective="生成或修复目标 package 入口文档、入口契约和 artifact contract。",
-            target_abs=target_abs,
             package_relative_files=package_files,
             package_relative_dirs=package_dirs,
             implementation_context=implementation_context,
@@ -352,7 +341,6 @@ def all_units(
             unit_id="root_workflow",
             unit_type="root_workflow",
             objective="生成或修复根 wf/workflow.lgwf，并复制已确认步骤设计文档到 wf/docs/steps/。",
-            target_abs=target_abs,
             package_relative_files=root_files,
             package_relative_dirs=root_dirs,
             implementation_context=implementation_context,
@@ -380,7 +368,6 @@ def all_units(
                 unit_id=f"stage_{stage_dir}",
                 unit_type="stage",
                 objective=f"生成或修复阶段 `{stage_dir}` 的自包含 workflow、prompt、script 和 resource。",
-                target_abs=target_abs,
                 package_relative_files=planned_files,
                 package_relative_dirs=planned_dirs,
                 implementation_context=implementation_context,
@@ -398,15 +385,14 @@ def all_units(
                 },
             )
         )
-    support_unit_target_dirs = support_unit_dirs(scaffold_plan, allocated_dirs)
+    support_unit_output_dirs = support_unit_dirs(scaffold_plan, allocated_dirs)
     units.append(
         unit_payload(
             unit_id="shared_helpers_tests",
             unit_type="support",
             objective="生成或修复共享 helper、最小测试和验证辅助文件。",
-            target_abs=target_abs,
             package_relative_files=support_unit_files,
-            package_relative_dirs=support_unit_target_dirs,
+            package_relative_dirs=support_unit_output_dirs,
             implementation_context=implementation_context,
             implementation_reason=implementation_reason,
             observe=observe,
@@ -415,7 +401,7 @@ def all_units(
             extra={
                 "scaffold_plan": scaffold_plan,
                 "planned_files": support_unit_files,
-                "planned_dirs": support_unit_target_dirs,
+                "planned_dirs": support_unit_output_dirs,
             },
         )
     )

@@ -461,7 +461,7 @@ def implement_current_unit(output_path: pathlib.Path | None) -> dict[str, Any]:
     context = json.loads(context_path.read_text(encoding="utf-8-sig"))
     unit = context["current_implementation_unit"]
     unit_id = unit["unit_id"]
-    target = pathlib.Path(unit["target_package_abs"])
+    target = current_work_dir() / context["unit_output_dir"]
 
     if unit_id == "package_contracts":
         generated = write_package_contracts(target)

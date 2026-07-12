@@ -33,6 +33,10 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             "scripts/prepare_current_implementation_unit.py",
             "prepare_current_implementation_unit",
         )
+        cls.publish_current = load_module(
+            "scripts/publish_current_implementation_unit_result.py",
+            "publish_current_implementation_unit_result",
+        )
         cls.merge_units = load_module("scripts/merge_implementation_results.py", "merge_implementation_results")
 
     def seed_context(self, root: Path, observe: dict[str, object] | None = None) -> Path:
@@ -184,10 +188,10 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertIn("wf/shared/scripts", support_unit["package_relative_dirs"])
             self.assertNotIn("wf/01_collect_context", support_unit["package_relative_dirs"])
 
-            all_files = [path for unit in units for path in unit["target_files"]]
+            all_files = [path for unit in units for path in unit["output_files"]]
             self.assertEqual(len(all_files), len(set(all_files)))
-            self.assertTrue(all(Path(path).is_absolute() for path in all_files))
-            self.assertIn(str((target_package / "wf" / "workflow.lgwf").resolve()), all_files)
+            self.assertTrue(all(not Path(path).is_absolute() for path in all_files))
+            self.assertIn("wf/workflow.lgwf", all_files)
             self.assertTrue((root / ".lgwf" / "implementation_units.json").is_file())
 
     def test_prepare_uses_observe_failures_to_select_affected_units(self) -> None:
@@ -302,16 +306,122 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                 "unit_id": "stage_01_collect_context",
                 "unit_type": "stage",
                 "target_package_abs": str(target_package.resolve()),
-                "target_files": [str((target_package / "wf" / "01_collect_context" / "workflow.lgwf").resolve())],
-                "target_dirs": [str((target_package / "wf" / "01_collect_context").resolve())],
+                "workspace_root": str((root / "workspace").resolve()),
+                "output_files": ["wf/01_collect_context/workflow.lgwf"],
+                "output_dirs": ["wf/01_collect_context"],
             }
 
             result = self.prepare_current.build_current_implementation_unit_context(root, unit)
 
             self.assertEqual(result["current_implementation_unit"]["unit_id"], "stage_01_collect_context")
-            self.assertEqual(result["current_implementation_unit_target_files"], unit["target_files"])
-            self.assertTrue((target_package / "wf" / "01_collect_context" / "workflow.lgwf").is_file())
+            self.assertNotIn("target_package_abs", result)
+            self.assertNotIn("target_package_abs", result["current_implementation_unit"])
+            self.assertNotIn("workspace_root", result["current_implementation_unit"])
+            self.assertEqual(result["output_files"], unit["output_files"])
+            self.assertEqual(result["unit_output_dir"], ".lgwf/implementation_stage/stage_01_collect_context")
+            self.assertFalse((target_package / "wf" / "01_collect_context" / "workflow.lgwf").is_file())
+            self.assertTrue((root / ".lgwf" / "implementation_stage" / "stage_01_collect_context").is_dir())
             self.assertTrue((root / ".lgwf" / "current_implementation_unit_context.json").is_file())
+
+    def test_publish_current_unit_materializes_staging_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            unit = {
+                "unit_id": "stage_01_collect_context",
+                "unit_type": "stage",
+                "target_package_abs": str(target_package.resolve()),
+                "output_files": ["wf/01_collect_context/workflow.lgwf"],
+                "output_dirs": ["wf/01_collect_context"],
+            }
+            context = self.prepare_current.build_current_implementation_unit_context(root, unit)
+            staged = root / context["workspace_output_files"][0]
+            staged.write_text("WORKFLOW collect_context;\n", encoding="utf-8")
+            write_json(
+                root / ".lgwf" / "current_implementation_unit_result.json",
+                {
+                    "unit_id": "stage_01_collect_context",
+                    "status": "ok",
+                    "generated_files": ["wf/01_collect_context/workflow.lgwf"],
+                },
+            )
+
+            result = self.publish_current.publish_current_implementation_unit_result(root)
+
+            target_file = target_package / "wf" / "01_collect_context" / "workflow.lgwf"
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["generated_files"], [{"path": "wf/01_collect_context/workflow.lgwf"}])
+            self.assertTrue(target_file.is_file())
+            self.assertEqual(target_file.read_text(encoding="utf-8"), "WORKFLOW collect_context;\n")
+
+    def test_publish_current_unit_publishes_all_staged_manifest_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            unit = {
+                "unit_id": "package_contracts",
+                "unit_type": "package",
+                "target_package_abs": str(target_package.resolve()),
+                "output_files": ["AGENTS.md", "README.md"],
+                "output_dirs": ["."],
+            }
+            context = self.prepare_current.build_current_implementation_unit_context(root, unit)
+            (root / context["workspace_output_files"][0]).write_text("# Agents\n", encoding="utf-8")
+            (root / context["workspace_output_files"][1]).write_text("# Readme\n", encoding="utf-8")
+            write_json(
+                root / ".lgwf" / "current_implementation_unit_result.json",
+                {
+                    "unit_id": "package_contracts",
+                    "status": "ok",
+                    "generated_files": ["AGENTS.md"],
+                },
+            )
+
+            result = self.publish_current.publish_current_implementation_unit_result(root)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["generated_files"], [{"path": "AGENTS.md"}, {"path": "README.md"}])
+            self.assertEqual((target_package / "AGENTS.md").read_text(encoding="utf-8"), "# Agents\n")
+            self.assertEqual((target_package / "README.md").read_text(encoding="utf-8"), "# Readme\n")
+
+    def test_publish_current_unit_rejects_path_escape(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            unit = {
+                "unit_id": "stage_01_collect_context",
+                "target_package_abs": str(target_package.resolve()),
+                "output_files": ["../escape.lgwf"],
+                "output_dirs": ["wf/01_collect_context"],
+            }
+
+            with self.assertRaises(ValueError):
+                self.prepare_current.build_current_implementation_unit_context(root, unit)
+
+    def test_publish_current_unit_rejects_generated_file_outside_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            unit = {
+                "unit_id": "stage_01_collect_context",
+                "target_package_abs": str(target_package.resolve()),
+                "output_files": ["wf/01_collect_context/workflow.lgwf"],
+                "output_dirs": ["wf/01_collect_context"],
+            }
+            context = self.prepare_current.build_current_implementation_unit_context(root, unit)
+            staged = root / context["workspace_output_files"][0]
+            staged.write_text("WORKFLOW collect_context;\n", encoding="utf-8")
+            write_json(
+                root / ".lgwf" / "current_implementation_unit_result.json",
+                {
+                    "unit_id": "stage_01_collect_context",
+                    "status": "ok",
+                    "generated_files": ["wf/other/workflow.lgwf"],
+                },
+            )
+
+            with self.assertRaises(ValueError):
+                self.publish_current.publish_current_implementation_unit_result(root)
 
     def test_merge_preserves_validation_and_summary_contracts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

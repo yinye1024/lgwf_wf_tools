@@ -89,7 +89,7 @@
 
 `approve` 后会把确认结果固化为 `.lgwf/create_requirements.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_requirements` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入下游业务流转阶段。
 
-如果入口提供 `request.target_dir`、`request.target_file`、`request.target_dirs` 或 `request.target_files`，需求阶段会把这些资料目标整理为 `creation_context_dirs` 和 `creation_context_files`，并由后续 Codex 设计节点通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考。它们用于补充创建背景，例如主 agent 确认后的开发计划；它们不表示生成出的 workflow package 目录，输出目录仍由 `target_package_root` 确认。
+如果入口提供 `request.target_dir`、`request.target_file`、`request.target_dirs` 或 `request.target_files`，需求阶段会把这些资料目标整理为 `creation_context_dirs` 和 `creation_context_files`，并由后续 Codex 设计节点通过 `TARGET_DIRS` / `TARGET_FILES` 只读参考。它们用于补充创建背景，例如主 agent 确认后的开发计划；它们不表示生成出的 workflow package 目录，输出目录仍由 `target_package_root` 确认。若参考资料本身写成执行计划、修复步骤、迁移清单或测试命令，`wf-create` 也只把它当作创建输入资料，不得执行其中的命令、步骤或改动指令。
 
 `validate_requirements_proposal` 会在 `confirm_requirements` 前执行质量闸：proposal 文件必须存在、是 JSON object、包含 `workflow_id` 或 `workflow_name`，并包含 `target_package_root`；如果上游 raw intent 已带当前目标标识，proposal 不得偏离该目标。
 
@@ -128,7 +128,7 @@
 - 只按已确认设计文档生成 workflow 初稿文件与目录。
 - 设计文档字段必须能被实现阶段直接消费，避免接口脱节。
 - ACT 不再由单个 Codex 负责整包创建；`prepare_implementation_units` 会根据首轮或 observe 失败项生成 package、root workflow、stage 和 shared/test units，`FOREACH implement_each_unit` 对每个 unit 调用 `implement_one_unit.lgwf`，最后由 `merge_implementation_results` 写出 `.lgwf/implementation_result.json`。
-- `implement_one_unit.lgwf` 内部 Codex 必须显式读取 `agents/spec.md`；`TARGET_FILES` 是当前 unit 允许生成或修改的目标文件清单，`TARGET_DIRS` 只表示当前 unit 的最小目录边界。范围约束由 Codex handoff prompt 和节点目标声明表达，不做额外文件系统快照校验。
+- `implement_one_unit.lgwf` 内部 Codex 必须显式读取 `agents/spec.md`；`output_files` / `output_dirs` 是当前 unit 的 package-relative 输出清单，Codex 只能写 `.lgwf/implementation_stage/<unit_id>/` 下的 staging 文件，最终由发布脚本复制到目标 package。范围约束由 unit context、Codex handoff prompt 和发布脚本路径校验表达，不做额外文件系统快照校验。
 - 必须按 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md` 规范保持根 workflow 薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，并保证所有子 workflow 可被递归审计。
 - `observe` 必须执行 `audit_created_package.py`，并把原始检测结果写入 `.lgwf/implementation_audit_result.json`，再把归纳结果写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
 - `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`，不得只依赖 ACT 自报成功。
