@@ -215,7 +215,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rerun-existing",
         action="store_true",
-        help="When work-dir contains previous .lgwf data, delete it and start a new workflow without prompting.",
+        help="When work-dir contains previous LGWF data, clean runtime data and declared run-managed outputs without prompting.",
     )
     parser.add_argument(
         "--continue-existing",

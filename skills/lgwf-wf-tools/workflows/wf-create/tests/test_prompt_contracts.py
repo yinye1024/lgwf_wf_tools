@@ -88,6 +88,49 @@ class PromptContractTest(unittest.TestCase):
             self.assertIn("TARGET_DIRS state.lgwf_wf_create.creation_context_dirs", workflow)
             self.assertIn("TARGET_FILES state.lgwf_wf_create.creation_context_files", workflow)
 
+    def test_step_design_prompt_stays_inside_design_node_contract(self) -> None:
+        prompt = read("03_confirm_step_designs/agents/design_steps_react.md")
+
+        for required in (
+            "不是开放式创意设计",
+            "不要调用或遵循外部 brainstorming",
+            "只读取本 prompt 的 Inputs",
+            "不要读取 `wf/04_implement_steps_react/`",
+            "不得生成 `docs/superpowers/`",
+            "唯一目标是把已确认输入确定性转换",
+        ):
+            self.assertIn(required, prompt)
+
+    def test_all_codex_prompt_nodes_have_contract_boundary_coverage(self) -> None:
+        expected_nodes = {
+            "01_confirm_requirements/workflow.lgwf:propose_requirements_react",
+            "02_confirm_business_flow/workflow.lgwf:propose_business_flow_react",
+            "03_confirm_step_designs/workflow.lgwf:design_steps_react",
+            "04_implement_steps_react/implement_one_unit.lgwf:implement_current_unit",
+            "04_implement_steps_react/observe_audit.lgwf:observe_implementation",
+            "04_implement_steps_react/workflow.lgwf:reason",
+        }
+        found_nodes: dict[str, str] = {}
+        for workflow_path in sorted(ROOT.rglob("*.lgwf")):
+            relative = workflow_path.relative_to(ROOT).as_posix()
+            text = workflow_path.read_text(encoding="utf-8")
+            matches = list(
+                re.finditer(
+                    r"(?m)^(?P<indent>\s*)(?:(?:CODEX\s+(?P<node>\w+))|(?P<slot>REASON|ACT|OBSERVE|DIAGNOSE|PLAN)\s+CODEX\b)",
+                    text,
+                )
+            )
+            for index, match in enumerate(matches):
+                node_name = match.group("node") or match.group("slot").lower()
+                next_start = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+                found_nodes[f"{relative}:{node_name}"] = text[match.start() : next_start]
+
+        self.assertEqual(expected_nodes, set(found_nodes))
+        for node_id, block in found_nodes.items():
+            self.assertIn("CONTRACT {", block, node_id)
+            for output_path in re.findall(r'OUTPUT_(?:JSON|FILE)\s+"([^"]+)"', block):
+                self.assertIn(f'WRITE workspace file "{output_path}"', block, node_id)
+
     def test_revision_prompts_are_revision_approval_prompts(self) -> None:
         for relative in (
             "01_confirm_requirements/revise_requirements.md",

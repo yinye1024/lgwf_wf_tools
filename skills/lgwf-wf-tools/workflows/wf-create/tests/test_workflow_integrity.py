@@ -315,6 +315,44 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             self.assertIn(workflow_id, text)
         self.assertIn("回到 facade 路由", text)
 
+    def test_real_positive_manual_entry_declares_runtime_fixture_audit_and_approval_flow(self) -> None:
+        text = (PACKAGE_ROOT / "tests" / "lgwf_wf_create_real_positive_e2e.py").read_text(encoding="utf-8")
+        for snippet in (
+            "runtime_e2e_created",
+            "real_positive_create_request.json",
+            "target_workflow_audit.stdout.txt",
+            "wf_create_run.stdout.txt",
+            "--auto-human",
+            "approval list",
+            "approval get",
+            "approval submit",
+            "create_result_report.md",
+            "python -m unittest discover tests",
+            "lgwf.py audit",
+        ):
+            self.assertIn(snippet, text)
+
+    def test_wf_fix_positive_manual_entry_declares_self_fix_input_and_summary_flow(self) -> None:
+        text = (PACKAGE_ROOT / "tests" / "lgwf_wf_create_real_positive_e2e_for_wf_fix.py").read_text(
+            encoding="utf-8"
+        )
+        for snippet in (
+            "skills/lgwf-wf-tools/workflows/wf-fix/wf/workflow.lgwf",
+            "target_workflow_lgwf",
+            "target_workflow_input",
+            "max_attempts",
+            "ask_main_agent_for_target_approvals",
+            "approval list",
+            "approval get",
+            "approval submit",
+            "self_fix_summary",
+            "wf_fix_failure_summary.json",
+            "create_result_summary.json",
+            "target_runs",
+            "lgwf.py audit",
+        ):
+            self.assertIn(snippet, text)
+
 
 if __name__ == "__main__":
     unittest.main()
