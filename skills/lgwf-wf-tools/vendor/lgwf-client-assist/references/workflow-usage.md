@@ -34,6 +34,27 @@ python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-di
 - `doctor` 始终只读，不触发安装。
 - 缺少 manifest 时按 `dev` 处理；非法 manifest 会明确报错。
 
+Codex 默认模型由随包文件控制：
+
+```text
+<skill-dir>\assets\codex-defaults.json
+```
+
+默认内容如下：
+
+```json
+{
+  "version": 1,
+  "model": "gpt-5.5",
+  "model_reasoning_effort": "xhigh",
+  "service_tier": "default"
+}
+```
+
+`model_reasoning_effort` 可用值为 `low`、`medium`、`high`、`xhigh`。`service_tier` 可用值为 `default` 或 `priority`；`priority` 对应 Codex app 中的 Fast 速度档。
+
+优先级为：workflow 节点显式 `MODEL` / runtime `config.model` > `<work_dir>\.lgwf\codex\config.json` > `<skill-dir>\assets\codex-defaults.json` > client 代码兜底默认值。`lgwf-wf-tools` 需要调整打包后的全局 Codex 默认模型、速度或推理强度时，改随包 `assets\codex-defaults.json` 并重新同步/打包 `lgwf-client-assist.zip`。
+
 打包命令：
 
 ```powershell

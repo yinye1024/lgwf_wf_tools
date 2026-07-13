@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "model": "gpt-5.5",
+  "model_reasoning_effort": "xhigh",
+  "service_tier": "default"
+}

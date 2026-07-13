@@ -56,6 +56,7 @@ def main(
     _configure_utf8(error_output)
     args = _build_parser().parse_args(argv)
     root = skill_root or pathlib.Path(__file__).resolve().parents[1]
+    _configure_codex_defaults(root)
     wheel = install_module.find_bundled_wheel(root)
     support = _runtime_support(wheel)
 
@@ -297,6 +298,12 @@ def _configure_utf8(stream: TextIO) -> None:
         reconfigure(encoding="utf-8", errors="replace")
     except (OSError, ValueError):
         return
+
+
+def _configure_codex_defaults(root: pathlib.Path) -> None:
+    config_path = root / "assets" / "codex-defaults.json"
+    if config_path.is_file():
+        os.environ["LGWF_CODEX_DEFAULTS_CONFIG"] = str(config_path)
 
 
 def _runtime_support(wheel: pathlib.Path):

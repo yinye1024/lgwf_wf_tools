@@ -1,4 +1,5 @@
 import argparse
+import os
 import pathlib
 import sys
 from collections.abc import Callable
@@ -187,6 +188,7 @@ def _module_runner(
     skill_root: pathlib.Path | None,
 ) -> ModuleRunner:
     root = _resolve_runtime_skill_root(skill_root or pathlib.Path(__file__).resolve().parents[1])
+    _configure_codex_defaults(root)
 
     def run(module_name: str, argv: list[str]) -> int:
         wheel = install_module.find_bundled_wheel(root)
@@ -214,6 +216,7 @@ def _run_audit(
     skill_root: pathlib.Path | None,
 ) -> int:
     root = _resolve_runtime_skill_root(skill_root or pathlib.Path(__file__).resolve().parents[1])
+    _configure_codex_defaults(root)
     wheel = install_module.find_bundled_wheel(root)
     support = bootstrap_module.load_runtime_support(wheel)
     install_module.ensure_bundled_lgwf(
@@ -238,6 +241,7 @@ def _run_compile(
     skill_root: pathlib.Path | None,
 ) -> int:
     root = _resolve_runtime_skill_root(skill_root or pathlib.Path(__file__).resolve().parents[1])
+    _configure_codex_defaults(root)
     wheel = install_module.find_bundled_wheel(root)
     support = bootstrap_module.load_runtime_support(wheel)
     install_module.ensure_bundled_lgwf(
@@ -310,6 +314,12 @@ def _resolve_runtime_skill_root(root: pathlib.Path) -> pathlib.Path:
 def _has_bundled_wheel(root: pathlib.Path) -> bool:
     assets = root / "assets"
     return assets.is_dir() and any(assets.glob("lgwf-*.whl"))
+
+
+def _configure_codex_defaults(root: pathlib.Path) -> None:
+    config_path = root / "assets" / "codex-defaults.json"
+    if config_path.is_file():
+        os.environ["LGWF_CODEX_DEFAULTS_CONFIG"] = str(config_path)
 
 
 class _ParseError(Exception):
