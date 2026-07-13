@@ -75,7 +75,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
     def test_scaffold_package_loads_resources_and_validator_from_runtime_workflow_mirror(self) -> None:
         self.seed_confirmed_requirements_and_business_flow()
 
-        result = self.run_script("02_confirm_business_flow/scripts/scaffold_package.py")
+        result = self.run_script("02_confirm_business_flow/03_scaffold_package/scripts/scaffold_package.py")
 
         plan = result["lgwf_wf_create.scaffold_package_result"]["scaffold_plan"]
         self.assertEqual(plan["target_package_root"], "skills/git-diff-brief")
@@ -84,23 +84,59 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         self.assertFalse((self.work_dir / ".lgwf" / "scripts" / "validate_two_layer_workflow.py").exists())
 
     def test_prepare_dsl_reference_context_writes_only_runtime_artifacts(self) -> None:
-        result = self.run_script("03_confirm_step_designs/scripts/prepare_dsl_reference_context.py")
+        stale_scaffold_context = self.work_dir / ".lgwf" / "create_reference_context" / "scaffold"
+        stale_scaffold_context.mkdir(parents=True)
+        (stale_scaffold_context / "scaffold_template_spec.md").write_text("stale", encoding="utf-8")
+        stale_root_manifest = self.work_dir / ".lgwf" / "create_reference_context" / "dsl_reference_context.json"
+        stale_root_manifest.parent.mkdir(parents=True, exist_ok=True)
+        stale_root_manifest.write_text("stale", encoding="utf-8")
+        stale_dsl_manifest = (
+            self.work_dir
+            / ".lgwf"
+            / "create_reference_context"
+            / "dsl-assist"
+            / "dsl_reference_context.json"
+        )
+        stale_dsl_manifest.parent.mkdir(parents=True, exist_ok=True)
+        stale_dsl_manifest.write_text("stale", encoding="utf-8")
+
+        result = self.run_script("03_confirm_step_designs/01_reference_context/scripts/prepare_dsl_reference_context.py")
 
         context = result["lgwf_wf_create.dsl_reference_context"]
         self.assertTrue(context["reference_context_ready"])
+        self.assertTrue(context["reference_index_ready"])
+        self.assertTrue(context["implementation_reference_index_ready"])
         self.assertTrue(context["modular_development_context_ready"])
         self.assertTrue(context["module_contract_context_ready"])
         self.assertTrue((self.work_dir / ".lgwf" / "create_reference_context" / "dsl-assist" / "guide.md").is_file())
-        self.assertTrue(
+        self.assertFalse(
             (
                 self.work_dir
                 / ".lgwf"
                 / "create_reference_context"
                 / "dsl-assist"
                 / "dsl_reference_context.json"
+            ).exists()
+        )
+        self.assertFalse((self.work_dir / ".lgwf" / "create_reference_context" / "dsl_reference_context.json").exists())
+        self.assertTrue(
+            (
+                self.work_dir
+                / ".lgwf"
+                / "create_reference_context"
+                / "step-design-reference-index.md"
             ).is_file()
         )
-        self.assertTrue((self.work_dir / ".lgwf" / "create_reference_context" / "dsl_reference_context.json").is_file())
+        self.assertTrue(
+            (
+                self.work_dir
+                / ".lgwf"
+                / "create_reference_context"
+                / "implementation-reference-index.md"
+            ).is_file()
+        )
+        self.assertFalse((self.work_dir / ".lgwf" / "create_reference_context" / "index.md").exists())
+        self.assertFalse((self.work_dir / ".lgwf" / "create_reference_context" / "scaffold").exists())
         self.assertTrue(
             (
                 self.work_dir
@@ -121,18 +157,16 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         )
         self.assertFalse((self.workflow_root / ".lgwf").exists())
 
-    def test_prepare_dsl_reference_context_resets_stale_step_design_drafts(self) -> None:
+    def test_prepare_dsl_reference_context_does_not_manage_step_design_markdown_drafts(self) -> None:
         stale_doc = self.work_dir / "docs" / "steps" / "old-workflow.md"
         stale_doc.parent.mkdir(parents=True)
         stale_doc.write_text("stale workflow draft", encoding="utf-8")
 
-        result = self.run_script("03_confirm_step_designs/scripts/prepare_dsl_reference_context.py")
+        result = self.run_script("03_confirm_step_designs/01_reference_context/scripts/prepare_dsl_reference_context.py")
 
         context = result["lgwf_wf_create.dsl_reference_context"]
-        self.assertEqual(context["step_design_draft_dir"], "docs/steps")
-        self.assertTrue(context["removed_previous_step_design_drafts"])
-        self.assertFalse(stale_doc.exists())
-        self.assertTrue(stale_doc.parent.is_dir())
+        self.assertNotIn("step_design_draft_dir", context)
+        self.assertTrue(stale_doc.exists())
 
     def test_prepare_implementation_context_resolves_target_from_repo_root_not_run_cwd(self) -> None:
         write_json(
@@ -157,7 +191,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         )
         (self.work_dir / ".git").mkdir()
 
-        result = self.run_script("03_confirm_step_designs/scripts/prepare_implementation_context.py")
+        result = self.run_script("03_confirm_step_designs/03_step_design_review/scripts/prepare_implementation_context.py")
 
         context = result["lgwf_wf_create.implementation_context"]
         self.assertEqual(context["target_package_root"], "skills/git-diff-brief")
@@ -192,7 +226,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
         )
         (self.work_dir / ".git").mkdir()
 
-        result = self.run_script("03_confirm_step_designs/scripts/prepare_implementation_context.py")
+        result = self.run_script("03_confirm_step_designs/03_step_design_review/scripts/prepare_implementation_context.py")
 
         context = result["lgwf_wf_create.implementation_context"]
         self.assertEqual(context["workflow_name"], "git-diff-brief")

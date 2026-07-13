@@ -20,7 +20,6 @@ STEP design_structure
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/create_requirements_proposal.json";
     WRITE workspace file ".lgwf/business_flow.json";
-    WRITE workspace file ".lgwf/business_flow_proposal.json";
     WRITE workspace file ".lgwf/scaffold_package_result.json";
   };
 
@@ -28,17 +27,15 @@ STEP implement_draft
   WORKFLOW "03_confirm_step_designs/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
-    READ workspace file ".lgwf/business_flow_proposal.json";
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/scaffold_package_result.json";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
     WRITE workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
     WRITE workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
-    WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
-    WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
-    WRITE workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
     WRITE workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
+    WRITE workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
+    WRITE workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
     WRITE workspace file ".lgwf/implementation_context.json";
     WRITE workspace file ".lgwf/step_designs.json";
   };
@@ -46,13 +43,8 @@ STEP implement_draft
 STEP implement_steps_react
   WORKFLOW "04_implement_steps_react/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
-    READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
-    READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
-    READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
-    READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
-    READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
-    READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
+    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    READ workspace dir ".lgwf/create_reference_context";
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";

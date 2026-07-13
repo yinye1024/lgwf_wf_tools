@@ -1,100 +1,41 @@
 WORKFLOW design_structure;
-ENTRY propose_business_flow_react;
+ENTRY business_flow_proposal;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
 }
 
-CODEX propose_business_flow_react
-  PROMPT "agents/propose_business_flow_react.md"
-  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
-  TARGET_FILES state.lgwf_wf_create.creation_context_files
-  OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
-  TIMEOUT 900
-  RESULT state.lgwf_wf_create.business_flow_proposal_result
+STEP business_flow_proposal
+  WORKFLOW "01_business_flow_proposal/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/create_requirements_proposal.json";
+    READ state.lgwf_wf_create.creation_context_dirs;
+    READ state.lgwf_wf_create.creation_context_files;
     WRITE workspace file ".lgwf/business_flow_proposal.json";
-  };
-
-PY validate_business_flow_proposal
-  SCRIPT "scripts/validate_business_flow_proposal.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.business_flow_proposal_quality_gate
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/create_requirements_proposal.json";
-    READ workspace file ".lgwf/business_flow_proposal.json";
     WRITE workspace file ".lgwf/business_flow_proposal_quality_gate.json";
   };
 
-PY prepare_business_flow_confirmation
-  SCRIPT "scripts/prepare_business_flow_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_business_flow_confirmation_result
-  UPDATES_STATE
+STEP business_flow_review
+  WORKFLOW "02_business_flow_review/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/business_flow_proposal.json";
-  };
-
-REVIEW confirm_business_flow
-  PROMPT_REF "confirm_business_flow.md"
-  CONTEXT state.lgwf_wf_create.business_flow_confirmation_context
-  RESULT state.lgwf_wf_create.business_flow_decision_result
-  PERSIST ".lgwf/business_flow_approval.json"
-  OPTIONS ["approve", "revise", "reject"]
-  CONTRACT {
+    READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
     WRITE workspace file ".lgwf/business_flow_approval.json";
-    READ state.lgwf_wf_create.business_flow_confirmation_context;
-  };
-
-PY prepare_business_flow_revision_confirmation
-  SCRIPT "scripts/prepare_business_flow_revision_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/business_flow_proposal.json";
-    READ workspace file ".lgwf/business_flow_approval.json";
-    WRITE state.lgwf_wf_create.business_flow_confirmation_context;
-    WRITE state.lgwf_wf_create.business_flow_revision_context;
-  };
-
-PY apply_confirmed_business_flow
-  SCRIPT "scripts/apply_confirmed_business_flow.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_create.apply_business_flow_result
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/business_flow_approval.json";
     WRITE workspace file ".lgwf/business_flow.json";
+    WRITE state.lgwf_wf_create.business_flow;
   };
 
-PY scaffold_package
-  SCRIPT "scripts/scaffold_package.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_create.scaffold_package_result
-  UPDATES_STATE
+STEP scaffold_package
+  WORKFLOW "03_scaffold_package/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
     WRITE workspace file ".lgwf/scaffold_package_result.json";
   };
 
-FLOW {
-  propose_business_flow_react THEN validate_business_flow_proposal THEN prepare_business_flow_confirmation THEN confirm_business_flow;
-
-  confirm_business_flow
-    WHEN "approve" THEN apply_confirmed_business_flow
-    WHEN "revise" THEN prepare_business_flow_revision_confirmation
-    WHEN "reject" THEN FAIL_ALL;
-
-  prepare_business_flow_revision_confirmation
-  THEN confirm_business_flow;
-
-  apply_confirmed_business_flow THEN scaffold_package;
-}
+FLOW business_flow_proposal
+  THEN business_flow_review
+  THEN scaffold_package;

@@ -2,7 +2,7 @@
 
 ## 职责
 
-基于已确认的 raw intent 和只读创建资料生成需求 proposal，并在进入人工确认前执行质量闸。
+基于已确认的 raw intent 和只读创建资料，用一个小型 ReAct 循环生成并修复需求 proposal；质量闸通过后才进入人工确认。
 
 ## 输入
 
@@ -19,7 +19,9 @@
 ## 产物
 
 - `.lgwf/create_requirements_proposal.json`
-- `.lgwf/create_requirements_proposal_quality_gate.json`
+- `.lgwf/create_requirements_proposal_quality_gate.json`，第一轮为空对象表示无上一轮反馈，随后由 OBSERVE 阶段真实校验覆盖。
+- `.lgwf/create_requirements_proposal_react_context.json`
+- `.lgwf/create_requirements_proposal_decision.json`
 
 ## 验证
 
@@ -31,3 +33,4 @@
 - 不固化 `.lgwf/create_requirements.json`。
 - 不处理需求 review、revise 或 approve 决策。
 - 不读取本子流程输入契约以外的目标 package、历史 run 或宿主仓库样例。
+- ReAct 达到最大轮次仍未通过质量闸时，不进入 `requirements_review`。

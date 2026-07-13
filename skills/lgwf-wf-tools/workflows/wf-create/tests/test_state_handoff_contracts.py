@@ -51,8 +51,8 @@ class StateHandoffContractTest(unittest.TestCase):
 
         for workflow_relative, node in (
             ("01_confirm_requirements/03_requirements_review/workflow.lgwf", "prepare_requirements_confirmation"),
-            ("02_confirm_business_flow/workflow.lgwf", "prepare_business_flow_confirmation"),
-            ("03_confirm_step_designs/workflow.lgwf", "prepare_step_design_confirmation"),
+            ("02_confirm_business_flow/02_business_flow_review/workflow.lgwf", "prepare_business_flow_confirmation"),
+            ("03_confirm_step_designs/03_step_design_review/workflow.lgwf", "prepare_step_design_confirmation"),
         ):
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
             self.assertIn(f"PY {node}", workflow)
@@ -69,13 +69,13 @@ class StateHandoffContractTest(unittest.TestCase):
                 "lgwf_wf_create.requirements_confirmation_context",
             ),
             (
-                "02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py",
+                "02_confirm_business_flow/02_business_flow_review/scripts/prepare_confirmation.py",
                 "business_flow_proposal.json",
                 {"workflow_name": "demo", "stages": []},
                 "lgwf_wf_create.business_flow_confirmation_context",
             ),
             (
-                "03_confirm_step_designs/scripts/prepare_step_design_confirmation.py",
+                "03_confirm_step_designs/03_step_design_review/scripts/prepare_step_design_confirmation.py",
                 "step_designs_proposal.json",
                 {"step_designs": [{"step_slug": "demo"}]},
                 "lgwf_wf_create.step_design_confirmation_context",
@@ -113,14 +113,14 @@ class StateHandoffContractTest(unittest.TestCase):
                 "lgwf_wf_create.requirements_revision_context",
             ),
             (
-                "02_confirm_business_flow/scripts/prepare_business_flow_revision_confirmation.py",
+                "02_confirm_business_flow/02_business_flow_review/scripts/prepare_revision_confirmation.py",
                 "business_flow_proposal.json",
                 "business_flow_approval.json",
                 {"stages": []},
                 "lgwf_wf_create.business_flow_revision_context",
             ),
             (
-                "03_confirm_step_designs/scripts/prepare_step_design_revision_confirmation.py",
+                "03_confirm_step_designs/03_step_design_review/scripts/prepare_step_design_revision_confirmation.py",
                 "step_designs_proposal.json",
                 "step_design_confirmation_record.json",
                 {"step_designs": []},
@@ -155,7 +155,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_script_can_build_plan_from_confirmed_runtime_artifacts(self) -> None:
         module = load_module(
-            ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
+            ROOT / "02_confirm_business_flow/03_scaffold_package/scripts/scaffold_package.py",
             "scaffold_handoff",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -184,7 +184,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_script_has_safe_default_without_confirmed_artifacts(self) -> None:
         module = load_module(
-            ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
+            ROOT / "02_confirm_business_flow/03_scaffold_package/scripts/scaffold_package.py",
             "scaffold_default",
         )
         with tempfile.TemporaryDirectory() as temp:
@@ -305,7 +305,7 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_scaffold_plan_lists_generic_skeleton_files(self) -> None:
         scaffold = load_module(
-            ROOT / "02_confirm_business_flow/scripts/scaffold_package.py",
+            ROOT / "02_confirm_business_flow/03_scaffold_package/scripts/scaffold_package.py",
             "scaffold_files",
         )
         plan = scaffold.build_scaffold_plan(
@@ -334,8 +334,8 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_prompt_docs_mention_confirmation_context_handoff(self) -> None:
         expectations = (
             ("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md", "requirements_confirmation_context"),
-            ("02_confirm_business_flow/agents/propose_business_flow_react.md", "business_flow_confirmation_context"),
-            ("03_confirm_step_designs/agents/design_steps_react.md", "step_design_confirmation_context"),
+            ("02_confirm_business_flow/01_business_flow_proposal/agents/propose_business_flow.md", "business_flow_confirmation_context"),
+            ("03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md", "step_design_confirmation_context"),
         )
         for relative, state_key in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
@@ -351,14 +351,14 @@ class StateHandoffContractTest(unittest.TestCase):
                 {"workflow_name": "demo", "target_package_root": "skills/demo"},
             ),
             (
-                "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py",
                 "business_flow_approval.json",
                 "business_flow_proposal.json",
                 "business_flow.json",
                 {"workflow_name": "demo", "stages": []},
             ),
             (
-                "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
                 "step_designs_proposal.json",
                 "step_designs.json",
@@ -386,13 +386,13 @@ class StateHandoffContractTest(unittest.TestCase):
                 "workflow_name",
             ),
             (
-                "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
+                "02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py",
                 "business_flow_approval.json",
                 "business_flow_proposal.json",
                 "stages",
             ),
             (
-                "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
+                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
                 "step_design_confirmation_record.json",
                 "step_designs_proposal.json",
                 "step_designs",

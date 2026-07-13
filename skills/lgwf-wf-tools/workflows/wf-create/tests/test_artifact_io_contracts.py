@@ -112,8 +112,8 @@ class ArtifactIOContractsTest(unittest.TestCase):
         write_json(self.work_dir / ".lgwf" / "step_designs_proposal.json", {"step_designs": []})
 
         requirements = self.run_script("01_confirm_requirements/03_requirements_review/scripts/prepare_confirmation.py")
-        business_flow = self.run_script("02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py")
-        step_designs = self.run_script("03_confirm_step_designs/scripts/prepare_step_design_confirmation.py")
+        business_flow = self.run_script("02_confirm_business_flow/02_business_flow_review/scripts/prepare_confirmation.py")
+        step_designs = self.run_script("03_confirm_step_designs/03_step_design_review/scripts/prepare_step_design_confirmation.py")
 
         self.assertEqual(
             requirements["lgwf_wf_create.requirements_confirmation_context"]["approve_writes"],
@@ -158,8 +158,8 @@ class ArtifactIOContractsTest(unittest.TestCase):
         )
 
         self.run_script("01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py")
-        self.run_script("02_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
-        self.run_script("03_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
+        self.run_script("02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py")
+        self.run_script("03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py")
 
         self.assertTrue((self.work_dir / ".lgwf" / "create_requirements.json").is_file())
         self.assertTrue((self.work_dir / ".lgwf" / "business_flow.json").is_file())

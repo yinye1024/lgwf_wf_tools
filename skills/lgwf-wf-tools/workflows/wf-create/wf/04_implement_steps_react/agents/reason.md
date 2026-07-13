@@ -11,9 +11,9 @@
 - `.lgwf/implementation_audit_result.json`：如果存在，表示上一轮 OB Python 脚本的原始确定性检测结果，是修复事实来源。
 - `.lgwf/implementation_observe.json`：如果存在，表示上一轮 observe 对确定性检测结果的归纳。
 - `.lgwf/implementation_decision.json`：上一轮 DECIDE 的继续/退出判断、失败原因和 `needs_post_fix` 状态；首轮由初始化脚本写入默认 continue 反馈。
-- `.lgwf/create_reference_context/dsl-assist/create-workflow.md`、`.lgwf/create_reference_context/dsl-assist/guide.md` 和 `.lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md`：LGWF DSL 创建和 audit 规则。
-- `.lgwf/create_reference_context/scaffold/scaffold_template_spec.md`、`.lgwf/create_reference_context/scaffold/scaffold_result_contract.md` 和 `.lgwf/create_reference_context/scaffold/scaffold_package_template.json`：wf-create 脚手架规则。
-- `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`：workflow 模块化创建总纲。
+- `.lgwf/create_reference_context/implementation-reference-index.md`：实现阶段 DSL、audit 和模块化参考路由；需要修复 `workflow.lgwf` 或 audit 问题时先读索引，再按需读取 `.lgwf/create_reference_context` 下的具体资料。
+- `.lgwf/scaffold_package_result.json` 中的 `scaffold_plan`：wf-create 脚手架结构事实源，包含 package profile、目录、文件、placeholder 和阶段 manifest。
+- `.lgwf/create_reference_context`：实现阶段技术参考目录，只用于 DSL 语法、audit 修复和模块边界，不得改写 `.lgwf/step_designs.json` 的设计范围。
 
 ## Task
 1. 先按 `agents/spec.md` 识别本轮必须遵守的共同准则。

@@ -8,7 +8,14 @@ from pathlib import Path
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = PACKAGE_ROOT / "wf" / "04_implement_steps_react" / "scripts" / "audit_created_package.py"
+SCRIPT_PATH = (
+    PACKAGE_ROOT
+    / "wf"
+    / "04_implement_steps_react"
+    / "02_observe_audit"
+    / "scripts"
+    / "audit_created_package.py"
+)
 
 
 def load_module():
@@ -47,8 +54,6 @@ class AuditCreatedPackageTests(unittest.TestCase):
         ]
         create_dirs = [
             "wf",
-            "wf/docs",
-            "wf/docs/steps",
             *[
                 rel
                 for item in stage_manifest
@@ -92,7 +97,19 @@ class AuditCreatedPackageTests(unittest.TestCase):
                     "target_package_root": "skills/demo-workflow",
                     "source_business_flow_stages": [{"stage_id": stage} for stage in stages],
                     "step_designs_proposal": [
-                        {"step_slug": "prepare", "path": "docs/steps/prepare.md"}
+                        {
+                            "step_slug": "prepare",
+                            "step_name": "准备",
+                            "stage_id": "prepare",
+                            "goal": "准备目标 workflow。",
+                            "inputs": [".lgwf/create_requirements.json"],
+                            "outputs": ["wf/01_prepare/workflow.lgwf"],
+                            "dependencies": [],
+                            "implementation_suggestions": ["生成阶段目录和 workflow。"],
+                            "acceptance_notes": ["阶段 workflow 存在。"],
+                            "out_of_scope": ["端到端运行保证"],
+                            "confirmation_points": ["阶段边界正确"],
+                        }
                     ],
                 }
             },
@@ -114,8 +131,6 @@ class AuditCreatedPackageTests(unittest.TestCase):
         (target_root / "README.md").write_text("# demo\n", encoding="utf-8")
         (target_root / "entry_contract.json").write_text("{}\n", encoding="utf-8")
         (target_root / "wf" / "artifact_contracts.json").write_text("{}\n", encoding="utf-8")
-        (target_root / "wf" / "docs" / "steps").mkdir(parents=True)
-        (target_root / "wf" / "docs" / "steps" / "prepare.md").write_text("# prepare\n", encoding="utf-8")
         return work_dir
 
     def add_stage(self, target_root: Path, stage: str) -> None:
@@ -180,20 +195,6 @@ class AuditCreatedPackageTests(unittest.TestCase):
 
             self.assertFalse(result["passed"])
             self.assertTrue(any("scaffold_plan create_dir wf/01_prepare/agents" in item for item in result["failures"]))
-
-    def test_audit_created_package_reports_missing_approved_step_doc(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            work_dir = self.make_work_dir(root, ["prepare"])
-            target_root = root / "skills" / "demo-workflow"
-            self.add_stage(target_root, "01_prepare")
-            (target_root / "wf" / "docs" / "steps" / "prepare.md").unlink()
-            self.patch_authoring_audit()
-
-            result = self.module.audit_created_package(work_dir)
-
-            self.assertFalse(result["passed"])
-            self.assertTrue(any("approved step design wf/docs/steps/prepare.md" in item for item in result["failures"]))
 
     def test_audit_created_package_reports_missing_generated_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

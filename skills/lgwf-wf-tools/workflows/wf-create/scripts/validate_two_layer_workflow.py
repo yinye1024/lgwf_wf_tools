@@ -9,6 +9,14 @@ from typing import Iterable
 
 WORKFLOW_REF_RE = re.compile(r'WORKFLOW\s+"([^"]+)"')
 RESOURCE_REF_RE = re.compile(r'(SCRIPT|PROMPT|PROMPT_REF|SPEC)\s+"([^"]+)"')
+ALLOWED_DEEP_WORKFLOWS = {
+    "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf"
+}
+ALLOWED_DEEP_WORKFLOW_PARENTS = {
+    "04_implement_steps_react/01_implement_units/workflow.lgwf": {
+        "01_implement_one_unit/workflow.lgwf"
+    }
+}
 
 
 def normalize_ref(raw: str, *, field: str) -> PurePosixPath:
@@ -35,10 +43,12 @@ def validate_workflow_file_depth(package_root: Path, errors: list[str]) -> None:
         depth = len(workflow.relative_to(wf_root).parts)
         if relative == "workflow.lgwf":
             continue
-        if depth not in {2, 3}:
+        if depth not in {2, 3} and relative not in ALLOWED_DEEP_WORKFLOWS:
             errors.append(f"workflow 最多允许阶段/子流程两级: wf/{relative}")
         if depth == 3 and not (workflow.parent / "README.md").is_file():
             errors.append(f"孙级 workflow 必须有 README.md 说明职责: wf/{relative}")
+        if relative in ALLOWED_DEEP_WORKFLOWS and not (workflow.parent / "README.md").is_file():
+            errors.append(f"受控第三层 workflow 必须有 README.md 说明职责: wf/{relative}")
 
 
 def validate_root_workflow(package_root: Path, errors: list[str]) -> None:
@@ -64,6 +74,8 @@ def validate_child_workflow(package_root: Path, workflow: Path, errors: list[str
     relative_parts = relative.parts
     is_stage_workflow = len(relative_parts) == 2
     is_subflow_workflow = len(relative_parts) == 3
+    is_deep_workflow = relative.as_posix() in ALLOWED_DEEP_WORKFLOWS
+    allowed_deep_refs = ALLOWED_DEEP_WORKFLOW_PARENTS.get(relative.as_posix(), set())
     for ref in WORKFLOW_REF_RE.findall(text):
         ref_path = normalize_ref(ref, field=f"WORKFLOW ref in wf/{relative.as_posix()}")
         if is_stage_workflow:
@@ -72,8 +84,11 @@ def validate_child_workflow(package_root: Path, workflow: Path, errors: list[str
             if not (is_local_lgwf_file or is_subflow_workflow):
                 errors.append(f"阶段 workflow 只能引用同目录 .lgwf 或同阶段孙级 workflow: wf/{relative.as_posix()} -> {ref}")
                 continue
-        elif is_subflow_workflow:
+        elif is_subflow_workflow and ref not in allowed_deep_refs:
             errors.append(f"孙级 workflow 不得继续引用 workflow: wf/{relative.as_posix()} -> {ref}")
+            continue
+        elif is_deep_workflow:
+            errors.append(f"受控第三层 workflow 不得继续引用 workflow: wf/{relative.as_posix()} -> {ref}")
             continue
         if not (stage_dir / ref_path).is_file():
             errors.append(f"workflow 引用不存在: wf/{relative.as_posix()} -> {ref}")

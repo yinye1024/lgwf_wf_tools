@@ -50,7 +50,7 @@ class ProposalQualityGateTest(unittest.TestCase):
                 },
             )
 
-            completed = run_script(work_dir, "02_confirm_business_flow/scripts/validate_business_flow_proposal.py")
+            completed = run_script(work_dir, "02_confirm_business_flow/01_business_flow_proposal/scripts/validate_proposal.py")
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             payload = json.loads(completed.stdout)
@@ -66,7 +66,7 @@ class ProposalQualityGateTest(unittest.TestCase):
 
             completed = run_script(work_dir, "01_confirm_requirements/02_requirements_proposal/scripts/validate_proposal.py")
 
-            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
             result = json.loads((lgwf_dir / "create_requirements_proposal_quality_gate.json").read_text(encoding="utf-8"))
             self.assertFalse(result["passed"])
             self.assertIn("proposal_exists", [check["name"] for check in result["checks"] if not check["passed"]])
@@ -110,14 +110,40 @@ class ProposalQualityGateTest(unittest.TestCase):
                 },
             )
 
-            completed = run_script(work_dir, "02_confirm_business_flow/scripts/validate_business_flow_proposal.py")
+            completed = run_script(work_dir, "02_confirm_business_flow/01_business_flow_proposal/scripts/validate_proposal.py")
 
-            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
             result = json.loads((lgwf_dir / "business_flow_proposal_quality_gate.json").read_text(encoding="utf-8"))
             self.assertFalse(result["passed"])
             failures = {check["name"]: check["message"] for check in result["checks"] if not check["passed"]}
             self.assertIn("target_package_root_matches", failures)
             self.assertIn("skills/old-demo", failures["target_package_root_matches"])
+
+    def test_business_flow_assert_quality_gate_rejects_failed_react_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(
+                lgwf_dir / "business_flow_proposal_quality_gate.json",
+                {
+                    "passed": False,
+                    "checks": [
+                        {
+                            "name": "target_package_root_matches",
+                            "passed": False,
+                            "message": "target_package_root 不一致",
+                        }
+                    ],
+                },
+            )
+
+            completed = run_script(
+                work_dir,
+                "02_confirm_business_flow/01_business_flow_proposal/scripts/assert_quality_gate.py",
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("business flow proposal quality gate failed", completed.stderr)
 
     def test_step_design_gate_rejects_stale_proposal(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -138,12 +164,99 @@ class ProposalQualityGateTest(unittest.TestCase):
             os.utime(lgwf_dir / "step_designs_proposal.json", (1000, 1000))
             os.utime(lgwf_dir / "scaffold_package_result.json", (2000, 2000))
 
-            completed = run_script(work_dir, "03_confirm_step_designs/scripts/validate_step_designs_proposal.py")
+            completed = run_script(work_dir, "03_confirm_step_designs/02_step_design_proposal/scripts/validate_step_designs_proposal.py")
 
-            self.assertNotEqual(completed.returncode, 0)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
             result = json.loads((lgwf_dir / "step_designs_proposal_quality_gate.json").read_text(encoding="utf-8"))
             self.assertFalse(result["passed"])
             self.assertIn("proposal_fresh_enough", [check["name"] for check in result["checks"] if not check["passed"]])
+
+    def test_step_design_gate_rejects_doc_path_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(
+                lgwf_dir / "business_flow.json",
+                {
+                    "confirmed": {
+                        "workflow_name": "demo",
+                        "target_package_root": "skills/demo",
+                        "stages": [{"stage_id": "prepare"}],
+                    }
+                },
+            )
+            write_json(
+                lgwf_dir / "create_requirements.json",
+                {"confirmed": {"workflow_name": "demo", "target_package_root": "skills/demo"}},
+            )
+            write_json(
+                lgwf_dir / "scaffold_package_result.json",
+                {
+                    "scaffold_plan": {
+                        "workflow_name": "demo",
+                        "target_package_root": "skills/demo",
+                        "stage_manifest": [{"stage_id": "prepare", "stage_dir": "01_prepare"}],
+                    }
+                },
+            )
+            write_json(
+                lgwf_dir / "step_designs_proposal.json",
+                {
+                    "workflow_id": "demo",
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "step_designs": [
+                        {
+                            "step_slug": "prepare",
+                            "step_name": "准备",
+                            "stage_id": "prepare",
+                            "goal": "准备目标 workflow。",
+                            "inputs": ["需求"],
+                            "outputs": ["wf/01_prepare/workflow.lgwf"],
+                            "dependencies": ["需求确认"],
+                            "implementation_suggestions": ["生成阶段 workflow。"],
+                            "acceptance_notes": ["阶段 workflow 存在。"],
+                            "out_of_scope": ["端到端运行保证"],
+                            "confirmation_points": ["阶段边界"],
+                            "doc_path": "docs/steps/prepare.md",
+                        }
+                    ],
+                },
+            )
+
+            completed = run_script(work_dir, "03_confirm_step_designs/02_step_design_proposal/scripts/validate_step_designs_proposal.py")
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads((lgwf_dir / "step_designs_proposal_quality_gate.json").read_text(encoding="utf-8"))
+            self.assertFalse(result["passed"])
+            failures = {check["name"]: check["message"] for check in result["checks"] if not check["passed"]}
+            self.assertIn("step_designs[0]_doc_path_not_used", failures)
+
+    def test_step_design_assert_quality_gate_rejects_failed_react_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(
+                lgwf_dir / "step_designs_proposal_quality_gate.json",
+                {
+                    "passed": False,
+                    "checks": [
+                        {
+                            "name": "proposal_fresh_enough",
+                            "passed": False,
+                            "message": "proposal 早于当前上游输入",
+                        }
+                    ],
+                },
+            )
+
+            completed = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/assert_quality_gate.py",
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("step designs proposal quality gate failed", completed.stderr)
 
 
 if __name__ == "__main__":

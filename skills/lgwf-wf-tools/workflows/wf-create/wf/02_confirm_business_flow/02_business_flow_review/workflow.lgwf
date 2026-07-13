@@ -1,0 +1,68 @@
+WORKFLOW business_flow_review;
+ENTRY prepare_business_flow_confirmation;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_business_flow_confirmation
+  SCRIPT "scripts/prepare_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_business_flow_confirmation_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.business_flow_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow_proposal.json";
+  };
+
+REVIEW confirm_business_flow
+  PROMPT_REF "agents/confirm_business_flow.md"
+  CONTEXT state.lgwf_wf_create.business_flow_confirmation_context
+  RESULT state.lgwf_wf_create.business_flow_decision_result
+  PERSIST ".lgwf/business_flow_approval.json"
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/business_flow_approval.json";
+    READ state.lgwf_wf_create.business_flow_confirmation_context;
+  };
+
+PY prepare_business_flow_revision_confirmation
+  SCRIPT "scripts/prepare_revision_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    READ workspace file ".lgwf/business_flow_approval.json";
+    WRITE state.lgwf_wf_create.business_flow_confirmation_context;
+    WRITE state.lgwf_wf_create.business_flow_revision_context;
+  };
+
+PY apply_confirmed_business_flow
+  SCRIPT "scripts/apply_confirmed.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.apply_business_flow_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.apply_business_flow_result;
+    WRITE state.lgwf_wf_create.business_flow;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow_approval.json";
+    READ workspace file ".lgwf/business_flow_proposal.json";
+    WRITE workspace file ".lgwf/business_flow.json";
+  };
+
+FLOW {
+  prepare_business_flow_confirmation
+  THEN confirm_business_flow;
+
+  confirm_business_flow
+    WHEN "approve" THEN apply_confirmed_business_flow
+    WHEN "revise" THEN prepare_business_flow_revision_confirmation
+    WHEN "reject" THEN FAIL_ALL;
+
+  prepare_business_flow_revision_confirmation
+  THEN confirm_business_flow;
+}

@@ -28,16 +28,22 @@ def write_json(path: Path, payload: object) -> None:
 class ImplementationUnitScriptsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.prepare_units = load_module("scripts/prepare_implementation_units.py", "prepare_implementation_units")
+        cls.prepare_units = load_module(
+            "01_implement_units/scripts/prepare_implementation_units.py",
+            "prepare_implementation_units",
+        )
         cls.prepare_current = load_module(
-            "scripts/prepare_current_implementation_unit.py",
+            "01_implement_units/01_implement_one_unit/scripts/prepare_current_implementation_unit.py",
             "prepare_current_implementation_unit",
         )
         cls.publish_current = load_module(
-            "scripts/publish_current_implementation_unit_result.py",
+            "01_implement_units/01_implement_one_unit/scripts/publish_current_implementation_unit_result.py",
             "publish_current_implementation_unit_result",
         )
-        cls.merge_units = load_module("scripts/merge_implementation_results.py", "merge_implementation_results")
+        cls.merge_units = load_module(
+            "01_implement_units/scripts/merge_implementation_results.py",
+            "merge_implementation_results",
+        )
 
     def seed_context(self, root: Path, observe: dict[str, object] | None = None) -> Path:
         target_package = root / "workspace" / "skills" / "demo-workflow"
@@ -66,13 +72,29 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                     "step_designs": [
                         {
                             "step_slug": "collect_context",
+                            "step_name": "收集上下文",
                             "stage_id": "collect_context",
-                            "doc_path": "docs/steps/collect-context.md",
+                            "goal": "收集目标上下文。",
+                            "inputs": [".lgwf/create_requirements.json"],
+                            "outputs": ["wf/01_collect_context/workflow.lgwf"],
+                            "dependencies": [],
+                            "implementation_suggestions": ["生成阶段 workflow 和私有资源。"],
+                            "acceptance_notes": ["阶段目录自包含。"],
+                            "out_of_scope": ["端到端运行保证"],
+                            "confirmation_points": ["阶段边界正确"],
                         },
                         {
                             "step_slug": "run_checks",
+                            "step_name": "运行检查",
                             "stage_id": "run_checks",
-                            "doc_path": "docs/steps/run-checks.md",
+                            "goal": "运行目标检查。",
+                            "inputs": ["collect_context"],
+                            "outputs": ["wf/02_run_checks/workflow.lgwf"],
+                            "dependencies": ["collect_context"],
+                            "implementation_suggestions": ["生成检查阶段 workflow 和私有资源。"],
+                            "acceptance_notes": ["检查阶段目录自包含。"],
+                            "out_of_scope": ["自动修复"],
+                            "confirmation_points": ["依赖关系正确"],
                         },
                     ],
                 }
@@ -103,7 +125,6 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                         "ws",
                         "wf",
                         "wf/shared/scripts",
-                        "wf/docs/steps",
                         "wf/01_collect_context",
                         "wf/01_collect_context/agents",
                         "wf/01_collect_context/scripts",
@@ -174,9 +195,9 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertNotIn("tests", package_unit["package_relative_dirs"])
             self.assertEqual(
                 root_unit["package_relative_files"],
-                ["wf/workflow.lgwf", "wf/docs/steps/collect-context.md", "wf/docs/steps/run-checks.md"],
+                ["wf/workflow.lgwf"],
             )
-            self.assertEqual(root_unit["package_relative_dirs"], ["wf", "wf/docs/steps"])
+            self.assertEqual(root_unit["package_relative_dirs"], ["wf"])
             self.assertEqual(stage_unit["stage_id"], "collect_context")
             self.assertEqual(stage_unit["stage_dir"], "01_collect_context")
             self.assertEqual(stage_unit["workflow_ref"], "wf/01_collect_context/workflow.lgwf")
@@ -193,6 +214,27 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertTrue(all(not Path(path).is_absolute() for path in all_files))
             self.assertIn("wf/workflow.lgwf", all_files)
             self.assertTrue((root / ".lgwf" / "implementation_units.json").is_file())
+
+    def test_prepare_current_injects_package_json_output_schemas(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            units = self.prepare_units.build_implementation_units(root)["implementation_units"]
+            package_unit = next(unit for unit in units if unit["unit_id"] == "package_contracts")
+
+            context = self.prepare_current.build_current_implementation_unit_context(root, package_unit)
+            target_schemas = context["target_output_file_schemas"]
+            result_schema = context["codex_output_json_schema"]
+            instructions = "\n".join(context["instructions"])
+
+            self.assertIn("entry_contract.json", target_schemas)
+            self.assertIn("wf/artifact_contracts.json", target_schemas)
+            self.assertIn("input_schema", target_schemas["entry_contract.json"]["required"])
+            self.assertIn("delivery_artifacts", target_schemas["wf/artifact_contracts.json"]["required"])
+            self.assertIn("unit_id", result_schema["required"])
+            self.assertIn("generated_files", result_schema["required"])
+            self.assertIn("缺少 schema 时记录 blocked_reason", instructions)
+            self.assertIn("不要递归搜索 .lgwf", instructions)
 
     def test_prepare_uses_observe_failures_to_select_affected_units(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

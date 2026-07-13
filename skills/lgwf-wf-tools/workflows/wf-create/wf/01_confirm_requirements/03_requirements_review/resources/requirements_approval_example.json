@@ -1,8 +1,0 @@
-{
-  "decision": "revise",
-  "changes": [
-    "补充 expected_outputs 的文件类型说明",
-    "明确 human_approval_points 中的业务流转确认节点"
-  ],
-  "comment": "示例 fixture：用于说明 confirm_requirements 的结构，不代表当前 run 必须生成正式确认结果。"
-}

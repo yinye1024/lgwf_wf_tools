@@ -7,9 +7,8 @@ DEFAULTS {
 }
 
 CONTEXT_SET implementation_shared_context {
-  workspace dir ".lgwf/create_reference_context/dsl-assist";
-  workspace dir ".lgwf/create_reference_context/scaffold";
-  workspace dir ".lgwf/create_reference_context/workflow-modular-development";
+  workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+  workspace dir ".lgwf/create_reference_context";
   workspace file ".lgwf/implementation_audit_result.json";
   workspace file ".lgwf/implementation_context.json";
   workspace file ".lgwf/implementation_decision.json";
@@ -40,13 +39,8 @@ REACT implement_steps_react MAX 3
     TIMEOUT 1200
     RESULT state.lgwf_wf_create.implementation_reason_result
     CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/create-workflow.md";
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/guide.md";
-      READ workspace file ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_package_template.json";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_result_contract.md";
-      READ workspace file ".lgwf/create_reference_context/scaffold/scaffold_template_spec.md";
-      READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
+      READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+      READ workspace dir ".lgwf/create_reference_context";
       READ workspace file ".lgwf/implementation_audit_result.json";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_decision.json";
@@ -57,9 +51,11 @@ REACT implement_steps_react MAX 3
       WRITE workspace file ".lgwf/implementation_reason.md";
     }
   ACT WORKFLOW implement_units
-    WORKFLOW "act_implement_units.lgwf"
+    WORKFLOW "01_implement_units/workflow.lgwf"
     RESULT state.lgwf_wf_create.implementation_result
     CONTRACT {
+      READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+      READ workspace dir ".lgwf/create_reference_context";
       READ workspace file ".lgwf/implementation_context.json";
       READ workspace file ".lgwf/implementation_observe.json";
       READ workspace file ".lgwf/implementation_reason.md";
@@ -68,7 +64,7 @@ REACT implement_steps_react MAX 3
       WRITE workspace file ".lgwf/implementation_result.json";
     }
   OBSERVE WORKFLOW observe_audit
-    WORKFLOW "observe_audit.lgwf"
+    WORKFLOW "02_observe_audit/workflow.lgwf"
     RESULT state.lgwf_wf_create.implementation_observe_result
     CONTRACT {
       READ workspace file ".lgwf/implementation_audit_result.json";

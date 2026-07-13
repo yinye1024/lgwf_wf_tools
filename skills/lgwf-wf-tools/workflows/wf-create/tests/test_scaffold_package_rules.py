@@ -11,6 +11,7 @@ SCRIPT_PATH = (
     PACKAGE_ROOT
     / "wf"
     / "02_confirm_business_flow"
+    / "03_scaffold_package"
     / "scripts"
     / "scaffold_package.py"
 )
@@ -66,7 +67,7 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         self.assertIn("AGENTS.md", plan["create_files"])
         self.assertIn("entry_contract.json", plan["create_files"])
         self.assertNotIn("SKILL.md", plan["create_files"])
-        self.assertIn("wf/docs/steps", plan["create_dirs"])
+        self.assertNotIn("wf/docs/steps", plan["create_dirs"])
         self.assertEqual(plan["stage_manifest"][0]["stage_id"], "package_scaffold")
         self.assertEqual(plan["stage_manifest"][0]["stage_dir"], "01_package_scaffold")
         self.assertIn("wf/01_package_scaffold/workflow.lgwf", plan["create_files"])
@@ -156,7 +157,7 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         self.assertTrue(
             self.module.validate_plan_paths(
                 {
-                    "create_dirs": ["agents", "docs/steps"],
+                    "create_dirs": ["agents", "docs"],
                     "create_files": ["wf/workflow.lgwf", "tests/README.md"],
                 }
             )

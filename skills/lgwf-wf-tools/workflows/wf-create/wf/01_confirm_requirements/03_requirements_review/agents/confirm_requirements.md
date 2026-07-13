@@ -5,7 +5,7 @@
 
 ## Inputs
 - `state.lgwf_wf_create.requirements_confirmation_context`：当前确认节点的验收上下文。
-- `.lgwf/create_requirements_proposal.json`：`propose_requirements_react` 生成的需求方案 proposal。
+- `.lgwf/create_requirements_proposal.json`：`propose_requirements` 生成的需求方案 proposal。
 
 ## Audit Scope
 只审核 `create_requirements_proposal` 的字段完整性、下游可消费性、人工确认点合理性和 proposal 边界，不修改 proposal 本身。
