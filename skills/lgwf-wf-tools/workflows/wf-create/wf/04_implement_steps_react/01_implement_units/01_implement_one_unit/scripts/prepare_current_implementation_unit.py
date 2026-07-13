@@ -187,7 +187,6 @@ def build_current_implementation_unit_context(root: Path, unit: dict[str, Any]) 
             "只能写入 unit_output_dir 下的 workspace_output_files，保持 output_files 的 package 相对路径结构。",
             "不要直接写最终目标 package；发布脚本会把 unit_output_dir 中的文件复制到目标 package。",
             "生成 JSON 输出文件时只能使用 target_output_file_schemas 中随当前 context 提供的 schema；缺少 schema 时记录 blocked_reason，不要递归搜索 .lgwf 或读取宿主仓库样例。",
-            "优先处理 current_implementation_unit.repair_focus 中的 observe 失败项。",
             "如果目标实现需要扩大到其他 unit，输出 blocked_reason，不要擅自修改。",
         ],
     }

@@ -1,12 +1,12 @@
-WORKFLOW implementation_observe_audit;
-ENTRY audit_created_package;
+WORKFLOW observe_repair;
+ENTRY audit_current_implementation;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 600;
 }
 
-CONTEXT_SET implementation_observe_context {
+CONTEXT_SET observe_repair_context {
   workspace file ".lgwf/implementation_context.json";
   workspace file ".lgwf/implementation_result.json";
   workspace file ".lgwf/implementation_audit_result.json";
@@ -15,8 +15,8 @@ CONTEXT_SET implementation_observe_context {
   workspace file ".lgwf/step_designs.json";
 }
 
-PY audit_created_package
-  SCRIPT "scripts/audit_created_package.py"
+PY audit_current_implementation
+  SCRIPT "scripts/audit_current_implementation.py"
   TIMEOUT 180
   RESULT state.lgwf_wf_create.implementation_audit_result
   UPDATES_STATE
@@ -29,9 +29,9 @@ PY audit_created_package
     WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
-CODEX observe_implementation
-  PROMPT "agents/observe.md"
-  CONTEXT implementation_observe_context
+CODEX observe_repair
+  PROMPT "agents/observe_repair.md"
+  CONTEXT observe_repair_context
   OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE
   TIMEOUT 600
   RESULT state.lgwf_wf_create.implementation_observe_result
@@ -44,5 +44,5 @@ CODEX observe_implementation
     WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
-FLOW audit_created_package
-  THEN observe_implementation;
+FLOW audit_current_implementation
+  THEN observe_repair;

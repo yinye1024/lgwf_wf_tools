@@ -573,6 +573,9 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertIn(".lgwf/create_requirements.json", summary["runtime_artifacts"])
         self.assertIn(".lgwf/business_flow.json", summary["runtime_artifacts"])
         self.assertIn(".lgwf/step_designs.json", summary["runtime_artifacts"])
+        self.assertNotIn(".lgwf/implementation_audit_result.json", summary["runtime_artifacts"])
+        self.assertNotIn(".lgwf/implementation_observe.json", summary["runtime_artifacts"])
+        self.assertNotIn(".lgwf/implementation_decision.json", summary["runtime_artifacts"])
         self.assertNotIn(".lgwf/create_requirements.json", summary["produced_files"])
 
     def test_apply_scripts_share_common_confirmation_helpers(self) -> None:
@@ -710,12 +713,17 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertIn("RESULT state.lgwf_wf_create.summary_result", workflow)
         self.assertIn("create_result_summary.json", script)
 
-    def test_implementation_observe_audit_runs_before_summary_and_handoff(self) -> None:
+    def test_implementation_audit_observe_stays_inside_repair_before_summary_and_handoff(self) -> None:
         workflow = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
         implement_workflow = (ROOT / "04_implement_steps_react/workflow.lgwf").read_text(encoding="utf-8")
-        observe_workflow = (ROOT / "04_implement_steps_react/02_observe_audit/workflow.lgwf").read_text(
+        repair_workflow = (ROOT / "04_implement_steps_react/02_repair_implementation_react/workflow.lgwf").read_text(
             encoding="utf-8"
         )
+        summary_workflow = (ROOT / "06_summarize_create_result/workflow.lgwf").read_text(encoding="utf-8")
+        handoff_workflow = (ROOT / "07_post_fix_handoff/workflow.lgwf").read_text(encoding="utf-8")
+        observe_workflow = (
+            ROOT / "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/workflow.lgwf"
+        ).read_text(encoding="utf-8")
         self.assertNotRegex(workflow, r"PY\s+validate_.*package")
         self.assertNotIn("created_package_" + "validation", workflow)
         self.assertNotIn("enrich_contracts_react", workflow)
@@ -726,11 +734,16 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "  THEN summarize_create_result",
             workflow,
         )
-        self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
-        self.assertIn("PY audit_created_package", observe_workflow)
-        self.assertIn('SCRIPT "scripts/audit_created_package.py"', observe_workflow)
+        self.assertIn('WORKFLOW "02_repair_implementation_react/workflow.lgwf"', implement_workflow)
+        self.assertIn("REACT repair_implementation_react MAX 3", repair_workflow)
+        self.assertIn("PY audit_current_implementation", observe_workflow)
+        self.assertIn('SCRIPT "scripts/audit_current_implementation.py"', observe_workflow)
         self.assertIn('READ workspace file ".lgwf/step_designs.json";', observe_workflow)
         self.assertIn('WRITE workspace file ".lgwf/implementation_audit_result.json";', observe_workflow)
+        for outer_workflow in (workflow, implement_workflow, summary_workflow, handoff_workflow):
+            self.assertNotIn('workspace file ".lgwf/implementation_audit_result.json"', outer_workflow)
+            self.assertNotIn('workspace file ".lgwf/implementation_observe.json"', outer_workflow)
+            self.assertNotIn('workspace file ".lgwf/implementation_decision.json"', outer_workflow)
 
     def test_agents_doc_names_route_back_to_facade_when_out_of_scope(self) -> None:
         text = (PACKAGE_ROOT / "AGENTS.md").read_text(encoding="utf-8")

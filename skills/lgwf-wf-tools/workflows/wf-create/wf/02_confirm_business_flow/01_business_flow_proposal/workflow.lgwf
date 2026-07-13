@@ -47,6 +47,8 @@ REACT business_flow_proposal_react MAX 3
       READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/create_requirements_proposal.json";
       READ workspace file ".lgwf/business_flow_proposal_react_context.json";
+      READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
+      READ workspace file ".lgwf/business_flow_proposal_decision.json";
       WRITE workspace file ".lgwf/business_flow_proposal.json";
     }
   OBSERVE PY

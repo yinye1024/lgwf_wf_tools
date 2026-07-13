@@ -1,87 +1,33 @@
 WORKFLOW implement_steps_react;
-ENTRY initialize_implementation_observe;
+ENTRY implement_initial_units;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
 }
 
-PY initialize_implementation_observe
-  SCRIPT "scripts/initialize_implementation_observe.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.initialize_implementation_observe_result
-  UPDATES_STATE
+STEP implement_initial_units
+  WORKFLOW "01_implement_units/workflow.lgwf"
   CONTRACT {
-    WRITE workspace file ".lgwf/implementation_audit_result.json";
-    WRITE workspace file ".lgwf/implementation_decision.json";
-    WRITE workspace file ".lgwf/implementation_observe.json";
+    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    READ workspace dir ".lgwf/create_reference_context";
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_result.json";
   };
 
-REACT implement_steps_react MAX 3
-  SPEC "agents/spec.md"
+STEP repair_implementation
+  WORKFLOW "02_repair_implementation_react/workflow.lgwf"
   CONTRACT {
-  }
-  REASON CODEX
-    PROMPT "agents/reason.md"
-    CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"
-    CONTEXT workspace dir ".lgwf/create_reference_context"
-    CONTEXT workspace file ".lgwf/implementation_audit_result.json"
-    CONTEXT workspace file ".lgwf/implementation_context.json"
-    CONTEXT workspace file ".lgwf/implementation_decision.json"
-    CONTEXT workspace file ".lgwf/implementation_observe.json"
-    CONTEXT workspace file ".lgwf/implementation_result.json"
-    CONTEXT workspace file ".lgwf/scaffold_package_result.json"
-    CONTEXT workspace file ".lgwf/step_designs.json"
-    OUTPUT_FILE ".lgwf/implementation_reason.md"
-    TIMEOUT 1200
-    RESULT state.lgwf_wf_create.implementation_reason_result
-    CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-      READ workspace dir ".lgwf/create_reference_context";
-      READ workspace file ".lgwf/implementation_audit_result.json";
-      READ workspace file ".lgwf/implementation_context.json";
-      READ workspace file ".lgwf/implementation_decision.json";
-      READ workspace file ".lgwf/implementation_observe.json";
-      READ workspace file ".lgwf/implementation_result.json";
-      READ workspace file ".lgwf/scaffold_package_result.json";
-      READ workspace file ".lgwf/step_designs.json";
-      WRITE workspace file ".lgwf/implementation_reason.md";
-    }
-  ACT WORKFLOW implement_units
-    WORKFLOW "01_implement_units/workflow.lgwf"
-    RESULT state.lgwf_wf_create.implementation_result
-    CONTRACT {
-      READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-      READ workspace dir ".lgwf/create_reference_context";
-      READ workspace file ".lgwf/implementation_context.json";
-      READ workspace file ".lgwf/implementation_observe.json";
-      READ workspace file ".lgwf/implementation_reason.md";
-      READ workspace file ".lgwf/scaffold_package_result.json";
-      READ workspace file ".lgwf/step_designs.json";
-      WRITE workspace file ".lgwf/implementation_result.json";
-    }
-  OBSERVE WORKFLOW observe_audit
-    WORKFLOW "02_observe_audit/workflow.lgwf"
-    RESULT state.lgwf_wf_create.implementation_observe_result
-    CONTRACT {
-      READ workspace file ".lgwf/implementation_audit_result.json";
-      READ workspace file ".lgwf/implementation_context.json";
-      READ workspace file ".lgwf/implementation_result.json";
-      READ workspace file ".lgwf/scaffold_package_result.json";
-      READ workspace file ".lgwf/step_designs.json";
-      WRITE workspace file ".lgwf/implementation_audit_result.json";
-      WRITE workspace file ".lgwf/implementation_observe.json";
-    }
-  DECIDE PY
-    SCRIPT "scripts/decide_implementation.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.implementation_decide_result
-    UPDATES_STATE
-    CONTRACT {
-      READ workspace file ".lgwf/implementation_audit_result.json";
-      READ workspace file ".lgwf/implementation_observe.json";
-      WRITE workspace file ".lgwf/implementation_decision.json";
-    };
+    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    READ workspace dir ".lgwf/create_reference_context";
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_result.json";
+  };
 
-FLOW initialize_implementation_observe
-  THEN implement_steps_react;
+FLOW implement_initial_units
+  THEN repair_implementation;

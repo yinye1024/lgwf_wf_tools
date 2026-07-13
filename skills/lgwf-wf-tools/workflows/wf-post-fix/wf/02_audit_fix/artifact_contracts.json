@@ -8,5 +8,19 @@
     ".lgwf/post_fix_decisions.json",
     ".lgwf/post_fix_decisions/audit_fix.json",
     ".lgwf/post_fix_stage_results.json"
-  ]
+  ],
+  "script_writes": {
+    "build_audit_fix_input": [
+      ".lgwf/post_fix_decisions.json",
+      ".lgwf/post_fix_stage_results.json"
+    ],
+    "finish_audit_fix_stage": [
+      ".lgwf/post_fix_decisions.json",
+      ".lgwf/post_fix_stage_results.json"
+    ],
+    "set_audit_fix_auto": [
+      ".lgwf/post_fix_decisions/audit_fix.json",
+      ".lgwf/post_fix_decisions.json"
+    ]
+  }
 }

@@ -137,6 +137,54 @@ class DoctorDeepTest(unittest.TestCase):
         self.assertEqual(1, len(module_checks))
         self.assertTrue(module_checks[0]["passed"])
 
+    def test_module_contract_validation_ignores_unregistered_sibling_skills(self) -> None:
+        module = load_doctor_module()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            facade = repo / "skills" / "lgwf-wf-tools"
+            sibling = repo / "skills" / "repo-context-pack"
+            sibling.mkdir(parents=True)
+            share = facade / "workflows" / "01-share"
+            share.mkdir(parents=True)
+            (share / "module-contract.md").write_text(
+                "codex_skill lgwf_workflow_package tool_workflow\n"
+                "模块定位 入口 依赖 状态 产物 验证 禁止\n",
+                encoding="utf-8",
+            )
+            (share / "entry-contract.md").write_text(
+                "input_mode auto_human_policy entry_contract.json\n",
+                encoding="utf-8",
+            )
+            agents = facade / "workflows" / "fake" / "AGENTS.md"
+            agents.parent.mkdir(parents=True)
+            agents.write_text("module-contract.md\nlgwf_workflow_package\n", encoding="utf-8")
+            registry = facade / "registry.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "fake",
+                                "kind": "lgwf",
+                                "agents_md": "workflows/fake/AGENTS.md",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            module.FACADE_ROOT = facade
+            module.REPO_ROOT = repo
+            module.SKILLS_ROOT = repo / "skills"
+            module.REGISTRY_PATH = registry
+            module.MODULE_CONTRACT_PATH = share / "module-contract.md"
+            module.ENTRY_CONTRACT_PATH = share / "entry-contract.md"
+
+            result = module.run_module_contract_validation()
+
+        self.assertTrue(result["passed"], result)
+
 
 if __name__ == "__main__":
     unittest.main()

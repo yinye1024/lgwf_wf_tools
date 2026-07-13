@@ -14,7 +14,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE_ROOT / "wf"
 ROOT_WORKFLOW = ROOT / "workflow.lgwf"
 SUMMARY_SCRIPT = ROOT / "06_summarize_create_result" / "scripts" / "summarize_create_result.py"
-STRUCTURE_VALIDATOR_SCRIPT = PACKAGE_ROOT / "scripts" / "validate_two_layer_workflow.py"
+STRUCTURE_VALIDATOR_SCRIPT = PACKAGE_ROOT / "tests" / "helpers" / "validate_two_layer_workflow.py"
 sys.dont_write_bytecode = True
 
 
@@ -59,6 +59,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             'WORKFLOW "03_confirm_step_designs/workflow.lgwf"',
             'WORKFLOW "04_implement_steps_react/workflow.lgwf"',
             'WORKFLOW "06_summarize_create_result/workflow.lgwf"',
+            'WORKFLOW "07_post_fix_handoff/workflow.lgwf"',
         )
         for fragment in expected_stage_files:
             self.assertIn(fragment, text)
@@ -76,7 +77,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertFalse((ROOT / "ws").exists())
         self.assertFalse((ROOT / "tests").exists())
 
-    def test_two_layer_structure_validator_exists(self) -> None:
+    def test_test_helper_validates_two_layer_structure(self) -> None:
+        self.assertFalse((PACKAGE_ROOT / "scripts" / "validate_two_layer_workflow.py").exists())
+        self.assertTrue((ROOT / "shared" / "scripts" / "validate_two_layer_workflow.py").is_file())
         module = load_module(STRUCTURE_VALIDATOR_SCRIPT, "validate_two_layer_workflow")
         errors = module.validate_scaffold_paths(["wf/demo/workflow.lgwf", "wf/demo/scripts/run.py"])
         self.assertEqual(errors, [])
@@ -97,6 +100,10 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             "wf/04_implement_steps_react/workflow.lgwf",
             "wf/06_summarize_create_result/workflow.lgwf",
             "wf/06_summarize_create_result/scripts/summarize_create_result.py",
+            "wf/07_post_fix_handoff/workflow.lgwf",
+            "wf/07_post_fix_handoff/artifact_contracts.json",
+            "wf/07_post_fix_handoff/scripts/prepare_post_fix_handoff.py",
+            "wf/07_post_fix_handoff/handoff_wf_post_fix.md",
         ):
             self.assertTrue((PACKAGE_ROOT / relative).exists(), relative)
 
@@ -237,6 +244,30 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                 ".lgwf/current_implementation_unit_result.json",
                 True,
             ),
+            (
+                "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/workflow.lgwf",
+                "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/agents/reason_repair.md",
+                ".lgwf/implementation_repair_reason.json",
+                True,
+            ),
+            (
+                "04_implement_steps_react/02_repair_implementation_react/02_act_repair/workflow.lgwf",
+                "04_implement_steps_react/02_repair_implementation_react/02_act_repair/agents/act_repair.md",
+                ".lgwf/implementation_repair_result.json",
+                True,
+            ),
+            (
+                "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/workflow.lgwf",
+                "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/agents/observe_repair.md",
+                ".lgwf/implementation_observe.json",
+                True,
+            ),
+            (
+                "04_implement_steps_react/02_repair_implementation_react/04_decide_repair/workflow.lgwf",
+                "04_implement_steps_react/02_repair_implementation_react/04_decide_repair/agents/decide_repair.md",
+                ".lgwf/implementation_repair_decision_analysis.json",
+                True,
+            ),
         )
         for workflow_relative, prompt_relative, artifact, uses_as_file in contracts:
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
@@ -260,7 +291,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             self.assertIn(f'PERSIST "{artifact}"', workflow)
             self.assertIn(f'WRITE workspace file "{artifact}"', workflow)
 
-    def test_implementation_is_react_child_workflow_with_deterministic_audit_observe(self) -> None:
+    def test_implementation_runs_initial_units_then_repair_react_with_internal_audit_observe(self) -> None:
         design_workflow = (ROOT / "03_confirm_step_designs/03_step_design_review/workflow.lgwf").read_text(encoding="utf-8")
         implement_workflow_path = ROOT / "04_implement_steps_react/workflow.lgwf"
         self.assertTrue(implement_workflow_path.is_file())
@@ -270,16 +301,27 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn("PY prepare_implementation_context", design_workflow)
         self.assertNotIn("PY pre_implementation_audit_check", implement_workflow)
         self.assertNotIn("THEN pre_implementation_audit_check", implement_workflow)
-        self.assertIn("REACT implement_steps_react MAX 3", implement_workflow)
-        self.assertIn("REASON CODEX", implement_workflow)
-        self.assertIn("ACT WORKFLOW implement_units", implement_workflow)
+        self.assertNotIn("REACT implement_steps_react MAX 3", implement_workflow)
+        self.assertIn("STEP implement_initial_units", implement_workflow)
+        self.assertIn("STEP repair_implementation", implement_workflow)
+        self.assertIn("ENTRY implement_initial_units;", implement_workflow)
+        self.assertNotIn("ENTRY FLOW implement_initial_units;", implement_workflow)
         self.assertIn('WORKFLOW "01_implement_units/workflow.lgwf"', implement_workflow)
+        self.assertIn('WORKFLOW "02_repair_implementation_react/workflow.lgwf"', implement_workflow)
+        self.assertNotIn("RESULT state.lgwf_wf_create.initial_implementation_result", implement_workflow)
+        self.assertNotIn("RESULT state.lgwf_wf_create.repair_implementation_result", implement_workflow)
+        self.assertIn("FLOW implement_initial_units", implement_workflow)
+        self.assertIn("THEN repair_implementation", implement_workflow)
         self.assertNotIn("ACT CODEX", implement_workflow)
-        self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
-        self.assertIn('WORKFLOW "02_observe_audit/workflow.lgwf"', implement_workflow)
-        self.assertIn("DECIDE PY", implement_workflow)
-        self.assertIn('SCRIPT "scripts/decide_implementation.py"', implement_workflow)
-        self.assertIn("RESULT state.lgwf_wf_create.implementation_result", implement_workflow)
+        repair_workflow = (ROOT / "04_implement_steps_react/02_repair_implementation_react/workflow.lgwf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("REACT repair_implementation_react MAX 3", repair_workflow)
+        self.assertNotIn("RESULT state.lgwf_wf_create.initial_repair_observe_result", repair_workflow)
+        self.assertIn("REASON WORKFLOW reason_repair", repair_workflow)
+        self.assertIn("ACT WORKFLOW act_repair", repair_workflow)
+        self.assertIn("OBSERVE WORKFLOW observe_repair", repair_workflow)
+        self.assertIn("DECIDE WORKFLOW decide_repair", repair_workflow)
         act_workflow = (ROOT / "04_implement_steps_react/01_implement_units/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn("PY prepare_implementation_units", act_workflow)
         self.assertIn("FOREACH implement_each_unit", act_workflow)
@@ -303,13 +345,13 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertNotIn("TARGET_FILES state.lgwf_wf_create.current_implementation_unit_target_files", unit_workflow)
         self.assertIn('WRITE workspace dir ".lgwf/implementation_stage";', unit_workflow)
         self.assertIn('OUTPUT_JSON ".lgwf/current_implementation_unit_result.json" AS_FILE', unit_workflow)
-        observe_workflow = (ROOT / "04_implement_steps_react/02_observe_audit/workflow.lgwf").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("PY audit_created_package", observe_workflow)
-        self.assertIn('SCRIPT "scripts/audit_created_package.py"', observe_workflow)
-        self.assertIn("CODEX observe_implementation", observe_workflow)
-        self.assertIn('PROMPT "agents/observe.md"', observe_workflow)
+        observe_workflow = (
+            ROOT / "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/workflow.lgwf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("PY audit_current_implementation", observe_workflow)
+        self.assertIn('SCRIPT "scripts/audit_current_implementation.py"', observe_workflow)
+        self.assertIn("CODEX observe_repair", observe_workflow)
+        self.assertIn('PROMPT "agents/observe_repair.md"', observe_workflow)
         self.assertNotIn('workflow file "agents/spec.md"', observe_workflow)
         self.assertNotIn('READ workflow file "agents/spec.md";', observe_workflow)
         self.assertNotIn("INSTRUCTION state.lgwf_wf_create.implementation_audit_result", observe_workflow)
@@ -317,14 +359,16 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn('workspace file ".lgwf/scaffold_package_result.json"', observe_workflow)
         self.assertIn('READ workspace file ".lgwf/step_designs.json";', observe_workflow)
         self.assertIn('OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE', observe_workflow)
-        self.assertIn("FLOW audit_created_package", observe_workflow)
-        self.assertIn("THEN observe_implementation", observe_workflow)
+        self.assertIn("FLOW audit_current_implementation", observe_workflow)
+        self.assertIn("THEN observe_repair", observe_workflow)
         self.assertIn("UPDATES_STATE", observe_workflow)
-        self.assertIn('READ workspace file ".lgwf/implementation_audit_result.json";', implement_workflow)
-        observe_prompt = (ROOT / "04_implement_steps_react/02_observe_audit/agents/observe.md").read_text(
-            encoding="utf-8"
-        )
-        reason_prompt = (ROOT / "04_implement_steps_react/agents/reason.md").read_text(encoding="utf-8")
+        self.assertIn('READ workspace file ".lgwf/implementation_audit_result.json";', repair_workflow)
+        observe_prompt = (
+            ROOT / "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/agents/observe_repair.md"
+        ).read_text(encoding="utf-8")
+        reason_prompt = (
+            ROOT / "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/agents/reason_repair.md"
+        ).read_text(encoding="utf-8")
         self.assertIn(".lgwf/implementation_audit_result.json", observe_prompt)
         self.assertIn(".lgwf/scaffold_package_result.json", observe_prompt)
         self.assertIn(".lgwf/implementation_audit_result.json", reason_prompt)
@@ -332,9 +376,10 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertNotIn("agents/spec.md", observe_prompt)
         self.assertIn("audit 解释边界", observe_prompt)
         self.assertIn("不得把脚本 audit 的失败结果改写为通过", observe_prompt)
-        audit_script = (ROOT / "04_implement_steps_react/02_observe_audit/scripts/audit_created_package.py").read_text(
-            encoding="utf-8"
-        )
+        audit_script = (
+            ROOT
+            / "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/scripts/audit_current_implementation.py"
+        ).read_text(encoding="utf-8")
         self.assertIn("lgwf.py audit", audit_script)
         self.assertIn("implementation_audit_result.json", audit_script)
 
@@ -405,7 +450,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
 
         implementation_prompt = "\n".join(
             (
-                (ROOT / "04_implement_steps_react/agents/spec.md").read_text(encoding="utf-8"),
+                (ROOT / "04_implement_steps_react/02_repair_implementation_react/agents/spec.md").read_text(
+                    encoding="utf-8"
+                ),
                 (ROOT / "04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/act_unit.md").read_text(
                     encoding="utf-8"
                 ),

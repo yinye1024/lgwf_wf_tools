@@ -1,0 +1,32 @@
+WORKFLOW post_fix_handoff;
+ENTRY prepare_post_fix_handoff;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+  result_path "lgwf_wf_create.results.{node}";
+}
+
+PY prepare_post_fix_handoff
+  SCRIPT "scripts/prepare_post_fix_handoff.py"
+  INPUT state.lgwf_wf_create.summary_result
+  RESULT state.lgwf_wf_create.post_fix_handoff_payload
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/create_result_summary.json";
+    READ state.lgwf_wf_create.summary_result;
+    WRITE workspace file ".lgwf/post_fix_handoff_input.json";
+    WRITE state.lgwf_wf_create.post_fix_handoff_payload;
+  };
+
+HANDOFF handoff_wf_post_fix
+  CONTEXT state.lgwf_wf_create.post_fix_handoff_payload
+  PROMPT "handoff_wf_post_fix.md"
+  RESULT state.lgwf_wf_create.post_fix_handoff
+  CONTRACT {
+    READ state.lgwf_wf_create.post_fix_handoff_payload;
+    WRITE state.lgwf_wf_create.post_fix_handoff;
+  };
+
+FLOW prepare_post_fix_handoff
+  THEN handoff_wf_post_fix;

@@ -1,4 +1,4 @@
-"""根据确定性 audit observe 结果决定 ReAct 是否继续。"""
+"""根据修复 observe 结果决定 ReAct 是否继续。"""
 
 from __future__ import annotations
 
@@ -23,16 +23,21 @@ def decide(work_dir: Path) -> dict[str, Any]:
     lgwf_dir = work_dir / ".lgwf"
     audit = read_json(lgwf_dir / "implementation_audit_result.json")
     observe = read_json(lgwf_dir / "implementation_observe.json")
+    analysis = read_json(lgwf_dir / "implementation_repair_decision_analysis.json")
     source = audit if audit else observe
     passed = source.get("passed") is True
     result = {
         "next": "exit" if passed else "continue",
         "passed": passed,
-        "reason": "authoring audit passed" if passed else "authoring audit failed; continue implementation repair",
+        "reason": analysis.get(
+            "reason",
+            "authoring audit passed" if passed else "authoring audit failed; continue implementation repair",
+        ),
         "source": "implementation_audit_result.json" if audit else "implementation_observe.json",
         "status": source.get("status", "passed" if passed else "failed"),
         "needs_post_fix": bool(source.get("needs_post_fix")),
         "failures": source.get("failures", []),
+        "decision_analysis": analysis,
     }
     write_json(lgwf_dir / "implementation_decision.json", result)
     return result

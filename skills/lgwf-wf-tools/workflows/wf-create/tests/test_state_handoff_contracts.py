@@ -13,6 +13,8 @@ from unittest.mock import patch
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 ROOT = PACKAGE_ROOT / "wf"
+POST_FIX_HANDOFF_ROOT = ROOT / "07_post_fix_handoff"
+POST_FIX_HANDOFF_SCRIPT = POST_FIX_HANDOFF_ROOT / "scripts" / "prepare_post_fix_handoff.py"
 sys.dont_write_bytecode = True
 
 
@@ -227,7 +229,7 @@ class StateHandoffContractTest(unittest.TestCase):
             summary.build_summary({"runtime_artifacts": [".lgwf/../bad.json"]})
 
     def test_post_fix_handoff_payload_targets_created_workflow(self) -> None:
-        module = load_module(ROOT / "scripts/prepare_post_fix_handoff.py", "prepare_post_fix_handoff")
+        module = load_module(POST_FIX_HANDOFF_SCRIPT, "prepare_post_fix_handoff")
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             payload = module.build_handoff_payload(
@@ -252,9 +254,11 @@ class StateHandoffContractTest(unittest.TestCase):
         self.assertEqual(payload["payload"]["post_fix_target"]["target_package_root"], "skills/example-workflow")
         self.assertEqual(payload["payload"]["post_fix_target"]["target_dirs"], ["skills/example-workflow"])
         self.assertIn("wf-post-fix", payload["suggested_command"])
+        self.assertNotIn("diagnostic_artifacts", payload)
+        self.assertNotIn("source_create_audit", payload)
 
     def test_post_fix_handoff_unwraps_summary_state_payload(self) -> None:
-        module = load_module(ROOT / "scripts/prepare_post_fix_handoff.py", "prepare_post_fix_handoff_state_wrapper")
+        module = load_module(POST_FIX_HANDOFF_SCRIPT, "prepare_post_fix_handoff_state_wrapper")
         summary = {
             "workflow_name": "example-workflow",
             "target_package_root": "skills/example-workflow",
@@ -263,7 +267,7 @@ class StateHandoffContractTest(unittest.TestCase):
         self.assertEqual(module.unwrap_summary_payload({"summary_result": summary}), summary)
 
     def test_post_fix_handoff_falls_back_to_summary_file_when_stdin_state_is_empty(self) -> None:
-        module = load_module(ROOT / "scripts/prepare_post_fix_handoff.py", "prepare_post_fix_handoff_file_fallback")
+        module = load_module(POST_FIX_HANDOFF_SCRIPT, "prepare_post_fix_handoff_file_fallback")
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             lgwf_dir = root / ".lgwf"
@@ -293,15 +297,26 @@ class StateHandoffContractTest(unittest.TestCase):
 
     def test_root_workflow_ends_with_post_fix_handoff(self) -> None:
         workflow_text = (ROOT / "workflow.lgwf").read_text(encoding="utf-8")
-        self.assertIn("PY prepare_post_fix_handoff", workflow_text)
-        self.assertIn('SCRIPT "scripts/prepare_post_fix_handoff.py"', workflow_text)
-        self.assertIn("INPUT state.lgwf_wf_create.summary_result", workflow_text)
-        self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff_payload", workflow_text)
-        self.assertIn("HANDOFF handoff_wf_post_fix", workflow_text)
-        self.assertIn("CONTEXT state.lgwf_wf_create.post_fix_handoff_payload", workflow_text)
-        self.assertIn('PROMPT "handoff_wf_post_fix.md"', workflow_text)
-        self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff", workflow_text)
-        self.assertIn("THEN prepare_post_fix_handoff\n  THEN handoff_wf_post_fix", workflow_text)
+        post_fix_workflow = (POST_FIX_HANDOFF_ROOT / "workflow.lgwf").read_text(encoding="utf-8")
+
+        self.assertIn('STEP post_fix_handoff\n  WORKFLOW "07_post_fix_handoff/workflow.lgwf"', workflow_text)
+        self.assertNotIn("PY prepare_post_fix_handoff", workflow_text)
+        self.assertIn("THEN summarize_create_result\n  THEN post_fix_handoff", workflow_text)
+        self.assertNotIn('workspace file ".lgwf/implementation_audit_result.json"', workflow_text)
+        self.assertNotIn('workspace file ".lgwf/implementation_observe.json"', workflow_text)
+        self.assertNotIn('workspace file ".lgwf/implementation_decision.json"', workflow_text)
+
+        self.assertIn("PY prepare_post_fix_handoff", post_fix_workflow)
+        self.assertIn('SCRIPT "scripts/prepare_post_fix_handoff.py"', post_fix_workflow)
+        self.assertIn("INPUT state.lgwf_wf_create.summary_result", post_fix_workflow)
+        self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff_payload", post_fix_workflow)
+        self.assertIn("HANDOFF handoff_wf_post_fix", post_fix_workflow)
+        self.assertIn("CONTEXT state.lgwf_wf_create.post_fix_handoff_payload", post_fix_workflow)
+        self.assertIn('PROMPT "handoff_wf_post_fix.md"', post_fix_workflow)
+        self.assertIn("RESULT state.lgwf_wf_create.post_fix_handoff", post_fix_workflow)
+        self.assertIn("THEN handoff_wf_post_fix", post_fix_workflow)
+        self.assertNotIn('workspace file ".lgwf/implementation_audit_result.json"', post_fix_workflow)
+        self.assertNotIn('workspace file ".lgwf/implementation_observe.json"', post_fix_workflow)
 
     def test_scaffold_plan_lists_generic_skeleton_files(self) -> None:
         scaffold = load_module(

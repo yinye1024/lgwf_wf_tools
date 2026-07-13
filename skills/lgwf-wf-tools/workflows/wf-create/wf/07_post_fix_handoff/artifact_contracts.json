@@ -1,0 +1,13 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/create_result_summary.json"
+  ],
+  "final_outputs": [
+    ".lgwf/post_fix_handoff_input.json"
+  ],
+  "script_writes": {
+    "prepare_post_fix_handoff": [
+      ".lgwf/post_fix_handoff_input.json"
+    ]
+  }
+}

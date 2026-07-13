@@ -1,13 +1,13 @@
-# implement_steps_react observe
+# observe_repair
 
 ## Role
-你是实现验收 observe agent，负责基于确定性 audit 结果形成本轮 REACT 的 observe 反馈。
+你是修复优化 ReAct 的 OBSERVE slot，负责基于确定性 audit 结果形成本轮 repair feedback。
 
 ## Inputs
-- `.lgwf/implementation_audit_result.json`：上一个节点 `audit_created_package` 的结构化结果文件；内容与 `state.lgwf_wf_create.implementation_audit_result` 对应，是本节点的主验收依据。
+- `.lgwf/implementation_audit_result.json`：上一个节点 `audit_current_implementation` 的结构化结果文件；内容与 `state.lgwf_wf_create.implementation_audit_result` 对应，是本节点的主验收依据。
 - `.lgwf/implementation_context.json`：目标 package 路径上下文。
 - `.lgwf/implementation_result.json`：ACT 阶段声明的生成结果。
-- `.lgwf/implementation_observe.json`：上一个节点 `audit_created_package` 已写入的确定性 audit 结果文件，必须与 `.lgwf/implementation_audit_result.json` 互相校验。
+- `.lgwf/implementation_observe.json`：上一个节点 `audit_current_implementation` 已写入的确定性 audit 结果文件，必须与 `.lgwf/implementation_audit_result.json` 互相校验。
 - `.lgwf/scaffold_package_result.json`：上游确定性脚手架计划，是目录和文件结构验收的事实来源。
 
 ## Mandatory First Step

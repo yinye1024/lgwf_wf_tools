@@ -44,8 +44,16 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             "01_implement_units/scripts/merge_implementation_results.py",
             "merge_implementation_results",
         )
+        cls.prepare_repair = load_module(
+            "02_repair_implementation_react/02_act_repair/scripts/prepare_repair_context.py",
+            "prepare_repair_context",
+        )
+        cls.publish_repair = load_module(
+            "02_repair_implementation_react/02_act_repair/scripts/publish_repair_result.py",
+            "publish_repair_result",
+        )
 
-    def seed_context(self, root: Path, observe: dict[str, object] | None = None) -> Path:
+    def seed_context(self, root: Path) -> Path:
         target_package = root / "workspace" / "skills" / "demo-workflow"
         lgwf_dir = root / ".lgwf"
         lgwf_dir.mkdir(parents=True, exist_ok=True)
@@ -154,16 +162,6 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                 }
             },
         )
-        (lgwf_dir / "implementation_reason.md").write_text("本轮实现全部已确认阶段。", encoding="utf-8")
-        write_json(
-            lgwf_dir / "implementation_observe.json",
-            observe
-            or {
-                "initial": True,
-                "passed": False,
-                "failures": ["首轮尚未执行 authoring audit"],
-            },
-        )
         return target_package
 
     def test_initial_prepare_generates_disjoint_units(self) -> None:
@@ -185,6 +183,10 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             root_unit = next(unit for unit in units if unit["unit_id"] == "root_workflow")
             stage_unit = next(unit for unit in units if unit["unit_id"] == "stage_01_collect_context")
             support_unit = next(unit for unit in units if unit["unit_id"] == "shared_helpers_tests")
+            for unit in units:
+                self.assertNotIn("implementation_reason", unit)
+                self.assertNotIn("observe", unit)
+                self.assertNotIn("repair_focus", unit)
             self.assertEqual(
                 package_unit["package_relative_files"],
                 ["AGENTS.md", "README.md", "entry_contract.json", "wf/artifact_contracts.json"],
@@ -235,61 +237,6 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertIn("generated_files", result_schema["required"])
             self.assertIn("缺少 schema 时记录 blocked_reason", instructions)
             self.assertIn("不要递归搜索 .lgwf", instructions)
-
-    def test_prepare_uses_observe_failures_to_select_affected_units(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            target_package = self.seed_context(root)
-            missing_stage_workflow = target_package / "wf" / "02_run_checks" / "workflow.lgwf"
-            failure = f"{missing_stage_workflow}:3:1 触发 DSL 语法错误"
-            self.seed_context(
-                root,
-                {
-                    "passed": False,
-                    "failures": [failure],
-                },
-            )
-
-            result = self.prepare_units.build_implementation_units(root)
-            unit_ids = [unit["unit_id"] for unit in result["implementation_units"]]
-
-            self.assertEqual(result["selection_mode"], "repair")
-            self.assertIn("stage_02_run_checks", unit_ids)
-            self.assertNotIn("stage_01_collect_context", unit_ids)
-
-    def test_prepare_selects_root_workflow_without_package_contracts_for_root_workflow_failure(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            self.seed_context(
-                root,
-                {
-                    "passed": False,
-                    "failures": ["wf\\workflow.lgwf:3:1 触发 DSL 语法错误：Expected ';'。"],
-                },
-            )
-
-            result = self.prepare_units.build_implementation_units(root)
-            unit_ids = [unit["unit_id"] for unit in result["implementation_units"]]
-
-            self.assertEqual(result["selection_mode"], "repair")
-            self.assertEqual(unit_ids, ["root_workflow"])
-
-    def test_prepare_selects_support_unit_for_unallocated_scaffold_dir_failure(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            self.seed_context(
-                root,
-                {
-                    "passed": False,
-                    "failures": ["scaffold_plan create_dir scripts 不存在"],
-                },
-            )
-
-            result = self.prepare_units.build_implementation_units(root)
-            unit_ids = [unit["unit_id"] for unit in result["implementation_units"]]
-
-            self.assertEqual(result["selection_mode"], "repair")
-            self.assertEqual(unit_ids, ["shared_helpers_tests"])
 
     def test_merge_records_foreach_collected_failures_with_unit_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -506,6 +453,114 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                 ["wf/01_collect_context/workflow.lgwf"],
             )
             self.assertTrue((root / ".lgwf" / "implementation_result.json").is_file())
+
+    def test_prepare_repair_context_uses_reason_target_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            write_json(
+                root / ".lgwf" / "implementation_repair_reason.json",
+                {
+                    "repair_required": True,
+                    "repair_units": [
+                        {
+                            "unit_id": "repair_root_workflow",
+                            "target_files": ["wf/workflow.lgwf", "wf/workflow.lgwf"],
+                        },
+                        {
+                            "unit_id": "repair_stage",
+                            "target_files": ["wf/01_collect_context/workflow.lgwf"],
+                        },
+                    ],
+                },
+            )
+
+            result = self.prepare_repair.build_repair_context(root)
+
+            self.assertTrue(result["repair_required"])
+            self.assertEqual(result["target_files"], ["wf/workflow.lgwf", "wf/01_collect_context/workflow.lgwf"])
+            self.assertEqual(
+                result["workspace_output_files"],
+                [
+                    ".lgwf/implementation_repair_stage/wf/workflow.lgwf",
+                    ".lgwf/implementation_repair_stage/wf/01_collect_context/workflow.lgwf",
+                ],
+            )
+            self.assertTrue((root / ".lgwf" / "implementation_repair_context.json").is_file())
+
+    def test_prepare_repair_context_noops_when_audit_passed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            write_json(
+                root / ".lgwf" / "implementation_repair_reason.json",
+                {"repair_required": False, "repair_units": [{"target_files": ["wf/workflow.lgwf"]}]},
+            )
+
+            result = self.prepare_repair.build_repair_context(root)
+
+            self.assertFalse(result["repair_required"])
+            self.assertEqual(result["target_files"], [])
+            self.assertEqual(result["workspace_output_files"], [])
+
+    def test_publish_repair_result_updates_target_and_implementation_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            (target_package / "wf").mkdir(parents=True, exist_ok=True)
+            write_json(
+                root / ".lgwf" / "implementation_repair_context.json",
+                {
+                    "repair_required": True,
+                    "unit_output_dir": ".lgwf/implementation_repair_stage",
+                    "target_files": ["wf/workflow.lgwf"],
+                },
+            )
+            write_json(
+                root / ".lgwf" / "implementation_repair_result.json",
+                {"status": "ok", "generated_files": [{"path": "wf/workflow.lgwf"}]},
+            )
+            write_json(
+                root / ".lgwf" / "implementation_result.json",
+                {"status": "ok", "generated_files": [{"path": "README.md"}]},
+            )
+            staged = root / ".lgwf" / "implementation_repair_stage" / "wf" / "workflow.lgwf"
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            staged.write_text("WORKFLOW demo;\n", encoding="utf-8")
+
+            result = self.publish_repair.publish_repair_result(root)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual((target_package / "wf" / "workflow.lgwf").read_text(encoding="utf-8"), "WORKFLOW demo;\n")
+            implementation_result = json.loads(
+                (root / ".lgwf" / "implementation_result.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                implementation_result["generated_files"],
+                [{"path": "README.md"}, {"path": "wf/workflow.lgwf"}],
+            )
+            self.assertEqual(implementation_result["repair_rounds"][0]["status"], "ok")
+
+    def test_publish_repair_result_rejects_files_outside_repair_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            write_json(
+                root / ".lgwf" / "implementation_repair_context.json",
+                {
+                    "repair_required": True,
+                    "unit_output_dir": ".lgwf/implementation_repair_stage",
+                    "target_files": ["wf/workflow.lgwf"],
+                },
+            )
+            write_json(
+                root / ".lgwf" / "implementation_repair_result.json",
+                {"status": "ok", "generated_files": [{"path": "README.md"}]},
+            )
+            write_json(root / ".lgwf" / "implementation_result.json", {"status": "ok", "generated_files": []})
+
+            with self.assertRaises(ValueError):
+                self.publish_repair.publish_repair_result(root)
 
 
 if __name__ == "__main__":

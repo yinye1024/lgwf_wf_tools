@@ -530,6 +530,143 @@
       },
       "additionalProperties": true
     },
+    ".lgwf/implementation_repair_reason.json": {
+      "type": "object",
+      "required": [
+        "repair_required",
+        "repair_goal",
+        "root_causes",
+        "affected_files",
+        "repair_units",
+        "do_not_change",
+        "success_checks"
+      ],
+      "properties": {
+        "repair_required": {
+          "type": "boolean"
+        },
+        "repair_goal": {
+          "type": "string"
+        },
+        "root_causes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "affected_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repair_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "unit_id",
+              "target_files",
+              "reason",
+              "success_checks"
+            ],
+            "properties": {
+              "unit_id": {
+                "type": "string"
+              },
+              "target_files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "reason": {
+                "type": "string"
+              },
+              "success_checks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "do_not_change": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "success_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    ".lgwf/implementation_repair_result.json": {
+      "type": "object",
+      "required": [
+        "status",
+        "no_op",
+        "generated_files",
+        "repair_notes",
+        "remaining_risks"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "partial",
+            "blocked",
+            "failed"
+          ]
+        },
+        "no_op": {
+          "type": "boolean"
+        },
+        "generated_files": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            ]
+          }
+        },
+        "repair_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "remaining_risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     ".lgwf/implementation_observe.json": {
       "type": "object",
       "required": [
@@ -564,6 +701,37 @@
         },
         "summary": {
           "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    ".lgwf/implementation_repair_decision_analysis.json": {
+      "type": "object",
+      "required": [
+        "recommended_next",
+        "reason",
+        "repeat_issue_signatures",
+        "no_progress_risk"
+      ],
+      "properties": {
+        "recommended_next": {
+          "type": "string",
+          "enum": [
+            "continue",
+            "exit"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "repeat_issue_signatures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "no_progress_risk": {
+          "type": "boolean"
         }
       },
       "additionalProperties": true

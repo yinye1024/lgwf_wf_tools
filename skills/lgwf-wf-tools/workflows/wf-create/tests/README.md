@@ -11,6 +11,7 @@
 - `scaffold_package` 的状态边界：脚手架只创建目标 package 框架，不向目标 package 根目录写入 `.lgwf`，运行状态仍归 `ws/.lgwf`。
 - REVIEW 确认节点固定使用 `approve`、`revise`、`reject` 三选项：`approve` 固化 confirmed artifact，`revise` 带完整 JSON 重入同一 REVIEW 节点，`reject` 通过 `FAIL_ALL` 终止。
 - 步骤设计阶段的文档模板、REVIEW 决策结构和实现阶段边界约定。
+- 实现阶段按 `01_implement_units` 初版 FOREACH 加 `02_repair_implementation_react` 修复 ReAct 验证；audit/observe/decision 只作为 repair 内部循环产物，不作为 summary 或 handoff 的外部输入。
 - `summarize_create_result` 的运行时结果汇总接口和报告路径。
 
 ## 建议验证命令
@@ -26,7 +27,7 @@ python -m unittest discover tests
 - 验证入口会检查根目录没有 `workflow.lgwf` 和 `SKILL.md`，真实入口固定为 `wf/workflow.lgwf`。
 - 验证入口会检查 `wf/workflow.lgwf` 的阶段顺序、REVIEW route 与 resource path，仅允许包内相对路径。
 - 验证入口会检查 `README.md`、`AGENTS.md`、`tests/README.md` 和 `summarize_create_result` 脚本能够以 UTF-8 正常读取，且中文说明可读。
-- 验证入口会检查 `wf/06_summarize_create_result/scripts/summarize_create_result.py` 已定义第一版结果汇总接口，不暗示后续 workflow 已集成。
+- 验证入口会检查 `wf/06_summarize_create_result/scripts/summarize_create_result.py` 已定义结果汇总接口，并检查 `wf/07_post_fix_handoff/` 承载 wf-post-fix 人工交接，不自动执行后续 workflow。
 - 如需单独验证脚手架规则函数，可额外执行 `python -m unittest tests.test_scaffold_package_rules`。
 
 未覆盖范围：

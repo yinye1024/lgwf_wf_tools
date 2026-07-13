@@ -1,0 +1,88 @@
+WORKFLOW repair_implementation_react;
+ENTRY initialize_repair_feedback;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY initialize_repair_feedback
+  SCRIPT "scripts/initialize_repair_feedback.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.initialize_repair_feedback_result
+  CONTRACT {
+    WRITE workspace file ".lgwf/implementation_decision.json";
+    WRITE workspace file ".lgwf/implementation_repair_decision_analysis.json";
+  };
+
+STEP prepare_initial_observe
+  WORKFLOW "03_observe_repair/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_audit_result.json";
+    WRITE workspace file ".lgwf/implementation_observe.json";
+  };
+
+REACT repair_implementation_react MAX 3
+  SPEC "agents/spec.md"
+  CONTRACT {
+  }
+  REASON WORKFLOW reason_repair
+    WORKFLOW "01_reason_repair/workflow.lgwf"
+    RESULT state.lgwf_wf_create.repair_reason_result
+    CONTRACT {
+      READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+      READ workspace dir ".lgwf/create_reference_context";
+      READ workspace file ".lgwf/implementation_audit_result.json";
+      READ workspace file ".lgwf/implementation_context.json";
+      READ workspace file ".lgwf/implementation_decision.json";
+      READ workspace file ".lgwf/implementation_repair_decision_analysis.json";
+      READ workspace file ".lgwf/implementation_observe.json";
+      READ workspace file ".lgwf/implementation_result.json";
+      READ workspace file ".lgwf/scaffold_package_result.json";
+      READ workspace file ".lgwf/step_designs.json";
+      WRITE workspace file ".lgwf/implementation_repair_reason.json";
+    }
+  ACT WORKFLOW act_repair
+    WORKFLOW "02_act_repair/workflow.lgwf"
+    RESULT state.lgwf_wf_create.repair_act_result
+    CONTRACT {
+      READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+      READ workspace dir ".lgwf/create_reference_context";
+      READ workspace file ".lgwf/implementation_audit_result.json";
+      READ workspace file ".lgwf/implementation_context.json";
+      READ workspace file ".lgwf/implementation_observe.json";
+      READ workspace file ".lgwf/implementation_repair_reason.json";
+      READ workspace file ".lgwf/implementation_result.json";
+      READ workspace file ".lgwf/scaffold_package_result.json";
+      READ workspace file ".lgwf/step_designs.json";
+      WRITE workspace file ".lgwf/implementation_result.json";
+    }
+  DECIDE WORKFLOW decide_repair
+    WORKFLOW "04_decide_repair/workflow.lgwf"
+    RESULT state.lgwf_wf_create.repair_decide_result
+    CONTRACT {
+      READ workspace file ".lgwf/implementation_audit_result.json";
+      READ workspace file ".lgwf/implementation_observe.json";
+      WRITE workspace file ".lgwf/implementation_repair_decision_analysis.json";
+      WRITE workspace file ".lgwf/implementation_decision.json";
+    }
+  OBSERVE WORKFLOW observe_repair
+    WORKFLOW "03_observe_repair/workflow.lgwf"
+    RESULT state.lgwf_wf_create.repair_observe_result
+    CONTRACT {
+      READ workspace file ".lgwf/implementation_audit_result.json";
+      READ workspace file ".lgwf/implementation_context.json";
+      READ workspace file ".lgwf/implementation_result.json";
+      READ workspace file ".lgwf/scaffold_package_result.json";
+      READ workspace file ".lgwf/step_designs.json";
+      WRITE workspace file ".lgwf/implementation_audit_result.json";
+      WRITE workspace file ".lgwf/implementation_observe.json";
+    };
+
+FLOW initialize_repair_feedback
+  THEN prepare_initial_observe
+  THEN repair_implementation_react;

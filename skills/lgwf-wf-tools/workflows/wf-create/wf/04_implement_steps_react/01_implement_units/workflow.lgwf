@@ -20,8 +20,6 @@ PY prepare_implementation_units
   }
   CONTRACT {
     READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/implementation_observe.json";
-    READ workspace file ".lgwf/implementation_reason.md";
     READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
     WRITE state.lgwf_wf_create.prepare_implementation_units_result;

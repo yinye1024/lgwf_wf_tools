@@ -1,0 +1,57 @@
+WORKFLOW act_repair;
+ENTRY prepare_repair_context;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY prepare_repair_context
+  SCRIPT "scripts/prepare_repair_context.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.prepare_repair_context_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_audit_result.json";
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_observe.json";
+    READ workspace file ".lgwf/implementation_repair_reason.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_repair_context.json";
+  };
+
+CODEX act_repair
+  PROMPT "agents/act_repair.md"
+  CONTEXT workspace file ".lgwf/implementation_repair_context.json"
+  CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context"
+  OUTPUT_JSON ".lgwf/implementation_repair_result.json" AS_FILE
+  TIMEOUT 1200
+  RESULT state.lgwf_wf_create.act_repair_result
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_repair_context.json";
+    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    READ workspace dir ".lgwf/create_reference_context";
+    WRITE workspace file ".lgwf/implementation_repair_result.json";
+    WRITE workspace dir ".lgwf/implementation_repair_stage";
+  };
+
+PY publish_repair_result
+  SCRIPT "scripts/publish_repair_result.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create.publish_repair_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_repair_context.json";
+    READ workspace file ".lgwf/implementation_repair_result.json";
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace dir ".lgwf/implementation_repair_stage";
+    WRITE workspace file ".lgwf/implementation_result.json";
+  };
+
+FLOW prepare_repair_context
+  THEN act_repair
+  THEN publish_repair_result;

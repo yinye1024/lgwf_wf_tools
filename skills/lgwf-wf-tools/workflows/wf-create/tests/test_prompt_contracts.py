@@ -223,8 +223,10 @@ class PromptContractTest(unittest.TestCase):
             "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/workflow.lgwf:observe_step_designs",
             "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/workflow.lgwf:decide_step_designs",
             "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf:implement_current_unit",
-            "04_implement_steps_react/02_observe_audit/workflow.lgwf:observe_implementation",
-            "04_implement_steps_react/workflow.lgwf:reason",
+            "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/workflow.lgwf:reason_repair",
+            "04_implement_steps_react/02_repair_implementation_react/02_act_repair/workflow.lgwf:act_repair",
+            "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/workflow.lgwf:observe_repair",
+            "04_implement_steps_react/02_repair_implementation_react/04_decide_repair/workflow.lgwf:decide_repair",
         }
         found_nodes: dict[str, str] = {}
         for workflow_path in sorted(ROOT.rglob("*.lgwf")):
@@ -270,7 +272,10 @@ class PromptContractTest(unittest.TestCase):
                 ".lgwf/step_design_semantic_observation.json",
                 ".lgwf/step_design_decision_analysis.json",
                 ".lgwf/current_implementation_unit_result.json",
+                ".lgwf/implementation_repair_reason.json",
+                ".lgwf/implementation_repair_result.json",
                 ".lgwf/implementation_observe.json",
+                ".lgwf/implementation_repair_decision_analysis.json",
             },
             output_json_paths,
         )
@@ -328,20 +333,41 @@ class PromptContractTest(unittest.TestCase):
         root_workflow = read("workflow.lgwf")
         workflow = read("03_confirm_step_designs/03_step_design_review/workflow.lgwf")
         implement_workflow = read("04_implement_steps_react/workflow.lgwf")
-        observe_workflow = read("04_implement_steps_react/02_observe_audit/workflow.lgwf")
-        spec = read("04_implement_steps_react/agents/spec.md")
-        observe_prompt = read("04_implement_steps_react/02_observe_audit/agents/observe.md")
+        repair_workflow = read("04_implement_steps_react/02_repair_implementation_react/workflow.lgwf")
+        observe_workflow = read(
+            "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/workflow.lgwf"
+        )
+        spec = read("04_implement_steps_react/02_repair_implementation_react/agents/spec.md")
+        observe_prompt = read(
+            "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/agents/observe_repair.md"
+        )
         self.assertIn("PY prepare_implementation_context", workflow)
         self.assertRegex(workflow, r"apply_confirmed_step_designs\s+THEN\s+prepare_implementation_context")
         self.assertNotIn('READ workspace file ".lgwf/implementation_context.json";', workflow)
         self.assertIn('WRITE workspace file ".lgwf/implementation_context.json";', workflow)
         self.assertIn('WORKFLOW "04_implement_steps_react/workflow.lgwf"', root_workflow)
-        self.assertIn('SPEC "agents/spec.md"', implement_workflow)
-        self.assertTrue((ROOT / "04_implement_steps_react/agents/spec.md").exists())
+        self.assertNotIn("REACT implement_steps_react", implement_workflow)
+        self.assertIn('WORKFLOW "01_implement_units/workflow.lgwf"', implement_workflow)
+        self.assertIn('WORKFLOW "02_repair_implementation_react/workflow.lgwf"', implement_workflow)
+        self.assertRegex(implement_workflow, r"implement_initial_units\s+THEN\s+repair_implementation")
+        self.assertFalse((ROOT / "04_implement_steps_react/agents/spec.md").exists())
+        self.assertFalse((ROOT / "04_implement_steps_react/agents/reason.md").exists())
+        self.assertIn("REACT repair_implementation_react MAX 3", repair_workflow)
+        self.assertIn("REASON WORKFLOW reason_repair", repair_workflow)
+        self.assertIn("ACT WORKFLOW act_repair", repair_workflow)
+        self.assertIn("OBSERVE WORKFLOW observe_repair", repair_workflow)
+        self.assertIn("DECIDE WORKFLOW decide_repair", repair_workflow)
+        self.assertIn('SPEC "agents/spec.md"', repair_workflow)
+        self.assertIn('WORKFLOW "03_observe_repair/workflow.lgwf"', repair_workflow)
+        self.assertTrue((ROOT / "04_implement_steps_react/02_repair_implementation_react/agents/spec.md").exists())
         self.assertFalse((ROOT / "03_confirm_step_designs/agents/implement_steps_react_spec.md").exists())
         self.assertIn('workspace file ".lgwf/implementation_context.json"', implement_workflow)
-        self.assertIn('workspace file ".lgwf/implementation_audit_result.json"', implement_workflow)
-        self.assertIn('workspace file ".lgwf/implementation_observe.json"', implement_workflow)
+        self.assertNotIn('workspace file ".lgwf/implementation_audit_result.json"', implement_workflow)
+        self.assertNotIn('workspace file ".lgwf/implementation_observe.json"', implement_workflow)
+        self.assertNotIn('workspace file ".lgwf/implementation_decision.json"', implement_workflow)
+        self.assertIn('WRITE workspace file ".lgwf/implementation_audit_result.json";', repair_workflow)
+        self.assertIn('WRITE workspace file ".lgwf/implementation_observe.json";', repair_workflow)
+        self.assertIn('WRITE workspace file ".lgwf/implementation_decision.json";', repair_workflow)
         self.assertIn('workspace file ".lgwf/scaffold_package_result.json"', implement_workflow)
         self.assertIn(
             'workspace file ".lgwf/create_reference_context/implementation-reference-index.md"',
@@ -352,9 +378,9 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("target_package_abs", spec)
         self.assertIn("target_package_root` 是 `workspace_root` 相对路径", spec)
         self.assertIn("禁止从 `work_dir` 使用 `..`", spec)
-        self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
-        self.assertIn("scripts/audit_created_package.py", observe_workflow)
-        self.assertIn("CODEX observe_implementation", observe_workflow)
+        self.assertIn("PY audit_current_implementation", observe_workflow)
+        self.assertIn("scripts/audit_current_implementation.py", observe_workflow)
+        self.assertIn("CODEX observe_repair", observe_workflow)
         self.assertNotIn('workflow file "agents/spec.md"', observe_workflow)
         self.assertNotIn('READ workflow file "agents/spec.md";', observe_workflow)
         self.assertNotIn("INSTRUCTION state.lgwf_wf_create.implementation_audit_result", observe_workflow)
@@ -369,7 +395,6 @@ class PromptContractTest(unittest.TestCase):
         act_workflow = read("04_implement_steps_react/01_implement_units/workflow.lgwf")
         unit_workflow = read("04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf")
         unit_prompt = read("04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/act_unit.md")
-        self.assertIn("ACT WORKFLOW implement_units", implement_workflow)
         self.assertIn('WORKFLOW "01_implement_units/workflow.lgwf"', implement_workflow)
         self.assertNotIn("ACT CODEX", implement_workflow)
         self.assertIn("FOREACH implement_each_unit", act_workflow)
@@ -397,26 +422,38 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("stage_dir", unit_prompt)
         self.assertIn("workflow_ref", unit_prompt)
 
-    def test_implementation_react_shared_rules_live_in_spec(self) -> None:
-        spec = read("04_implement_steps_react/agents/spec.md")
+    def test_repair_react_shared_rules_live_in_repair_spec(self) -> None:
+        spec = read("04_implement_steps_react/02_repair_implementation_react/agents/spec.md")
         duplicate_specs = (
+            "04_implement_steps_react/agents/spec.md",
+            "04_implement_steps_react/agents/reason.md",
             "04_implement_steps_react/01_implement_units/agents/spec.md",
             "04_implement_steps_react/01_implement_units/agents/act.md",
             "04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/spec.md",
-            "04_implement_steps_react/02_observe_audit/agents/spec.md",
+            "04_implement_steps_react/02_observe_audit",
             "04_implement_steps_react/README.md",
             "04_implement_steps_react/01_implement_units/README.md",
             "04_implement_steps_react/01_implement_units/01_implement_one_unit/README.md",
-            "04_implement_steps_react/02_observe_audit/README.md",
+            "04_implement_steps_react/02_repair_implementation_react/README.md",
         )
         for relative in duplicate_specs:
             self.assertFalse((ROOT / relative).exists(), relative)
         role_prompts = {
-            "reason": read("04_implement_steps_react/agents/reason.md"),
+            "reason_repair": read(
+                "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/agents/reason_repair.md"
+            ),
         }
         local_prompts = {
             "act_unit": read("04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/act_unit.md"),
-            "observe": read("04_implement_steps_react/02_observe_audit/agents/observe.md"),
+            "act_repair": read(
+                "04_implement_steps_react/02_repair_implementation_react/02_act_repair/agents/act_repair.md"
+            ),
+            "observe_repair": read(
+                "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/agents/observe_repair.md"
+            ),
+            "decide_repair": read(
+                "04_implement_steps_react/02_repair_implementation_react/04_decide_repair/agents/decide_repair.md"
+            ),
         }
 
         self.assertIn("## ReAct 共同准则", spec)
@@ -450,16 +487,19 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("只能写 `workspace_output_files`", local_prompts["act_unit"])
         self.assertIn("schema 只来自 `target_output_file_schemas`", local_prompts["act_unit"])
         self.assertIn("不递归读 `.lgwf`", local_prompts["act_unit"])
-        self.assertIn("audit 解释边界", local_prompts["observe"])
+        self.assertIn("只能写 `workspace_output_files`", local_prompts["act_repair"])
+        self.assertIn("audit 解释边界", local_prompts["observe_repair"])
+        self.assertIn("不直接写 `next`", local_prompts["decide_repair"])
 
     def test_implementation_act_is_resumable_and_not_bound_to_default_timeout(self) -> None:
         workflow = read("04_implement_steps_react/workflow.lgwf")
         act_workflow = read("04_implement_steps_react/01_implement_units/workflow.lgwf")
-        reason_block = re.search(r"REASON CODEX.*?ACT WORKFLOW", workflow, re.S)
-        act_block = re.search(r"ACT WORKFLOW.*?OBSERVE WORKFLOW", workflow, re.S)
-        self.assertIsNotNone(reason_block)
-        self.assertIsNotNone(act_block)
-        self.assertRegex(reason_block.group(0), r"TIMEOUT\s+1200")
+        repair_workflow = read("04_implement_steps_react/02_repair_implementation_react/workflow.lgwf")
+        act_repair_workflow = read("04_implement_steps_react/02_repair_implementation_react/02_act_repair/workflow.lgwf")
+        self.assertIn("STEP implement_initial_units", workflow)
+        self.assertIn("STEP repair_implementation", workflow)
+        self.assertIn("REACT repair_implementation_react MAX 3", repair_workflow)
+        self.assertIn("TIMEOUT 1200", act_repair_workflow)
         self.assertIn("PY prepare_implementation_units", act_workflow)
         self.assertIn("PY merge_implementation_results", act_workflow)
 

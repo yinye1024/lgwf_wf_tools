@@ -12,6 +12,7 @@ PY prepare_step_design_proposal_react_feedback
   RESULT state.lgwf_wf_create.step_design_proposal_react_feedback_prepare_result
   CONTRACT {
     WRITE workspace file ".lgwf/step_design_observation.json";
+    WRITE workspace file ".lgwf/step_designs_proposal.json";
     WRITE workspace file ".lgwf/step_designs_proposal_quality_gate.json";
     WRITE workspace file ".lgwf/step_designs_proposal_decision.json";
   };
@@ -27,6 +28,11 @@ REACT step_design_proposal_react MAX 3
       READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/scaffold_package_result.json";
       READ workspace file ".lgwf/step_design_observation.json";
+      READ workspace file ".lgwf/step_design_structural_gate.json";
+      READ workspace file ".lgwf/step_design_semantic_observation.json";
+      READ workspace file ".lgwf/step_designs_proposal_quality_gate.json";
+      READ workspace file ".lgwf/step_design_decision_analysis.json";
+      READ workspace file ".lgwf/step_designs_proposal.json";
       READ workspace file ".lgwf/step_designs_proposal_decision.json";
       WRITE workspace file ".lgwf/step_design_reason.json";
     }

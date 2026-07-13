@@ -69,7 +69,7 @@
 ## Constraints
 
 - 不修改 `.lgwf/step_designs_proposal.json`。
-- 不写 `.lgwf/step_designs.json`。
+- 不写已确认的 step designs artifact。
 - 不得把脚本 structural gate 的失败结果改写为通过；如果 structural gate 已失败，语义审查仍可补充问题，但不能声明整体可通过。
 - `reason_feedback` 必须足够让下一轮 REASON 生成 targeted repair 指令。
 - `issue_id` 必须稳定，便于 DECIDE 识别重复失败。

@@ -19,7 +19,7 @@
 
 ## Task
 
-1. 判断本轮模式：首轮使用 `round_mode=first_round`；如果 `.lgwf/step_design_observation.json.reason_feedback` 已给出具体问题，使用 `round_mode=targeted_repair`。
+1. 判断本轮模式：首轮使用 `round_mode=first_round`；如果 `.lgwf/step_design_observation.json` 中的 `reason_feedback` 已给出具体问题，使用 `round_mode=targeted_repair`。
 2. 将 `reason_feedback.priority_issue_ids`、`must_preserve`、`must_change`、`forbidden_changes` 和 `act_instruction_patch` 转换成本轮 `ACT` 指令。
 3. 对照已确认需求、已确认业务流和 scaffold plan，补充 `ACT` 必须保留的目标 identity、目录边界和 source reference 要求。
 4. 如果上一轮没有进展，只记录 `risk_notes`，不要自行改写 proposal。

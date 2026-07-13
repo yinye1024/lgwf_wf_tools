@@ -22,6 +22,7 @@ DEFAULT_SCOPE_BOUNDARY = {
         "脚手架规则与路径边界",
         "步骤设计模板、确认模板与实现初稿接口",
         "结果汇总接口与最小结构性验证入口",
+        "wf-post-fix 人工确认交接",
     ],
     "out_of_scope": [
         "lgwf-wf-prompt-fix 集成",
@@ -42,12 +43,10 @@ DEFAULT_RUNTIME_ARTIFACTS = [
     ".lgwf/business_flow.json",
     ".lgwf/step_designs_proposal.json",
     ".lgwf/step_design_confirmation_record.json",
-    ".lgwf/implementation_audit_result.json",
-    ".lgwf/implementation_observe.json",
-    ".lgwf/implementation_decision.json",
     ".lgwf/step_designs.json",
     ".lgwf/implementation_result.json",
     ".lgwf/create_result_summary.json",
+    ".lgwf/post_fix_handoff_input.json",
 ]
 
 
@@ -111,8 +110,6 @@ def payload_from_implementation_result(root: Path) -> dict[str, Any]:
     implementation = load_json(root / ".lgwf" / "implementation_result.json")
     if not implementation:
         return {}
-    audit_result = load_json(root / ".lgwf" / "implementation_audit_result.json")
-    observe_result = load_json(root / ".lgwf" / "implementation_observe.json")
     package_root = str(implementation.get("target_package_root", "")).strip()
     workflow_name = str(implementation.get("workflow_name", "")).strip()
     if not package_root or not workflow_name:
@@ -147,20 +144,6 @@ def payload_from_implementation_result(root: Path) -> dict[str, Any]:
         payload["produced_files"] = produced_files
     if validation_entry:
         payload["validation_entry"] = validation_entry
-    if audit_result:
-        payload["implementation_audit"] = {
-            "passed": audit_result.get("passed"),
-            "status": audit_result.get("status"),
-            "needs_post_fix": bool(audit_result.get("needs_post_fix")),
-            "failures": audit_result.get("failures", []),
-        }
-    elif observe_result:
-        payload["implementation_audit"] = {
-            "passed": observe_result.get("passed"),
-            "status": observe_result.get("status"),
-            "needs_post_fix": bool(observe_result.get("needs_post_fix")),
-            "failures": observe_result.get("failures", []),
-        }
     return payload
 
 
@@ -213,6 +196,8 @@ def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
             "AGENTS.md",
             "tests/test_structured_contracts.py",
             "wf/06_summarize_create_result/scripts/summarize_create_result.py",
+            "wf/07_post_fix_handoff/workflow.lgwf",
+            "wf/07_post_fix_handoff/scripts/prepare_post_fix_handoff.py",
         ],
     )
     if not isinstance(produced_files, list):
@@ -275,7 +260,6 @@ def write_report(root: Path, summary: dict[str, Any]) -> Path:
         f"- workflow：`{summary['workflow_name']}`",
         f"- 状态：`{summary['status']}`",
         f"- 最小验证：`{summary['validation']['minimal_command']}`",
-        f"- 实现验收：`{summary.get('implementation_audit', {}).get('status', 'unknown')}`",
         "",
         "## 产物",
         "",

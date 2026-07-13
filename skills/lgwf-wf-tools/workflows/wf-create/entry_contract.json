@@ -41,9 +41,11 @@
     "target_writes": "approved generated workflow package"
   },
   "outputs": {
+    "implementation_result": ".lgwf/implementation_result.json",
     "summary": ".lgwf/create_result_summary.json",
     "handoff": ".lgwf/post_fix_handoff_input.json",
-    "reports": []
+    "report": "reports/create-workflow/create_result_report.md",
+    "internal_note": ".lgwf/implementation_audit_result.json, .lgwf/implementation_observe.json and .lgwf/implementation_decision.json are internal to 02_repair_implementation_react and are not external outputs."
   },
   "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
 }

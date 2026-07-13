@@ -44,13 +44,11 @@ STEP implement_steps_react
   WORKFLOW "04_implement_steps_react/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    READ workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
     READ workspace dir ".lgwf/create_reference_context";
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
-    WRITE workspace file ".lgwf/implementation_audit_result.json";
-    WRITE workspace file ".lgwf/implementation_decision.json";
-    WRITE workspace file ".lgwf/implementation_observe.json";
     WRITE workspace file ".lgwf/implementation_result.json";
   };
 
@@ -59,28 +57,19 @@ STEP summarize_create_result
   CONTRACT {
     READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/implementation_audit_result.json";
-    READ workspace file ".lgwf/implementation_observe.json";
     READ workspace file ".lgwf/implementation_result.json";
+    WRITE workspace file ".lgwf/create_result_summary.json";
     WRITE state.lgwf_wf_create.summary_result;
   };
 
-PY prepare_post_fix_handoff
-  SCRIPT "scripts/prepare_post_fix_handoff.py"
-  INPUT state.lgwf_wf_create.summary_result
-  RESULT state.lgwf_wf_create.post_fix_handoff_payload
-  UPDATES_STATE
+STEP post_fix_handoff
+  WORKFLOW "07_post_fix_handoff/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/implementation_audit_result.json";
-    READ workspace file ".lgwf/implementation_observe.json";
+    READ workspace file ".lgwf/create_result_summary.json";
     READ state.lgwf_wf_create.summary_result;
-  };
-
-HANDOFF handoff_wf_post_fix
-  CONTEXT state.lgwf_wf_create.post_fix_handoff_payload
-  PROMPT "handoff_wf_post_fix.md"
-  RESULT state.lgwf_wf_create.post_fix_handoff
-  CONTRACT {
+    WRITE workspace file ".lgwf/post_fix_handoff_input.json";
+    WRITE state.lgwf_wf_create.post_fix_handoff_payload;
+    WRITE state.lgwf_wf_create.post_fix_handoff;
   };
 
 FLOW define_requirements
@@ -88,5 +77,4 @@ FLOW define_requirements
   THEN implement_draft
   THEN implement_steps_react
   THEN summarize_create_result
-  THEN prepare_post_fix_handoff
-  THEN handoff_wf_post_fix;
+  THEN post_fix_handoff;

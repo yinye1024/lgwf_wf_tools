@@ -14,8 +14,6 @@ from validate_registry import run_validation
 
 
 FACADE_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = FACADE_ROOT.parents[1]
-SKILLS_ROOT = REPO_ROOT / "skills"
 REGISTRY_PATH = FACADE_ROOT / "registry.json"
 ROOT_SKILL_MD = FACADE_ROOT / "SKILL.md"
 MODULE_CONTRACT_PATH = FACADE_ROOT / "workflows" / "01-share" / "module-contract.md"
@@ -104,24 +102,6 @@ def run_module_contract_validation() -> dict[str, Any]:
         for token in ("input_mode", "auto_human_policy", "entry_contract.json"):
             if token not in entry_contract_text:
                 failures.append({"label": "entry_contract.token_declared", "token": token})
-
-    if SKILLS_ROOT.is_dir():
-        for skill_root in sorted(path for path in SKILLS_ROOT.iterdir() if path.is_dir()):
-            skill_name = skill_root.name
-            for filename in ("SKILL.md", "AGENTS.md", "README.md"):
-                if not (skill_root / filename).is_file():
-                    failures.append({"label": "skill.entry_doc.exists", "skill": skill_name, "file": filename})
-            agents_path = skill_root / "AGENTS.md"
-            if agents_path.is_file():
-                agents_text = agents_path.read_text(encoding="utf-8")
-                for topic in ("模块类型", "模块定位", "入口", "依赖", "状态边界", "验证", "禁止事项"):
-                    if topic not in agents_text:
-                        failures.append({"label": "skill.agents.topic_declared", "skill": skill_name, "topic": topic})
-            if (skill_root / "wf").is_dir():
-                if not (skill_root / "wf" / "workflow.lgwf").is_file():
-                    failures.append({"label": "skill.workflow.entry_exists", "skill": skill_name})
-                if not (skill_root / "ws").is_dir():
-                    failures.append({"label": "skill.workflow.work_dir_exists", "skill": skill_name})
 
     if REGISTRY_PATH.is_file():
         registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8-sig"))

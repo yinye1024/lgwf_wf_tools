@@ -260,10 +260,7 @@ def unit_payload(
     package_relative_files: list[str],
     package_relative_dirs: list[str],
     implementation_context: dict[str, Any],
-    implementation_reason: str,
-    observe: dict[str, Any],
     step_designs: list[dict[str, Any]],
-    repair_focus: list[str],
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     package_relative_files = unique([normalize_package_path(path) for path in package_relative_files])
@@ -279,9 +276,6 @@ def unit_payload(
         "package_relative_dirs": package_relative_dirs,
         "output_files": package_relative_files,
         "output_dirs": package_relative_dirs,
-        "implementation_reason": implementation_reason,
-        "observe": observe,
-        "repair_focus": repair_focus,
         "step_designs": step_designs,
     }
     if extra:
@@ -293,9 +287,6 @@ def all_units(
     implementation_context: dict[str, Any],
     step_designs_payload: dict[str, Any],
     scaffold_plan: dict[str, Any],
-    implementation_reason: str,
-    observe: dict[str, Any],
-    repair_focus: list[str],
 ) -> list[dict[str, Any]]:
     items = step_design_items(step_designs_payload)
     fallback_stage_ids = source_stage_ids(step_designs_payload)
@@ -314,10 +305,7 @@ def all_units(
             package_relative_files=package_files,
             package_relative_dirs=package_dirs,
             implementation_context=implementation_context,
-            implementation_reason=implementation_reason,
-            observe=observe,
             step_designs=[],
-            repair_focus=repair_focus,
             extra={
                 "scaffold_plan": scaffold_plan,
                 "package_profile": scaffold_plan.get("package_profile", implementation_context.get("package_profile", "")),
@@ -332,10 +320,7 @@ def all_units(
             package_relative_files=root_files,
             package_relative_dirs=root_dirs,
             implementation_context=implementation_context,
-            implementation_reason=implementation_reason,
-            observe=observe,
             step_designs=items,
-            repair_focus=repair_focus,
             extra={
                 "scaffold_plan": scaffold_plan,
                 "stage_manifest": stage_manifest_items(scaffold_plan),
@@ -359,10 +344,7 @@ def all_units(
                 package_relative_files=planned_files,
                 package_relative_dirs=planned_dirs,
                 implementation_context=implementation_context,
-                implementation_reason=implementation_reason,
-                observe=observe,
                 step_designs=stage_step_designs(items, stage_id),
-                repair_focus=repair_focus,
                 extra={
                     "scaffold_plan": scaffold_plan,
                     "stage_id": stage_id,
@@ -382,10 +364,7 @@ def all_units(
             package_relative_files=support_unit_files,
             package_relative_dirs=support_unit_output_dirs,
             implementation_context=implementation_context,
-            implementation_reason=implementation_reason,
-            observe=observe,
             step_designs=[],
-            repair_focus=repair_focus,
             extra={
                 "scaffold_plan": scaffold_plan,
                 "planned_files": support_unit_files,
@@ -396,92 +375,23 @@ def all_units(
     return units
 
 
-def failure_texts(observe: dict[str, Any]) -> list[str]:
-    failures = observe.get("failures", [])
-    if isinstance(failures, list):
-        return [str(item) for item in failures if str(item).strip()]
-    if isinstance(failures, str) and failures.strip():
-        return [failures]
-    return []
-
-
-def is_initial_observe(observe: dict[str, Any], failures: list[str]) -> bool:
-    if observe.get("initial") is True:
-        return True
-    return any("首轮尚未执行" in failure for failure in failures)
-
-
-def selected_unit_ids(units: list[dict[str, Any]], failures: list[str]) -> set[str]:
-    combined = "\n".join(failures).replace("\\", "/")
-    selected: set[str] = set()
-    for unit in units:
-        unit_id = str(unit.get("unit_id", ""))
-        markers = [
-            unit_id,
-            str(unit.get("stage_id", "")),
-            str(unit.get("stage_dir", "")),
-            str(unit.get("workflow_ref", "")),
-            *[str(path) for path in unit.get("planned_files", []) if isinstance(unit.get("planned_files", []), list)],
-            *[str(path) for path in unit.get("planned_dirs", []) if isinstance(unit.get("planned_dirs", []), list)],
-        ]
-        for marker in markers:
-            if marker and path_marker_in_text(combined, marker.replace("\\", "/")):
-                selected.add(unit_id)
-                break
-    package_markers = ("AGENTS.md", "README.md", "entry_contract.json", "artifact_contracts.json")
-    if any(path_marker_in_text(combined, marker) for marker in package_markers):
-        selected.add("package_contracts")
-    if "wf/workflow.lgwf" in combined or "root workflow" in combined or "根" in combined:
-        selected.add("root_workflow")
-    if "tests" in combined or "shared" in combined:
-        selected.add("shared_helpers_tests")
-    if not selected:
-        selected.add("root_workflow")
-        selected.update(str(unit.get("unit_id", "")) for unit in units if str(unit.get("unit_id", "")).startswith("stage_"))
-    return {unit_id for unit_id in selected if unit_id}
-
-
-def path_marker_in_text(text: str, marker: str) -> bool:
-    normalized = marker.strip().replace("\\", "/").strip("/")
-    if not normalized or normalized == ".":
-        return False
-    pattern = rf"(?<![\w.-]){re.escape(normalized)}(?![\w./-])"
-    return re.search(pattern, text) is not None
-
-
 def build_implementation_units(root: Path) -> dict[str, Any]:
     lgwf_dir = root / ".lgwf"
     implementation_context = load_json(lgwf_dir / "implementation_context.json")
     step_designs_payload = load_json(lgwf_dir / "step_designs.json")
     scaffold_plan = load_scaffold_plan(root)
-    implementation_reason = read_text(lgwf_dir / "implementation_reason.md")
-    observe = load_json(lgwf_dir / "implementation_observe.json")
-    failures = failure_texts(observe)
     units = all_units(
         implementation_context,
         step_designs_payload,
         scaffold_plan,
-        implementation_reason,
-        observe,
-        failures,
     )
-    if observe.get("passed") is True:
-        selected = []
-        selection_mode = "noop"
-    elif not failures or is_initial_observe(observe, failures):
-        selected = units
-        selection_mode = "full"
-    else:
-        wanted = selected_unit_ids(units, failures)
-        selected = [unit for unit in units if str(unit.get("unit_id", "")) in wanted]
-        selection_mode = "repair"
     result = {
-        "selection_mode": selection_mode,
-        "unit_count": len(selected),
-        "implementation_units": selected,
+        "selection_mode": "full",
+        "unit_count": len(units),
+        "implementation_units": units,
         "all_unit_ids": [str(unit.get("unit_id", "")) for unit in units],
-        "failure_count": len(failures),
-        "failures": failures,
+        "failure_count": 0,
+        "failures": [],
         "scaffold_plan_used": bool(scaffold_plan),
         "stage_manifest": stage_manifest_items(scaffold_plan),
     }

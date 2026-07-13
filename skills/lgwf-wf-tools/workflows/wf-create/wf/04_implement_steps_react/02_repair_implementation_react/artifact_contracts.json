@@ -1,0 +1,32 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/create_reference_context/implementation-reference-index.md",
+    ".lgwf/implementation_context.json",
+    ".lgwf/implementation_result.json",
+    ".lgwf/scaffold_package_result.json",
+    ".lgwf/step_designs.json"
+  ],
+  "final_outputs": [
+    ".lgwf/implementation_result.json"
+  ],
+  "script_writes": {
+    "initialize_repair_feedback": [
+      ".lgwf/implementation_decision.json",
+      ".lgwf/implementation_repair_decision_analysis.json"
+    ],
+    "prepare_repair_context": [
+      ".lgwf/implementation_repair_context.json",
+      ".lgwf/implementation_repair_stage"
+    ],
+    "publish_repair_result": [
+      ".lgwf/implementation_result.json"
+    ],
+    "audit_current_implementation": [
+      ".lgwf/implementation_audit_result.json",
+      ".lgwf/implementation_observe.json"
+    ],
+    "decide_repair_implementation": [
+      ".lgwf/implementation_decision.json"
+    ]
+  }
+}

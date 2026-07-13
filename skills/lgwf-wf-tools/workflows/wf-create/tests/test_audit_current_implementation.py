@@ -12,14 +12,15 @@ SCRIPT_PATH = (
     PACKAGE_ROOT
     / "wf"
     / "04_implement_steps_react"
-    / "02_observe_audit"
+    / "02_repair_implementation_react"
+    / "03_observe_repair"
     / "scripts"
-    / "audit_created_package.py"
+    / "audit_current_implementation.py"
 )
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("audit_created_package", SCRIPT_PATH)
+    spec = importlib.util.spec_from_file_location("audit_current_implementation", SCRIPT_PATH)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     spec.loader.exec_module(module)
@@ -31,7 +32,7 @@ def write_json(path: Path, data: object) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-class AuditCreatedPackageTests(unittest.TestCase):
+class AuditCurrentImplementationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.module = load_module()
 
@@ -148,7 +149,7 @@ class AuditCreatedPackageTests(unittest.TestCase):
             "stderr": "" if ok else "audit failed",
         }
 
-    def test_audit_created_package_accepts_confirmed_stage_structure(self) -> None:
+    def test_audit_current_implementation_accepts_confirmed_stage_structure(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare", "finish"])
@@ -157,7 +158,7 @@ class AuditCreatedPackageTests(unittest.TestCase):
             self.add_stage(target_root, "02_finish")
             self.patch_authoring_audit()
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertTrue(result["passed"])
             self.assertEqual(result["status"], "passed")
@@ -166,7 +167,7 @@ class AuditCreatedPackageTests(unittest.TestCase):
             self.assertTrue((work_dir / ".lgwf" / "implementation_audit_result.json").exists())
             self.assertTrue((work_dir / ".lgwf" / "implementation_observe.json").exists())
 
-    def test_audit_created_package_reports_missing_confirmed_stage_workflow(self) -> None:
+    def test_audit_current_implementation_reports_missing_confirmed_stage_workflow(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare"])
@@ -175,14 +176,14 @@ class AuditCreatedPackageTests(unittest.TestCase):
                 (target_root / "wf" / "01_prepare" / rel).mkdir(parents=True, exist_ok=True)
             self.patch_authoring_audit()
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertFalse(result["passed"])
             self.assertTrue(
                 any("scaffold_plan create_file wf/01_prepare/workflow.lgwf" in item for item in result["failures"])
             )
 
-    def test_audit_created_package_reports_missing_stage_private_dirs(self) -> None:
+    def test_audit_current_implementation_reports_missing_stage_private_dirs(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare"])
@@ -191,12 +192,12 @@ class AuditCreatedPackageTests(unittest.TestCase):
             (stage_root / "workflow.lgwf").write_text("WORKFLOW stage;\nENTRY done;\n", encoding="utf-8")
             self.patch_authoring_audit()
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertFalse(result["passed"])
             self.assertTrue(any("scaffold_plan create_dir wf/01_prepare/agents" in item for item in result["failures"]))
 
-    def test_audit_created_package_reports_missing_generated_file(self) -> None:
+    def test_audit_current_implementation_reports_missing_generated_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare"])
@@ -205,12 +206,12 @@ class AuditCreatedPackageTests(unittest.TestCase):
             (target_root / "README.md").unlink()
             self.patch_authoring_audit()
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertFalse(result["passed"])
             self.assertTrue(any("implementation_result generated file README.md" in item for item in result["failures"]))
 
-    def test_audit_created_package_accepts_repo_relative_generated_files(self) -> None:
+    def test_audit_current_implementation_accepts_repo_relative_generated_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare"])
@@ -230,11 +231,11 @@ class AuditCreatedPackageTests(unittest.TestCase):
             )
             self.patch_authoring_audit()
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertTrue(result["passed"])
 
-    def test_audit_created_package_reports_agent_loop_target_dirs_prompt_contract(self) -> None:
+    def test_audit_current_implementation_reports_agent_loop_target_dirs_prompt_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare"])
@@ -250,12 +251,12 @@ class AuditCreatedPackageTests(unittest.TestCase):
             )
             self.patch_authoring_audit()
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertFalse(result["passed"])
             self.assertTrue(any("AGENT_LOOP 阶段文档不得承诺 TARGET_DIRS" in item for item in result["failures"]))
 
-    def test_audit_created_package_marks_authoring_audit_failure_as_repair_feedback(self) -> None:
+    def test_audit_current_implementation_marks_authoring_audit_failure_as_repair_feedback(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             work_dir = self.make_work_dir(root, ["prepare"])
@@ -263,7 +264,7 @@ class AuditCreatedPackageTests(unittest.TestCase):
             self.add_stage(target_root, "01_prepare")
             self.patch_authoring_audit(ok=False)
 
-            result = self.module.audit_created_package(work_dir)
+            result = self.module.audit_current_implementation(work_dir)
 
             self.assertFalse(result["passed"])
             self.assertTrue(result["needs_post_fix"])

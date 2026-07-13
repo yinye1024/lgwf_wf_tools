@@ -10,15 +10,6 @@ WF_POST_FIX_LGWF = "skills/lgwf-wf-tools/workflows/wf-post-fix/wf/workflow.lgwf"
 WF_POST_FIX_WORK_DIR = "skills/lgwf-wf-tools/workflows/wf-post-fix/ws"
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8-sig"))
-    if not isinstance(data, dict):
-        raise TypeError(f"{path.as_posix()} 必须是 JSON object")
-    return data
-
-
 def workflow_lgwf_from_package_root(package_root: str) -> str:
     cleaned = package_root.replace("\\", "/").rstrip("/")
     if not cleaned:
@@ -46,16 +37,6 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
     report_path = str(summary.get("report_path", "")).strip()
     if report_path:
         source_artifacts.append(report_path)
-    audit_result = load_json(work_dir / ".lgwf" / "implementation_audit_result.json")
-    observe_result = load_json(work_dir / ".lgwf" / "implementation_observe.json")
-    diagnostic_artifacts = [
-        path
-        for path in (
-            ".lgwf/implementation_audit_result.json",
-            ".lgwf/implementation_observe.json",
-        )
-        if (work_dir / path).exists()
-    ]
     suggested_command = (
         "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py run "
         f"--workflow-lgwf {WF_POST_FIX_LGWF} "
@@ -71,13 +52,6 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
         "input_json_file": input_json_file.as_posix(),
         "suggested_command": suggested_command,
         "source_artifacts": source_artifacts,
-        "diagnostic_artifacts": diagnostic_artifacts,
-        "source_create_audit": {
-            "status": audit_result.get("status") or observe_result.get("status"),
-            "passed": audit_result.get("passed") if audit_result else observe_result.get("passed"),
-            "needs_post_fix": bool(audit_result.get("needs_post_fix") or observe_result.get("needs_post_fix")),
-            "failures": audit_result.get("failures", observe_result.get("failures", [])),
-        },
         "requires_user_confirmation": True,
         "auto_execute": False,
         "payload": input_payload,

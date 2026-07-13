@@ -233,7 +233,7 @@ def run_authoring_audit(workflow_lgwf: Path, workspace_root: Path) -> dict[str, 
     }
 
 
-def audit_created_package(work_dir: Path) -> dict[str, Any]:
+def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
     lgwf_dir = work_dir / ".lgwf"
     implementation_context = read_json(lgwf_dir / "implementation_context.json")
     implementation_result = read_json(lgwf_dir / "implementation_result.json")
@@ -339,7 +339,7 @@ def audit_created_package(work_dir: Path) -> dict[str, Any]:
 
 
 def main() -> None:
-    result = audit_created_package(Path.cwd())
+    result = audit_current_implementation(Path.cwd())
     print(json.dumps({"lgwf_wf_create.implementation_audit_result": result}, ensure_ascii=False))
 
 

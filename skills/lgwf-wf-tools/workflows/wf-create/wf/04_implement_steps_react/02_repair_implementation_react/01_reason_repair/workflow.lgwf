@@ -1,0 +1,34 @@
+WORKFLOW reason_repair;
+ENTRY reason_repair;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+CODEX reason_repair
+  PROMPT "agents/reason_repair.md"
+  CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context"
+  CONTEXT workspace file ".lgwf/implementation_audit_result.json"
+  CONTEXT workspace file ".lgwf/implementation_context.json"
+  CONTEXT workspace file ".lgwf/implementation_decision.json"
+  CONTEXT workspace file ".lgwf/implementation_observe.json"
+  CONTEXT workspace file ".lgwf/implementation_result.json"
+  CONTEXT workspace file ".lgwf/scaffold_package_result.json"
+  CONTEXT workspace file ".lgwf/step_designs.json"
+  OUTPUT_JSON ".lgwf/implementation_repair_reason.json" AS_FILE
+  TIMEOUT 600
+  RESULT state.lgwf_wf_create.repair_reason_json_result
+  CONTRACT {
+    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    READ workspace dir ".lgwf/create_reference_context";
+    READ workspace file ".lgwf/implementation_audit_result.json";
+    READ workspace file ".lgwf/implementation_context.json";
+    READ workspace file ".lgwf/implementation_decision.json";
+    READ workspace file ".lgwf/implementation_observe.json";
+    READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_repair_reason.json";
+  };

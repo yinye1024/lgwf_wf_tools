@@ -11,6 +11,11 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def write_json_if_missing(path: Path, payload: dict) -> None:
+    if not path.exists():
+        write_json(path, payload)
+
+
 def main() -> None:
     lgwf_dir = Path.cwd() / ".lgwf"
     write_json(
@@ -34,6 +39,7 @@ def main() -> None:
             },
         },
     )
+    write_json_if_missing(lgwf_dir / "step_designs_proposal.json", {})
     write_json(lgwf_dir / "step_designs_proposal_quality_gate.json", {})
     write_json(lgwf_dir / "step_designs_proposal_decision.json", {})
     print(
@@ -42,6 +48,7 @@ def main() -> None:
                 "prepared": True,
                 "files": [
                     ".lgwf/step_design_observation.json",
+                    ".lgwf/step_designs_proposal.json",
                     ".lgwf/step_designs_proposal_quality_gate.json",
                     ".lgwf/step_designs_proposal_decision.json",
                 ],

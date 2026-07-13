@@ -38,9 +38,9 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `create_requirements_proposal`：需求方案草案。
 - `business_flow_proposal`：业务流转草案。
 - `step_designs_proposal`：步骤设计草案。
-- `implementation_result`：按已确认设计生成的 workflow 初稿说明。
-- `implementation_audit_result`：实现 ReAct observe 阶段的 Python 确定性检测结果，是下一轮 reason 的修复事实来源。
-- `implementation_observe`：实现 ReAct observe 阶段对确定性检测结果的归纳，失败时反馈给下一轮实现修复。
+- `implementation_result`：按已确认设计生成并经过 repair ReAct 优化后的 workflow 初稿说明，是实现阶段对外结果。
+- `implementation_repair_reason` / `implementation_repair_context` / `implementation_repair_result` / `implementation_repair_decision_analysis`：实现阶段 repair ReAct 的对外可审计修复轨迹。
+- `implementation_audit_result` / `implementation_observe` / `implementation_decision`：只在 `02_repair_implementation_react` 内部作为 reason、observe、decide 的循环反馈和路由依据，不作为 summary 或 handoff 的外部输入。
 
 所有目标 package 路径和 resource path 只允许使用包内相对路径，禁止绝对路径、盘符路径和 `..`。
 
@@ -53,12 +53,12 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
-- `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；其中 ACT 调用 `01_implement_units/workflow.lgwf`，内部通过 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results` 拆分实现任务，避免单个 Codex 负责整包创建。
-- `04_implement_steps_react` 只保留顶层 `agents/spec.md` 作为全局 ReAct spec；每个 ACT unit 由 `01_implement_units/01_implement_one_unit/workflow.lgwf` 独立执行，单 unit 局部边界直接写在 `agents/act_unit.md` 中。当前 unit 的 `output_files` / `output_dirs` 是 package-relative 输出清单，Codex 只能写 `.lgwf/implementation_stage/<unit_id>/` 下对应 staging 文件，再由发布脚本复制到目标 package。该第三层 workflow 独立承载单 unit 输入、输出、schema 注入、staging 和失败恢复边界；超时时应把已落盘目标 package 视为可续写草稿，resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
-- `04_implement_steps_react` 的 `observe` 调用 `02_observe_audit/workflow.lgwf`，必须执行 `audit_created_package.py` 确定性检测，检查 scaffold 文件结构、已批准步骤设计 JSON、ACT 自报生成文件和 `lgwf.py audit`，并写出 `.lgwf/implementation_audit_result.json` 与 `.lgwf/implementation_observe.json`。
-- `04_implement_steps_react` 的 `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`；可修复问题必须在 ReAct 内回流，不得留到 root validation 节点。
-- `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
-- `handoff_wf_post_fix` 是结束节点，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
+- `04_implement_steps_react` 是实现阶段子 workflow，先调用 `01_implement_units/workflow.lgwf` 生成初版，再调用 `02_repair_implementation_react/workflow.lgwf` 执行修复优化；父级只暴露 `implementation_result` 和 repair 轨迹文件，不把 audit/observe/decision 内部循环文件交给 summary 或 handoff。
+- `01_implement_units` 是纯初版实现 workflow，内部通过 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results` 拆分 package、root workflow、stage 和 shared/test units，避免单个 Codex 负责整包创建。每个 unit 由 `01_implement_units/01_implement_one_unit/workflow.lgwf` 独立执行，局部边界直接写在 `agents/act_unit.md` 中；Codex 只能读取 `.lgwf/current_implementation_unit_context.json` 和显式传入的 implementation reference context，只能写 `workspace_output_files` 对应 staging 文件。
+- `02_repair_implementation_react` 是修复优化 ReAct workflow，使用唯一全局 spec `02_repair_implementation_react/agents/spec.md`。它先通过 `03_observe_repair/workflow.lgwf` 执行 `audit_current_implementation.py` 确定性检测，再在 `reason_repair -> act_repair -> observe_repair -> decide_repair` 循环中把 audit/observe 反馈转成最小修复计划、staging 修复、再次验收和路由决策。
+- `implementation_audit_result.json`、`implementation_observe.json` 和 `implementation_decision.json` 只服务 repair ReAct 内部闭环；可修复问题必须在 repair ReAct 内回流，不得留到 root validation、summary 或 handoff 节点。
+- `07_post_fix_handoff` 是结束子 workflow；`prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
+- `handoff_wf_post_fix` 位于 `07_post_fix_handoff/workflow.lgwf`，只暴露 `wf-post-fix` pending action 给主 agent；不得自动启动下游 workflow，必须等待用户确认。
 
 ## Approval 边界
 
@@ -70,7 +70,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `approve` 后由固定 proposal 文件固化 confirmed artifact，禁止把 human decision record 当作业务对象写入 `confirmed`。
 - `revise` 只触发确认上下文重入，不直接生成 confirmed artifact，也不能绕过主 agent 对用户修改需求的整理。
 - `reject` 表示整体不通过，通过 DSL `FAIL_ALL` 终止整个 run，不继续进入下游阶段。
-- 当前第一版不自动 approve 任何业务决策，也不接入自动修复链路。
+- 当前第一版不自动 approve 任何业务决策；实现阶段只允许在 `02_repair_implementation_react` 内做 bounded repair，不自动启动跨 workflow 修复链路。
 
 ## 固定产物
 
@@ -99,10 +99,12 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/create_reference_context/module-contract/module-contract.md`
 - `.lgwf/implementation_result.json`
 - `.lgwf/implementation_units.json`
-- `.lgwf/implementation_reason.md`
-- `.lgwf/implementation_audit_result.json`
-- `.lgwf/implementation_observe.json`
-- `.lgwf/implementation_decision.json`
+- `.lgwf/current_implementation_unit_context.json`
+- `.lgwf/current_implementation_unit_result.json`
+- `.lgwf/implementation_repair_reason.json`
+- `.lgwf/implementation_repair_context.json`
+- `.lgwf/implementation_repair_result.json`
+- `.lgwf/implementation_repair_decision_analysis.json`
 - `.lgwf/post_fix_handoff_input.json`
 - `reports/create-workflow/create_result_report.md`
 
@@ -112,7 +114,7 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - 结束时只通过 `HANDOFF` 引导用户选择是否运行 `wf-post-fix`，不自动执行。
 - 不负责把生成出的目标 workflow 自动接入 facade 路由、registry 或其他治理链路。
 - 不承诺端到端业务 happy path 成功。
-- 实现阶段只允许在 `04_implement_steps_react` 的 ReAct 最大轮次内基于 audit 反馈修复初稿；不做跨 workflow 自动修复、自动重试或后续 agent 化。
+- 实现阶段只允许在 `02_repair_implementation_react` 的 ReAct 最大轮次内基于 audit 反馈修复初稿；不做跨 workflow 自动修复、自动重试或后续 agent 化。
 - 创建或修改 `workflow.lgwf` 时必须先按 `.lgwf/create_reference_context/implementation-reference-index.md` 路由读取必要参考资料，并遵守 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md`：根 workflow 保持薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，所有引用路径保持包内相对路径。
 
 ## 最小验证

@@ -28,21 +28,24 @@
     ".lgwf/step_designs.json",
     ".lgwf/implementation_context.json",
     ".lgwf/implementation_observe.json",
-    ".lgwf/implementation_reason.md",
     ".lgwf/implementation_audit_result.json",
     ".lgwf/implementation_decision.json",
     ".lgwf/implementation_units.json",
     ".lgwf/current_implementation_unit_context.json",
     ".lgwf/current_implementation_unit_result.json",
+    ".lgwf/implementation_repair_reason.json",
+    ".lgwf/implementation_repair_context.json",
+    ".lgwf/implementation_repair_result.json",
+    ".lgwf/implementation_repair_decision_analysis.json",
+    ".lgwf/implementation_repair_stage",
     ".lgwf/implementation_result.json",
-    ".lgwf/create_result_summary.json"
+    ".lgwf/create_result_summary.json",
+    ".lgwf/post_fix_handoff_input.json"
   ],
   "bootstrap_inputs": [
     ".lgwf/business_flow.json",
     ".lgwf/create_requirements.json",
-    ".lgwf/implementation_audit_result.json",
     ".lgwf/implementation_context.json",
-    ".lgwf/implementation_observe.json",
     ".lgwf/implementation_result.json",
     ".lgwf/step_designs.json"
   ],
@@ -57,9 +60,7 @@
     ".lgwf/create_reference_context/module-contract/module-contract.md",
     ".lgwf/create_requirements_approval.json",
     ".lgwf/create_requirements_proposal_quality_gate.json",
-    ".lgwf/implementation_audit_result.json",
-    ".lgwf/implementation_decision.json",
-    ".lgwf/implementation_observe.json",
+    ".lgwf/post_fix_handoff_input.json",
     ".lgwf/raw_intent_approval.json",
     ".lgwf/raw_intent_request_proposal.json",
     ".lgwf/step_design_observation.json",
@@ -75,6 +76,23 @@
       ".lgwf/create_reference_context/module-contract/module-contract.md",
       ".lgwf/create_reference_context/step-design-reference-index.md",
       ".lgwf/create_reference_context/implementation-reference-index.md"
+    ],
+    "prepare_post_fix_handoff": [
+      ".lgwf/post_fix_handoff_input.json"
+    ],
+    "prepare_repair_context": [
+      ".lgwf/implementation_repair_context.json",
+      ".lgwf/implementation_repair_stage"
+    ],
+    "publish_repair_result": [
+      ".lgwf/implementation_result.json"
+    ],
+    "audit_current_implementation": [
+      ".lgwf/implementation_audit_result.json",
+      ".lgwf/implementation_observe.json"
+    ],
+    "decide_repair_implementation": [
+      ".lgwf/implementation_decision.json"
     ]
   }
 }

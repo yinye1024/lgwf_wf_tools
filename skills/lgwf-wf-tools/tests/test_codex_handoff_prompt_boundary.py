@@ -13,7 +13,7 @@ WHEEL = FACADE_ROOT / "vendor" / "lgwf-client-assist" / "assets" / "lgwf-0.1.2-p
 
 
 class CodexHandoffPromptBoundaryTests(unittest.TestCase):
-    def test_handoff_prompt_includes_system_level_node_boundary(self) -> None:
+    def test_handoff_prompt_includes_node_contract_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             temp_root = Path(temp)
             wheel_root = temp_root / "wheel"
@@ -65,14 +65,13 @@ class CodexHandoffPromptBoundaryTests(unittest.TestCase):
             self.assertIsNotNone(main_prompt_path)
             self.assertTrue(str(main_prompt_path).replace("\\", "/").endswith("/workflow/agents/prompt.md"))
             self.assertEqual(1, len(context_paths))
-            self.assertIn("System-level LGWF node boundary", prompt_text)
-            self.assertIn("contract-first", prompt_text)
-            self.assertIn("reference-only", prompt_text)
-            self.assertIn("output-file-required", prompt_text)
-            self.assertIn("LGWF node contract (contract-first details)", prompt_text)
+            self.assertIn("Reference context:", prompt_text)
+            self.assertIn("LGWF node contract:", prompt_text)
+            self.assertIn("Treat this contract as workflow-authoritative input/output scope", prompt_text)
             self.assertIn(".lgwf/input.json", prompt_text)
             self.assertIn(".lgwf/out.json", prompt_text)
-            self.assertIn("Codex-written JSON output (output-file-required)", prompt_text)
+            self.assertIn("Codex-written JSON output:", prompt_text)
+            self.assertIn("Write, edit, or create this output JSON file yourself before finishing.", prompt_text)
 
 
 if __name__ == "__main__":
