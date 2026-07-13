@@ -1,0 +1,57 @@
+WORKFLOW observe_step_designs;
+ENTRY validate_step_designs_structure;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY validate_step_designs_structure
+  SCRIPT "scripts/validate_step_designs_structure.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.step_design_structural_gate
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_designs_proposal.json";
+    WRITE workspace file ".lgwf/step_design_structural_gate.json";
+  };
+
+CODEX observe_step_designs
+  PROMPT "agents/observe_step_designs.md"
+  CONTEXT workspace file ".lgwf/step_design_reason.json"
+  CONTEXT workspace file ".lgwf/step_designs_proposal.json"
+  CONTEXT workspace file ".lgwf/step_design_structural_gate.json"
+  CONTEXT workspace file ".lgwf/business_flow.json"
+  CONTEXT workspace file ".lgwf/create_requirements.json"
+  CONTEXT workspace file ".lgwf/scaffold_package_result.json"
+  OUTPUT_JSON ".lgwf/step_design_semantic_observation.json" AS_FILE
+  TIMEOUT 900
+  RESULT state.lgwf_wf_create.step_design_semantic_observation_result
+  CONTRACT {
+    READ workspace file ".lgwf/step_design_reason.json";
+    READ workspace file ".lgwf/step_designs_proposal.json";
+    READ workspace file ".lgwf/step_design_structural_gate.json";
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    WRITE workspace file ".lgwf/step_design_semantic_observation.json";
+  };
+
+PY merge_step_design_observation
+  SCRIPT "scripts/merge_step_design_observation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.step_design_observation
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/step_design_structural_gate.json";
+    READ workspace file ".lgwf/step_design_semantic_observation.json";
+    WRITE workspace file ".lgwf/step_design_observation.json";
+    WRITE workspace file ".lgwf/step_designs_proposal_quality_gate.json";
+  };
+
+FLOW validate_step_designs_structure
+  THEN observe_step_designs
+  THEN merge_step_design_observation;

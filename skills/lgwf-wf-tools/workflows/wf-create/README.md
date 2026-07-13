@@ -21,7 +21,7 @@
 - `collect_raw_intent`、`propose_requirements`、`confirm_requirements` 的需求阶段文档与接口约定。
 - `propose_business_flow_react`、`confirm_business_flow` 的业务流转 proposal/approval 契约。
 - `scaffold_package` 的确定性脚手架规则与最小验证入口。
-- `design_steps_react` 的步骤设计草案 prompt。
+- `design_steps_react` 的步骤设计 ReAct slot workflow、prompt 和质量反馈契约。
 - `.lgwf/step_designs_proposal.json` 的字段模板、命名约定和实现阶段输入契约。
 - `confirm_step_designs` 的确认模板与决策结构示例。
 - `04_implement_steps_react` 的 ReAct 实现循环、ACT FOREACH 拆分、audit observe 和边界说明。
@@ -75,7 +75,7 @@
 步骤设计和实现阶段当前已补齐以下契约：
 
 - `prepare_dsl_reference_context`：从 facade 内置 bundled client 复制 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`；从 facade docs 复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，并发布 `.lgwf/create_reference_context/step-design-reference-index.md` 和 `.lgwf/create_reference_context/implementation-reference-index.md`，分别作为步骤设计和实现阶段的参考资料索引。
-- `design_steps_react`：在小 ReAct ACT 中先读取 `.lgwf/step_design_proposal_react_context.json` 和 `.lgwf/create_reference_context/step-design-reference-index.md`，再按索引路由按需读取具体参考资料；定义输出为完整结构化 `.lgwf/step_designs_proposal.json`，要求每个步骤覆盖目标、输入、输出、依赖、实现建议、验收说明和排除范围。
+- `design_steps_react`：在 `REASON/ACT/OBSERVE/DECIDE` 四个 slot workflow 中生成和修复步骤设计；`ACT` 读取 `.lgwf/step_design_reason.json`、`.lgwf/create_reference_context/step-design-reference-index.md` 和按索引路由的参考资料，输出完整结构化 `.lgwf/step_designs_proposal.json`，要求每个步骤覆盖目标、输入、输出、依赖、实现建议、验收说明、排除范围和 `source_refs`。
 - `confirm_step_designs`：定义 `approve`、`revise`、`reject` 三类确认决策，并区分设计草案审阅与 confirm 后固化。
 - `03_confirm_step_designs`：父级只编排 `01_reference_context -> 02_step_design_proposal -> 03_step_design_review`，不直接承载 `PY`、`CODEX` 或 `REVIEW` 节点。
 - `implement_steps_react`：在独立子 workflow 中按 `reason -> act -> observe -> decide` 循环生成 workflow 初稿；其中 ACT 通过 `01_implement_units/workflow.lgwf` 拆成 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results`，每个 unit 由 `01_implement_units/01_implement_one_unit/workflow.lgwf` 独立执行；`observe` 通过 `02_observe_audit/workflow.lgwf` 执行 scaffold 文件结构、已批准步骤设计 JSON、ACT 自报生成文件和 `lgwf.py audit` 的确定性检测，失败反馈回下一轮 reason，同时明确不负责 prompt 修复、agent 化和自动修复。
@@ -122,14 +122,14 @@
 
 `approve` 后会把确认结果固化为 `.lgwf/step_designs.json`；`revise` 会先准备修订确认上下文，再回到同一个 `confirm_step_designs` REVIEW 节点；`reject` 通过 `FAIL_ALL` 终止整个 run，不进入实现阶段。
 
-`validate_step_designs_proposal` 会在 `confirm_step_designs` 前执行质量闸，使用已确认业务流、已确认需求和 scaffold plan 校验当前目标；失败结果会写入 `.lgwf/step_designs_proposal_quality_gate.json` 并反馈给步骤设计 ReAct 下一轮，auto-human 也不能绕过该节点。ReAct 最多 3 轮后仍失败时由 `assert_step_designs_proposal_quality_gate` 终止。
+步骤设计 `OBSERVE` 会在 `confirm_step_designs` 前先执行 deterministic structural gate，再由 Codex 做 semantic audit，最后把结果合并到 `.lgwf/step_design_observation.json`；失败结果通过 `reason_feedback` 反馈给下一轮 `REASON`，auto-human 也不能绕过该节点。`.lgwf/step_designs_proposal_quality_gate.json` 仅保留为最终 assert 兼容产物。ReAct 最多 3 轮后仍失败时由 `assert_step_designs_proposal_quality_gate` 终止。
 
 `implement_steps_react` 当前是独立 ReAct 子 workflow，重点约束：
 
 - 只按已确认 `.lgwf/step_designs.json` 生成 workflow 初稿文件与目录。
 - 结构化 JSON 字段必须能被实现阶段直接消费，避免接口脱节。
 - ACT 不再由单个 Codex 负责整包创建；`prepare_implementation_units` 会根据首轮或 observe 失败项生成 package、root workflow、stage 和 shared/test units，`FOREACH implement_each_unit` 对每个 unit 调用 `01_implement_units/01_implement_one_unit/workflow.lgwf`，最后由 `merge_implementation_results` 写出 `.lgwf/implementation_result.json`。
-- `01_implement_units/01_implement_one_unit/workflow.lgwf` 内部 Codex 必须显式读取本地 `agents/spec.md`；`output_files` / `output_dirs` 是当前 unit 的 package-relative 输出清单，Codex 只能写 `.lgwf/implementation_stage/<unit_id>/` 下的 staging 文件，最终由发布脚本复制到目标 package。该第三层 workflow 独立承载单 unit 输入、输出、schema 注入、staging 目录、发布脚本和失败恢复边界；范围约束由 unit context、Codex handoff prompt 和发布脚本路径校验表达，不做额外文件系统快照校验。
+- `04_implement_steps_react/agents/spec.md` 是实现 ReAct 的唯一全局 spec。`01_implement_units/01_implement_one_unit/workflow.lgwf` 内部 Codex 只读取当前 unit context 和按需 implementation reference，单 unit 局部边界直接写在 `agents/act_unit.md` 中；`output_files` / `output_dirs` 是当前 unit 的 package-relative 输出清单，Codex 只能写 `.lgwf/implementation_stage/<unit_id>/` 下的 staging 文件，最终由发布脚本复制到目标 package。该第三层 workflow 独立承载单 unit 输入、输出、schema 注入、staging 目录、发布脚本和失败恢复边界；范围约束由 unit context、Codex handoff prompt 和发布脚本路径校验表达，不做额外文件系统快照校验。
 - 必须先按 `.lgwf/create_reference_context/implementation-reference-index.md` 路由读取必要参考资料，再按 `dsl-assist` 和 `LGWF_WF_MODULAR_DEVELOPMENT.md` 规范保持根 workflow 薄编排，阶段细节优先拆到自包含子 workflow 或复杂 step，并保证所有子 workflow 可被递归审计。
 - `observe` 必须执行 `audit_created_package.py`，并把原始检测结果写入 `.lgwf/implementation_audit_result.json`，再把归纳结果写入 `.lgwf/implementation_observe.json` 反馈给下一轮 reason。
 - `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`，不得只依赖 ACT 自报成功。

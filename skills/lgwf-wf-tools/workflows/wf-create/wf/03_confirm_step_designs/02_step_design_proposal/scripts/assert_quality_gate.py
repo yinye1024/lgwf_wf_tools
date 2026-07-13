@@ -8,11 +8,23 @@ from typing import Any
 
 
 def read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
     data = json.loads(path.read_text(encoding="utf-8-sig"))
     return data if isinstance(data, dict) else {}
 
 
 def failure_messages(gate: dict[str, Any]) -> list[str]:
+    blocking = gate.get("blocking_issues")
+    if isinstance(blocking, list):
+        messages = [
+            str(item.get("required_change") or item.get("evidence") or item.get("issue_id") or "")
+            for item in blocking
+            if isinstance(item, dict)
+        ]
+        messages = [message for message in messages if message]
+        if messages:
+            return messages
     checks = gate.get("checks")
     if not isinstance(checks, list):
         return ["quality gate checks missing"]
@@ -25,7 +37,10 @@ def failure_messages(gate: dict[str, Any]) -> list[str]:
 
 
 def main() -> None:
-    gate = read_json(Path.cwd() / ".lgwf" / "step_designs_proposal_quality_gate.json")
+    lgwf_dir = Path.cwd() / ".lgwf"
+    gate = read_json(lgwf_dir / "step_design_observation.json") or read_json(
+        lgwf_dir / "step_designs_proposal_quality_gate.json"
+    )
     if gate.get("passed") is not True:
         raise ValueError("step designs proposal quality gate failed after ReAct repair: " + "; ".join(failure_messages(gate)))
     print(json.dumps({"lgwf_wf_create.step_designs_proposal_quality_gate_asserted": True}, ensure_ascii=False))

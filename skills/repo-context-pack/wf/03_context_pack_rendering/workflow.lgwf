@@ -1,0 +1,24 @@
+WORKFLOW context_pack_rendering;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY render_context_pack
+  SCRIPT "scripts/run.py"
+  TIMEOUT 120
+  RESULT state.repo_context_pack.context_pack_generation
+  CONTRACT {
+    READ workspace file ".lgwf/context_inventory.json";
+    READ workspace file ".lgwf/repo_context_pack_request.json";
+    WRITE workspace file ".lgwf/context_pack_generation.json";
+    WRITE workspace dir "reports/repo-context-pack";
+    WRITE workspace file "reports/repo-context-pack/repo-context-pack.md";
+    WRITE workspace file "reports/repo-context-pack/repo-context-pack.json";
+    WRITE workspace file "reports/repo-context-pack/artifact-index.json";
+  };
+
+FLOW main
+  START render_context_pack;

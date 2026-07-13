@@ -48,13 +48,13 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 
 - `prepare_dsl_reference_context` 复制 facade 内置 bundled client 的 `dsl-assist` 规范到 `.lgwf/create_reference_context/dsl-assist/`，复制 workflow 模块化创建指引到 `.lgwf/create_reference_context/workflow-modular-development/`，复制 Contract 摘要到 `.lgwf/create_reference_context/module-contract/`，并发布 `.lgwf/create_reference_context/step-design-reference-index.md` 和 `.lgwf/create_reference_context/implementation-reference-index.md` 两个按需读取索引；scaffold 结构信息以 `.lgwf/scaffold_package_result.json` 为准，不再镜像 scaffold resource。
 - `03_confirm_step_designs` 父 workflow 只编排 `01_reference_context`、`02_step_design_proposal` 和 `03_step_design_review`；准备参考上下文、生成步骤设计草案、人工确认固化三个职责必须留在各自子 workflow 内。
-- `validate_requirements_proposal`、`validate_business_flow_proposal` 和 `validate_step_designs_proposal` 在 REVIEW 前执行 proposal 质量闸；无论是否启用 `--auto-human`，都必须先确认 proposal 文件存在、JSON 可解析、包含当前目标的 `workflow_id` / `workflow_name` 与 `target_package_root`，且未明显落后于当前上游输入。需求、业务流和步骤设计 proposal 阶段均通过小 ReAct 把 quality gate 失败反馈给 Codex 修正，最终 assert 失败才终止。
+- `validate_requirements_proposal` 和 `validate_business_flow_proposal` 在 REVIEW 前执行 proposal 质量闸；步骤设计阶段由 `OBSERVE` slot 内的 `validate_step_designs_structure`、Codex semantic audit 和 `merge_step_design_observation` 合并执行质量闸。无论是否启用 `--auto-human`，都必须先确认 proposal 文件存在、JSON 可解析、包含当前目标的 `workflow_id` / `workflow_name` 与 `target_package_root`，且未明显落后于当前上游输入。步骤设计失败反馈必须写入 `.lgwf/step_design_observation.json.reason_feedback`，再由下一轮 `REASON` 转成 `.lgwf/step_design_reason.json`。
 - `prepare_requirements_confirmation` 读取 `.lgwf/create_requirements_proposal.json`，输出 `requirements_confirmation_context`。
 - `prepare_business_flow_confirmation` 读取 `.lgwf/business_flow_proposal.json`，输出 `business_flow_confirmation_context`。
 - `prepare_step_design_confirmation` 读取 `.lgwf/step_designs_proposal.json`，输出 `step_design_confirmation_context`。
 - `scaffold_package` 优先从 `.lgwf/create_requirements.json` 和 `.lgwf/business_flow.json` 推导脚手架计划，避免依赖人工拼 stdin JSON。
 - `04_implement_steps_react` 是实现阶段子 workflow，使用 `REACT` 拆分 `reason`、`act`、`observe` 和 `decide`；其中 ACT 调用 `01_implement_units/workflow.lgwf`，内部通过 `prepare_implementation_units -> FOREACH implement_each_unit -> merge_implementation_results` 拆分实现任务，避免单个 Codex 负责整包创建。
-- `04_implement_steps_react` 的每个 ACT unit 由 `01_implement_units/01_implement_one_unit/workflow.lgwf` 独立执行，并显式读取本地 `agents/spec.md`；当前 unit 的 `output_files` / `output_dirs` 是 package-relative 输出清单，Codex 只能写 `.lgwf/implementation_stage/<unit_id>/` 下对应 staging 文件，再由发布脚本复制到目标 package。该第三层 workflow 独立承载单 unit 输入、输出、schema 注入、staging 和失败恢复边界；超时时应把已落盘目标 package 视为可续写草稿，resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
+- `04_implement_steps_react` 只保留顶层 `agents/spec.md` 作为全局 ReAct spec；每个 ACT unit 由 `01_implement_units/01_implement_one_unit/workflow.lgwf` 独立执行，单 unit 局部边界直接写在 `agents/act_unit.md` 中。当前 unit 的 `output_files` / `output_dirs` 是 package-relative 输出清单，Codex 只能写 `.lgwf/implementation_stage/<unit_id>/` 下对应 staging 文件，再由发布脚本复制到目标 package。该第三层 workflow 独立承载单 unit 输入、输出、schema 注入、staging 和失败恢复边界；超时时应把已落盘目标 package 视为可续写草稿，resume 后优先按 observe 失败项只重跑相关 unit，不从零重写已成型内容。
 - `04_implement_steps_react` 的 `observe` 调用 `02_observe_audit/workflow.lgwf`，必须执行 `audit_created_package.py` 确定性检测，检查 scaffold 文件结构、已批准步骤设计 JSON、ACT 自报生成文件和 `lgwf.py audit`，并写出 `.lgwf/implementation_audit_result.json` 与 `.lgwf/implementation_observe.json`。
 - `04_implement_steps_react` 的 `reason` 必须优先读取 `.lgwf/implementation_audit_result.json`，再读取 `.lgwf/implementation_observe.json`；可修复问题必须在 ReAct 内回流，不得留到 root validation 节点。
 - `prepare_post_fix_handoff` 优先读取 `state.lgwf_wf_create.summary_result`，当父 workflow 未把 summary 正确传入 stdin 时，回退读取 `.lgwf/create_result_summary.json`，生成 `wf-post-fix` 的 handoff payload 和 `.lgwf/post_fix_handoff_input.json`。
@@ -83,7 +83,11 @@ facade 命中本 workflow 后，必须启动或继续 `wf-create` run；主 agen
 - `.lgwf/business_flow_approval.json`
 - `.lgwf/business_flow.json`
 - `.lgwf/step_designs_proposal.json`
-- `.lgwf/step_design_proposal_react_context.json`
+- `.lgwf/step_design_reason.json`
+- `.lgwf/step_design_structural_gate.json`
+- `.lgwf/step_design_semantic_observation.json`
+- `.lgwf/step_design_observation.json`
+- `.lgwf/step_design_decision_analysis.json`
 - `.lgwf/step_designs_proposal_decision.json`
 - `.lgwf/step_designs_proposal_quality_gate.json`
 - `.lgwf/step_design_confirmation_record.json`

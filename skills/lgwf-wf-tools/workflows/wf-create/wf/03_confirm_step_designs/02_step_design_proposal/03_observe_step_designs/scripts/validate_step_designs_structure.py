@@ -1,14 +1,14 @@
-"""校验步骤设计 proposal 是否可进入 REVIEW。"""
+"""校验步骤设计 proposal 的结构契约。"""
 
 from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 
-SHARED_SCRIPTS = Path(__file__).resolve().parents[3] / "shared" / "scripts"
+SHARED_SCRIPTS = Path(__file__).resolve().parents[4] / "shared" / "scripts"
 if str(SHARED_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SHARED_SCRIPTS))
 
@@ -37,7 +37,9 @@ LIST_STEP_FIELDS = (
     "out_of_scope",
     "confirmation_points",
 )
+OPTIONAL_LIST_PATH_FIELDS = ("target_files", "target_dirs", "runtime_artifacts")
 FORBIDDEN_DOC_PATH_FIELDS = ("doc_path", "draft_doc_path", "path")
+FORBIDDEN_OUT_OF_SCOPE_TERMS = ("lgwf-wf-prompt-fix", "lgwf-wf-tools", "自动修复", "端到端运行保证")
 
 
 def load_json_object(path: Path) -> dict[str, Any]:
@@ -58,6 +60,42 @@ def dict_list(value: Any) -> list[dict[str, Any]]:
 
 def check(name: str, passed: bool, message: str) -> dict[str, Any]:
     return {"name": name, "passed": passed, "message": message}
+
+
+def normalize_path_issue(raw_path: Any) -> str:
+    if not isinstance(raw_path, str):
+        return "路径必须是字符串"
+    cleaned = raw_path.strip()
+    candidate = PurePosixPath(cleaned.replace("\\", "/"))
+    if not cleaned:
+        return "路径不能为空"
+    if candidate.is_absolute():
+        return "禁止绝对路径"
+    if ":" in cleaned:
+        return "禁止盘符路径"
+    if any(part == ".." for part in candidate.parts):
+        return "禁止 `..`"
+    if candidate.parts and candidate.parts[0] == ".lgwf":
+        return "禁止指向 `.lgwf` 运行状态目录"
+    return ""
+
+
+def append_path_list_checks(checks: list[dict[str, Any]], index: int, field: str, value: Any) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list):
+        checks.append(check(f"step_designs[{index}]_{field}_list", False, f"step_designs[{index}].{field} 必须是数组"))
+        return
+    checks.append(check(f"step_designs[{index}]_{field}_list", True, f"step_designs[{index}].{field} 是数组"))
+    for item_index, item in enumerate(value):
+        issue = normalize_path_issue(item)
+        checks.append(
+            check(
+                f"step_designs[{index}]_{field}[{item_index}]_relative_safe",
+                not issue,
+                f"step_designs[{index}].{field}[{item_index}] {issue or '是安全相对路径'}",
+            )
+        )
 
 
 def append_step_design_contract_checks(result: dict[str, Any], lgwf_dir: Path) -> dict[str, Any]:
@@ -108,6 +146,23 @@ def append_step_design_contract_checks(result: dict[str, Any], lgwf_dir: Path) -
                 passed = isinstance(value, str) and bool(value.strip())
                 message = f"step_designs[{index}].{field} 必须是非空字符串"
             checks.append(check(f"step_designs[{index}]_{field}_present", passed, message))
+        source_refs = item.get("source_refs")
+        checks.append(
+            check(
+                f"step_designs[{index}]_source_refs_present",
+                isinstance(source_refs, list) and bool(source_refs),
+                f"step_designs[{index}].source_refs 必须是非空数组",
+            )
+        )
+        out_of_scope_text = "\n".join(str(value) for value in item.get("out_of_scope", []) if isinstance(value, str))
+        for term in FORBIDDEN_OUT_OF_SCOPE_TERMS:
+            checks.append(
+                check(
+                    f"step_designs[{index}]_out_of_scope_mentions_{term}",
+                    term in out_of_scope_text,
+                    f"step_designs[{index}].out_of_scope 必须排除 {term}",
+                )
+            )
         stage_id = str(item.get("stage_id", "")).strip()
         if expected_stage_ids and stage_id:
             checks.append(
@@ -117,6 +172,8 @@ def append_step_design_contract_checks(result: dict[str, Any], lgwf_dir: Path) -
                     f"stage_id `{stage_id}` 必须匹配已确认业务流或 scaffold stage_manifest",
                 )
             )
+        for field in OPTIONAL_LIST_PATH_FIELDS:
+            append_path_list_checks(checks, index, field, item.get(field))
         for field in FORBIDDEN_DOC_PATH_FIELDS:
             raw_value = item.get(field)
             if not isinstance(raw_value, str) or not raw_value.strip():
@@ -153,10 +210,10 @@ def main() -> None:
         ],
     )
     result = append_step_design_contract_checks(result, lgwf_dir)
-    write_json(lgwf_dir / "step_designs_proposal_quality_gate.json", result)
+    write_json(lgwf_dir / "step_design_structural_gate.json", result)
     print(
         json.dumps(
-            {"lgwf_wf_create.step_designs_proposal_quality_gate": result},
+            {"lgwf_wf_create.step_design_structural_gate": result},
             ensure_ascii=False,
             indent=2,
         )

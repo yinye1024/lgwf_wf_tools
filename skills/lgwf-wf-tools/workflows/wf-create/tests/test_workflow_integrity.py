@@ -241,12 +241,23 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "01_reference_context/scripts/prepare_dsl_reference_context.py",
             "02_step_design_proposal/workflow.lgwf",
             "02_step_design_proposal/README.md",
-            "02_step_design_proposal/agents/design_steps_react.md",
+            "02_step_design_proposal/01_reason_step_designs/workflow.lgwf",
+            "02_step_design_proposal/01_reason_step_designs/README.md",
+            "02_step_design_proposal/01_reason_step_designs/agents/reason_step_designs.md",
+            "02_step_design_proposal/02_act_step_designs/workflow.lgwf",
+            "02_step_design_proposal/02_act_step_designs/README.md",
+            "02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md",
+            "02_step_design_proposal/03_observe_step_designs/workflow.lgwf",
+            "02_step_design_proposal/03_observe_step_designs/README.md",
+            "02_step_design_proposal/03_observe_step_designs/agents/observe_step_designs.md",
+            "02_step_design_proposal/03_observe_step_designs/scripts/validate_step_designs_structure.py",
+            "02_step_design_proposal/03_observe_step_designs/scripts/merge_step_design_observation.py",
+            "02_step_design_proposal/04_decide_step_designs/workflow.lgwf",
+            "02_step_design_proposal/04_decide_step_designs/README.md",
+            "02_step_design_proposal/04_decide_step_designs/agents/decide_step_designs.md",
+            "02_step_design_proposal/04_decide_step_designs/scripts/decide_step_designs.py",
             "02_step_design_proposal/scripts/assert_quality_gate.py",
-            "02_step_design_proposal/scripts/decide_react.py",
-            "02_step_design_proposal/scripts/prepare_react_context.py",
             "02_step_design_proposal/scripts/prepare_react_feedback.py",
-            "02_step_design_proposal/scripts/validate_step_designs_proposal.py",
             "03_step_design_review/workflow.lgwf",
             "03_step_design_review/README.md",
             "03_step_design_review/agents/confirm_step_designs.md",
@@ -267,6 +278,10 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "scripts",
             "confirm_step_designs.md",
             "revise_step_designs.md",
+            "02_step_design_proposal/agents/design_steps_react.md",
+            "02_step_design_proposal/scripts/prepare_react_context.py",
+            "02_step_design_proposal/scripts/validate_step_designs_proposal.py",
+            "02_step_design_proposal/scripts/decide_react.py",
         )
         for relative in old_locations:
             with self.subTest(old_location=relative):
@@ -283,14 +298,15 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "step_design_proposal": (
                 "PY prepare_step_design_proposal_react_feedback",
                 "REACT step_design_proposal_react",
-                "REASON PY",
-                "ACT CODEX",
-                "OBSERVE PY",
-                "DECIDE PY",
+                "REASON WORKFLOW reason_step_designs",
+                "ACT WORKFLOW act_step_designs",
+                "OBSERVE WORKFLOW observe_step_designs",
+                "DECIDE WORKFLOW decide_step_designs",
                 "PY assert_step_designs_proposal_quality_gate",
-                'PROMPT "agents/design_steps_react.md"',
-                'CONTEXT workspace file ".lgwf/step_design_proposal_react_context.json"',
-                'SCRIPT "scripts/validate_step_designs_proposal.py"',
+                'WORKFLOW "01_reason_step_designs/workflow.lgwf"',
+                'WORKFLOW "02_act_step_designs/workflow.lgwf"',
+                'WORKFLOW "03_observe_step_designs/workflow.lgwf"',
+                'WORKFLOW "04_decide_step_designs/workflow.lgwf"',
                 'READ workspace file ".lgwf/scaffold_package_result.json";',
             ),
             "step_design_review": (
@@ -335,12 +351,25 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         proposal = (ROOT / "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf").read_text(
             encoding="utf-8"
         )
-        prompt = (
-            ROOT / "03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md"
-        ).read_text(encoding="utf-8")
+        prompt = "\n".join(
+            (
+                (
+                    ROOT
+                    / "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/agents/reason_step_designs.md"
+                ).read_text(encoding="utf-8"),
+                (
+                    ROOT
+                    / "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md"
+                ).read_text(encoding="utf-8"),
+                (
+                    ROOT
+                    / "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/agents/observe_step_designs.md"
+                ).read_text(encoding="utf-8"),
+            )
+        )
         validator = (
             ROOT
-            / "03_confirm_step_designs/02_step_design_proposal/scripts/validate_step_designs_proposal.py"
+            / "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/scripts/validate_step_designs_structure.py"
         ).read_text(encoding="utf-8")
 
         combined_workflow = parent + "\n" + proposal
@@ -565,14 +594,19 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         proposal_workflow = (ROOT / "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf").read_text(
             encoding="utf-8"
         )
+        proposal_act_workflow = (
+            ROOT / "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/workflow.lgwf"
+        ).read_text(encoding="utf-8")
         implementation_workflow = (ROOT / "04_implement_steps_react/workflow.lgwf").read_text(encoding="utf-8")
         self.assertIn('WORKFLOW "01_reference_context/workflow.lgwf"', parent_workflow)
         self.assertIn('WORKFLOW "02_step_design_proposal/workflow.lgwf"', parent_workflow)
         self.assertIn('WORKFLOW "03_step_design_review/workflow.lgwf"', parent_workflow)
         self.assertIn("PY prepare_dsl_reference_context", reference_workflow)
         self.assertIn("REACT step_design_proposal_react", proposal_workflow)
-        self.assertIn("ACT CODEX", proposal_workflow)
-        self.assertIn('PROMPT "agents/design_steps_react.md"', proposal_workflow)
+        self.assertIn("REASON WORKFLOW reason_step_designs", proposal_workflow)
+        self.assertIn("ACT WORKFLOW act_step_designs", proposal_workflow)
+        self.assertIn("OBSERVE WORKFLOW observe_step_designs", proposal_workflow)
+        self.assertIn("DECIDE WORKFLOW decide_step_designs", proposal_workflow)
         self.assertRegex(
             proposal_workflow,
             r"step_design_proposal_react\s+THEN\s+assert_step_designs_proposal_quality_gate",
@@ -580,7 +614,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
 
-        text = proposal_workflow
+        text = proposal_workflow + "\n" + proposal_act_workflow
         self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context"', text)
         self.assertIn('CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"', text)
         self.assertNotIn('CONTEXT workspace file ".lgwf/create_reference_context/index.md"', text)

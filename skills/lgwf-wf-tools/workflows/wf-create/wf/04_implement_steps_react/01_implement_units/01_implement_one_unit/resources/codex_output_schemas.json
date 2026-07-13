@@ -219,6 +219,64 @@
       },
       "additionalProperties": true
     },
+    ".lgwf/step_design_reason.json": {
+      "type": "object",
+      "required": [
+        "round_mode",
+        "repair_focus",
+        "must_preserve",
+        "must_change",
+        "forbidden_changes",
+        "act_instructions",
+        "risk_notes"
+      ],
+      "properties": {
+        "round_mode": {
+          "type": "string",
+          "enum": [
+            "first_round",
+            "targeted_repair"
+          ]
+        },
+        "repair_focus": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "must_preserve": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "must_change": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbidden_changes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "act_instructions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risk_notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     ".lgwf/step_designs_proposal.json": {
       "type": "object",
       "required": [
@@ -328,6 +386,75 @@
             },
             "additionalProperties": true
           }
+        }
+      },
+      "additionalProperties": true
+    },
+    ".lgwf/step_design_semantic_observation.json": {
+      "type": "object",
+      "required": [
+        "verdict",
+        "semantic_passed",
+        "blocking_issues",
+        "valid_parts_to_preserve",
+        "reason_feedback"
+      ],
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "semantic_passed": {
+          "type": "boolean"
+        },
+        "blocking_issues": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "valid_parts_to_preserve": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason_feedback": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    ".lgwf/step_design_decision_analysis.json": {
+      "type": "object",
+      "required": [
+        "recommended_next",
+        "reason",
+        "repeat_issue_signatures",
+        "no_progress_risk"
+      ],
+      "properties": {
+        "recommended_next": {
+          "type": "string",
+          "enum": [
+            "continue",
+            "exit"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "repeat_issue_signatures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "no_progress_risk": {
+          "type": "boolean"
         }
       },
       "additionalProperties": true

@@ -6,17 +6,6 @@ DEFAULTS {
   timeout_seconds 900;
 }
 
-CONTEXT_SET implementation_shared_context {
-  workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-  workspace dir ".lgwf/create_reference_context";
-  workspace file ".lgwf/implementation_audit_result.json";
-  workspace file ".lgwf/implementation_context.json";
-  workspace file ".lgwf/implementation_decision.json";
-  workspace file ".lgwf/implementation_observe.json";
-  workspace file ".lgwf/scaffold_package_result.json";
-  workspace file ".lgwf/step_designs.json";
-}
-
 PY initialize_implementation_observe
   SCRIPT "scripts/initialize_implementation_observe.py"
   TIMEOUT 30
@@ -30,11 +19,19 @@ PY initialize_implementation_observe
 
 REACT implement_steps_react MAX 3
   SPEC "agents/spec.md"
-  CONTEXT implementation_shared_context
   CONTRACT {
   }
   REASON CODEX
     PROMPT "agents/reason.md"
+    CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"
+    CONTEXT workspace dir ".lgwf/create_reference_context"
+    CONTEXT workspace file ".lgwf/implementation_audit_result.json"
+    CONTEXT workspace file ".lgwf/implementation_context.json"
+    CONTEXT workspace file ".lgwf/implementation_decision.json"
+    CONTEXT workspace file ".lgwf/implementation_observe.json"
+    CONTEXT workspace file ".lgwf/implementation_result.json"
+    CONTEXT workspace file ".lgwf/scaffold_package_result.json"
+    CONTEXT workspace file ".lgwf/step_designs.json"
     OUTPUT_FILE ".lgwf/implementation_reason.md"
     TIMEOUT 1200
     RESULT state.lgwf_wf_create.implementation_reason_result

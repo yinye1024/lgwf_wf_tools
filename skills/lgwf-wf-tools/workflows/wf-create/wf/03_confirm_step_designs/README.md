@@ -13,8 +13,12 @@
 ## 输出
 
 - `.lgwf/create_reference_context/*`
-- `.lgwf/step_design_proposal_react_context.json`
+- `.lgwf/step_design_reason.json`
 - `.lgwf/step_designs_proposal.json`
+- `.lgwf/step_design_structural_gate.json`
+- `.lgwf/step_design_semantic_observation.json`
+- `.lgwf/step_design_observation.json`
+- `.lgwf/step_design_decision_analysis.json`
 - `.lgwf/step_designs_proposal_decision.json`
 - `.lgwf/step_designs_proposal_quality_gate.json`
 - `.lgwf/step_design_confirmation_record.json`
@@ -24,7 +28,7 @@
 ## 子流程
 
 - `01_reference_context`：复制 DSL、模块化开发和模块契约参考资料，发布 `.lgwf/create_reference_context/step-design-reference-index.md` 和 `.lgwf/create_reference_context/implementation-reference-index.md` 两个索引；scaffold 结构信息来自 `.lgwf/scaffold_package_result.json`。
-- `02_step_design_proposal`：先按 reference index 按需读取参考资料，再用小 ReAct 生成完整结构化 `.lgwf/step_designs_proposal.json`；quality gate 失败时把失败项反馈给下一轮修正，最终仍失败才终止。
+- `02_step_design_proposal`：先按 reference index 按需读取参考资料，再用 `REASON/ACT/OBSERVE/DECIDE` 四个 slot workflow 生成完整结构化 `.lgwf/step_designs_proposal.json`；`OBSERVE` 把 structural gate 和 semantic audit 合并为 `.lgwf/step_design_observation.json`，下一轮 `REASON` 只从该文件的 `reason_feedback` 提取修复指令，最终仍失败才终止。
 - `03_step_design_review`：处理 `approve`、`revise`、`reject` 人工确认，批准后固化步骤设计并准备实现上下文。
 
 ## 状态边界

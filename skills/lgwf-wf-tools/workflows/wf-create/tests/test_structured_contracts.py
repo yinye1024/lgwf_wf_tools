@@ -18,6 +18,18 @@ STRUCTURE_VALIDATOR_SCRIPT = PACKAGE_ROOT / "scripts" / "validate_two_layer_work
 sys.dont_write_bytecode = True
 
 
+def read_step_design_prompts() -> str:
+    return "\n".join(
+        (ROOT / relative).read_text(encoding="utf-8")
+        for relative in (
+            "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/agents/reason_step_designs.md",
+            "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md",
+            "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/agents/observe_step_designs.md",
+            "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/agents/decide_step_designs.md",
+        )
+    )
+
+
 def load_summary_module():
     spec = importlib.util.spec_from_file_location("lgwf_wf_create_summary", SUMMARY_SCRIPT)
     module = importlib.util.module_from_spec(spec)
@@ -196,9 +208,27 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                 True,
             ),
             (
-                "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf",
-                "03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md",
+                "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/workflow.lgwf",
+                "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/agents/reason_step_designs.md",
+                ".lgwf/step_design_reason.json",
+                True,
+            ),
+            (
+                "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/workflow.lgwf",
+                "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md",
                 ".lgwf/step_designs_proposal.json",
+                True,
+            ),
+            (
+                "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/workflow.lgwf",
+                "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/agents/observe_step_designs.md",
+                ".lgwf/step_design_semantic_observation.json",
+                True,
+            ),
+            (
+                "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/workflow.lgwf",
+                "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/agents/decide_step_designs.md",
+                ".lgwf/step_design_decision_analysis.json",
                 True,
             ),
             (
@@ -261,7 +291,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("PY prepare_current_implementation_unit", unit_workflow)
         self.assertIn("CODEX implement_current_unit", unit_workflow)
-        self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
+        self.assertNotIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
+        self.assertNotIn('READ workflow file "agents/spec.md";', unit_workflow)
         self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
         self.assertIn(
             'CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"',
@@ -279,8 +310,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn('SCRIPT "scripts/audit_created_package.py"', observe_workflow)
         self.assertIn("CODEX observe_implementation", observe_workflow)
         self.assertIn('PROMPT "agents/observe.md"', observe_workflow)
-        self.assertIn('workflow file "agents/spec.md"', observe_workflow)
-        self.assertIn('READ workflow file "agents/spec.md";', observe_workflow)
+        self.assertNotIn('workflow file "agents/spec.md"', observe_workflow)
+        self.assertNotIn('READ workflow file "agents/spec.md";', observe_workflow)
         self.assertNotIn("INSTRUCTION state.lgwf_wf_create.implementation_audit_result", observe_workflow)
         self.assertIn('workspace file ".lgwf/implementation_audit_result.json"', observe_workflow)
         self.assertIn('workspace file ".lgwf/scaffold_package_result.json"', observe_workflow)
@@ -298,8 +329,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn(".lgwf/scaffold_package_result.json", observe_prompt)
         self.assertIn(".lgwf/implementation_audit_result.json", reason_prompt)
         self.assertIn("原始确定性检测结果", reason_prompt)
-        self.assertIn("先读取 `agents/spec.md`", observe_prompt)
-        self.assertIn('CONTEXT workflow file "agents/spec.md"', observe_prompt)
+        self.assertNotIn("agents/spec.md", observe_prompt)
+        self.assertIn("audit 解释边界", observe_prompt)
         self.assertIn("不得把脚本 audit 的失败结果改写为通过", observe_prompt)
         audit_script = (ROOT / "04_implement_steps_react/02_observe_audit/scripts/audit_created_package.py").read_text(
             encoding="utf-8"
@@ -312,6 +343,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         template_path = ROOT / "02_confirm_business_flow/03_scaffold_package/resources/scaffold_package_template.json"
         contract_path = ROOT / "02_confirm_business_flow/03_scaffold_package/resources/scaffold_result_contract.md"
         step_workflow = (ROOT / "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf").read_text(encoding="utf-8")
+        step_act_workflow = (
+            ROOT / "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/workflow.lgwf"
+        ).read_text(encoding="utf-8")
         spec = spec_path.read_text(encoding="utf-8")
         template = json.loads(template_path.read_text(encoding="utf-8"))
         contract = contract_path.read_text(encoding="utf-8")
@@ -334,13 +368,14 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         }
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
-        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context"', step_workflow)
+        step_design_workflow_text = step_workflow + "\n" + step_act_workflow
+        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context"', step_design_workflow_text)
         self.assertIn(
             'CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"',
-            step_workflow,
+            step_design_workflow_text,
         )
-        self.assertNotIn('CONTEXT workspace file ".lgwf/create_reference_context/index.md"', step_workflow)
-        self.assertNotIn('CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"', step_workflow)
+        self.assertNotIn('CONTEXT workspace file ".lgwf/create_reference_context/index.md"', step_design_workflow_text)
+        self.assertNotIn('CONTEXT workspace dir ".lgwf/create_reference_context/scaffold"', step_design_workflow_text)
         reference_index = (
             ROOT / "03_confirm_step_designs/01_reference_context/resources/step_design_reference_index.md"
         ).read_text(encoding="utf-8")
@@ -359,9 +394,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         )
         self.assertIn("workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md", reference_index)
 
-        prompt = (
-            ROOT / "03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md"
-        ).read_text(encoding="utf-8")
+        prompt = read_step_design_prompts()
         self.assertIn(".lgwf/create_reference_context/step-design-reference-index.md", prompt)
         self.assertNotIn(".lgwf/create_reference_context/index.md", prompt)
         self.assertIn("scaffold_plan", prompt)
@@ -370,20 +403,28 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertNotIn("02_confirm_business_flow/03_scaffold_package/resources/scaffold_template_spec.md", prompt)
         self.assertNotIn(".lgwf/create_reference_context/scaffold", prompt)
 
-        act_prompt = (ROOT / "04_implement_steps_react/01_implement_units/agents/act.md").read_text(
-            encoding="utf-8"
+        implementation_prompt = "\n".join(
+            (
+                (ROOT / "04_implement_steps_react/agents/spec.md").read_text(encoding="utf-8"),
+                (ROOT / "04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/act_unit.md").read_text(
+                    encoding="utf-8"
+                ),
+            )
         )
-        self.assertNotIn("02_confirm_business_flow/03_scaffold_package/resources/scaffold_template_spec.md", act_prompt)
-        self.assertNotIn(".lgwf/create_reference_context/scaffold", act_prompt)
-        self.assertIn(".lgwf/scaffold_package_result.json", act_prompt)
-        self.assertIn(".lgwf/create_reference_context/implementation-reference-index.md", act_prompt)
-        self.assertIn(".lgwf/create_reference_context", act_prompt)
+        self.assertNotIn(
+            "02_confirm_business_flow/03_scaffold_package/resources/scaffold_template_spec.md",
+            implementation_prompt,
+        )
+        self.assertNotIn(".lgwf/create_reference_context/scaffold", implementation_prompt)
+        self.assertIn(".lgwf/scaffold_package_result.json", implementation_prompt)
+        self.assertIn(".lgwf/create_reference_context/implementation-reference-index.md", implementation_prompt)
+        self.assertIn(".lgwf/create_reference_context", implementation_prompt)
         self.assertNotIn(
             ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md",
-            act_prompt,
+            implementation_prompt,
         )
-        self.assertIn("scaffold_plan", act_prompt)
-        self.assertIn("package_profile", act_prompt)
+        self.assertIn("scaffold_plan", implementation_prompt)
+        self.assertIn("package_profile", implementation_prompt)
 
     def test_apply_scripts_write_confirmed_artifacts_and_reject_invalid_paths(self) -> None:
         cases = (

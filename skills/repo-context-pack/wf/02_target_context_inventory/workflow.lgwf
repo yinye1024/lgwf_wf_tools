@@ -1,0 +1,40 @@
+WORKFLOW target_context_inventory;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "repo_context_pack.target_context_inventory.{node}";
+}
+
+PY build_target_context_inventory
+  SCRIPT "scripts/run.py"
+  INPUT state.repo_context_pack_request
+  TIMEOUT 180
+  RESULT state.repo_context_pack.target_context_inventory_build_result
+  UPDATES_STATE {
+    WRITE state.repo_context_pack.context_inventory;
+  }
+  CONTRACT {
+    READ state.repo_context_pack_request;
+    WRITE state.repo_context_pack.context_inventory;
+    WRITE workspace file ".lgwf/context_inventory.json";
+  };
+
+PY verify_context_inventory_handoff
+  SCRIPT "scripts/run.py"
+  INPUT state.repo_context_pack.context_inventory
+  TIMEOUT 60
+  RESULT state.repo_context_pack.target_context_inventory_result
+  UPDATES_STATE {
+    WRITE state.repo_context_pack.context_inventory_verification;
+  }
+  CONTRACT {
+    READ state.repo_context_pack.context_inventory;
+    READ workspace file ".lgwf/context_inventory.json";
+    WRITE state.repo_context_pack.context_inventory_verification;
+  };
+
+FLOW main
+  START build_target_context_inventory
+  THEN verify_context_inventory_handoff;

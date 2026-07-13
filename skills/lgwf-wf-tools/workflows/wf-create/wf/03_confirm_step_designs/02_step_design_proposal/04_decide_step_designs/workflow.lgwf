@@ -1,0 +1,34 @@
+WORKFLOW decide_step_designs;
+ENTRY decide_step_designs;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+CODEX decide_step_designs
+  PROMPT "agents/decide_step_designs.md"
+  CONTEXT workspace file ".lgwf/step_design_observation.json"
+  CONTEXT workspace file ".lgwf/step_designs_proposal.json"
+  OUTPUT_JSON ".lgwf/step_design_decision_analysis.json" AS_FILE
+  TIMEOUT 300
+  RESULT state.lgwf_wf_create.step_design_decision_analysis_result
+  CONTRACT {
+    READ workspace file ".lgwf/step_design_observation.json";
+    READ workspace file ".lgwf/step_designs_proposal.json";
+    WRITE workspace file ".lgwf/step_design_decision_analysis.json";
+  };
+
+PY write_step_design_decision
+  SCRIPT "scripts/decide_step_designs.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.step_designs_proposal_decision_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/step_design_observation.json";
+    READ workspace file ".lgwf/step_design_decision_analysis.json";
+    WRITE workspace file ".lgwf/step_designs_proposal_decision.json";
+  };
+
+FLOW decide_step_designs
+  THEN write_step_design_decision;

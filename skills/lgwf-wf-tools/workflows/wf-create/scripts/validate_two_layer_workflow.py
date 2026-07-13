@@ -10,12 +10,27 @@ from typing import Iterable
 WORKFLOW_REF_RE = re.compile(r'WORKFLOW\s+"([^"]+)"')
 RESOURCE_REF_RE = re.compile(r'(SCRIPT|PROMPT|PROMPT_REF|SPEC)\s+"([^"]+)"')
 ALLOWED_DEEP_WORKFLOWS = {
+    "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/workflow.lgwf",
+    "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/workflow.lgwf",
+    "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/workflow.lgwf",
+    "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/workflow.lgwf",
     "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf"
 }
 ALLOWED_DEEP_WORKFLOW_PARENTS = {
+    "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf": {
+        "01_reason_step_designs/workflow.lgwf",
+        "02_act_step_designs/workflow.lgwf",
+        "03_observe_step_designs/workflow.lgwf",
+        "04_decide_step_designs/workflow.lgwf",
+    },
     "04_implement_steps_react/01_implement_units/workflow.lgwf": {
         "01_implement_one_unit/workflow.lgwf"
     }
+}
+README_OPTIONAL_WORKFLOWS = {
+    "04_implement_steps_react/01_implement_units/workflow.lgwf",
+    "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf",
+    "04_implement_steps_react/02_observe_audit/workflow.lgwf",
 }
 
 
@@ -45,9 +60,13 @@ def validate_workflow_file_depth(package_root: Path, errors: list[str]) -> None:
             continue
         if depth not in {2, 3} and relative not in ALLOWED_DEEP_WORKFLOWS:
             errors.append(f"workflow 最多允许阶段/子流程两级: wf/{relative}")
-        if depth == 3 and not (workflow.parent / "README.md").is_file():
+        if depth == 3 and relative not in README_OPTIONAL_WORKFLOWS and not (workflow.parent / "README.md").is_file():
             errors.append(f"孙级 workflow 必须有 README.md 说明职责: wf/{relative}")
-        if relative in ALLOWED_DEEP_WORKFLOWS and not (workflow.parent / "README.md").is_file():
+        if (
+            relative in ALLOWED_DEEP_WORKFLOWS
+            and relative not in README_OPTIONAL_WORKFLOWS
+            and not (workflow.parent / "README.md").is_file()
+        ):
             errors.append(f"受控第三层 workflow 必须有 README.md 说明职责: wf/{relative}")
 
 

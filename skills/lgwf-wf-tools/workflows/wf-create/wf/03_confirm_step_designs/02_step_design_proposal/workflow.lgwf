@@ -11,6 +11,7 @@ PY prepare_step_design_proposal_react_feedback
   TIMEOUT 30
   RESULT state.lgwf_wf_create.step_design_proposal_react_feedback_prepare_result
   CONTRACT {
+    WRITE workspace file ".lgwf/step_design_observation.json";
     WRITE workspace file ".lgwf/step_designs_proposal_quality_gate.json";
     WRITE workspace file ".lgwf/step_designs_proposal_decision.json";
   };
@@ -18,56 +19,50 @@ PY prepare_step_design_proposal_react_feedback
 REACT step_design_proposal_react MAX 3
   CONTRACT {
   }
-  REASON PY
-    SCRIPT "scripts/prepare_react_context.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.step_design_proposal_react_context_result
-    UPDATES_STATE
+  REASON WORKFLOW reason_step_designs
+    WORKFLOW "01_reason_step_designs/workflow.lgwf"
+    RESULT state.lgwf_wf_create.step_design_reason_workflow_result
     CONTRACT {
       READ workspace file ".lgwf/business_flow.json";
       READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/scaffold_package_result.json";
-      READ workspace file ".lgwf/step_designs_proposal_quality_gate.json";
+      READ workspace file ".lgwf/step_design_observation.json";
       READ workspace file ".lgwf/step_designs_proposal_decision.json";
-      WRITE workspace file ".lgwf/step_design_proposal_react_context.json";
-      WRITE state.lgwf_wf_create.step_design_proposal_react_context;
+      WRITE workspace file ".lgwf/step_design_reason.json";
     }
-  ACT CODEX
-    PROMPT "agents/design_steps_react.md"
-    CONTEXT workspace file ".lgwf/step_design_proposal_react_context.json"
-    CONTEXT workspace dir ".lgwf/create_reference_context"
-    CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"
-    OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
-    TIMEOUT 900
-    RESULT state.lgwf_wf_create.step_design_result
+  ACT WORKFLOW act_step_designs
+    WORKFLOW "02_act_step_designs/workflow.lgwf"
+    RESULT state.lgwf_wf_create.step_design_act_workflow_result
     CONTRACT {
       READ workspace file ".lgwf/business_flow.json";
       READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/scaffold_package_result.json";
-      READ workspace file ".lgwf/step_design_proposal_react_context.json";
-      READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
+      READ workspace file ".lgwf/step_design_reason.json";
       READ workspace dir ".lgwf/create_reference_context";
+      READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
       WRITE workspace file ".lgwf/step_designs_proposal.json";
     }
-  OBSERVE PY
-    SCRIPT "scripts/validate_step_designs_proposal.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.step_designs_proposal_quality_gate
-    UPDATES_STATE
+  OBSERVE WORKFLOW observe_step_designs
+    WORKFLOW "03_observe_step_designs/workflow.lgwf"
+    RESULT state.lgwf_wf_create.step_design_observe_workflow_result
     CONTRACT {
       READ workspace file ".lgwf/business_flow.json";
       READ workspace file ".lgwf/create_requirements.json";
       READ workspace file ".lgwf/scaffold_package_result.json";
+      READ workspace file ".lgwf/step_design_reason.json";
       READ workspace file ".lgwf/step_designs_proposal.json";
+      WRITE workspace file ".lgwf/step_design_structural_gate.json";
+      WRITE workspace file ".lgwf/step_design_semantic_observation.json";
+      WRITE workspace file ".lgwf/step_design_observation.json";
       WRITE workspace file ".lgwf/step_designs_proposal_quality_gate.json";
     }
-  DECIDE PY
-    SCRIPT "scripts/decide_react.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.step_designs_proposal_decision_result
-    UPDATES_STATE
+  DECIDE WORKFLOW decide_step_designs
+    WORKFLOW "04_decide_step_designs/workflow.lgwf"
+    RESULT state.lgwf_wf_create.step_design_decide_workflow_result
     CONTRACT {
-      READ workspace file ".lgwf/step_designs_proposal_quality_gate.json";
+      READ workspace file ".lgwf/step_design_observation.json";
+      READ workspace file ".lgwf/step_designs_proposal.json";
+      WRITE workspace file ".lgwf/step_design_decision_analysis.json";
       WRITE workspace file ".lgwf/step_designs_proposal_decision.json";
     };
 
@@ -77,6 +72,7 @@ PY assert_step_designs_proposal_quality_gate
   RESULT state.lgwf_wf_create.step_designs_proposal_quality_gate_assert_result
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/step_design_observation.json";
     READ workspace file ".lgwf/step_designs_proposal_quality_gate.json";
     WRITE state.lgwf_wf_create.step_designs_proposal_quality_gate_asserted;
   };

@@ -7,7 +7,6 @@ DEFAULTS {
 }
 
 CONTEXT_SET implementation_observe_context {
-  workflow file "agents/spec.md";
   workspace file ".lgwf/implementation_context.json";
   workspace file ".lgwf/implementation_result.json";
   workspace file ".lgwf/implementation_audit_result.json";
@@ -37,7 +36,6 @@ CODEX observe_implementation
   TIMEOUT 600
   RESULT state.lgwf_wf_create.implementation_observe_result
   CONTRACT {
-    READ workflow file "agents/spec.md";
     READ workspace file ".lgwf/implementation_audit_result.json";
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/implementation_result.json";

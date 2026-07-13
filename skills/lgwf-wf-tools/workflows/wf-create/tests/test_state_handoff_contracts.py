@@ -335,7 +335,10 @@ class StateHandoffContractTest(unittest.TestCase):
         expectations = (
             ("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md", "requirements_confirmation_context"),
             ("02_confirm_business_flow/01_business_flow_proposal/agents/propose_business_flow.md", "business_flow_confirmation_context"),
-            ("03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md", "step_design_confirmation_context"),
+            (
+                "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md",
+                "step_design_confirmation_context",
+            ),
         )
         for relative, state_key in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")

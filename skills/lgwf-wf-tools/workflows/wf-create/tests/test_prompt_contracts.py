@@ -13,6 +13,18 @@ def read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
 
 
+def read_step_design_prompts() -> str:
+    return "\n".join(
+        read(relative)
+        for relative in (
+            "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/agents/reason_step_designs.md",
+            "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md",
+            "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/agents/observe_step_designs.md",
+            "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/agents/decide_step_designs.md",
+        )
+    )
+
+
 class PromptContractTest(unittest.TestCase):
     def test_collect_raw_intent_drops_decision_routing(self) -> None:
         workflow = read("01_confirm_requirements/01_raw_intent/workflow.lgwf")
@@ -74,7 +86,7 @@ class PromptContractTest(unittest.TestCase):
         business_workflow = read("02_confirm_business_flow/01_business_flow_proposal/workflow.lgwf")
         requirements_prompt = read("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md")
         business_prompt = read("02_confirm_business_flow/01_business_flow_proposal/agents/propose_business_flow.md")
-        step_prompt = read("03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md")
+        step_prompt = read_step_design_prompts()
         step_workflow = read("03_confirm_step_designs/02_step_design_proposal/workflow.lgwf")
 
         self.assertIn('"target_dir"', entry_contract)
@@ -114,17 +126,33 @@ class PromptContractTest(unittest.TestCase):
         self.assertNotIn('READ workspace file ".lgwf/business_flow_proposal.json";', step_workflow)
 
     def test_step_design_prompt_stays_inside_design_node_contract(self) -> None:
-        prompt = read("03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md")
+        prompt = read_step_design_prompts()
 
         for required in (
             "不是开放式创意设计",
             "不要调用或遵循外部 brainstorming",
-            "只读取本 prompt 的 Inputs",
             "不要读取 `wf/04_implement_steps_react/`",
             "不得生成 `docs/superpowers/`",
-            "唯一目标是把已确认输入确定性转换",
+            "已确认输入",
         ):
             self.assertIn(required, prompt)
+        reason_prompt = read(
+            "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/agents/reason_step_designs.md"
+        )
+        act_prompt = read(
+            "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md"
+        )
+        observe_prompt = read(
+            "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/agents/observe_step_designs.md"
+        )
+        decide_prompt = read(
+            "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/agents/decide_step_designs.md"
+        )
+        self.assertIn("reason_feedback", reason_prompt)
+        self.assertIn("act_instructions", act_prompt)
+        self.assertIn("blocking_issues", observe_prompt)
+        self.assertIn("recommended_next", decide_prompt)
+        self.assertNotIn("workflow control", decide_prompt.lower())
 
     def test_all_proposal_reviews_have_quality_gate_before_review(self) -> None:
         cases = (
@@ -143,7 +171,7 @@ class PromptContractTest(unittest.TestCase):
             (
                 "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf",
                 "step_design_proposal_react",
-                "OBSERVE PY",
+                "OBSERVE WORKFLOW observe_step_designs",
                 ".lgwf/step_designs_proposal_quality_gate.json",
             ),
         )
@@ -153,23 +181,17 @@ class PromptContractTest(unittest.TestCase):
             if gate_snippet == "OBSERVE PY":
                 self.assertIn(f"REACT {proposal_node}", workflow)
                 self.assertIn("OBSERVE PY", workflow)
-                expected_validate_script = (
-                    'SCRIPT "scripts/validate_step_designs_proposal.py"'
-                    if proposal_node == "step_design_proposal_react"
-                    else 'SCRIPT "scripts/validate_proposal.py"'
-                )
-                self.assertIn(expected_validate_script, workflow)
+                self.assertIn('SCRIPT "scripts/validate_proposal.py"', workflow)
                 expected_assert = (
                     "assert_requirements_proposal_quality_gate"
                     if proposal_node == "requirements_proposal_react"
                     else "assert_business_flow_proposal_quality_gate"
-                    if proposal_node == "business_flow_proposal_react"
-                    else "assert_step_designs_proposal_quality_gate"
                 )
                 self.assertRegex(workflow, rf"{proposal_node}\s+THEN\s+{expected_assert}")
             else:
-                self.assertIn(f"PY {gate_snippet}", workflow)
-                self.assertRegex(workflow, rf"{proposal_node}\s+THEN\s+{gate_snippet}")
+                self.assertIn(gate_snippet, workflow)
+                self.assertIn('WORKFLOW "03_observe_step_designs/workflow.lgwf"', workflow)
+                self.assertRegex(workflow, rf"{proposal_node}\s+THEN\s+assert_step_designs_proposal_quality_gate")
 
         review_cases = (
             ("01_confirm_requirements/03_requirements_review/workflow.lgwf", "prepare_requirements_confirmation", "confirm_requirements"),
@@ -184,17 +206,22 @@ class PromptContractTest(unittest.TestCase):
         for relative in (
             "01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md",
             "02_confirm_business_flow/01_business_flow_proposal/agents/propose_business_flow.md",
-            "03_confirm_step_designs/02_step_design_proposal/agents/design_steps_react.md",
         ):
             prompt = read(relative)
             self.assertIn("workflow_id", prompt, relative)
             self.assertIn("target_package_root", prompt, relative)
+        step_prompt = read_step_design_prompts()
+        self.assertIn("workflow_id", step_prompt)
+        self.assertIn("target_package_root", step_prompt)
 
     def test_all_codex_prompt_nodes_have_contract_boundary_coverage(self) -> None:
         expected_nodes = {
             "01_confirm_requirements/02_requirements_proposal/workflow.lgwf:act",
             "02_confirm_business_flow/01_business_flow_proposal/workflow.lgwf:act",
-            "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf:act",
+            "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/workflow.lgwf:reason_step_designs",
+            "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/workflow.lgwf:act_step_designs",
+            "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/workflow.lgwf:observe_step_designs",
+            "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/workflow.lgwf:decide_step_designs",
             "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf:implement_current_unit",
             "04_implement_steps_react/02_observe_audit/workflow.lgwf:observe_implementation",
             "04_implement_steps_react/workflow.lgwf:reason",
@@ -238,7 +265,10 @@ class PromptContractTest(unittest.TestCase):
             {
                 ".lgwf/create_requirements_proposal.json",
                 ".lgwf/business_flow_proposal.json",
+                ".lgwf/step_design_reason.json",
                 ".lgwf/step_designs_proposal.json",
+                ".lgwf/step_design_semantic_observation.json",
+                ".lgwf/step_design_decision_analysis.json",
                 ".lgwf/current_implementation_unit_result.json",
                 ".lgwf/implementation_observe.json",
             },
@@ -325,16 +355,17 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("OBSERVE WORKFLOW observe_audit", implement_workflow)
         self.assertIn("scripts/audit_created_package.py", observe_workflow)
         self.assertIn("CODEX observe_implementation", observe_workflow)
-        self.assertIn('workflow file "agents/spec.md"', observe_workflow)
-        self.assertIn('READ workflow file "agents/spec.md";', observe_workflow)
+        self.assertNotIn('workflow file "agents/spec.md"', observe_workflow)
+        self.assertNotIn('READ workflow file "agents/spec.md";', observe_workflow)
         self.assertNotIn("INSTRUCTION state.lgwf_wf_create.implementation_audit_result", observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_workflow)
         self.assertIn(".lgwf/scaffold_package_result.json", observe_workflow)
         self.assertIn('READ workspace file ".lgwf/step_designs.json";', observe_workflow)
         self.assertIn(".lgwf/implementation_audit_result.json", observe_prompt)
         self.assertIn(".lgwf/scaffold_package_result.json", observe_prompt)
-        self.assertIn('CONTEXT workflow file "agents/spec.md"', observe_prompt)
+        self.assertNotIn("agents/spec.md", observe_prompt)
         self.assertIn("脚本 audit", observe_prompt)
+        self.assertIn("audit 解释边界", observe_prompt)
         act_workflow = read("04_implement_steps_react/01_implement_units/workflow.lgwf")
         unit_workflow = read("04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf")
         unit_prompt = read("04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/act_unit.md")
@@ -346,7 +377,8 @@ class PromptContractTest(unittest.TestCase):
         self.assertNotIn('RUN_WORKFLOW "01_implement_one_unit/workflow.lgwf"', act_workflow)
         self.assertIn("RESULTS state.lgwf_wf_create.implementation_unit_results.items", act_workflow)
         self.assertIn("CODEX implement_current_unit", unit_workflow)
-        self.assertIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
+        self.assertNotIn('CONTEXT workflow file "agents/spec.md"', unit_workflow)
+        self.assertNotIn('READ workflow file "agents/spec.md";', unit_workflow)
         self.assertIn('CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"', unit_workflow)
         self.assertIn(
             'CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"',
@@ -359,14 +391,30 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("当前 implementation unit", unit_prompt)
         self.assertIn("current_implementation_unit_context.json", unit_prompt)
         self.assertIn("workspace_output_files", unit_prompt)
+        self.assertIn("target_output_file_schemas", unit_prompt)
+        self.assertIn("不得执行 `rg ... .lgwf`", unit_prompt)
+        self.assertNotIn("agents/spec.md", unit_prompt)
         self.assertIn("stage_dir", unit_prompt)
         self.assertIn("workflow_ref", unit_prompt)
 
     def test_implementation_react_shared_rules_live_in_spec(self) -> None:
         spec = read("04_implement_steps_react/agents/spec.md")
+        duplicate_specs = (
+            "04_implement_steps_react/01_implement_units/agents/spec.md",
+            "04_implement_steps_react/01_implement_units/agents/act.md",
+            "04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/spec.md",
+            "04_implement_steps_react/02_observe_audit/agents/spec.md",
+            "04_implement_steps_react/README.md",
+            "04_implement_steps_react/01_implement_units/README.md",
+            "04_implement_steps_react/01_implement_units/01_implement_one_unit/README.md",
+            "04_implement_steps_react/02_observe_audit/README.md",
+        )
+        for relative in duplicate_specs:
+            self.assertFalse((ROOT / relative).exists(), relative)
         role_prompts = {
             "reason": read("04_implement_steps_react/agents/reason.md"),
-            "act": read("04_implement_steps_react/01_implement_units/agents/act.md"),
+        }
+        local_prompts = {
             "act_unit": read("04_implement_steps_react/01_implement_units/01_implement_one_unit/agents/act_unit.md"),
             "observe": read("04_implement_steps_react/02_observe_audit/agents/observe.md"),
         }
@@ -396,10 +444,17 @@ class PromptContractTest(unittest.TestCase):
             ):
                 self.assertNotIn(duplicated_rule, prompt, name)
 
+        for name, prompt in local_prompts.items():
+            self.assertNotIn("`agents/spec.md`", prompt, name)
+        self.assertIn("只能读 `.lgwf/current_implementation_unit_context.json`", local_prompts["act_unit"])
+        self.assertIn("只能写 `workspace_output_files`", local_prompts["act_unit"])
+        self.assertIn("schema 只来自 `target_output_file_schemas`", local_prompts["act_unit"])
+        self.assertIn("不递归读 `.lgwf`", local_prompts["act_unit"])
+        self.assertIn("audit 解释边界", local_prompts["observe"])
+
     def test_implementation_act_is_resumable_and_not_bound_to_default_timeout(self) -> None:
         workflow = read("04_implement_steps_react/workflow.lgwf")
         act_workflow = read("04_implement_steps_react/01_implement_units/workflow.lgwf")
-        act_prompt = read("04_implement_steps_react/01_implement_units/agents/act.md")
         reason_block = re.search(r"REASON CODEX.*?ACT WORKFLOW", workflow, re.S)
         act_block = re.search(r"ACT WORKFLOW.*?OBSERVE WORKFLOW", workflow, re.S)
         self.assertIsNotNone(reason_block)
@@ -407,9 +462,6 @@ class PromptContractTest(unittest.TestCase):
         self.assertRegex(reason_block.group(0), r"TIMEOUT\s+1200")
         self.assertIn("PY prepare_implementation_units", act_workflow)
         self.assertIn("PY merge_implementation_results", act_workflow)
-        self.assertIn("已存在的目标 package", act_prompt)
-        self.assertIn("续写草稿", act_prompt)
-        self.assertIn("先补齐缺失的必需文件", act_prompt)
 
 
 if __name__ == "__main__":
