@@ -1,157 +1,42 @@
 WORKFLOW define_requirements;
-ENTRY prepare_raw_intent_confirmation;
+ENTRY raw_intent;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 300;
 }
 
-PY prepare_raw_intent_confirmation
-  SCRIPT "scripts/prepare_raw_intent_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_raw_intent_confirmation_result
-  UPDATES_STATE {
-    WRITE state.lgwf_wf_create.raw_intent_request_proposal;
-    WRITE state.lgwf_wf_create.raw_intent_confirmation_context;
-  }
+STEP raw_intent
+  WORKFLOW "01_raw_intent/workflow.lgwf"
   CONTRACT {
     WRITE workspace file ".lgwf/raw_intent_request_proposal.json";
-  };
-
-REVIEW confirm_raw_intent
-  PROMPT_REF "confirm_raw_intent.md"
-  CONTEXT state.lgwf_wf_create.raw_intent_confirmation_context
-  RESULT state.lgwf_wf_create.raw_intent_result
-  PERSIST ".lgwf/raw_intent_approval.json"
-  OPTIONS ["approve", "revise", "reject"]
-  CONTRACT {
-    READ state.lgwf_wf_create.raw_intent_confirmation_context;
     WRITE workspace file ".lgwf/raw_intent_approval.json";
-  };
-
-PY apply_confirmed_raw_intent
-  SCRIPT "scripts/apply_confirmed_raw_intent.py"
-  INPUT state.lgwf_wf_create.raw_intent_confirmation_context
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.raw_intent_apply_result
-  UPDATES_STATE {
-    WRITE state.lgwf_wf_create.raw_intent_request;
-    WRITE state.lgwf_wf_create.raw_intent_apply_result;
-  }
-  CONTRACT {
-    READ state.lgwf_wf_create.raw_intent_confirmation_context;
-    READ workspace file ".lgwf/raw_intent_request_proposal.json";
-    READ workspace file ".lgwf/raw_intent_approval.json";
     WRITE workspace file ".lgwf/raw_intent_request.json";
-    WRITE state.lgwf_wf_create.raw_intent_request;
-  };
-
-PY finish_raw_intent
-  SCRIPT "scripts/finish_raw_intent.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.raw_intent_finish_result
-  UPDATES_STATE {
     WRITE state.lgwf_wf_create.raw_intent_request;
     WRITE state.lgwf_wf_create.creation_context_dirs;
     WRITE state.lgwf_wf_create.creation_context_files;
-    WRITE state.lgwf_wf_create.raw_intent_finished;
-  }
-  CONTRACT {
-    READ workspace file ".lgwf/raw_intent_request.json";
   };
 
-CODEX propose_requirements_react
-  PROMPT "agents/propose_requirements_react.md"
-  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
-  TARGET_FILES state.lgwf_wf_create.creation_context_files
-  OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
-  RESULT state.lgwf_wf_create.requirements_proposal_result
+STEP requirements_proposal
+  WORKFLOW "02_requirements_proposal/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/raw_intent_request.json";
+    READ state.lgwf_wf_create.creation_context_dirs;
+    READ state.lgwf_wf_create.creation_context_files;
     WRITE workspace file ".lgwf/create_requirements_proposal.json";
-  };
-
-PY validate_requirements_proposal
-  SCRIPT "scripts/validate_requirements_proposal.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.create_requirements_proposal_quality_gate
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/raw_intent_request.json";
-    READ workspace file ".lgwf/create_requirements_proposal.json";
     WRITE workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
   };
 
-PY prepare_requirements_confirmation
-  SCRIPT "scripts/prepare_requirements_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_requirements_confirmation_result
-  UPDATES_STATE {
-    WRITE state.lgwf_wf_create.requirements_confirmation_context;
-  }
+STEP requirements_review
+  WORKFLOW "03_requirements_review/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/create_requirements_proposal.json";
-  };
-
-REVIEW confirm_requirements
-  PROMPT_REF "confirm_requirements.md"
-  CONTEXT state.lgwf_wf_create.requirements_confirmation_context
-  RESULT state.lgwf_wf_create.requirements_decision_result
-  PERSIST ".lgwf/create_requirements_approval.json"
-  OPTIONS ["approve", "revise", "reject"]
-  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
     WRITE workspace file ".lgwf/create_requirements_approval.json";
-    READ state.lgwf_wf_create.requirements_confirmation_context;
-  };
-
-PY prepare_requirements_revision_confirmation
-  SCRIPT "scripts/prepare_requirements_revision_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_requirements_revision_confirmation_result
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/create_requirements_proposal.json";
-    READ workspace file ".lgwf/create_requirements_approval.json";
-    WRITE state.lgwf_wf_create.requirements_confirmation_context;
-    WRITE state.lgwf_wf_create.requirements_revision_context;
-  };
-
-PY apply_confirmed_requirements
-  SCRIPT "scripts/apply_confirmed_requirements.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_create.apply_requirements_result
-  UPDATES_STATE {
-    WRITE state.lgwf_wf_create.apply_requirements_result;
-    WRITE state.lgwf_wf_create.create_requirements;
-  }
-  CONTRACT {
-    READ workspace file ".lgwf/create_requirements_approval.json";
-    READ workspace file ".lgwf/create_requirements_proposal.json";
     WRITE workspace file ".lgwf/create_requirements.json";
+    WRITE state.lgwf_wf_create.create_requirements;
   };
 
-FLOW {
-  prepare_raw_intent_confirmation
-  THEN confirm_raw_intent;
-
-  confirm_raw_intent
-    WHEN "approve" THEN apply_confirmed_raw_intent
-    WHEN "revise" THEN confirm_raw_intent
-    WHEN "reject" THEN FAIL_ALL;
-
-  apply_confirmed_raw_intent
-  THEN finish_raw_intent
-  THEN propose_requirements_react 
-  THEN validate_requirements_proposal
-  THEN prepare_requirements_confirmation 
-  THEN confirm_requirements;
-
-  confirm_requirements
-    WHEN "approve" THEN apply_confirmed_requirements
-    WHEN "revise" THEN prepare_requirements_revision_confirmation
-    WHEN "reject" THEN FAIL_ALL;
-
-  prepare_requirements_revision_confirmation
-  THEN confirm_requirements;
-}
+FLOW raw_intent
+  THEN requirements_proposal
+  THEN requirements_review;

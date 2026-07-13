@@ -68,8 +68,12 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         module = load_module(STRUCTURE_VALIDATOR_SCRIPT, "validate_two_layer_workflow")
         errors = module.validate_scaffold_paths(["wf/demo/workflow.lgwf", "wf/demo/scripts/run.py"])
         self.assertEqual(errors, [])
+        errors = module.validate_scaffold_paths(["wf/demo/sub/workflow.lgwf", "wf/demo/sub/README.md"])
+        self.assertEqual(errors, [])
         self.assertTrue(module.validate_scaffold_paths(["wf/demo/sub/workflow.lgwf"]))
+        self.assertTrue(module.validate_scaffold_paths(["wf/demo/sub/deeper/workflow.lgwf", "wf/demo/sub/deeper/README.md"]))
         self.assertTrue(module.validate_scaffold_paths(["wf/tests/test_demo.py"]))
+        self.assertEqual(module.validate_package(PACKAGE_ROOT), [])
 
     def test_required_files_and_dirs_exist(self) -> None:
         for relative in (
@@ -131,6 +135,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         child_workflows = "\n".join(
             (
                 (ROOT / "01_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8"),
+                (ROOT / "01_confirm_requirements/01_raw_intent/workflow.lgwf").read_text(encoding="utf-8"),
+                (ROOT / "01_confirm_requirements/02_requirements_proposal/workflow.lgwf").read_text(encoding="utf-8"),
+                (ROOT / "01_confirm_requirements/03_requirements_review/workflow.lgwf").read_text(encoding="utf-8"),
                 (ROOT / "02_confirm_business_flow/workflow.lgwf").read_text(encoding="utf-8"),
                 (ROOT / "03_confirm_step_designs/workflow.lgwf").read_text(encoding="utf-8"),
             )
@@ -171,8 +178,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
     def test_codex_nodes_and_prompts_define_output_json_contracts(self) -> None:
         contracts = (
             (
-                "01_confirm_requirements/workflow.lgwf",
-                "01_confirm_requirements/agents/propose_requirements_react.md",
+                "01_confirm_requirements/02_requirements_proposal/workflow.lgwf",
+                "01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md",
                 ".lgwf/create_requirements_proposal.json",
                 True,
             ),
@@ -207,8 +214,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
 
     def test_persisted_decision_files_have_contract_writes(self) -> None:
         expectations = (
-            ("01_confirm_requirements/workflow.lgwf", ".lgwf/raw_intent_approval.json"),
-            ("01_confirm_requirements/workflow.lgwf", ".lgwf/create_requirements_approval.json"),
+            ("01_confirm_requirements/01_raw_intent/workflow.lgwf", ".lgwf/raw_intent_approval.json"),
+            ("01_confirm_requirements/03_requirements_review/workflow.lgwf", ".lgwf/create_requirements_approval.json"),
             ("02_confirm_business_flow/workflow.lgwf", ".lgwf/business_flow_approval.json"),
             ("03_confirm_step_designs/workflow.lgwf", ".lgwf/step_design_confirmation_record.json"),
         )
@@ -338,7 +345,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
     def test_apply_scripts_write_confirmed_artifacts_and_reject_invalid_paths(self) -> None:
         cases = (
             (
-                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
                 "create_requirements_approval.json",
                 "create_requirements_proposal.json",
                 "create_requirements.json",

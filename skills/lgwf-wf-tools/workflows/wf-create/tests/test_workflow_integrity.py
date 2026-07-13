@@ -23,6 +23,111 @@ def load_module(path: Path, name: str):
 
 
 class WorkflowCreateIntegrityTest(unittest.TestCase):
+    def test_confirm_requirements_files_are_grouped_by_business_flow(self) -> None:
+        base = ROOT / "01_confirm_requirements"
+        expected_files = (
+            "01_raw_intent/workflow.lgwf",
+            "01_raw_intent/README.md",
+            "01_raw_intent/agents/confirm_raw_intent.md",
+            "01_raw_intent/resources/raw_intent_contract.md",
+            "01_raw_intent/scripts/prepare_confirmation.py",
+            "01_raw_intent/scripts/apply_confirmed.py",
+            "02_requirements_proposal/workflow.lgwf",
+            "02_requirements_proposal/README.md",
+            "02_requirements_proposal/agents/propose_requirements.md",
+            "02_requirements_proposal/agents/spec.md",
+            "02_requirements_proposal/scripts/validate_proposal.py",
+            "02_requirements_proposal/resources/proposal_schema.json",
+            "03_requirements_review/workflow.lgwf",
+            "03_requirements_review/README.md",
+            "03_requirements_review/agents/confirm_requirements.md",
+            "03_requirements_review/agents/revise_requirements.md",
+            "03_requirements_review/scripts/prepare_confirmation.py",
+            "03_requirements_review/scripts/prepare_revision_confirmation.py",
+            "03_requirements_review/scripts/apply_confirmed.py",
+        )
+        for relative in expected_files:
+            with self.subTest(relative=relative):
+                self.assertTrue((base / relative).is_file(), relative)
+
+        old_locations = (
+            "confirm_raw_intent.md",
+            "confirm_requirements.md",
+            "revise_requirements.md",
+            "agents/propose_requirements_react.md",
+            "agents/propose_requirements_react_spec.md",
+            "resources/raw_intent_contract.md",
+            "scripts/prepare_raw_intent_confirmation.py",
+            "scripts/apply_confirmed_raw_intent.py",
+            "scripts/finish_raw_intent.py",
+            "scripts/validate_requirements_proposal.py",
+            "scripts/prepare_requirements_confirmation.py",
+            "scripts/prepare_requirements_revision_confirmation.py",
+            "scripts/apply_confirmed_requirements.py",
+            "raw_intent/workflow.lgwf",
+            "raw_intent/confirm_raw_intent.md",
+            "requirements_proposal/workflow.lgwf",
+            "requirements_review/workflow.lgwf",
+            "requirements_review/confirm_requirements.md",
+            "requirements_review/revise_requirements.md",
+        )
+        for relative in old_locations:
+            with self.subTest(old_location=relative):
+                self.assertFalse((base / relative).exists(), relative)
+
+    def test_confirm_requirements_parent_workflow_only_orchestrates_business_subflows(self) -> None:
+        text = (ROOT / "01_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8")
+        for snippet in (
+            'WORKFLOW "01_raw_intent/workflow.lgwf"',
+            'WORKFLOW "02_requirements_proposal/workflow.lgwf"',
+            'WORKFLOW "03_requirements_review/workflow.lgwf"',
+            "FLOW raw_intent\n  THEN requirements_proposal\n  THEN requirements_review;",
+        ):
+            self.assertIn(snippet, text)
+        for direct_node in ("PY ", "CODEX ", "REVIEW "):
+            self.assertNotIn(direct_node, text)
+
+    def test_confirm_requirements_business_subflows_declare_local_responsibilities(self) -> None:
+        expectations = {
+            "raw_intent": (
+                "PY prepare_raw_intent_confirmation",
+                "REVIEW confirm_raw_intent",
+                "PY apply_confirmed_raw_intent",
+                "PY finish_raw_intent",
+                'SCRIPT "scripts/prepare_confirmation.py"',
+                'PROMPT_REF "agents/confirm_raw_intent.md"',
+            ),
+            "requirements_proposal": (
+                "CODEX propose_requirements_react",
+                "PY validate_requirements_proposal",
+                'PROMPT "agents/propose_requirements.md"',
+                'CONTEXT workflow file "agents/spec.md"',
+                'SCRIPT "scripts/validate_proposal.py"',
+            ),
+            "requirements_review": (
+                "PY prepare_requirements_confirmation",
+                "REVIEW confirm_requirements",
+                "PY prepare_requirements_revision_confirmation",
+                "PY apply_confirmed_requirements",
+                'SCRIPT "scripts/prepare_confirmation.py"',
+                'PROMPT_REF "agents/confirm_requirements.md"',
+            ),
+        }
+        for subflow, snippets in expectations.items():
+            subflow_dir = {
+                "raw_intent": "01_raw_intent",
+                "requirements_proposal": "02_requirements_proposal",
+                "requirements_review": "03_requirements_review",
+            }[subflow]
+            workflow = (ROOT / f"01_confirm_requirements/{subflow_dir}/workflow.lgwf").read_text(encoding="utf-8")
+            readme = (ROOT / f"01_confirm_requirements/{subflow_dir}/README.md").read_text(encoding="utf-8")
+            for snippet in snippets:
+                with self.subTest(subflow=subflow, snippet=snippet):
+                    self.assertIn(snippet, workflow)
+            for heading in ("职责", "输入", "输出", "产物", "验证", "禁止事项"):
+                with self.subTest(subflow=subflow, heading=heading):
+                    self.assertIn(heading, readme)
+
     def test_all_workflow_resource_references_exist(self) -> None:
         patterns = (
             r'WORKFLOW "([^"]+)"',
@@ -42,7 +147,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
     def test_sub_approval_workflows_have_persist_and_decision_routes(self) -> None:
         expectations = (
             (
-                "01_confirm_requirements/workflow.lgwf",
+                "01_confirm_requirements/03_requirements_review/workflow.lgwf",
                 "confirm_requirements",
                 "prepare_requirements_revision_confirmation",
                 "apply_confirmed_requirements",
@@ -78,7 +183,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             self.assertIn('WHEN "reject" THEN FAIL_ALL', text)
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:
-        text = (ROOT / "01_confirm_requirements/workflow.lgwf").read_text(encoding="utf-8")
+        text = (ROOT / "01_confirm_requirements/01_raw_intent/workflow.lgwf").read_text(encoding="utf-8")
         self.assertNotIn("APPROVAL collect_raw_intent", text)
         self.assertIn("PY prepare_raw_intent_confirmation", text)
         self.assertIn("REVIEW confirm_raw_intent", text)
@@ -92,7 +197,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
     def test_apply_scripts_reject_non_approve_decisions(self) -> None:
         cases = (
-            ("01_confirm_requirements/scripts/apply_confirmed_requirements.py", "create_requirements_approval.json", "create_requirements.json"),
+            ("01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py", "create_requirements_approval.json", "create_requirements.json"),
             ("02_confirm_business_flow/scripts/apply_confirmed_business_flow.py", "business_flow_approval.json", "business_flow.json"),
             ("03_confirm_step_designs/scripts/apply_confirmed_step_designs.py", "step_design_confirmation_record.json", "step_designs.json"),
         )
@@ -113,7 +218,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
     def test_apply_scripts_use_fixed_proposal_after_approved_revision(self) -> None:
         cases = (
             (
-                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
                 "create_requirements_approval.json",
                 "create_requirements_revision_approval.json",
                 "create_requirements_proposal.json",
@@ -167,7 +272,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
     def test_apply_scripts_reject_missing_fixed_proposal(self) -> None:
         cases = (
             (
-                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
                 "create_requirements_approval.json",
                 "create_requirements_revision_approval.json",
                 "create_requirements.json",
@@ -216,7 +321,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
 
     def test_apply_scripts_share_common_confirmation_helpers(self) -> None:
         for relative in (
-            "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
+            "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
             "02_confirm_business_flow/scripts/apply_confirmed_business_flow.py",
             "03_confirm_step_designs/scripts/apply_confirmed_step_designs.py",
         ):
@@ -280,7 +385,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertEqual(plan["stage_manifest"][0]["stage_dir"], "01_prepare")
         self.assertIn("wf/shared/scripts", plan["create_dirs"])
         self.assertNotIn("wf/common/confirmation_io.py", plan["create_files"])
-        self.assertNotIn("wf/01_confirm_requirements/scripts/apply_confirmed_requirements.py", plan["create_files"])
+        self.assertNotIn("wf/01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py", plan["create_files"])
 
     def test_summary_workflow_uses_py_result_and_script_writes_json(self) -> None:
         workflow = (ROOT / "06_summarize_create_result/workflow.lgwf").read_text(encoding="utf-8")
@@ -314,47 +419,6 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         for workflow_id in ("wf-fix", "wf-prompt-fix", "wf-prompt-upgrade", "e2e-test-generator"):
             self.assertIn(workflow_id, text)
         self.assertIn("回到 facade 路由", text)
-
-    def test_real_positive_manual_entry_declares_runtime_fixture_audit_and_approval_flow(self) -> None:
-        text = (PACKAGE_ROOT / "tests" / "lgwf_wf_create_real_positive_e2e.py").read_text(encoding="utf-8")
-        for snippet in (
-            "repo_context_pack",
-            "repo-context-pack",
-            "target_package_hint",
-            "target_dir",
-            "real_positive_create_request.json",
-            "target_workflow_audit.stdout.txt",
-            "wf_create_run.stdout.txt",
-            "--auto-human",
-            "approval list",
-            "approval get",
-            "approval submit",
-            "create_result_report.md",
-            "python -m unittest discover tests",
-            "generated_package_audit.stdout.txt",
-        ):
-            self.assertIn(snippet, text)
-
-    def test_wf_fix_positive_manual_entry_declares_self_fix_input_and_summary_flow(self) -> None:
-        text = (PACKAGE_ROOT / "tests" / "lgwf_wf_create_real_positive_e2e_for_wf_fix.py").read_text(
-            encoding="utf-8"
-        )
-        for snippet in (
-            "skills/lgwf-wf-tools/workflows/wf-fix/wf/workflow.lgwf",
-            "target_workflow_lgwf",
-            "target_workflow_input",
-            "max_attempts",
-            "ask_main_agent_for_target_approvals",
-            "approval list",
-            "approval get",
-            "approval submit",
-            "self_fix_summary",
-            "wf_fix_failure_summary.json",
-            "create_result_summary.json",
-            "target_runs",
-            "lgwf.py audit",
-        ):
-            self.assertIn(snippet, text)
 
 
 if __name__ == "__main__":

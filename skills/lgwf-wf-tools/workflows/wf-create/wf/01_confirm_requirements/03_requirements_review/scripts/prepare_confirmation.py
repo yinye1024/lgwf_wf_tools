@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
+SHARED_SCRIPTS = Path(__file__).resolve().parents[3] / "shared" / "scripts"
 if str(SHARED_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SHARED_SCRIPTS))
 

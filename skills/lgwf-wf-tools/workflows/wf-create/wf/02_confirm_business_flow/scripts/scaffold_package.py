@@ -168,7 +168,7 @@ def validate_plan_paths(plan: dict[str, Any]) -> bool:
         [*plan.get("create_dirs", []), *plan.get("create_files", [])]
     )
     if structure_errors:
-        raise ValueError("脚手架结构不满足两层 workflow 规则: " + "; ".join(structure_errors))
+        raise ValueError("脚手架结构不满足模块化 workflow 结构规则: " + "; ".join(structure_errors))
     return True
 
 

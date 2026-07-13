@@ -21,10 +21,11 @@ LGWF workflow 创建时按三层看待模块。
 | 层级 | 目录边界 | 适用场景 | 必备契约 |
 | --- | --- | --- | --- |
 | workflow package | `<package>/` 或 `workflows/<id>/` | 一个稳定用户意图或可派发 workflow | `AGENTS.md`、`README.md`、入口、状态边界、产物、验证、禁止事项 |
-| 子 workflow | `wf/<stage>/` | 可独立理解、可恢复、可验证的业务阶段 | `workflow.lgwf`、阶段私有 `agents/` / `scripts/` / `resources/`、输入输出说明 |
+| 子 workflow | `wf/<stage>/` 或 `wf/<stage>/<subflow>/` | 可独立理解、可恢复、可验证的业务阶段或阶段内部业务子流程 | `workflow.lgwf`、阶段私有 `agents/` / `scripts/` / `resources/`、输入输出说明 |
 | 复杂 step | `wf/docs/steps/*.md` 或 `wf/<stage>/resources/<step>/` | 不值得独立运行，但需要独立说明和验收的步骤 | 目标、输入、输出、依赖、产物、验证和禁止事项 |
 
 子 workflow 是强模块，复杂 step 是弱模块。弱模块一旦出现独立输入输出、独立人工确认、独立恢复或跨 workflow 复用需求，应升级为子 workflow。
+孙级 workflow 也是子 workflow，但只能作为阶段内部的受控业务子流程使用；它必须有明确职责、显式输入输出和父级编排边界，不得只是为了按文件类型拆目录。
 
 ## 推荐目录
 
@@ -50,6 +51,11 @@ LGWF workflow 创建时按三层看待模块。
       agents/
       scripts/
       resources/
+      <subflow>/
+        workflow.lgwf
+        agents/
+        scripts/
+        resources/
 ```
 
 `wf/` 是唯一 workflow package root，真实入口固定为 `wf/workflow.lgwf`。外层 package 根目录不得再放可运行的 `workflow.lgwf`。`ws/` 与 `wf/` 同级，只作为 LGWF work dir，运行状态只允许写入 `ws/.lgwf/`。
@@ -65,6 +71,13 @@ LGWF workflow 创建时按三层看待模块。
 - 该阶段可能被其他 workflow 复用。
 - 该阶段内部 prompt、script、schema、resource 已经成体系。
 
+满足以下任一条件时，可以在阶段内部继续拆为孙级 workflow：
+
+- 阶段内部存在两个以上职责清楚的业务子流程，且每个子流程都有独立输入、输出、确认点或失败恢复边界。
+- 父阶段 workflow 继续承载所有节点会导致控制面过长，难以看出业务流转顺序。
+- 子流程需要把自己的 prompt、script、schema、review prompt 和资源封装在同一目录，避免 Codex 节点读取过宽上下文。
+- 子流程的产物会作为父阶段内部的显式 handoff artifact，被后续子流程消费。
+
 满足以下条件时，保留为复杂 step：
 
 - 它只是当前阶段内部的连续动作。
@@ -73,10 +86,11 @@ LGWF workflow 创建时按三层看待模块。
 - 它没有独立人工确认点，也不会被其他 workflow 复用。
 
 禁止为了“看起来模块化”而把每个节点都拆成子 workflow。模块边界应服务理解、恢复、验证和复用。
+孙级 workflow 的命名必须表达业务职责，可以使用数字前缀表达阶段内顺序，例如 `01_raw_intent`、`02_requirements_proposal`、`03_requirements_review`；禁止使用 `scripts`、`agents`、`resources`、`helpers` 这类文件类型名称作为 workflow 边界。
 
 ## 子 workflow 自包含要求
 
-一个 `wf/<stage>/` 目录应自包含该阶段的私有资源：
+一个 `wf/<stage>/` 或 `wf/<stage>/<subflow>/` 目录应自包含该阶段或子流程的私有资源：
 
 - `workflow.lgwf`：阶段内部拓扑。
 - `agents/`：阶段私有 prompt、spec、reason、act、observe 等文档。
@@ -86,7 +100,12 @@ LGWF workflow 创建时按三层看待模块。
 
 父 workflow 只通过 `STEP ... WORKFLOW "<stage>/workflow.lgwf"` 或明确 handoff payload 调用子 workflow，不读取子 workflow 的内部临时文件作为隐式接口。
 
-子 workflow 目录下不得继续创建孙级 `workflow.lgwf`，例如禁止 `wf/<stage>/<substage>/workflow.lgwf`。如果阶段内部有多个节点、确认点、ReAct 循环或脚本，应放在同一个 `wf/<stage>/workflow.lgwf` 中编排。
+阶段 workflow 可以继续通过 `STEP ... WORKFLOW "<subflow>/workflow.lgwf"` 调用孙级 workflow，但必须满足以下约束：
+
+- 父阶段 `workflow.lgwf` 只负责编排子流程顺序、route、handoff 和父级状态流，不直接读取孙级内部临时文件作为隐式接口。
+- 每个孙级 workflow 的目录名、`README.md` 或本地说明必须写清一句话职责、输入、输出、依赖、产物、验证和禁止事项。
+- 孙级 workflow 只能再包含节点、prompt、script、resource 和复杂 step；默认不得继续创建更深层 `workflow.lgwf`。确需第三层以上嵌套时，必须先在父级步骤设计中说明为什么两层无法表达职责边界。
+- 同一层级的子流程之间只能通过 confirmed artifact、handoff payload、report 或父级声明的 workspace/state 字段交接，不得互相读取对方目录下的私有 prompt、script 或运行中临时文件。
 
 ## 复杂 step 自包含要求
 
@@ -109,6 +128,7 @@ LGWF workflow 创建时按三层看待模块。
 
 - 根 `wf/workflow.lgwf` 保持薄编排，只连接阶段。
 - 阶段 `wf/<stage>/workflow.lgwf` 编排本阶段内部节点。
+- 阶段内部存在孙级 workflow 时，阶段 `workflow.lgwf` 保持薄编排，只连接业务子流程；孙级 `workflow.lgwf` 编排本子流程内部节点。
 - Prompt 和 spec 放在阶段私有 `agents/`。
 - 确定性文件操作、校验和转换放在阶段私有 `scripts/`。
 - 模板、schema、示例和确认文案放在阶段私有 `resources/`。
@@ -126,7 +146,7 @@ LGWF workflow 创建时按三层看待模块。
 - 子 workflow 不拥有独立源码外状态目录；其运行产物仍通过当前 run 的 `.lgwf/` 或明确 artifact contract 管理。
 - 目标 package 根目录不得写入 `.lgwf/`、`.tmp/`、`__pycache__/` 或临时运行文件。
 
-父 workflow 不得直接依赖子 workflow `.lgwf` 内部临时文件。确需跨阶段消费时，应把结果固化为 confirmed artifact、report、handoff payload 或 `artifact_contracts.json` 中声明的产物。
+父 workflow 不得直接依赖子 workflow `.lgwf` 内部临时文件。确需跨阶段或跨子流程消费时，应把结果固化为 confirmed artifact、report、handoff payload、父级 state 字段或 `artifact_contracts.json` 中声明的产物。
 
 ## 契约文件
 
@@ -137,15 +157,15 @@ LGWF workflow 创建时按三层看待模块。
 - `entry_contract.json`：面向 facade/runner 的输入模式、schema、auto-human 策略、状态边界、输出和 resume 规则。
 - `wf/artifact_contracts.json`：声明关键运行产物、确认后固化产物和报告。
 
-子 workflow 和复杂 step 不一定都需要独立 JSON contract，但必须在本地文档或父级步骤设计中写清楚输入输出边界。
+子 workflow 和复杂 step 不一定都需要独立 JSON contract，但必须在本地文档或父级步骤设计中写清楚输入输出边界。孙级 workflow 必须至少有本地 `README.md` 或父级步骤设计条目说明职责、输入、输出、产物、验证和禁止事项。
 
 ## 路径规则
 
 - 所有 resource path 必须使用包内相对路径。
 - 禁止绝对路径、盘符路径、URL、`..` 和指向 `.lgwf` 的 resource path。
 - 生成文件必须落在目标 package 内。
-- `workflow.lgwf` 只能出现在 `wf/workflow.lgwf` 与 `wf/<stage>/workflow.lgwf` 两类位置。
-- Prompt、approval prompt、spec 和 stage-local resource 必须留在对应 `wf/<stage>/` 目录内。
+- `workflow.lgwf` 可以出现在 `wf/workflow.lgwf`、`wf/<stage>/workflow.lgwf` 和受控的 `wf/<stage>/<subflow>/workflow.lgwf`。第三层以上嵌套必须在父级步骤设计中说明必要性。
+- Prompt、approval prompt、spec 和 stage-local resource 必须留在对应 `wf/<stage>/` 或 `wf/<stage>/<subflow>/` 目录内。
 
 ## 创建阶段要求
 
@@ -153,7 +173,7 @@ LGWF workflow 创建时按三层看待模块。
 
 1. 需求确认：确认 workflow package 的用户意图、目标、非目标、输入、输出和风险边界。
 2. 业务流确认：确认应拆成哪些阶段，哪些阶段需要人工确认、review、handoff 或独立验证。
-3. 步骤设计确认：确认每个阶段是子 workflow 还是复杂 step，并说明目录、自包含资源、输入输出和验证方式。
+3. 步骤设计确认：确认每个阶段是子 workflow、孙级 workflow 还是复杂 step，并说明目录、自包含资源、输入输出和验证方式。
 4. 初稿实现：严格按已确认步骤设计落地，不自行发明与 scaffold plan 冲突的结构。
 
 步骤设计必须显式说明每个阶段如何遵循本文。实现阶段如果发现步骤设计无法落地，应反馈到对应确认点或 observe 结果，不得静默改变模块边界。
@@ -163,9 +183,10 @@ LGWF workflow 创建时按三层看待模块。
 新增或调整 workflow 模块后，至少检查：
 
 - 根目录没有多余可运行 `workflow.lgwf`。
-- `wf/workflow.lgwf` 只做薄编排，阶段细节在 `wf/<stage>/`。
-- 没有 `wf/<stage>/<substage>/workflow.lgwf`。
-- 每个 `wf/<stage>/` 自包含阶段私有 prompt、script、resource。
+- `wf/workflow.lgwf` 只做薄编排，阶段细节在 `wf/<stage>/`；如果存在孙级 workflow，父阶段 workflow 也只做子流程编排。
+- 每个 `wf/<stage>/workflow.lgwf` 和 `wf/<stage>/<subflow>/workflow.lgwf` 都有明确业务职责、输入、输出和产物边界。
+- 孙级 workflow 使用业务职责命名，不使用 `scripts`、`agents`、`resources` 等文件类型名称作为 workflow 边界。
+- 每个 `wf/<stage>/` 或 `wf/<stage>/<subflow>/` 自包含阶段/子流程私有 prompt、script、resource。
 - 共享目录没有阶段私有 prompt 或 approval prompt。
 - `ws/.lgwf/` 是唯一运行状态目录。
 - `AGENTS.md`、`README.md`、`entry_contract.json` 和 `artifact_contracts.json` 的边界描述一致。

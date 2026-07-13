@@ -35,8 +35,10 @@ def validate_workflow_file_depth(package_root: Path, errors: list[str]) -> None:
         depth = len(workflow.relative_to(wf_root).parts)
         if relative == "workflow.lgwf":
             continue
-        if depth != 2:
-            errors.append(f"禁止孙级 workflow: wf/{relative}")
+        if depth not in {2, 3}:
+            errors.append(f"workflow 最多允许阶段/子流程两级: wf/{relative}")
+        if depth == 3 and not (workflow.parent / "README.md").is_file():
+            errors.append(f"孙级 workflow 必须有 README.md 说明职责: wf/{relative}")
 
 
 def validate_root_workflow(package_root: Path, errors: list[str]) -> None:
@@ -59,8 +61,22 @@ def validate_child_workflow(package_root: Path, workflow: Path, errors: list[str
         return
     stage_dir = workflow.parent
     text = workflow.read_text(encoding="utf-8")
-    if WORKFLOW_REF_RE.search(text):
-        errors.append(f"子 workflow 不得再引用孙级 workflow: wf/{relative.as_posix()}")
+    relative_parts = relative.parts
+    is_stage_workflow = len(relative_parts) == 2
+    is_subflow_workflow = len(relative_parts) == 3
+    for ref in WORKFLOW_REF_RE.findall(text):
+        ref_path = normalize_ref(ref, field=f"WORKFLOW ref in wf/{relative.as_posix()}")
+        if is_stage_workflow:
+            is_local_lgwf_file = len(ref_path.parts) == 1 and ref_path.suffix == ".lgwf"
+            is_subflow_workflow = len(ref_path.parts) == 2 and ref_path.parts[-1] == "workflow.lgwf"
+            if not (is_local_lgwf_file or is_subflow_workflow):
+                errors.append(f"阶段 workflow 只能引用同目录 .lgwf 或同阶段孙级 workflow: wf/{relative.as_posix()} -> {ref}")
+                continue
+        elif is_subflow_workflow:
+            errors.append(f"孙级 workflow 不得继续引用 workflow: wf/{relative.as_posix()} -> {ref}")
+            continue
+        if not (stage_dir / ref_path).is_file():
+            errors.append(f"workflow 引用不存在: wf/{relative.as_posix()} -> {ref}")
     for field, ref in RESOURCE_REF_RE.findall(text):
         ref_path = normalize_ref(ref, field=f"resource ref in wf/{relative.as_posix()}")
         resolved = stage_dir / ref_path
@@ -115,14 +131,24 @@ def validate_package(package_root: Path) -> list[str]:
 
 def validate_scaffold_paths(paths: Iterable[str]) -> list[str]:
     errors: list[str] = []
-    for raw in paths:
+    normalized_items: list[tuple[str, PurePosixPath]] = []
+    normalized_paths: set[str] = set()
+    for raw in list(paths):
         try:
             path = normalize_ref(raw, field="scaffold path")
         except ValueError as exc:
             errors.append(str(exc))
             continue
-        if path.name == "workflow.lgwf" and len(path.parts) > 3 and path.parts[0] == "wf":
-            errors.append(f"scaffold 计划禁止孙级 workflow: {raw}")
+        normalized_items.append((raw, path))
+        normalized_paths.add(path.as_posix())
+    for raw, path in normalized_items:
+        if path.name == "workflow.lgwf" and path.parts and path.parts[0] == "wf":
+            if len(path.parts) > 4:
+                errors.append(f"scaffold 计划 workflow 最多允许阶段/子流程两级: {raw}")
+            if len(path.parts) == 4:
+                readme_path = path.parent / "README.md"
+                if readme_path.as_posix() not in normalized_paths:
+                    errors.append(f"scaffold 计划孙级 workflow 必须包含 README.md: {raw}")
         if path.parts[:2] == ("wf", "tests"):
             errors.append(f"scaffold 计划禁止 wf/tests: {raw}")
         if len(path.parts) >= 3 and path.parts[:2] == ("wf", "shared") and path.suffix.lower() in {".md", ".lgwf"}:
@@ -131,7 +157,7 @@ def validate_scaffold_paths(paths: Iterable[str]) -> list[str]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="校验 workflow package 的两层 workflow 结构。")
+    parser = argparse.ArgumentParser(description="校验 workflow package 的受控模块化 workflow 结构。")
     parser.add_argument("package_root", type=Path)
     parser.add_argument("--json", action="store_true", help="输出 JSON 结果")
     args = parser.parse_args()
@@ -144,7 +170,7 @@ def main() -> int:
             for error in errors:
                 print(f"ERROR: {error}")
         else:
-            print("two-layer workflow validation passed")
+            print("workflow structure validation passed")
     return 0 if not errors else 1
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -14,12 +15,12 @@ def read(relative: str) -> str:
 
 class PromptContractTest(unittest.TestCase):
     def test_collect_raw_intent_drops_decision_routing(self) -> None:
-        workflow = read("01_confirm_requirements/workflow.lgwf")
+        workflow = read("01_confirm_requirements/01_raw_intent/workflow.lgwf")
         self.assertNotIn("APPROVAL collect_raw_intent", workflow)
         self.assertIn("PY prepare_raw_intent_confirmation", workflow)
         self.assertIn("REVIEW confirm_raw_intent", workflow)
         self.assertIn("PY apply_confirmed_raw_intent", workflow)
-        self.assertIn('PROMPT_REF "confirm_raw_intent.md"', workflow)
+        self.assertIn('PROMPT_REF "agents/confirm_raw_intent.md"', workflow)
         self.assertIn('WRITE state.lgwf_wf_create.raw_intent_request', workflow)
         self.assertIn('PERSIST ".lgwf/raw_intent_approval.json"', workflow)
         raw_intent_block = re.search(r"REVIEW confirm_raw_intent.*?;", workflow, re.S)
@@ -29,12 +30,12 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("THEN finish_raw_intent", workflow)
 
     def test_finish_raw_intent_syncs_state_from_output_file(self) -> None:
-        script = read("01_confirm_requirements/scripts/finish_raw_intent.py")
+        script = read("01_confirm_requirements/01_raw_intent/scripts/finish_raw_intent.py")
         self.assertIn('raw_intent_request.json', script)
         self.assertIn('"lgwf_wf_create.raw_intent_request"', script)
 
     def test_confirm_raw_intent_prompt_is_plain_output_prompt(self) -> None:
-        prompt = read("01_confirm_requirements/confirm_raw_intent.md")
+        prompt = read("01_confirm_requirements/01_raw_intent/agents/confirm_raw_intent.md")
         self.assertIn("## Task", prompt)
         self.assertIn("## Output Format", prompt)
         self.assertIn("approve", prompt)
@@ -43,9 +44,9 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("approve` 不得携带空对象或完整业务 value", prompt)
 
     def test_structured_prompt_convert_context_is_supported_without_replacing_raw_intent(self) -> None:
-        raw_prompt = read("01_confirm_requirements/confirm_raw_intent.md")
-        raw_contract = read("01_confirm_requirements/resources/raw_intent_contract.md")
-        requirements_prompt = read("01_confirm_requirements/agents/propose_requirements_react.md")
+        raw_prompt = read("01_confirm_requirements/01_raw_intent/agents/confirm_raw_intent.md")
+        raw_contract = read("01_confirm_requirements/01_raw_intent/resources/raw_intent_contract.md")
+        requirements_prompt = read("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md")
         business_prompt = read("02_confirm_business_flow/agents/propose_business_flow_react.md")
 
         for text in (raw_prompt, raw_contract, requirements_prompt, business_prompt):
@@ -62,12 +63,12 @@ class PromptContractTest(unittest.TestCase):
         entry_contract = (ROOT.parent / "entry_contract.json").read_text(encoding="utf-8")
         agents_md = (ROOT.parent / "AGENTS.md").read_text(encoding="utf-8")
         readme = (ROOT.parent / "README.md").read_text(encoding="utf-8")
-        raw_prompt = read("01_confirm_requirements/confirm_raw_intent.md")
-        raw_contract = read("01_confirm_requirements/resources/raw_intent_contract.md")
-        requirements_workflow = read("01_confirm_requirements/workflow.lgwf")
+        raw_prompt = read("01_confirm_requirements/01_raw_intent/agents/confirm_raw_intent.md")
+        raw_contract = read("01_confirm_requirements/01_raw_intent/resources/raw_intent_contract.md")
+        requirements_workflow = read("01_confirm_requirements/02_requirements_proposal/workflow.lgwf")
         business_workflow = read("02_confirm_business_flow/workflow.lgwf")
         step_workflow = read("03_confirm_step_designs/workflow.lgwf")
-        requirements_prompt = read("01_confirm_requirements/agents/propose_requirements_react.md")
+        requirements_prompt = read("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md")
         business_prompt = read("02_confirm_business_flow/agents/propose_business_flow_react.md")
         step_prompt = read("03_confirm_step_designs/agents/design_steps_react.md")
 
@@ -123,42 +124,42 @@ class PromptContractTest(unittest.TestCase):
     def test_all_proposal_reviews_have_quality_gate_before_review(self) -> None:
         cases = (
             (
-                "01_confirm_requirements/workflow.lgwf",
+                "01_confirm_requirements/02_requirements_proposal/workflow.lgwf",
                 "propose_requirements_react",
                 "validate_requirements_proposal",
-                "prepare_requirements_confirmation",
-                "confirm_requirements",
                 ".lgwf/create_requirements_proposal_quality_gate.json",
             ),
             (
                 "02_confirm_business_flow/workflow.lgwf",
                 "propose_business_flow_react",
                 "validate_business_flow_proposal",
-                "prepare_business_flow_confirmation",
-                "confirm_business_flow",
                 ".lgwf/business_flow_proposal_quality_gate.json",
             ),
             (
                 "03_confirm_step_designs/workflow.lgwf",
                 "design_steps_react",
                 "validate_step_designs_proposal",
-                "prepare_step_design_confirmation",
-                "confirm_step_designs",
                 ".lgwf/step_designs_proposal_quality_gate.json",
             ),
         )
-        for relative, codex_node, gate_node, prepare_node, review_node, gate_file in cases:
+        for relative, codex_node, gate_node, gate_file in cases:
             workflow = read(relative)
             self.assertIn(f"PY {gate_node}", workflow)
             self.assertIn(gate_file, workflow)
-            self.assertRegex(
-                workflow,
-                rf"{codex_node}\s+THEN\s+{gate_node}\s+THEN\s+{prepare_node}\s+THEN\s+{review_node}",
-            )
+            self.assertRegex(workflow, rf"{codex_node}\s+THEN\s+{gate_node}")
+
+        review_cases = (
+            ("01_confirm_requirements/03_requirements_review/workflow.lgwf", "prepare_requirements_confirmation", "confirm_requirements"),
+            ("02_confirm_business_flow/workflow.lgwf", "prepare_business_flow_confirmation", "confirm_business_flow"),
+            ("03_confirm_step_designs/workflow.lgwf", "prepare_step_design_confirmation", "confirm_step_designs"),
+        )
+        for relative, prepare_node, review_node in review_cases:
+            workflow = read(relative)
+            self.assertRegex(workflow, rf"{prepare_node}\s+THEN\s+{review_node}")
 
     def test_all_proposal_prompts_require_current_target_identity(self) -> None:
         for relative in (
-            "01_confirm_requirements/agents/propose_requirements_react.md",
+            "01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md",
             "02_confirm_business_flow/agents/propose_business_flow_react.md",
             "03_confirm_step_designs/agents/design_steps_react.md",
         ):
@@ -168,7 +169,7 @@ class PromptContractTest(unittest.TestCase):
 
     def test_all_codex_prompt_nodes_have_contract_boundary_coverage(self) -> None:
         expected_nodes = {
-            "01_confirm_requirements/workflow.lgwf:propose_requirements_react",
+            "01_confirm_requirements/02_requirements_proposal/workflow.lgwf:propose_requirements_react",
             "02_confirm_business_flow/workflow.lgwf:propose_business_flow_react",
             "03_confirm_step_designs/workflow.lgwf:design_steps_react",
             "04_implement_steps_react/implement_one_unit.lgwf:implement_current_unit",
@@ -196,9 +197,41 @@ class PromptContractTest(unittest.TestCase):
             for output_path in re.findall(r'OUTPUT_(?:JSON|FILE)\s+"([^"]+)"', block):
                 self.assertIn(f'WRITE workspace file "{output_path}"', block, node_id)
 
+    def test_codex_output_json_files_have_schema_registry_entries(self) -> None:
+        schema_path = ROOT / "04_implement_steps_react/resources/codex_output_schemas.json"
+        schemas = json.loads(schema_path.read_text(encoding="utf-8"))
+        codex_schemas = schemas["codex_output_json_schemas"]
+        target_schemas = schemas["target_package_output_file_schemas"]
+
+        output_json_paths: set[str] = set()
+        for workflow_path in sorted(ROOT.rglob("*.lgwf")):
+            text = workflow_path.read_text(encoding="utf-8")
+            output_json_paths.update(re.findall(r'OUTPUT_JSON\s+"([^"]+)"\s+AS_FILE', text))
+
+        self.assertEqual(
+            {
+                ".lgwf/create_requirements_proposal.json",
+                ".lgwf/business_flow_proposal.json",
+                ".lgwf/step_designs_proposal.json",
+                ".lgwf/current_implementation_unit_result.json",
+                ".lgwf/implementation_observe.json",
+            },
+            output_json_paths,
+        )
+        self.assertEqual(output_json_paths, set(codex_schemas))
+        for output_path, schema in codex_schemas.items():
+            self.assertEqual("object", schema.get("type"), output_path)
+            self.assertIsInstance(schema.get("required"), list, output_path)
+            self.assertGreater(len(schema["required"]), 0, output_path)
+
+        self.assertIn("entry_contract.json", target_schemas)
+        self.assertIn("wf/artifact_contracts.json", target_schemas)
+        self.assertIn("input_schema", target_schemas["entry_contract.json"]["required"])
+        self.assertIn("delivery_artifacts", target_schemas["wf/artifact_contracts.json"]["required"])
+
     def test_revision_prompts_are_revision_approval_prompts(self) -> None:
         for relative in (
-            "01_confirm_requirements/revise_requirements.md",
+            "01_confirm_requirements/03_requirements_review/agents/revise_requirements.md",
             "02_confirm_business_flow/revise_business_flow.md",
             "03_confirm_step_designs/revise_step_designs.md",
         ):
@@ -212,7 +245,7 @@ class PromptContractTest(unittest.TestCase):
     def test_review_prompts_document_three_options_and_full_json_revise(self) -> None:
         for relative, context_key, review_node in (
             (
-                "01_confirm_requirements/confirm_requirements.md",
+                "01_confirm_requirements/03_requirements_review/agents/confirm_requirements.md",
                 "requirements_confirmation_context.review_context_json",
                 "confirm_requirements",
             ),

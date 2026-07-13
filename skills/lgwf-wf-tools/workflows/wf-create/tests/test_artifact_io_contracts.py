@@ -50,7 +50,7 @@ class ArtifactIOContractsTest(unittest.TestCase):
     def test_finish_raw_intent_reads_runtime_request_artifact(self) -> None:
         write_json(self.work_dir / ".lgwf" / "raw_intent_request.json", {"raw_intent": "创建 git-diff-brief"})
 
-        result = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
+        result = self.run_script("01_confirm_requirements/01_raw_intent/scripts/finish_raw_intent.py")
 
         self.assertEqual(result["lgwf_wf_create.raw_intent_request"]["raw_intent"], "创建 git-diff-brief")
 
@@ -62,13 +62,13 @@ class ArtifactIOContractsTest(unittest.TestCase):
             },
         }
 
-        prepared = self.run_script("01_confirm_requirements/scripts/prepare_raw_intent_confirmation.py", input_state)
+        prepared = self.run_script("01_confirm_requirements/01_raw_intent/scripts/prepare_confirmation.py", input_state)
         write_json(
             self.work_dir / ".lgwf" / "raw_intent_approval.json",
             {"decision": "approve", "approval": "approve", "comment": ""},
         )
-        applied = self.run_script("01_confirm_requirements/scripts/apply_confirmed_raw_intent.py")
-        finished = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
+        applied = self.run_script("01_confirm_requirements/01_raw_intent/scripts/apply_confirmed.py")
+        finished = self.run_script("01_confirm_requirements/01_raw_intent/scripts/finish_raw_intent.py")
 
         proposal = prepared["lgwf_wf_create.raw_intent_confirmation_context"]["proposal"]
         self.assertEqual(proposal["raw_intent"], "创建 skill-packaging workflow")
@@ -95,7 +95,7 @@ class ArtifactIOContractsTest(unittest.TestCase):
             },
         )
 
-        result = self.run_script("01_confirm_requirements/scripts/finish_raw_intent.py")
+        result = self.run_script("01_confirm_requirements/01_raw_intent/scripts/finish_raw_intent.py")
 
         self.assertEqual(
             result["lgwf_wf_create.creation_context_dirs"],
@@ -111,7 +111,7 @@ class ArtifactIOContractsTest(unittest.TestCase):
         write_json(self.work_dir / ".lgwf" / "business_flow_proposal.json", {"stages": []})
         write_json(self.work_dir / ".lgwf" / "step_designs_proposal.json", {"step_designs": []})
 
-        requirements = self.run_script("01_confirm_requirements/scripts/prepare_requirements_confirmation.py")
+        requirements = self.run_script("01_confirm_requirements/03_requirements_review/scripts/prepare_confirmation.py")
         business_flow = self.run_script("02_confirm_business_flow/scripts/prepare_business_flow_confirmation.py")
         step_designs = self.run_script("03_confirm_step_designs/scripts/prepare_step_design_confirmation.py")
 
@@ -157,7 +157,7 @@ class ArtifactIOContractsTest(unittest.TestCase):
             {"decision": "approve", "confirmed": {"approval": "approve"}},
         )
 
-        self.run_script("01_confirm_requirements/scripts/apply_confirmed_requirements.py")
+        self.run_script("01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py")
         self.run_script("02_confirm_business_flow/scripts/apply_confirmed_business_flow.py")
         self.run_script("03_confirm_step_designs/scripts/apply_confirmed_step_designs.py")
 

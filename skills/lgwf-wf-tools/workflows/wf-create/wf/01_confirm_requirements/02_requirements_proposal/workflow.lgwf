@@ -1,0 +1,34 @@
+WORKFLOW requirements_proposal;
+ENTRY propose_requirements_react;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+CODEX propose_requirements_react
+  PROMPT "agents/propose_requirements.md"
+  CONTEXT workflow file "agents/spec.md"
+  TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
+  TARGET_FILES state.lgwf_wf_create.creation_context_files
+  OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
+  RESULT state.lgwf_wf_create.requirements_proposal_result
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/raw_intent_request.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+  };
+
+PY validate_requirements_proposal
+  SCRIPT "scripts/validate_proposal.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.create_requirements_proposal_quality_gate
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/raw_intent_request.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+  };
+
+FLOW propose_requirements_react
+  THEN validate_requirements_proposal;

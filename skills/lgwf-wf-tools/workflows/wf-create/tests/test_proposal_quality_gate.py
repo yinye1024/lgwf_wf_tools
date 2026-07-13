@@ -64,7 +64,7 @@ class ProposalQualityGateTest(unittest.TestCase):
             lgwf_dir = work_dir / ".lgwf"
             write_json(lgwf_dir / "raw_intent_request.json", {"workflow_name": "demo"})
 
-            completed = run_script(work_dir, "01_confirm_requirements/scripts/validate_requirements_proposal.py")
+            completed = run_script(work_dir, "01_confirm_requirements/02_requirements_proposal/scripts/validate_proposal.py")
 
             self.assertNotEqual(completed.returncode, 0)
             result = json.loads((lgwf_dir / "create_requirements_proposal_quality_gate.json").read_text(encoding="utf-8"))
@@ -85,7 +85,7 @@ class ProposalQualityGateTest(unittest.TestCase):
                 },
             )
 
-            completed = run_script(work_dir, "01_confirm_requirements/scripts/validate_requirements_proposal.py")
+            completed = run_script(work_dir, "01_confirm_requirements/02_requirements_proposal/scripts/validate_proposal.py")
 
             self.assertEqual(completed.returncode, 0, completed.stderr)
             result = json.loads((lgwf_dir / "create_requirements_proposal_quality_gate.json").read_text(encoding="utf-8"))

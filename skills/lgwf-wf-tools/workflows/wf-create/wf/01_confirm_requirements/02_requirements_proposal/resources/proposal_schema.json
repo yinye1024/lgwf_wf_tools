@@ -1,0 +1,72 @@
+{
+  "type": "object",
+  "required": [
+    "workflow_id",
+    "workflow_name",
+    "target_package_root",
+    "purpose",
+    "target_users",
+    "expected_inputs",
+    "expected_outputs",
+    "human_approval_points",
+    "workflow_shape",
+    "proposal_notes",
+    "design_rationale"
+  ],
+  "properties": {
+    "workflow_id": {
+      "type": "string"
+    },
+    "workflow_name": {
+      "type": "string"
+    },
+    "target_package_root": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "target_users": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "human_approval_points": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "workflow_shape": {
+      "type": "string",
+      "enum": [
+        "simple",
+        "react",
+        "agent_loop"
+      ]
+    },
+    "proposal_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "design_rationale": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

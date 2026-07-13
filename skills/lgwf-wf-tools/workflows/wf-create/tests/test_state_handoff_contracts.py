@@ -50,7 +50,7 @@ class StateHandoffContractTest(unittest.TestCase):
         self.assertNotIn("APPROVAL confirm_requirements", main_workflow)
 
         for workflow_relative, node in (
-            ("01_confirm_requirements/workflow.lgwf", "prepare_requirements_confirmation"),
+            ("01_confirm_requirements/03_requirements_review/workflow.lgwf", "prepare_requirements_confirmation"),
             ("02_confirm_business_flow/workflow.lgwf", "prepare_business_flow_confirmation"),
             ("03_confirm_step_designs/workflow.lgwf", "prepare_step_design_confirmation"),
         ):
@@ -58,12 +58,12 @@ class StateHandoffContractTest(unittest.TestCase):
             self.assertIn(f"PY {node}", workflow)
             self.assertIn(f"RESULT state.lgwf_wf_create.{node}_result", workflow)
             self.assertIn("UPDATES_STATE", workflow)
-            self.assertRegex(workflow, rf"THEN {node}\s+THEN confirm_")
+            self.assertRegex(workflow, rf"{node}\s+THEN confirm_")
 
     def test_confirmation_context_scripts_emit_expected_state_keys(self) -> None:
         cases = (
             (
-                "01_confirm_requirements/scripts/prepare_requirements_confirmation.py",
+                "01_confirm_requirements/03_requirements_review/scripts/prepare_confirmation.py",
                 "create_requirements_proposal.json",
                 {"workflow_name": "demo", "target_package_root": "skills/demo"},
                 "lgwf_wf_create.requirements_confirmation_context",
@@ -106,7 +106,7 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_revision_context_scripts_emit_revision_request_and_state_keys(self) -> None:
         cases = (
             (
-                "01_confirm_requirements/scripts/prepare_requirements_revision_confirmation.py",
+                "01_confirm_requirements/03_requirements_review/scripts/prepare_revision_confirmation.py",
                 "create_requirements_proposal.json",
                 "create_requirements_approval.json",
                 {"workflow_name": "demo"},
@@ -329,11 +329,11 @@ class StateHandoffContractTest(unittest.TestCase):
         ):
             self.assertIn(relative, plan["create_files"])
         self.assertIn("wf/shared/scripts", plan["create_dirs"])
-        self.assertNotIn("wf/01_confirm_requirements/scripts/prepare_requirements_confirmation.py", plan["create_files"])
+        self.assertNotIn("wf/01_confirm_requirements/03_requirements_review/scripts/prepare_confirmation.py", plan["create_files"])
 
     def test_prompt_docs_mention_confirmation_context_handoff(self) -> None:
         expectations = (
-            ("01_confirm_requirements/agents/propose_requirements_react.md", "requirements_confirmation_context"),
+            ("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md", "requirements_confirmation_context"),
             ("02_confirm_business_flow/agents/propose_business_flow_react.md", "business_flow_confirmation_context"),
             ("03_confirm_step_designs/agents/design_steps_react.md", "step_design_confirmation_context"),
         )
@@ -344,7 +344,7 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_apply_scripts_return_output_artifact_path(self) -> None:
         for relative, approval_name, proposal_name, output_name, proposal in (
             (
-                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
                 "create_requirements_approval.json",
                 "create_requirements_proposal.json",
                 "create_requirements.json",
@@ -380,7 +380,7 @@ class StateHandoffContractTest(unittest.TestCase):
     def test_apply_scripts_use_proposal_when_approval_only_records_decision(self) -> None:
         for relative, approval_name, proposal_name, expected_key in (
             (
-                "01_confirm_requirements/scripts/apply_confirmed_requirements.py",
+                "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
                 "create_requirements_approval.json",
                 "create_requirements_proposal.json",
                 "workflow_name",
