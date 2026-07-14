@@ -277,8 +277,8 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 - runtime 不读取该文件。
 - client runner 在本机解析并读取。
 - 对于 `exec.codex_prompt`，prompt 期望 Codex 读取的每个 workspace 文件或目录都要放入 `context_refs`。
-- 对于 Codex 真正要分析的用户授权目标目录或文件，使用 `target_dirs` / `target_files`，或 Authoring DSL 的 `TARGET_DIR` / `TARGET_FILE` / `TARGET_DIRS state.*` / `TARGET_FILES state.*`；这些字段只表达可读分析范围，不表达写权限。不要把动态分析目标塞进 `context_refs`。
-- 对于 Codex 允许修改的目录，使用 `edit_dirs` 或 Authoring DSL 的 `EDIT_DIR` / `EDIT_DIRS state.*`。`EDIT_DIR(S)` 也隐含可读；未落入 `EDIT_DIR(S)` 的 `TARGET_DIR(S)` 只能分析，不能修改。
+- 对于 Codex 真正要分析的用户授权目标目录或文件，使用 runtime `target_dirs` / `target_files`，或 Authoring DSL 的 `ANALYSIS_DIR` / `ANALYSIS_FILE` / `ANALYSIS_DIRS state.*` / `ANALYSIS_FILES state.*`；这些字段只表达可读分析范围，不表达写权限。不要把动态分析目标塞进 `context_refs`。
+- 对于 Codex 允许修改的目录，使用 `edit_dirs` 或 Authoring DSL 的 `EDIT_DIR` / `EDIT_DIRS state.*`。`EDIT_DIR(S)` 也隐含可读；未落入 `EDIT_DIR(S)` 的 `ANALYSIS_DIR(S)` 只能分析，不能修改。
 - `target_dirs` / `target_files` / `edit_dirs` 可使用绝对路径，由 client runner 校验存在性和文件/目录类型；它们不是 workflow resource refs。
 - 生成 prompt 文件时，不在本文件展开 prompt 规则；读取 `references/prompt-assist/guide.md`，并保持 prompt 的 `Inputs` 与 `context_refs` 对齐。
 - 省略 `cwd`，让执行默认发生在 workspace root。
@@ -296,7 +296,7 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 
 `subgraph.react` 和 `subgraph.agent_loop` 中的 prompt 设计职责由 `references/prompt-assist/guide.md` 处理：`reason` / `diagnose` / `plan` 使用 Draft Prompt，`act` 使用 Action Prompt，`observe` 使用 Audit Prompt，`decide` 默认优先脚本或轻量节点。不属于 Draft、Action 或 Audit 职责的普通 `exec.codex_prompt` 使用 Normal Prompt。
 
-`AGENT_LOOP` 默认向内部 Codex slot 注入 `target_dirs_path="targets.dirs"`、`target_files_path="targets.files"` 和 `edit_dirs_path="targets.edit_dirs"`，slot 内不要声明 `TARGET_DIRS` / `TARGET_FILES` / `EDIT_DIRS` 覆盖。运行时 `exec.codex_prompt` 会写节点级 `state.token_usage.<node_id>`；全局累计和用时由 runtime metrics 写入 `state.run.token_usage` 和 `state.run.node_timings`。`TOKEN_MAX` 默认 `1000000`，在准备进入下一轮之前判断，达到预算后进入 `waiting_human`。
+`AGENT_LOOP` 默认向内部 Codex slot 注入 `target_dirs_path="targets.dirs"`、`target_files_path="targets.files"` 和 `edit_dirs_path="targets.edit_dirs"`，slot 内不要声明 `ANALYSIS_DIRS` / `ANALYSIS_FILES` / `EDIT_DIRS` 覆盖。运行时 `exec.codex_prompt` 会写节点级 `state.token_usage.<node_id>`；全局累计和用时由 runtime metrics 写入 `state.run.token_usage` 和 `state.run.node_timings`。`TOKEN_MAX` 默认 `1000000`，在准备进入下一轮之前判断，达到预算后进入 `waiting_human`。
 
 除非任务明确要求架构工作，否则不要新增 `flow.join`、parallel fan-in 或新的 DSL schema 字段。
 

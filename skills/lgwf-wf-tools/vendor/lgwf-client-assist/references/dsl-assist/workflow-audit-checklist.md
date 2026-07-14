@@ -39,7 +39,7 @@
 - `REACT MAX > 1` 时，`OBSERVE` / `DECIDE` slot 通过 `CONTRACT WRITE state.*` 或 `CONTRACT WRITE workspace file "..."` 明确写出的反馈必须被下一轮 `REASON` 通过 `CONTRACT READ` 或 workspace file context 消费；`state.next` 等路由控制字段除外。缺失时 audit 返回 `LGWF_REACT_REASON_MISSING_OBSERVE_FEEDBACK` 或 `LGWF_REACT_REASON_MISSING_DECIDE_FEEDBACK`。
 - `AGENT_LOOP` sugar 只表达 `subgraph.agent_loop`，必须包含 `OBSERVE`、`DIAGNOSE`、`PLAN`、`ACT`、`VERIFY`、`DECIDE`；runtime 按声明顺序执行 slot。
 - `AGENT_LOOP` slot 可使用 `CODEX`、`PY`、`TOOL` 或 `WORKFLOW`；`WORKFLOW` slot 必须声明 `RESULT state.*`。`VERIFY` 结果必须包含 boolean `passed`；`DECIDE` 结果必须包含 `category` 和 `reason`，可包含 `evidence`、`stop_reason`。
-- `AGENT_LOOP` 默认 `TOKEN_MAX 1000000`，默认 Codex target 授权读取 `state.targets.dirs` 和 `state.targets.files`，并用 `state.targets.edit_dirs` 表达可修改目录；slot 内不得覆盖 `TARGET_DIRS` / `TARGET_FILES` / `EDIT_DIRS`。
+- `AGENT_LOOP` 默认 `TOKEN_MAX 1000000`，默认 Codex analysis 授权读取 `state.targets.dirs` 和 `state.targets.files`，并用 `state.targets.edit_dirs` 表达可修改目录；slot 内不得覆盖 `ANALYSIS_DIRS` / `ANALYSIS_FILES` / `EDIT_DIRS`。
 - `AGENT_LOOP` 不依赖顶层 `SANDBOX`，每轮自动使用 sandbox；失败、blocked、retry 或验证失败轮次只归档，不 promote。
 - `RUN_WORKFLOW + PY map_*` 用于串联独立 workflow package；mapper 只做 state shape adapter，不默认复制文件。
 - 有可审计文件副作用的 `PY` 必须声明 `CONTRACT`；`CONTRACT` 不用于声明 stdout state patch。
