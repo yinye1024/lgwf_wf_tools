@@ -1,6 +1,10 @@
 {
+  "_comment": "LGWF Codex 默认配置。JSON 不支持 // 注释，所以用 _comment 字段说明。",
   "version": 1,
+  "_model_options": "任意当前 Codex CLI 支持的模型名；LGWF 只要求非空且不含空格。",
   "model": "gpt-5.5",
+  "_model_reasoning_effort_options": "low | medium | high | xhigh",
   "model_reasoning_effort": "xhigh",
+  "_service_tier_options": "default | priority；priority 对应更快速度档",
   "service_tier": "default"
 }

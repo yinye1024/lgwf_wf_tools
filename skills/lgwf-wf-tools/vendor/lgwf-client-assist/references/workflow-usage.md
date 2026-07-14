@@ -55,6 +55,20 @@ Codex 默认模型由随包文件控制：
 
 优先级为：workflow 节点显式 `MODEL` / runtime `config.model` > `<work_dir>\.lgwf\codex\config.json` > `<skill-dir>\assets\codex-defaults.json` > client 代码兜底默认值。`lgwf-wf-tools` 需要调整打包后的全局 Codex 默认模型、速度或推理强度时，改随包 `assets\codex-defaults.json` 并重新同步/打包 `lgwf-client-assist.zip`。
 
+## Codex Keep Session
+
+`CODEX` 节点可声明 `KEEP_SESSION`，让 LGWF 在当前 runtime scope 内复用 Codex CLI session：
+
+```lgwf
+CODEX reason
+  PROMPT "agents/reason.md"
+  KEEP_SESSION;
+```
+
+`KEEP_SESSION` 不会保活 Codex 进程。每次节点执行仍会启动一次 `codex exec` 或 `codex exec resume <session_id>`，执行完成后进程退出。LGWF 只在 `<work_dir>\.lgwf\codex\sessions\` 保存逻辑 session 和 Codex 实际 session id 的映射。
+
+scope 由 runtime 自动推导：普通 `CODEX` 使用当前 run + node id；`REACT` 中的 `CODEX` slot 使用当前 run + ReAct 节点 + slot；`AGENT_LOOP` 中的 `CODEX` slot 使用当前 run + AgentLoop 节点 + slot；`RUN_WORKFLOW` 子 workflow 在自己的 work_dir/run 下隔离保存。checkpoint resume 会复用同一 run 下的 session；rerun 或新 run 会生成新的 session。
+
 打包命令：
 
 ```powershell

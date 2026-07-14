@@ -243,6 +243,8 @@ HANDOFF_FILES spec_to_impl
 
 `CODEX` 小型结构化结果可用 `OUTPUT_JSON "path.json"`；大 JSON 使用 `OUTPUT_JSON "path.json" AS_FILE`，由 Codex 写文件，LGWF runner 验证文件存在、UTF-8、JSON 可解析且顶层是 object。通用文本 artifact 使用 `OUTPUT_FILE "path"`，由 Codex 写文件，runner 验证文件存在、UTF-8 可读并记录路径和大小，不解析内容。
 
+需要让同一个 Codex 逻辑节点在循环中复用上下文时，可在 `CODEX` 内声明 `KEEP_SESSION`。该标志只复用 Codex CLI session id，不保活进程；scope 由 runtime 自动按普通 node、`REACT` slot 或 `AGENT_LOOP` slot 推导。典型用途是 `REACT` 的 `REASON CODEX KEEP_SESSION`，让下一轮 reason 能延续上一轮 observe 反馈的会话上下文。
+
 `APPROVAL` 只表达二元人工审批，route key 只能是 `approve` / `reject`。需要 `approve` / `revise` / `reject` 或“小改后再确认”时使用固定三选项的 `REVIEW`；`REVIEW CONTEXT state.*` 必须指向 JSON object，并在 `FLOW` 中把 `revise` 接回修订节点或当前评审节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
 
 ## 资源引用
