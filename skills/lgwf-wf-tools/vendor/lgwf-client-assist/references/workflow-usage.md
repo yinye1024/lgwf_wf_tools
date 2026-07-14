@@ -69,6 +69,24 @@ CODEX reason
 
 scope 由 runtime 自动推导：普通 `CODEX` 使用当前 run + node id；`REACT` 中的 `CODEX` slot 使用当前 run + ReAct 节点 + slot；`AGENT_LOOP` 中的 `CODEX` slot 使用当前 run + AgentLoop 节点 + slot；`RUN_WORKFLOW` 子 workflow 在自己的 work_dir/run 下隔离保存。checkpoint resume 会复用同一 run 下的 session；rerun 或新 run 会生成新的 session。
 
+需要让同一个 `workflow.lgwf` 内多个 Codex 节点或 slot 共享 session 时，使用 `KEEP_SESSION GROUP "name"`：
+
+```lgwf
+CODEX implement
+  PROMPT "agents/prepare.md"
+  KEEP_SESSION GROUP "reason";
+
+REACT fix_loop MAX 5
+  REASON CODEX
+    PROMPT "agents/reason.md"
+    KEEP_SESSION GROUP "reason"
+  ACT CODEX PROMPT "agents/act.md"
+  OBSERVE PY SCRIPT "scripts/observe.py"
+  DECIDE PY SCRIPT "scripts/decide.py";
+```
+
+`GROUP` 只在当前 authoring workflow 文件内共享；父 workflow、`STEP ... WORKFLOW` 子 workflow 和 `RUN_WORKFLOW` 子进程都不会共享这个 group。同一 workflow 内同名 group 会共享同一个 Codex session，命名冲突由 workflow 作者负责避免。
+
 打包命令：
 
 ```powershell
