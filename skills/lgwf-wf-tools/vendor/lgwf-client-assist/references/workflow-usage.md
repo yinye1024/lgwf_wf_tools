@@ -24,6 +24,17 @@ python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-di
 python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <workflow_lgwf> --work-dir <work_dir> --input-json "{}" --auto-human
 ```
 
+注意：`--auto-human` 本身不是运行后可动态修改的 CLI 参数；动态设置的是当前 work-dir 的 human gate policy override。workflow 启动后可以通过 work-dir 控制文件动态覆盖有效策略。`set --enabled true` 会让正在等待和后续进入的 `APPROVAL`、`REVIEW`、`CHOICE` 自动走正向分支；`set --enabled false` 会覆盖启动时的 `--auto-human`；`clear` 删除动态覆盖并恢复启动参数语义：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py human-auto get --work-dir <work_dir>
+python <skill-dir>\scripts\lgwf.py human-auto set --work-dir <work_dir> --enabled true --apply-pending
+python <skill-dir>\scripts\lgwf.py human-auto set --work-dir <work_dir> --enabled false
+python <skill-dir>\scripts\lgwf.py human-auto clear --work-dir <work_dir>
+```
+
+已有 `RUN_WORKFLOW` 子 workflow 且需要同步现有 child work dir 时，在 `human-auto set` / `clear` 命令上追加 `--cascade-children`。后续新启动的子 workflow 会继承父 workflow 当前有效 auto 策略。
+
 复制按文件字节执行，不转换文本编码或换行。`.git/`、`__pycache__/`、`.lgwf-compiled-*` 和 package 内部的整个 work dir 不进入 snapshot；symlink、junction 或其他 reparse point 会使启动失败。snapshot 会保留到下一次 rerun，由现有 work-dir 清理流程删除。
 
 安装策略由打包时生成的 `assets/package-profile.json` 决定：
@@ -201,17 +212,10 @@ python <skill-dir>\scripts\lgwf.py runs get-eval-suite --work-dir <work_dir> --r
 ```powershell
 python <skill-dir>\scripts\lgwf.py tool list
 python <skill-dir>\scripts\lgwf.py tool describe copy_file
-python <skill-dir>\scripts\lgwf.py tool schema copy_file
 python <skill-dir>\scripts\lgwf.py tool run copy_file --options-json '{"source":"a.bin","destination":"b.bin"}'
 ```
 
-公开 tools 包括 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`、`lgwf_dsl_cli` 和 sandbox 系列工具。需要查看权威 options schema 时使用：
-
-```powershell
-python <skill-dir>\scripts\lgwf.py tool schema lgwf_dsl_cli
-```
-
-`lgwf_dsl_cli` 只暴露 `lgwf_dsl.cli` 的白名单 authoring 命令：`compile`、`explain`、`lint`、`audit` 和 `schema`。它用于 workflow runtime 内的确定性 DSL gate，不调用 `lgwf.py`，也不处理 `run`、`status`、`approval`、`review` 或 `runs` 控制面命令。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
+公开 tools 为 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`。前三者要求 `--work-dir`；复制 CLI 可使用绝对路径或基于当前目录的相对路径。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
 
 ## Codex Token Status
 
@@ -274,24 +278,6 @@ TOOL ensure_output
 ```
 
 `TOOL` 的 options 会在 audit 和 runtime 中按 tool catalog 校验，workflow 路径始终限制在 `work_dir`。旧 `exec.run_python builtin_script` JSON 保持兼容。
-
-`lgwf_dsl_cli` 示例：
-
-```lgwf
-TOOL audit_generated_workflow
-  USE lgwf_dsl_cli
-  OPTIONS {
-    "command": "audit",
-    "input": "skills/example/wf/workflow.lgwf",
-    "result_output_path": ".lgwf/example_audit_result.json",
-    "include_stdout": true,
-    "fail_on_command_failure": false
-  }
-  RESULT state.example.audit_result
-  CONTRACT {
-    WRITE workspace file ".lgwf/example_audit_result.json";
-  };
-```
 
 ```json
 {

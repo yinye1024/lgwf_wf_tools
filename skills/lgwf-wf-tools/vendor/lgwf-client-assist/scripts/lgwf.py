@@ -34,6 +34,11 @@ _APPROVAL_COMMANDS = {
 _REVIEW_COMMANDS = {
     "submit": "submit-main-agent-review",
 }
+_HUMAN_AUTO_COMMANDS = {
+    "get": "get-human-gate-policy",
+    "set": "set-human-gate-policy",
+    "clear": "clear-human-gate-policy",
+}
 _RUN_COMMANDS = {
     "list": "list-runs",
     "get": "get-run",
@@ -114,6 +119,8 @@ def main(
         return _run_group(args, _APPROVAL_COMMANDS, run_module, error_output, "approval")
     if command == "review":
         return _run_group(args, _REVIEW_COMMANDS, run_module, error_output, "review")
+    if command == "human-auto":
+        return _run_group(args, _HUMAN_AUTO_COMMANDS, run_module, error_output, "human-auto")
     if command == "runs":
         return _run_group(args, _RUN_COMMANDS, run_module, error_output, "runs")
 
@@ -340,7 +347,7 @@ class _ArgumentParser(argparse.ArgumentParser):
 
 def _write_usage(stream: TextIO) -> None:
     stream.write(
-        "usage: lgwf.py {doctor,audit,compile,schema,run,status,stop,wait,approval,review,runs,tool,codex} ...\n"
+        "usage: lgwf.py {doctor,audit,compile,schema,run,status,stop,wait,approval,review,human-auto,runs,tool,codex} ...\n"
     )
 
 
