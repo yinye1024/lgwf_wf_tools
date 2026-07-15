@@ -7,26 +7,22 @@
     ".lgwf/create_requirements_proposal.json",
     ".lgwf/create_requirements_proposal_quality_gate.json",
     ".lgwf/create_requirements_approval.json",
-    ".lgwf/create_requirements_revision_approval.json",
     ".lgwf/create_requirements.json",
+    ".lgwf/business_flow_proposal_context.json",
     ".lgwf/business_flow_proposal.json",
-    ".lgwf/business_flow_proposal_quality_gate.json",
     ".lgwf/business_flow_approval.json",
-    ".lgwf/business_flow_revision_approval.json",
     ".lgwf/business_flow.json",
     ".lgwf/scaffold_package_result.json",
-    ".lgwf/step_design_reason.json",
+    ".lgwf/step_design_repair_plan.json",
     ".lgwf/step_designs_proposal.json",
     ".lgwf/step_design_structural_gate.json",
-    ".lgwf/step_design_semantic_observation.json",
     ".lgwf/step_design_observation.json",
     ".lgwf/step_design_decision_analysis.json",
     ".lgwf/step_designs_proposal_decision.json",
-    ".lgwf/step_designs_proposal_quality_gate.json",
     ".lgwf/step_design_confirmation_record.json",
-    ".lgwf/step_design_revision_approval.json",
     ".lgwf/step_designs.json",
     ".lgwf/implementation_context.json",
+    ".lgwf/implementation_lgwf_dsl_audit_result.json",
     ".lgwf/implementation_observe.json",
     ".lgwf/implementation_audit_result.json",
     ".lgwf/implementation_decision.json",
@@ -34,7 +30,6 @@
     ".lgwf/current_implementation_unit_context.json",
     ".lgwf/current_implementation_unit_result.json",
     ".lgwf/implementation_repair_reason.json",
-    ".lgwf/implementation_repair_context.json",
     ".lgwf/implementation_repair_result.json",
     ".lgwf/implementation_repair_decision_analysis.json",
     ".lgwf/implementation_repair_stage",
@@ -51,20 +46,20 @@
   ],
   "final_outputs": [
     ".lgwf/business_flow_approval.json",
-    ".lgwf/business_flow_proposal_quality_gate.json",
     ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
     ".lgwf/create_reference_context/dsl-assist/guide.md",
     ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",
     ".lgwf/create_reference_context/step-design-reference-index.md",
     ".lgwf/create_reference_context/implementation-reference-index.md",
+    ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md",
     ".lgwf/create_reference_context/module-contract/module-contract.md",
     ".lgwf/create_requirements_approval.json",
     ".lgwf/create_requirements_proposal_quality_gate.json",
     ".lgwf/post_fix_handoff_input.json",
     ".lgwf/raw_intent_approval.json",
     ".lgwf/raw_intent_request_proposal.json",
+    ".lgwf/step_design_structural_gate.json",
     ".lgwf/step_design_observation.json",
-    ".lgwf/step_designs_proposal_quality_gate.json",
     ".lgwf/step_design_confirmation_record.json"
   ],
   "script_writes": {
@@ -80,18 +75,16 @@
     "prepare_post_fix_handoff": [
       ".lgwf/post_fix_handoff_input.json"
     ],
-    "prepare_repair_context": [
-      ".lgwf/implementation_repair_context.json",
-      ".lgwf/implementation_repair_stage"
-    ],
     "publish_repair_result": [
       ".lgwf/implementation_result.json"
     ],
     "audit_current_implementation": [
+      ".lgwf/implementation_lgwf_dsl_audit_result.json",
       ".lgwf/implementation_audit_result.json",
       ".lgwf/implementation_observe.json"
     ],
     "decide_repair_implementation": [
+      ".lgwf/implementation_repair_decision_analysis.json",
       ".lgwf/implementation_decision.json"
     ]
   }

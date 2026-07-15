@@ -31,4 +31,4 @@
 - 不自由设计业务阶段，只按已确认的业务流和模板生成计划。
 - 不修改 `.lgwf/business_flow.json` 或 `.lgwf/create_requirements.json`。
 - 不向目标 package 根目录写入 `.lgwf`、`.tmp`、`__pycache__` 或运行状态文件。
-- 不创建目标 package 实体文件；这里只生成脚手架计划。
+- 不创建或覆盖目标 package 实体文件；本阶段只生成脚手架计划。

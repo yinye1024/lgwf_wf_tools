@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -71,6 +73,7 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         self.assertEqual(plan["stage_manifest"][0]["stage_id"], "package_scaffold")
         self.assertEqual(plan["stage_manifest"][0]["stage_dir"], "01_package_scaffold")
         self.assertIn("wf/01_package_scaffold/workflow.lgwf", plan["create_files"])
+        self.assertIn("wf/01_package_scaffold/artifact_contracts.json", plan["create_files"])
 
     def test_build_scaffold_plan_enforces_two_layer_workflow_paths(self) -> None:
         plan = self.module.build_scaffold_plan(
@@ -82,6 +85,7 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         )
         all_paths = [*plan["create_dirs"], *plan["create_files"]]
         self.assertIn("wf/01_prepare/workflow.lgwf", plan["create_files"])
+        self.assertIn("wf/01_prepare/artifact_contracts.json", plan["create_files"])
         self.assertNotIn("wf/01_prepare/00_collect_raw_intent/workflow.lgwf", all_paths)
         self.assertFalse(any(path.startswith("wf/tests") for path in all_paths))
         self.assertFalse(
@@ -107,6 +111,95 @@ class ScaffoldPackageRuleTest(unittest.TestCase):
         self.assertIn("AGENTS.md", plan["create_files"])
         self.assertIn("wf/workflow.lgwf", plan["create_files"])
         self.assertIn("SKILL.md", plan["placeholders"])
+        self.assertIn("wf/01_prepare/artifact_contracts.json", plan["create_files"])
+        self.assertIn("wf/01_prepare/scripts/run.py", plan["create_files"])
+        self.assertNotIn("wf/01_prepare/agents/prompt.md", plan["create_files"])
+        self.assertNotIn("wf/01_prepare/resources/README.md", plan["create_files"])
+
+    def test_build_scaffold_plan_infers_skill_profile_from_confirmed_requirements(self) -> None:
+        plan = self.module.build_scaffold_plan(
+            {
+                "workflow_name": "repo-context-pack",
+                "target_package_root": "skills/repo-context-pack",
+                "purpose": "创建一个名为 repo-context-pack 的 Codex skill，内嵌 LGWF workflow。",
+                "expected_outputs": [
+                    "目标 package 包含 SKILL.md、AGENTS.md、README.md、entry_contract.json、scripts/build_context_pack.py、tests/test_build_context_pack.py、ws/ 和 wf/。",
+                    "跨阶段可复用的纯函数放在 wf/shared/scripts/repo_context_runtime.py。",
+                ],
+                "business_flow": {
+                    "stages": [
+                        {
+                            "stage_id": "entry_scope_resolution",
+                            "key_nodes": ["load_repo_context_pack_input"],
+                            "human_approval": False,
+                        }
+                    ]
+                },
+            }
+        )
+
+        self.assertEqual(plan["package_profile"], "skill_wrapped_workflow")
+        for path in (
+            "SKILL.md",
+            "scripts/build_context_pack.py",
+            "tests/test_build_context_pack.py",
+            "wf/shared/scripts/repo_context_runtime.py",
+            "wf/01_entry_scope_resolution/artifact_contracts.json",
+            "wf/01_entry_scope_resolution/scripts/run.py",
+        ):
+            self.assertIn(path, plan["create_files"])
+        self.assertNotIn("wf/01_entry_scope_resolution/agents/prompt.md", plan["create_files"])
+        self.assertNotIn("wf/01_entry_scope_resolution/resources/README.md", plan["create_files"])
+
+    def test_build_scaffold_plan_from_root_preserves_package_source_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            lgwf_dir.mkdir(parents=True)
+            (lgwf_dir / "create_requirements.json").write_text(
+                json.dumps(
+                    {
+                        "confirmed": {
+                            "workflow_name": "repo-context-pack",
+                            "target_package_root": "skills/repo-context-pack",
+                            "package_source_files": [
+                                "SKILL.md",
+                                "scripts/build_context_pack.py",
+                                "tests/test_build_context_pack.py",
+                                "wf/shared/scripts/repo_context_runtime.py",
+                            ],
+                        }
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (lgwf_dir / "business_flow.json").write_text(
+                json.dumps(
+                    {
+                        "confirmed": {
+                            "workflow_name": "repo-context-pack",
+                            "target_package_root": "skills/repo-context-pack",
+                            "stages": [{"stage_id": "entry_scope_resolution"}],
+                        }
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            plan = self.module.build_scaffold_plan_from_root(work_dir)
+
+        self.assertEqual(plan["package_profile"], "skill_wrapped_workflow")
+        for path in (
+            "SKILL.md",
+            "scripts/build_context_pack.py",
+            "tests/test_build_context_pack.py",
+            "wf/shared/scripts/repo_context_runtime.py",
+        ):
+            self.assertIn(path, plan["create_files"])
 
     def test_build_scaffold_plan_rejects_unknown_profile(self) -> None:
         with self.assertRaises(ValueError):

@@ -7,6 +7,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+SHARED_SCRIPTS = Path(__file__).resolve().parents[3] / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
+
+from confirmation_io import approval_decision, require_approve
+
 
 APPROVAL_FILE = "raw_intent_approval.json"
 PROPOSAL_FILE = "raw_intent_request_proposal.json"
@@ -33,28 +39,7 @@ def read_stdin_context() -> dict[str, Any]:
 
 
 def _approval_route(approval: dict[str, Any]) -> str:
-    for key in ("approval", "decision", "route"):
-        value = approval.get(key)
-        if isinstance(value, str) and value:
-            return value
-    return ""
-
-
-def _revision_payload(approval: dict[str, Any]) -> dict[str, Any]:
-    value = approval.get("value")
-    if isinstance(value, dict):
-        updated = value.get("updated_context")
-        if isinstance(updated, dict):
-            return updated
-    updated_context = approval.get("updated_context")
-    if isinstance(updated_context, dict):
-        return updated_context
-    review_context = approval.get("review_context_json")
-    if isinstance(review_context, dict):
-        proposal = review_context.get("proposal")
-        if isinstance(proposal, dict):
-            return proposal
-    return {}
+    return approval_decision(approval)
 
 
 def _proposal_from_context(context: dict[str, Any]) -> dict[str, Any]:
@@ -66,18 +51,11 @@ def confirmed_raw_intent(lgwf_dir: Path, context: dict[str, Any] | None = None) 
     approval = load_json(lgwf_dir / APPROVAL_FILE)
     if not isinstance(approval, dict):
         raise ValueError(".lgwf/raw_intent_approval.json 必须是 JSON object")
-    route = _approval_route(approval)
-    if route == "approve":
-        proposal = _proposal_from_context(context or {}) or load_json(lgwf_dir / PROPOSAL_FILE)
-        if not isinstance(proposal, dict) or not proposal:
-            raise ValueError("approve 需要已存在的非空 raw_intent_request_proposal.json")
-        return proposal
-    if route == "revise":
-        revision = _revision_payload(approval)
-        if not revision:
-            raise ValueError("revise 需要完整 raw_intent_request JSON")
-        return revision
-    raise ValueError(f"不支持的 raw intent 决策: {route or '<missing>'}")
+    require_approve(approval)
+    proposal = _proposal_from_context(context or {}) or load_json(lgwf_dir / PROPOSAL_FILE)
+    if not isinstance(proposal, dict) or not proposal:
+        raise ValueError("approve 需要已存在的非空 raw_intent_request_proposal.json")
+    return proposal
 
 
 def main() -> None:

@@ -1,6 +1,6 @@
 # scaffold package 模板规范
 
-本规范定义 `lgwf-wf-create` 生成 workflow 初稿时必须遵循的 package 结构。它面向 `design_steps_react`、`implement_steps_react` 和人工审阅者；机器可读模板见 `scaffold_package_template.json`，脚手架输出契约见 `scaffold_result_contract.md`。
+本规范定义 `lgwf-wf-create` 生成 workflow 初稿时必须遵循的 package 结构。它面向 `step_design_proposal`、`implement_steps_react` 和人工审阅者；机器可读模板见 `scaffold_package_template.json`，脚手架输出契约见 `scaffold_result_contract.md`。
 
 本规范是 workflow 模块化创建指引的脚手架落地细则。运行时由 `prepare_dsl_reference_context` 把共享指引镜像到 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md`；涉及 workflow、子 workflow、复杂 step、目录边界、状态隔离和验证方式时，先遵循该运行态镜像，再应用本文的模板字段。
 
@@ -17,23 +17,28 @@
   ws/
   wf/
     workflow.lgwf
+    artifact_contracts.json
     01_confirm_requirements/
       workflow.lgwf
+      artifact_contracts.json
       agents/
       scripts/
       resources/
     02_confirm_business_flow/
       workflow.lgwf
+      artifact_contracts.json
       agents/
       scripts/
       resources/
     03_confirm_step_designs/
       workflow.lgwf
+      artifact_contracts.json
       agents/
       scripts/
       resources/
     06_summarize_create_result/
       workflow.lgwf
+      artifact_contracts.json
       scripts/
 ```
 
@@ -44,7 +49,7 @@ workflow 拓扑只允许两层：
 - 第一层：`wf/workflow.lgwf`，只通过 `STEP ... WORKFLOW "NN_stage/workflow.lgwf"` 编排业务阶段。
 - 第二层：`wf/<stage>/workflow.lgwf`，承载该阶段内部的 `PY`、`CODEX`、`REACT`、`APPROVAL`、`ROUTE` 等具体逻辑。
 
-子 workflow 目录必须自包含 prompt 和阶段私有资源：一个 `wf/<stage>/` 目录应包含该阶段需要的 `workflow.lgwf`、`agents/`、`scripts/`、`resources/` 或阶段私有文档。禁止再创建 `wf/<stage>/<substage>/workflow.lgwf` 这类孙级 workflow；如果阶段内部有多个节点、确认点、ReAct 循环或脚本，应全部放在同一个 `wf/<stage>/workflow.lgwf` 中编排。
+子 workflow 目录必须自包含阶段契约、prompt 和阶段私有资源：一个 `wf/<stage>/` 目录应包含该阶段需要的 `workflow.lgwf`、`artifact_contracts.json`、`agents/`、`scripts/`、`resources/` 或阶段私有文档。`artifact_contracts.json` 用于在单独审计该 stage workflow 时声明本阶段读取的上游 workspace artifact 和本阶段写出的最终 workspace artifact。禁止再创建 `wf/<stage>/<substage>/workflow.lgwf` 这类孙级 workflow；如果阶段内部有多个节点、确认点、ReAct 循环或脚本，应全部放在同一个 `wf/<stage>/workflow.lgwf` 中编排。
 
 共享 Python helper 可放入 `wf/shared/scripts/` 并被阶段脚本通过 Python import 复用。`PROMPT`、`PROMPT_REF`、`SPEC` 引用必须留在对应 `wf/<stage>/` 目录内；不得把阶段 prompt 放入共享目录。
 
@@ -61,7 +66,7 @@ workflow 拓扑只允许两层：
 
 默认 profile 是 `internal_workflow_package`。
 
-当 `package_profile=skill_wrapped_workflow` 时，根 `SKILL.md` 只能作为 skill 入口说明和路由封装，不能承载内部 workflow 的详细运行逻辑。内部 workflow 规则仍写在根 `AGENTS.md` 和 `wf/**/resources` 中。
+当已确认需求明确目标是 Codex skill、显式列出根 `SKILL.md`，或列出 `scripts/`、`tests/`、`wf/shared/scripts/` 下的目标源码文件时，`scaffold_package` 必须推断为 `skill_wrapped_workflow`。当 `package_profile=skill_wrapped_workflow` 时，根 `SKILL.md` 只能作为 skill 入口说明和路由封装，不能承载内部 workflow 的详细运行逻辑；阶段目录默认只生成 `workflow.lgwf` 和 `scripts/run.py`，不得为确定性脚本 workflow 强行生成 prompt/resource 占位。
 
 ## 路径规则
 
@@ -69,7 +74,7 @@ workflow 拓扑只允许两层：
 - 禁止绝对路径、盘符路径、URL、`..` 和指向 `.lgwf` 的路径。
 - 生成文件必须落在目标 package 内。
 - `.lgwf/step_designs_proposal.json` 是步骤设计草案的唯一机器契约，步骤字段必须完整内联在 JSON 中。
-- `wf/**/workflow.lgwf`、`agents/*.md`、`scripts/*.py` 和 `resources/` 必须保持相对引用。
+- `wf/**/workflow.lgwf`、`wf/**/artifact_contracts.json`、`agents/*.md`、`scripts/*.py` 和 `resources/` 必须保持相对引用。
 - `workflow.lgwf` 只能出现在 `wf/workflow.lgwf` 与 `wf/<stage>/workflow.lgwf` 两类位置。
 
 ## scaffold_plan 契约
@@ -90,7 +95,7 @@ workflow 拓扑只允许两层：
 - `placeholders`
 - `derived_from_business_flow`
 
-后续 `design_steps_react` 和 `implement_steps_react` 必须优先遵循 `scaffold_plan`，不得自行发明与模板冲突的根目录结构。
+后续 `step_design_proposal` 和 `implement_steps_react` 必须优先遵循 `scaffold_plan`，不得自行发明与模板冲突的根目录结构。`scaffold_plan.create_files` 是步骤设计 structural gate 的硬约束：每个文件都必须进入 `file_designs` 并被 `step_designs[].target_files` 引用。
 
 ## 阶段职责
 
@@ -102,7 +107,7 @@ workflow 拓扑只允许两层：
 
 `implement_draft` 聚合步骤设计 proposal、步骤设计确认和初稿实现。
 
-`design_steps_react` 负责把 `scaffold_plan` 和业务流转拆成完整结构化 `.lgwf/step_designs_proposal.json`。步骤设计必须说明每个步骤如何遵循本规范。
+`step_design_proposal` 负责把 `scaffold_plan` 和业务流转拆成完整结构化 `.lgwf/step_designs_proposal.json`。步骤设计必须说明每个步骤如何遵循本规范。
 
 `implement_steps_react` 负责按已确认步骤设计落地初稿。实现阶段必须遵循 `package_profile`、`wf/` 唯一 workflow root 和 `ws/.lgwf` 状态边界。
 

@@ -28,9 +28,10 @@
       ".lgwf/delivery_review_context.json"
     ],
     "route_delivery_review": [
-      ".lgwf/delivery_decision.json"
+      ".lgwf/delivery_review_context.json"
     ],
     "finalize_output": [
+      ".lgwf/delivery_decision.json",
       ".lgwf/commit_plan.json"
     ],
     "execute_commit_action": [

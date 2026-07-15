@@ -27,17 +27,13 @@ STEP step_design_proposal
     READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
     READ workspace dir ".lgwf/create_reference_context";
     WRITE workspace file ".lgwf/step_designs_proposal.json";
-    WRITE workspace file ".lgwf/step_designs_proposal_quality_gate.json";
+    WRITE workspace file ".lgwf/step_design_observation.json";
   };
 
 STEP step_design_review
   WORKFLOW "03_step_design_review/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/business_flow.json";
-    READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs_proposal.json";
-    READ workspace file ".lgwf/step_designs_proposal_quality_gate.json";
     WRITE workspace file ".lgwf/step_design_confirmation_record.json";
     WRITE workspace file ".lgwf/step_designs.json";
     WRITE workspace file ".lgwf/implementation_context.json";

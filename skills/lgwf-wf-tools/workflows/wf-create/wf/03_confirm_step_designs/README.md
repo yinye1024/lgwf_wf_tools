@@ -13,14 +13,12 @@
 ## 输出
 
 - `.lgwf/create_reference_context/*`
-- `.lgwf/step_design_reason.json`
 - `.lgwf/step_designs_proposal.json`
+- `.lgwf/step_design_repair_plan.json`
 - `.lgwf/step_design_structural_gate.json`
-- `.lgwf/step_design_semantic_observation.json`
 - `.lgwf/step_design_observation.json`
 - `.lgwf/step_design_decision_analysis.json`
 - `.lgwf/step_designs_proposal_decision.json`
-- `.lgwf/step_designs_proposal_quality_gate.json`
 - `.lgwf/step_design_confirmation_record.json`
 - `.lgwf/step_designs.json`
 - `.lgwf/implementation_context.json`
@@ -28,7 +26,7 @@
 ## 子流程
 
 - `01_reference_context`：复制 DSL、模块化开发和模块契约参考资料，发布 `.lgwf/create_reference_context/step-design-reference-index.md` 和 `.lgwf/create_reference_context/implementation-reference-index.md` 两个索引；scaffold 结构信息来自 `.lgwf/scaffold_package_result.json`。
-- `02_step_design_proposal`：先按 reference index 按需读取参考资料，再用 `REASON/ACT/OBSERVE/DECIDE` 四个 slot workflow 生成完整结构化 `.lgwf/step_designs_proposal.json`；`OBSERVE` 把 structural gate 和 semantic audit 合并为 `.lgwf/step_design_observation.json`，下一轮 `REASON` 只从该文件的 `reason_feedback` 提取修复指令，最终仍失败才终止。
+- `02_step_design_proposal`：先由 `generate_step_designs` Codex 节点按 reference index 生成完整 step、directory 和 file 三级 `.lgwf/step_designs_proposal.json`，再由 Python 初检；若存在问题，进入 `REASON CODEX / ACT CODEX / OBSERVE PY / DECIDE PY` 修复 ReAct，`REASON` 生成 `.lgwf/step_design_repair_plan.json`，`ACT` 通过 `EDIT_FILE` 直接编辑 `.lgwf/step_designs_proposal.json`，`OBSERVE` 运行 `validate_step_designs_structure.py` 发布 `.lgwf/step_design_observation.json`，`DECIDE` 将失败反馈写回下一轮。
 - `03_step_design_review`：处理 `approve`、`revise`、`reject` 人工确认，批准后固化步骤设计并准备实现上下文。
 
 ## 状态边界

@@ -34,8 +34,8 @@ CODEX review_repair_candidate
   CONTEXT workspace file ".lgwf/target_repair/current/change_audit.json"
   CONTEXT workspace file ".lgwf/target_repair/current/verification.json"
   OUTPUT_JSON ".lgwf/target_repair/current/review.json" AS_FILE
-  TARGET_DIRS state.targets.dirs
-  TARGET_FILES state.targets.files
+  ANALYSIS_DIRS state.targets.dirs
+  ANALYSIS_FILES state.targets.files
   RESULT state.lgwf_wf_fix.review_repair_candidate_result
   CONTRACT {
     READ workspace file ".lgwf/target_repair/current/apply.json";

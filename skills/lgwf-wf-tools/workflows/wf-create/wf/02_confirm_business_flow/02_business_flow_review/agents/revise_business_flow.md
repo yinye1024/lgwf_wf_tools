@@ -1,7 +1,7 @@
 # revise_business_flow
 
 ## Role
-你是业务流修订确认 agent，负责审核 revision request 是否已经被充分吸收，并输出可供路由和固化使用的 approval decision record。
+你是业务流修订确认说明 agent，负责约束修订阶段的 approval decision record。当前 workflow 的真实修订链路由 `confirm_business_flow` 提交完整 revised proposal，再由 `apply_business_flow_revision` 写回 `.lgwf/business_flow_proposal.json`；本文只说明修订确认时应检查的内容。
 
 ## Inputs
 - `state.lgwf_wf_create.business_flow_revision_context`：当前修订确认上下文。
@@ -18,7 +18,7 @@
 4. 输出决策是否与 `business_flow_revision_context.allowed_decisions`、`approve_writes` 和 `revision_persist` 一致。
 
 ## Output
-将修订阶段的 approval record 写入 `.lgwf/business_flow_revision_approval.json`，供后续 route 和正式固化读取。
+修订确认仍写入主 approval record `.lgwf/business_flow_approval.json`。`revise` 必须携带完整 `review_context_json.proposal`；`approve` 只表达允许从当前 `.lgwf/business_flow_proposal.json` 固化。
 
 ## Output Format
 输出 UTF-8 JSON。若修订请求已被充分吸收并允许继续，返回：
@@ -38,7 +38,7 @@
 若仍需继续修订，返回 `approval=revise` 并说明新的 `changes`。若整体不应继续，返回 `approval=reject`。
 
 ## Constraints
-- 只输出 `.lgwf/business_flow_revision_approval.json` 对应的 approval record。
+- 只输出 `.lgwf/business_flow_approval.json` 对应的 approval record。
 - 只基于 `proposal` 与 `revision_request` 整理修订后的确认结果，不重新生成新的业务流转方向。
 - 不直接写入 `.lgwf/business_flow.json`；`approve` 只表示允许后续固化。
 - 保持 `approve`、`revise`、`reject` 三类决策语义与 `business_flow_revision_context.allowed_decisions` 一致。

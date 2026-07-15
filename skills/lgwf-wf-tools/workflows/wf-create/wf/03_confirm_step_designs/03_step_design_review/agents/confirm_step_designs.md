@@ -5,7 +5,7 @@
 
 ## Inputs
 - `state.lgwf_wf_create.step_design_confirmation_context`：当前确认节点的验收上下文。
-- `.lgwf/step_designs_proposal.json`：`design_steps_react` 生成的完整结构化步骤设计草案。
+- `.lgwf/step_designs_proposal.json`：`step_design_proposal` 生成的完整结构化步骤设计草案。
 
 ## Audit Scope
 只审核结构化步骤设计草案的完整性、可消费性、命名稳定性和 proposal 边界，不修改被审 proposal。
@@ -19,9 +19,11 @@
 6. 是否没有遗留 `doc_path`、`draft_doc_path`、`docs/steps/*.md` 或 `wf/docs/steps/*.md` 之类 Markdown 草案契约。
 
 ## Output
-将当前节点的 approval record 写入 `.lgwf/step_design_confirmation_record.json`，只作为 route decision。后续固化节点必须从 `.lgwf/step_designs_proposal.json` 读取业务结构。
+将当前节点的 approval record 写入 `.lgwf/step_design_confirmation_record.json`。`approve` 只作为 route decision；`revise` 必须携带完整修订后的 proposal，并由后续 `apply_step_design_revision` 写回 `.lgwf/step_designs_proposal.json`。
 
 ## Output Format
+可选决策固定为 `approve` / `revise` / `reject`。
+
 只允许以下三类 UTF-8 JSON 结果之一，节点命名必须保持 `confirm_step_designs`。主 agent 展示时必须完整展示 `step_design_confirmation_context.review_context_json`，不能只摘录摘要：
 
 ```json
@@ -56,8 +58,8 @@
 
 ## Constraints
 - 只输出 `.lgwf/step_design_confirmation_record.json` 对应的 approval record。
-- approval record 只表达 `approve` / `revise` / `reject` route，不承载下游业务结构。
-- 不修改 `.lgwf/step_designs_proposal.json`。
+- `approve` / `reject` record 只表达 route；`revise` record 必须承载完整修订后的 proposal。
+- REVIEW 节点本身不直接修改 `.lgwf/step_designs_proposal.json`，写回由 `apply_step_design_revision` 完成。
 - 不直接生成 `.lgwf/step_designs.json`；`approve` 只表示允许后续固化。
 - `revise` 必须结合用户修改需求返回完整 JSON，并重新进入 `confirm_step_designs` REVIEW 节点。
 - `reject` 表示整体不通过并结束该分支。

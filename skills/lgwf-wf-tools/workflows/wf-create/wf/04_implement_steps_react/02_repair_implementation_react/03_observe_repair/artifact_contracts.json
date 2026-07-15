@@ -1,0 +1,19 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/implementation_context.json",
+    ".lgwf/implementation_result.json",
+    ".lgwf/step_designs.json"
+  ],
+  "final_outputs": [
+    ".lgwf/implementation_lgwf_dsl_audit_result.json",
+    ".lgwf/implementation_audit_result.json",
+    ".lgwf/implementation_observe.json"
+  ],
+  "script_writes": {
+    "audit_current_implementation": [
+      ".lgwf/implementation_lgwf_dsl_audit_result.json",
+      ".lgwf/implementation_audit_result.json",
+      ".lgwf/implementation_observe.json"
+    ]
+  }
+}

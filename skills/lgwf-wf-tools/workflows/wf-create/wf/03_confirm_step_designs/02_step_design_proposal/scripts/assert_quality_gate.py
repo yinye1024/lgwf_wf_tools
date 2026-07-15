@@ -38,9 +38,7 @@ def failure_messages(gate: dict[str, Any]) -> list[str]:
 
 def main() -> None:
     lgwf_dir = Path.cwd() / ".lgwf"
-    gate = read_json(lgwf_dir / "step_design_observation.json") or read_json(
-        lgwf_dir / "step_designs_proposal_quality_gate.json"
-    )
+    gate = read_json(lgwf_dir / "step_design_observation.json")
     if gate.get("passed") is not True:
         raise ValueError("step designs proposal quality gate failed after ReAct repair: " + "; ".join(failure_messages(gate)))
     print(json.dumps({"lgwf_wf_create.step_designs_proposal_quality_gate_asserted": True}, ensure_ascii=False))

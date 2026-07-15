@@ -15,7 +15,6 @@ from confirmation_io import confirmed_from_proposal, load_json, normalize_relati
 
 
 APPROVAL_FILE = "step_design_confirmation_record.json"
-REVISION_APPROVAL_FILE = "step_design_revision_approval.json"
 PROPOSAL_FILE = "step_designs_proposal.json"
 OUTPUT_FILE = "step_designs.json"
 
@@ -32,12 +31,7 @@ def write_confirmed_artifact(root: Path) -> dict[str, Any]:
     lgwf_dir = root / ".lgwf"
     lgwf_dir.mkdir(parents=True, exist_ok=True)
     source_file = APPROVAL_FILE
-    revision_approval = load_json(lgwf_dir / REVISION_APPROVAL_FILE)
-    approval = unwrap_approval(revision_approval, "step_design_revision_approval") if revision_approval else {}
-    if approval:
-        source_file = REVISION_APPROVAL_FILE
-    else:
-        approval = unwrap_approval(load_json(lgwf_dir / APPROVAL_FILE), "step_design_confirmation_record")
+    approval = unwrap_approval(load_json(lgwf_dir / APPROVAL_FILE), "step_design_confirmation_record")
     confirmed_payload = resolve_confirmed_payload(lgwf_dir, approval)
     for key in ("approved_step_designs_path", "step_designs_path"):
         if isinstance(confirmed_payload.get(key), str) and confirmed_payload[key].strip():

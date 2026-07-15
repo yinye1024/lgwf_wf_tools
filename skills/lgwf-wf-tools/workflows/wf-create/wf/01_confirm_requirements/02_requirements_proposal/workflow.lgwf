@@ -33,8 +33,8 @@ REACT requirements_proposal_react MAX 3
   ACT CODEX
     PROMPT "agents/propose_requirements.md"
     CONTEXT workspace file ".lgwf/create_requirements_proposal_react_context.json"
-    TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
-    TARGET_FILES state.lgwf_wf_create.creation_context_files
+    ANALYSIS_DIRS state.lgwf_wf_create.creation_context_dirs
+    ANALYSIS_FILES state.lgwf_wf_create.creation_context_files
     OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
     RESULT state.lgwf_wf_create.requirements_proposal_result
     CONTRACT {

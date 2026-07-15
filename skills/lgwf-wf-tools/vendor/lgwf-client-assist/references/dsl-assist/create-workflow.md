@@ -243,7 +243,7 @@ HANDOFF_FILES spec_to_impl
 
 `CODEX` 小型结构化结果可用 `OUTPUT_JSON "path.json"`；大 JSON 使用 `OUTPUT_JSON "path.json" AS_FILE`，由 Codex 写文件，LGWF runner 验证文件存在、UTF-8、JSON 可解析且顶层是 object。通用文本 artifact 使用 `OUTPUT_FILE "path"`，由 Codex 写文件，runner 验证文件存在、UTF-8 可读并记录路径和大小，不解析内容。
 
-需要让同一个 Codex 逻辑节点在循环中复用上下文时，可在 `CODEX` 内声明 `KEEP_SESSION`。该标志只复用 Codex CLI session id，不保活进程；scope 由 runtime 自动按普通 node、`REACT` slot 或 `AGENT_LOOP` slot 推导。典型用途是 `REACT` 的 `REASON CODEX KEEP_SESSION`，让下一轮 reason 能延续上一轮 observe 反馈的会话上下文。需要让同一个 `workflow.lgwf` 内多个 Codex 节点或 slot 共享 session 时，使用 `KEEP_SESSION GROUP "name"`；group 不跨父 workflow、`STEP ... WORKFLOW` 子 workflow 或 `RUN_WORKFLOW` 子进程，同一 workflow 内同名 group 会共享。
+需要让同一个 Codex 逻辑节点在循环中复用上下文时，可在 `CODEX` 内声明 `KEEP_SESSION`。该标志只复用 Codex CLI session id，不保活进程；scope 由 runtime 自动按普通 node、`REACT` slot 或 `AGENT_LOOP` slot 推导。典型用途是 `REACT` 的 `REASON CODEX KEEP_SESSION`，让下一轮 reason 能延续上一轮 observe 反馈的会话上下文。需要在同一个 `work_dir` 内跨普通节点、父/子 workflow、`REACT`、`AGENT_LOOP` 或 `FOREACH` 共享重参考上下文时，使用 `KEEP_SESSION KEY "name"`；key manifest 保存在 `.lgwf/codex_key_session/`，同名 key 会共享，命名冲突由 workflow 作者负责避免。
 
 `APPROVAL` 只表达二元人工审批，route key 只能是 `approve` / `reject`。需要 `approve` / `revise` / `reject` 或“小改后再确认”时使用固定三选项的 `REVIEW`；`REVIEW CONTEXT state.*` 必须指向 JSON object，并在 `FLOW` 中把 `revise` 接回修订节点或当前评审节点。不要在 `.lgwf` 或 `workflow.json` 中写入 Agent Host、`main_agent`、`session_id`、controller payload、approval worker/window 或 CLI 调用；这些属于 `lgwf_client.main_agent` 控制面和执行 agent loop。
 
@@ -278,8 +278,8 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 - client runner 在本机解析并读取。
 - 对于 `exec.codex_prompt`，prompt 期望 Codex 读取的每个 workspace 文件或目录都要放入 `context_refs`。
 - 对于 Codex 真正要分析的用户授权目标目录或文件，使用 runtime `target_dirs` / `target_files`，或 Authoring DSL 的 `ANALYSIS_DIR` / `ANALYSIS_FILE` / `ANALYSIS_DIRS state.*` / `ANALYSIS_FILES state.*`；这些字段只表达可读分析范围，不表达写权限。不要把动态分析目标塞进 `context_refs`。
-- 对于 Codex 允许修改的目录，使用 `edit_dirs` 或 Authoring DSL 的 `EDIT_DIR` / `EDIT_DIRS state.*`。`EDIT_DIR(S)` 也隐含可读；未落入 `EDIT_DIR(S)` 的 `ANALYSIS_DIR(S)` 只能分析，不能修改。
-- `target_dirs` / `target_files` / `edit_dirs` 可使用绝对路径，由 client runner 校验存在性和文件/目录类型；它们不是 workflow resource refs。
+- 对于 Codex 允许修改的目录或精确文件，使用 `edit_dirs` / `edit_files`，或 Authoring DSL 的 `EDIT_DIR` / `EDIT_FILE` / `EDIT_DIRS state.*` / `EDIT_FILES state.*`。`EDIT_DIR(S)` / `EDIT_FILE(S)` 也隐含可读；未落入这些字段的 `ANALYSIS_DIR(S)` / `ANALYSIS_FILE(S)` 只能分析，不能修改。
+- `target_dirs` / `target_files` / `edit_dirs` / `edit_files` 可使用绝对路径，由 client runner 校验存在性和文件/目录类型；它们不是 workflow resource refs。
 - 生成 prompt 文件时，不在本文件展开 prompt 规则；读取 `references/prompt-assist/guide.md`，并保持 prompt 的 `Inputs` 与 `context_refs` 对齐。
 - 省略 `cwd`，让执行默认发生在 workspace root。
 
@@ -296,7 +296,7 @@ workflow 通过 `scripts/lgwf.py run --work-dir <dir>` 指定用户 workspace ro
 
 `subgraph.react` 和 `subgraph.agent_loop` 中的 prompt 设计职责由 `references/prompt-assist/guide.md` 处理：`reason` / `diagnose` / `plan` 使用 Draft Prompt，`act` 使用 Action Prompt，`observe` 使用 Audit Prompt，`decide` 默认优先脚本或轻量节点。不属于 Draft、Action 或 Audit 职责的普通 `exec.codex_prompt` 使用 Normal Prompt。
 
-`AGENT_LOOP` 默认向内部 Codex slot 注入 `target_dirs_path="targets.dirs"`、`target_files_path="targets.files"` 和 `edit_dirs_path="targets.edit_dirs"`，slot 内不要声明 `ANALYSIS_DIRS` / `ANALYSIS_FILES` / `EDIT_DIRS` 覆盖。运行时 `exec.codex_prompt` 会写节点级 `state.token_usage.<node_id>`；全局累计和用时由 runtime metrics 写入 `state.run.token_usage` 和 `state.run.node_timings`。`TOKEN_MAX` 默认 `1000000`，在准备进入下一轮之前判断，达到预算后进入 `waiting_human`。
+`AGENT_LOOP` 默认向内部 Codex slot 注入 `target_dirs_path="targets.dirs"`、`target_files_path="targets.files"`、`edit_dirs_path="targets.edit_dirs"` 和 `edit_files_path="targets.edit_files"`，slot 内不要声明 `ANALYSIS_DIRS` / `ANALYSIS_FILES` / `EDIT_DIRS` / `EDIT_FILES` 覆盖。运行时 `exec.codex_prompt` 会写节点级 `state.token_usage.<node_id>`；全局累计和用时由 runtime metrics 写入 `state.run.token_usage` 和 `state.run.node_timings`。`TOKEN_MAX` 默认 `1000000`，在准备进入下一轮之前判断，达到预算后进入 `waiting_human`。
 
 除非任务明确要求架构工作，否则不要新增 `flow.join`、parallel fan-in 或新的 DSL schema 字段。
 

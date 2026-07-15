@@ -29,13 +29,20 @@ REVIEW confirm_business_flow
   };
 
 PY prepare_business_flow_revision_confirmation
-  SCRIPT "scripts/prepare_revision_confirmation.py"
+  SCRIPT "scripts/apply_revision.py"
   TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_business_flow_revision_confirmation_result
-  UPDATES_STATE
+  RESULT state.lgwf_wf_create.business_flow_revision_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.business_flow_revision_result;
+    WRITE state.lgwf_wf_create.business_flow_proposal;
+    WRITE state.lgwf_wf_create.business_flow_confirmation_context;
+    WRITE state.lgwf_wf_create.business_flow_revision_context;
+  }
   CONTRACT {
     READ workspace file ".lgwf/business_flow_proposal.json";
     READ workspace file ".lgwf/business_flow_approval.json";
+    WRITE workspace file ".lgwf/business_flow_proposal.json";
+    WRITE state.lgwf_wf_create.business_flow_proposal;
     WRITE state.lgwf_wf_create.business_flow_confirmation_context;
     WRITE state.lgwf_wf_create.business_flow_revision_context;
   };

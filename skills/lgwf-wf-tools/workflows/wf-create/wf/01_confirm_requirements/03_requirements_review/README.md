@@ -14,12 +14,13 @@
 
 - `state.lgwf_wf_create.requirements_confirmation_context`
 - `state.lgwf_wf_create.requirements_revision_context`
+- `state.lgwf_wf_create.requirements_revision_result`
 - `state.lgwf_wf_create.create_requirements`
 
 ## 产物
 
 - `.lgwf/create_requirements_approval.json`
-- `.lgwf/create_requirements_revision_approval.json`
+- `.lgwf/create_requirements_proposal.json`（`revise` 后由 `apply_requirements_revision` 写回）
 - `.lgwf/create_requirements.json`
 
 ## 验证
@@ -31,4 +32,4 @@
 
 - 不重新生成需求 proposal。
 - `approve` 不携带业务 value，只固化已经展示并确认的 proposal。
-- `revise` 只重入本 REVIEW 子流程，不绕过人工确认直接写 confirmed artifact。
+- `revise` 必须携带完整修订 proposal，先写回 `.lgwf/create_requirements_proposal.json`，再重入本 REVIEW 子流程。

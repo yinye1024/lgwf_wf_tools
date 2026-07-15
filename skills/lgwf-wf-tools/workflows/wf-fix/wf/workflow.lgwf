@@ -49,7 +49,7 @@ CODEX analyze_target_input_contract
   PROMPT "01_prepare_target/agents/analyze_target_input_contract.md"
   CONTEXT workspace file ".lgwf/self_fix_request.json"
   CONTEXT workspace file ".lgwf/self_fix_target.json"
-  TARGET_DIRS state.lgwf_wf_fix.target_dirs
+  ANALYSIS_DIRS state.lgwf_wf_fix.target_dirs
   RESULT state.lgwf_wf_fix.input_contract_result
   CONTRACT {
     READ workspace file ".lgwf/self_fix_request.json";

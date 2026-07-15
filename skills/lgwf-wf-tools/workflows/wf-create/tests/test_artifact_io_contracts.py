@@ -166,6 +166,55 @@ class ArtifactIOContractsTest(unittest.TestCase):
         self.assertTrue((self.work_dir / ".lgwf" / "step_designs.json").is_file())
         self.assertFalse((self.workflow_root / ".lgwf").exists())
 
+    def test_apply_revision_scripts_rewrite_canonical_proposals(self) -> None:
+        cases = (
+            (
+                "01_confirm_requirements/01_raw_intent/scripts/apply_revision.py",
+                "raw_intent_approval.json",
+                "raw_intent_request_proposal.json",
+                {"raw_intent": "旧需求"},
+                {"raw_intent": "新需求", "goal": "生成 workflow"},
+            ),
+            (
+                "01_confirm_requirements/03_requirements_review/scripts/apply_revision.py",
+                "create_requirements_approval.json",
+                "create_requirements_proposal.json",
+                {"workflow_name": "old", "target_package_root": "skills/old"},
+                {"workflow_name": "new", "target_package_root": "skills/new"},
+            ),
+            (
+                "02_confirm_business_flow/02_business_flow_review/scripts/apply_revision.py",
+                "business_flow_approval.json",
+                "business_flow_proposal.json",
+                {"workflow_name": "old", "target_package_root": "skills/old"},
+                {"workflow_name": "new", "target_package_root": "skills/new", "stages": []},
+            ),
+            (
+                "03_confirm_step_designs/03_step_design_review/scripts/apply_revision.py",
+                "step_design_confirmation_record.json",
+                "step_designs_proposal.json",
+                {"workflow_name": "old", "target_package_root": "skills/old"},
+                {"workflow_name": "new", "target_package_root": "skills/new", "step_designs": []},
+            ),
+        )
+        for script, approval_file, proposal_file, old_proposal, new_proposal in cases:
+            with self.subTest(script=script):
+                write_json(self.work_dir / ".lgwf" / proposal_file, old_proposal)
+                write_json(
+                    self.work_dir / ".lgwf" / approval_file,
+                    {
+                        "approval": "revise",
+                        "review_context_json": {
+                            "proposal": new_proposal,
+                        },
+                    },
+                )
+
+                self.run_script(script)
+
+                actual = json.loads((self.work_dir / ".lgwf" / proposal_file).read_text(encoding="utf-8"))
+                self.assertEqual(actual, new_proposal)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,6 @@ PY prepare_implementation_units
   }
   CONTRACT {
     READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
     WRITE state.lgwf_wf_create.prepare_implementation_units_result;
     WRITE state.lgwf_wf_create.implementation_units;
@@ -45,8 +44,6 @@ FOREACH implement_each_unit
   CONTRACT {
     READ state.lgwf_wf_create.current_implementation_unit;
     READ state.lgwf_wf_create.current_implementation_unit_index;
-    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-    READ workspace dir ".lgwf/create_reference_context";
     WRITE state.lgwf_wf_create.current_implementation_unit_result;
     READ workflow file "01_implement_one_unit/workflow.lgwf";
   };

@@ -219,30 +219,24 @@
       },
       "additionalProperties": true
     },
-    ".lgwf/step_design_reason.json": {
+    ".lgwf/step_design_repair_plan.json": {
       "type": "object",
       "required": [
-        "round_mode",
-        "repair_focus",
+        "repair_scope",
+        "observation_summary",
         "must_preserve",
         "must_change",
+        "repair_steps",
+        "field_level_instructions",
         "forbidden_changes",
-        "act_instructions",
         "risk_notes"
       ],
       "properties": {
-        "round_mode": {
-          "type": "string",
-          "enum": [
-            "first_round",
-            "targeted_repair"
-          ]
+        "repair_scope": {
+          "type": "string"
         },
-        "repair_focus": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+        "observation_summary": {
+          "type": "string"
         },
         "must_preserve": {
           "type": "array",
@@ -253,16 +247,34 @@
         "must_change": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object"
           }
         },
-        "forbidden_changes": {
+        "repair_steps": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "act_instructions": {
+        "field_level_instructions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "json_path": {
+                "type": "string"
+              },
+              "operation": {
+                "type": "string"
+              },
+              "instruction": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "forbidden_changes": {
           "type": "array",
           "items": {
             "type": "string"
@@ -273,188 +285,6 @@
           "items": {
             "type": "string"
           }
-        }
-      },
-      "additionalProperties": true
-    },
-    ".lgwf/step_designs_proposal.json": {
-      "type": "object",
-      "required": [
-        "workflow_id",
-        "workflow_name",
-        "target_package_root",
-        "package_profile",
-        "step_designs"
-      ],
-      "properties": {
-        "workflow_id": {
-          "type": "string"
-        },
-        "workflow_name": {
-          "type": "string"
-        },
-        "target_package_root": {
-          "type": "string"
-        },
-        "package_profile": {
-          "type": "string"
-        },
-        "step_designs": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "step_slug",
-              "step_name",
-              "stage_id",
-              "goal",
-              "inputs",
-              "outputs",
-              "dependencies",
-              "implementation_suggestions",
-              "acceptance_notes",
-              "out_of_scope",
-              "confirmation_points"
-            ],
-            "properties": {
-              "step_slug": {
-                "type": "string"
-              },
-              "step_name": {
-                "type": "string"
-              },
-              "stage_id": {
-                "type": "string"
-              },
-              "goal": {
-                "type": "string"
-              },
-              "inputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "outputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "dependencies": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "implementation_suggestions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "acceptance_notes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "out_of_scope": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "depends_on": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "target_outputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "confirmation_points": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "additionalProperties": true
-          }
-        }
-      },
-      "additionalProperties": true
-    },
-    ".lgwf/step_design_semantic_observation.json": {
-      "type": "object",
-      "required": [
-        "verdict",
-        "semantic_passed",
-        "blocking_issues",
-        "valid_parts_to_preserve",
-        "reason_feedback"
-      ],
-      "properties": {
-        "verdict": {
-          "type": "string",
-          "enum": [
-            "pass",
-            "fail"
-          ]
-        },
-        "semantic_passed": {
-          "type": "boolean"
-        },
-        "blocking_issues": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
-        },
-        "valid_parts_to_preserve": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "reason_feedback": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
-    },
-    ".lgwf/step_design_decision_analysis.json": {
-      "type": "object",
-      "required": [
-        "recommended_next",
-        "reason",
-        "repeat_issue_signatures",
-        "no_progress_risk"
-      ],
-      "properties": {
-        "recommended_next": {
-          "type": "string",
-          "enum": [
-            "continue",
-            "exit"
-          ]
-        },
-        "reason": {
-          "type": "string"
-        },
-        "repeat_issue_signatures": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "no_progress_risk": {
-          "type": "boolean"
         }
       },
       "additionalProperties": true
@@ -533,9 +363,11 @@
     ".lgwf/implementation_repair_reason.json": {
       "type": "object",
       "required": [
-        "repair_required",
-        "repair_goal",
-        "root_causes",
+          "repair_required",
+          "repair_goal",
+          "unit_output_dir",
+          "target_files",
+          "root_causes",
         "affected_files",
         "repair_units",
         "do_not_change",
@@ -545,10 +377,19 @@
         "repair_required": {
           "type": "boolean"
         },
-        "repair_goal": {
-          "type": "string"
-        },
-        "root_causes": {
+          "repair_goal": {
+            "type": "string"
+          },
+          "unit_output_dir": {
+            "type": "string"
+          },
+          "target_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "root_causes": {
           "type": "array",
           "items": {
             "type": "string"
@@ -663,75 +504,6 @@
           "items": {
             "type": "string"
           }
-        }
-      },
-      "additionalProperties": true
-    },
-    ".lgwf/implementation_observe.json": {
-      "type": "object",
-      "required": [
-        "passed",
-        "checks",
-        "audit",
-        "failures",
-        "next_action_hint",
-        "summary"
-      ],
-      "properties": {
-        "passed": {
-          "type": "boolean"
-        },
-        "checks": {
-          "type": "array"
-        },
-        "audit": {
-          "type": "object"
-        },
-        "failures": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "next_action_hint": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "summary": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": true
-    },
-    ".lgwf/implementation_repair_decision_analysis.json": {
-      "type": "object",
-      "required": [
-        "recommended_next",
-        "reason",
-        "repeat_issue_signatures",
-        "no_progress_risk"
-      ],
-      "properties": {
-        "recommended_next": {
-          "type": "string",
-          "enum": [
-            "continue",
-            "exit"
-          ]
-        },
-        "reason": {
-          "type": "string"
-        },
-        "repeat_issue_signatures": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "no_progress_risk": {
-          "type": "boolean"
         }
       },
       "additionalProperties": true
@@ -945,6 +717,40 @@
           }
         },
         "pending_confirmations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "wf/*/artifact_contracts.json": {
+      "type": "object",
+      "required": [
+        "bootstrap_inputs",
+        "final_outputs"
+      ],
+      "properties": {
+        "bootstrap_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "final_outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "runtime_records": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "notes": {
           "type": "array",
           "items": {
             "type": "string"

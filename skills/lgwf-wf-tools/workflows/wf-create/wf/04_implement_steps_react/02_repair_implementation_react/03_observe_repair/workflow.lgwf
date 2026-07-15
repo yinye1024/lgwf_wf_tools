@@ -6,15 +6,6 @@ DEFAULTS {
   timeout_seconds 600;
 }
 
-CONTEXT_SET observe_repair_context {
-  workspace file ".lgwf/implementation_context.json";
-  workspace file ".lgwf/implementation_result.json";
-  workspace file ".lgwf/implementation_audit_result.json";
-  workspace file ".lgwf/implementation_observe.json";
-  workspace file ".lgwf/scaffold_package_result.json";
-  workspace file ".lgwf/step_designs.json";
-}
-
 PY audit_current_implementation
   SCRIPT "scripts/audit_current_implementation.py"
   TIMEOUT 180
@@ -23,26 +14,10 @@ PY audit_current_implementation
   CONTRACT {
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/implementation_result.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
+    WRITE workspace file ".lgwf/implementation_lgwf_dsl_audit_result.json";
     WRITE workspace file ".lgwf/implementation_audit_result.json";
     WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
-CODEX observe_repair
-  PROMPT "agents/observe_repair.md"
-  CONTEXT observe_repair_context
-  OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE
-  TIMEOUT 600
-  RESULT state.lgwf_wf_create.implementation_observe_result
-  CONTRACT {
-    READ workspace file ".lgwf/implementation_audit_result.json";
-    READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/implementation_result.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
-    READ workspace file ".lgwf/step_designs.json";
-    WRITE workspace file ".lgwf/implementation_observe.json";
-  };
-
-FLOW audit_current_implementation
-  THEN observe_repair;
+FLOW audit_current_implementation;

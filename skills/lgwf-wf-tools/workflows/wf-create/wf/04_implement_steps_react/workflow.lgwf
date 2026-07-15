@@ -9,10 +9,7 @@ DEFAULTS {
 STEP implement_initial_units
   WORKFLOW "01_implement_units/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-    READ workspace dir ".lgwf/create_reference_context";
     READ workspace file ".lgwf/implementation_context.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
     WRITE workspace file ".lgwf/implementation_result.json";
   };
@@ -20,13 +17,11 @@ STEP implement_initial_units
 STEP repair_implementation
   WORKFLOW "02_repair_implementation_react/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-    READ workspace dir ".lgwf/create_reference_context";
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/implementation_result.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
     WRITE workspace file ".lgwf/implementation_result.json";
+    WRITE workspace file ".lgwf/implementation_audit_result.json";
   };
 
 FLOW implement_initial_units

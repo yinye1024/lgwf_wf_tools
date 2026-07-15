@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
+import re
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -61,40 +60,6 @@ def package_relative_path(raw_path: str, field_name: str, target_package_root: s
     return strip_target_package_root(normalized, target_package_root)
 
 
-def scaffold_plan_from_result(payload: dict[str, Any]) -> dict[str, Any]:
-    plan = payload.get("scaffold_plan", payload)
-    return plan if isinstance(plan, dict) else {}
-
-
-def scaffold_plan_paths(plan: dict[str, Any], key: str) -> list[str]:
-    raw_items = plan.get(key, [])
-    if not isinstance(raw_items, list):
-        return []
-    result: list[str] = []
-    for index, item in enumerate(raw_items):
-        if isinstance(item, str) and item.strip():
-            result.append(package_relative_path(item, f"scaffold_plan.{key}[{index}]"))
-    return unique(result)
-
-
-def scaffold_stage_dirs(plan: dict[str, Any]) -> list[str]:
-    stage_dirs: list[str] = []
-    manifest = plan.get("stage_manifest", [])
-    if isinstance(manifest, list):
-        for item in manifest:
-            if isinstance(item, dict) and isinstance(item.get("stage_dir"), str):
-                stage_dir = item["stage_dir"].strip()
-                if stage_dir:
-                    stage_dirs.append(stage_dir)
-    for rel_path in scaffold_plan_paths(plan, "create_files"):
-        parts = PurePosixPath(rel_path).parts
-        if len(parts) == 3 and parts[0] == "wf" and parts[2] == "workflow.lgwf":
-            stage_dir = parts[1]
-            if stage_dir not in {"docs", "shared"}:
-                stage_dirs.append(stage_dir)
-    return unique(stage_dirs)
-
-
 def confirmed_step_designs(step_designs: dict[str, Any]) -> dict[str, Any]:
     confirmed = step_designs.get("confirmed")
     return confirmed if isinstance(confirmed, dict) else step_designs
@@ -137,6 +102,81 @@ def implementation_generated_files(implementation: dict[str, Any], target_packag
     return unique(result)
 
 
+def step_design_paths(step_designs: dict[str, Any], section: str, fallback_field: str) -> list[str]:
+    confirmed = confirmed_step_designs(step_designs)
+    result: list[str] = []
+    raw_designs = confirmed.get(section, [])
+    if isinstance(raw_designs, list):
+        for index, item in enumerate(raw_designs):
+            if not isinstance(item, dict):
+                continue
+            raw_path = str(item.get("path", "")).strip()
+            if raw_path:
+                result.append(package_relative_path(raw_path, f"{section}[{index}].path"))
+    raw_steps = confirmed.get("step_designs", [])
+    if not isinstance(raw_steps, list) or not raw_steps:
+        raw_steps = confirmed.get("step_designs_proposal", [])
+    if isinstance(raw_steps, list):
+        for step_index, item in enumerate(raw_steps):
+            if not isinstance(item, dict):
+                continue
+            raw_paths = item.get(fallback_field, [])
+            if not isinstance(raw_paths, list):
+                continue
+            for path_index, raw_path in enumerate(raw_paths):
+                if str(raw_path).strip():
+                    result.append(package_relative_path(str(raw_path), f"step_designs[{step_index}].{fallback_field}[{path_index}]"))
+    return unique(result)
+
+
+def step_design_file_entries(step_designs: dict[str, Any]) -> list[dict[str, Any]]:
+    confirmed = confirmed_step_designs(step_designs)
+    raw_designs = confirmed.get("file_designs", [])
+    if not isinstance(raw_designs, list):
+        return []
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(raw_designs):
+        if not isinstance(item, dict):
+            continue
+        raw_path = str(item.get("path", "")).strip()
+        if not raw_path:
+            continue
+        rel_path = package_relative_path(raw_path, f"file_designs[{index}].path")
+        if not rel_path or rel_path in seen:
+            continue
+        seen.add(rel_path)
+        entries.append({**item, "path": rel_path})
+    return entries
+
+
+def stage_dirs_from_step_designs(step_designs: dict[str, Any]) -> list[str]:
+    stage_dirs: list[str] = []
+    for rel_path in step_design_paths(step_designs, "file_designs", "target_files"):
+        parts = PurePosixPath(rel_path).parts
+        if len(parts) >= 3 and parts[0] == "wf" and parts[1] not in {"docs", "shared"}:
+            stage_dirs.append(parts[1])
+    for rel_path in step_design_paths(step_designs, "directory_designs", "target_dirs"):
+        parts = PurePosixPath(rel_path).parts
+        if len(parts) >= 2 and parts[0] == "wf" and parts[1] not in {"docs", "shared"}:
+            stage_dirs.append(parts[1])
+    return unique(stage_dirs)
+
+
+def implementation_status_failures(implementation: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    status = str(implementation.get("status", "")).strip().lower()
+    if status in {"failed", "partial", "error", "needs_review"}:
+        failures.append(f"implementation_result 自报状态未通过: status={status}")
+    failed_units = implementation.get("failed_units", [])
+    if isinstance(failed_units, list):
+        failures.extend([f"implementation_result 存在失败 unit: {unit}" for unit in failed_units if str(unit).strip()])
+    remaining_risks = implementation.get("remaining_risks", [])
+    if isinstance(remaining_risks, list):
+        failures.extend([f"implementation_result 存在未关闭风险: {risk}" for risk in remaining_risks if str(risk).strip()])
+    return failures
+
+
 def implementation_validation_failures(implementation: dict[str, Any]) -> list[str]:
     raw_items = implementation.get("validation", [])
     if not isinstance(raw_items, list):
@@ -149,6 +189,28 @@ def implementation_validation_failures(implementation: dict[str, Any]) -> list[s
         if status and not status.startswith("passed"):
             command = str(item.get("command", f"validation[{index}]"))
             failures.append(f"implementation_result 自报验证未通过: {command} status={status}")
+    return failures
+
+
+def repair_round_failures(implementation: dict[str, Any]) -> list[str]:
+    raw_rounds = implementation.get("repair_rounds", [])
+    if not isinstance(raw_rounds, list) or not raw_rounds:
+        return []
+    latest = raw_rounds[-1]
+    if not isinstance(latest, dict):
+        return []
+    status = str(latest.get("status", "")).strip().lower()
+    if status not in {"invalid_plan", "blocked"}:
+        return []
+    failures: list[str] = []
+    raw_failures = latest.get("failures", [])
+    if isinstance(raw_failures, list):
+        failures.extend([f"repair_round {status}: {item}" for item in raw_failures if str(item).strip()])
+    raw_risks = latest.get("remaining_risks", [])
+    if isinstance(raw_risks, list):
+        failures.extend([f"repair_round {status}: {item}" for item in raw_risks if str(item).strip()])
+    if not failures:
+        failures.append(f"repair_round {status}: 修复未发布")
     return failures
 
 
@@ -195,6 +257,116 @@ def check_agent_loop_prompt_contracts(target_abs: Path, checks: list[dict[str, A
                     failures.append(f"AGENT_LOOP 阶段文档不得承诺 TARGET_DIRS/TARGET_FILES: {md_path}")
 
 
+def check_runtime_pollution(target_abs: Path, checks: list[dict[str, Any]], failures: list[str]) -> None:
+    forbidden_dirs = {".lgwf", ".tmp", "__pycache__"}
+    for path in sorted(target_abs.rglob("*")):
+        if not path.is_dir() or path.name not in forbidden_dirs:
+            continue
+        checks.append({"check": "target_package_no_runtime_pollution", "path": str(path), "ok": False})
+        failures.append(f"目标 package 不得包含运行态目录: {path}")
+
+
+REFERENCE_PATTERN = re.compile(r'\b(SCRIPT|PROMPT|PROMPT_REF|SPEC|WORKFLOW)\s+"([^"]+)"')
+
+
+def normalize_workflow_reference(raw_path: str) -> str:
+    cleaned = raw_path.strip()
+    candidate = PurePosixPath(cleaned.replace("\\", "/"))
+    if not cleaned:
+        raise ValueError("引用路径不能为空")
+    if candidate.is_absolute() or ":" in cleaned:
+        raise ValueError("引用路径禁止绝对路径或盘符路径")
+    if any(part in {"..", ".lgwf"} for part in candidate.parts):
+        raise ValueError("引用路径禁止 `..` 或 `.lgwf`")
+    return candidate.as_posix()
+
+
+def check_workflow_resource_references(target_abs: Path, checks: list[dict[str, Any]], failures: list[str]) -> None:
+    for workflow_lgwf in sorted((target_abs / "wf").rglob("workflow.lgwf")):
+        text = workflow_lgwf.read_text(encoding="utf-8-sig")
+        for kind, raw_path in REFERENCE_PATTERN.findall(text):
+            try:
+                rel_path = normalize_workflow_reference(raw_path)
+            except ValueError as exc:
+                checks.append(
+                    {
+                        "check": "workflow_reference_path",
+                        "path": f"{workflow_lgwf}:{raw_path}",
+                        "ok": False,
+                    }
+                )
+                failures.append(f"{workflow_lgwf} 的 {kind} 引用非法: {raw_path} ({exc})")
+                continue
+            target = workflow_lgwf.parent / rel_path
+            ok = target.is_file()
+            checks.append(
+                {
+                    "check": f"workflow_reference_exists:{kind}",
+                    "path": str(target),
+                    "ok": ok,
+                }
+            )
+            if not ok:
+                failures.append(f"{workflow_lgwf} 的 {kind} 引用文件不存在: {rel_path}")
+
+
+TEXT_EXTENSIONS = {".lgwf", ".md", ".py", ".json", ".yaml", ".yml"}
+
+
+PLACEHOLDER_JSON_PATTERN = re.compile(r'"_lgwf_placeholder"\s*:\s*true')
+
+
+def normalized_text(value: str) -> str:
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def check_step_design_content_contracts(target_abs: Path, step_designs: dict[str, Any], checks: list[dict[str, Any]], failures: list[str]) -> None:
+    for item in step_design_file_entries(step_designs):
+        rel_path = str(item.get("path", "")).strip()
+        if not rel_path:
+            continue
+        path = target_abs / rel_path
+        if not path.is_file() or path.suffix.lower() not in TEXT_EXTENSIONS:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = path.read_text(encoding="utf-8", errors="replace")
+
+        placeholder_ok = "LGWF_PLACEHOLDER" not in text and PLACEHOLDER_JSON_PATTERN.search(text) is None
+        checks.append({"check": "generated_file_not_placeholder", "path": str(path), "ok": placeholder_ok})
+        if not placeholder_ok:
+            failures.append(f"生成文件仍包含占位内容，必须由实现阶段替换: {rel_path}")
+
+        if str(item.get("content_mode", "")).strip() != "exact":
+            continue
+        expected = item.get("exact_content")
+        if not isinstance(expected, str) or not expected.strip():
+            continue
+        exact_ok = normalized_text(text) == normalized_text(expected)
+        checks.append({"check": "exact_content_matches_step_design", "path": str(path), "ok": exact_ok})
+        if not exact_ok:
+            failures.append(f"exact 文件内容与 step_designs.file_designs[].exact_content 不一致: {rel_path}")
+
+
+def check_utf8_no_bom(target_abs: Path, checks: list[dict[str, Any]], failures: list[str]) -> None:
+    for path in sorted(target_abs.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in TEXT_EXTENSIONS:
+            continue
+        raw = path.read_bytes()
+        if raw.startswith(b"\xef\xbb\xbf"):
+            checks.append({"check": "text_utf8_no_bom", "path": str(path), "ok": False})
+            failures.append(f"文本文件不得包含 UTF-8 BOM: {path}")
+            continue
+        try:
+            raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            checks.append({"check": "text_utf8_no_bom", "path": str(path), "ok": False})
+            failures.append(f"文本文件必须使用 UTF-8: {path} ({exc})")
+            continue
+        checks.append({"check": "text_utf8_no_bom", "path": str(path), "ok": True})
+
+
 def find_workspace_root(work_dir: Path, implementation_context: dict[str, Any]) -> Path:
     raw = str(implementation_context.get("workspace_root", "")).strip()
     if raw:
@@ -209,28 +381,80 @@ def find_workspace_root(work_dir: Path, implementation_context: dict[str, Any]) 
 
 
 def run_authoring_audit(workflow_lgwf: Path, workspace_root: Path) -> dict[str, Any]:
-    lgwf_py = workspace_root / "skills" / "lgwf-wf-tools" / "vendor" / "lgwf-client-assist" / "scripts" / "lgwf.py"
-    if not lgwf_py.exists():
+    try:
+        rel_input = workflow_lgwf.resolve().relative_to(workspace_root.resolve()).as_posix()
+    except ValueError as exc:
         return {
             "ok": False,
             "skipped": True,
             "exit_code": None,
             "stdout": "",
-            "stderr": f"找不到 lgwf.py: {lgwf_py}",
+            "stderr": f"workflow_lgwf 不在 workspace_root 内: {workflow_lgwf} ({exc})",
         }
-    completed = subprocess.run(
-        [sys.executable, str(lgwf_py), "audit", str(workflow_lgwf)],
-        cwd=workspace_root,
-        text=True,
-        capture_output=True,
+    try:
+        import lgwf_client.tools.registry as tool_registry_module
+    except Exception as exc:  # pragma: no cover - runtime 环境异常时保留可诊断结果
+        return {
+            "ok": False,
+            "skipped": True,
+            "exit_code": None,
+            "stdout": "",
+            "stderr": f"无法加载 runtime tool registry: {type(exc).__name__}: {exc}",
+        }
+    tool_result = tool_registry_module.run_builtin_tool(
+        "lgwf_dsl_cli",
+        {
+            "command": "audit",
+            "input": rel_input,
+            "include_stdout": True,
+            "fail_on_command_failure": False,
+        },
+        workspace_root.resolve(),
     )
     return {
-        "ok": completed.returncode == 0,
+        "ok": bool(tool_result.get("passed")),
         "skipped": False,
-        "exit_code": completed.returncode,
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
+        "exit_code": tool_result.get("exit_code"),
+        "stdout": str(tool_result.get("stdout", "")),
+        "stderr": str(tool_result.get("stderr", "")),
+        "tool": "lgwf_dsl_cli",
+        "command": "audit",
+        "payload": tool_result.get("payload", {}),
+        "diagnostics": tool_result.get("diagnostics", []),
     }
+
+
+def package_relative(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def collect_workflow_audits(
+    target_abs: Path,
+    workspace_root: Path,
+    root_workflow: Path,
+) -> list[dict[str, Any]]:
+    wf_root = target_abs / "wf"
+    candidates: list[Path] = []
+    if root_workflow.exists():
+        candidates.append(root_workflow)
+    if wf_root.is_dir():
+        for candidate in sorted(wf_root.rglob("workflow.lgwf")):
+            if candidate.resolve() != root_workflow.resolve():
+                candidates.append(candidate)
+
+    results: list[dict[str, Any]] = []
+    for candidate in candidates:
+        audit = run_authoring_audit(candidate, workspace_root)
+        item = {
+            "package_relative_path": package_relative(candidate, target_abs),
+            "path": str(candidate),
+            **audit,
+        }
+        results.append(item)
+    return results
 
 
 def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
@@ -238,7 +462,6 @@ def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
     implementation_context = read_json(lgwf_dir / "implementation_context.json")
     implementation_result = read_json(lgwf_dir / "implementation_result.json")
     step_designs = read_json(lgwf_dir / "step_designs.json")
-    scaffold_plan = scaffold_plan_from_result(read_json(lgwf_dir / "scaffold_package_result.json"))
     workspace_root = find_workspace_root(work_dir, implementation_context)
 
     failures: list[str] = []
@@ -248,7 +471,6 @@ def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
         implementation_result.get("target_package_root")
         or implementation_context.get("target_package_root")
         or confirmed_step_designs(step_designs).get("target_package_root")
-        or scaffold_plan.get("target_package_root")
         or ""
     )
     try:
@@ -276,46 +498,55 @@ def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
             failures.append(f"{label} 不存在: {path}")
 
     require_path(target_abs, "target_package_root", "dir")
+    require_path(target_abs / "AGENTS.md", "package AGENTS.md", "file")
+    require_path(target_abs / "README.md", "package README.md", "file")
+    require_path(target_abs / "entry_contract.json", "package entry_contract.json", "file")
     workflow_lgwf = target_abs / "wf" / "workflow.lgwf"
     require_path(workflow_lgwf, "wf/workflow.lgwf", "file")
-
-    scaffold_create_dirs = scaffold_plan_paths(scaffold_plan, "create_dirs")
-    scaffold_create_files = scaffold_plan_paths(scaffold_plan, "create_files")
-    if scaffold_plan:
-        for rel_path in scaffold_create_dirs:
-            require_path(target_abs / rel_path, f"scaffold_plan create_dir {rel_path}", "dir")
-        for rel_path in scaffold_create_files:
-            require_path(target_abs / rel_path, f"scaffold_plan create_file {rel_path}", "file")
-    else:
-        for stage_id in required_stage_ids(step_designs):
-            stage_root = target_abs / "wf" / stage_id
-            require_path(stage_root / "workflow.lgwf", f"stage {stage_id} workflow.lgwf", "file")
-            for directory_name in ("agents", "scripts", "resources"):
-                if is_stage_exempt(step_designs, stage_id, directory_name):
-                    checks.append(
-                        {
-                            "check": f"stage {stage_id} {directory_name}/ exempt",
-                            "path": str(stage_root / directory_name),
-                            "ok": True,
-                        }
-                    )
-                    continue
-                require_path(stage_root / directory_name, f"stage {stage_id} {directory_name}/", "dir")
+    require_path(target_abs / "wf" / "artifact_contracts.json", "wf/artifact_contracts.json", "file")
 
     for rel_path in implementation_generated_files(implementation_result, target_package_root):
         require_path(target_abs / rel_path, f"implementation_result generated file {rel_path}", "file")
 
+    for rel_path in step_design_paths(step_designs, "file_designs", "target_files"):
+        require_path(target_abs / rel_path, f"step_designs file_design {rel_path}", "file")
+    for rel_path in step_design_paths(step_designs, "directory_designs", "target_dirs"):
+        require_path(target_abs / rel_path, f"step_designs directory_design {rel_path}", "dir")
+
+    failures.extend(implementation_status_failures(implementation_result))
     failures.extend(implementation_validation_failures(implementation_result))
+    failures.extend(repair_round_failures(implementation_result))
     check_agent_loop_prompt_contracts(target_abs, checks, failures)
+    check_runtime_pollution(target_abs, checks, failures)
+    check_workflow_resource_references(target_abs, checks, failures)
+    check_step_design_content_contracts(target_abs, step_designs, checks, failures)
+    check_utf8_no_bom(target_abs, checks, failures)
 
     audit_result: dict[str, Any] = {"ok": False, "skipped": True, "stdout": "", "stderr": "", "exit_code": None}
+    workflow_audits: list[dict[str, Any]] = []
     if workflow_lgwf.exists():
         audit_result = run_authoring_audit(workflow_lgwf, workspace_root)
-        checks.append({"check": "lgwf.py audit", "path": str(workflow_lgwf), "ok": audit_result.get("ok")})
+        write_json(lgwf_dir / "implementation_lgwf_dsl_audit_result.json", audit_result)
+        checks.append({"check": "lgwf_dsl_cli audit", "path": str(workflow_lgwf), "ok": audit_result.get("ok")})
         if not audit_result.get("ok"):
-            failures.append("lgwf.py audit 未通过")
+            failures.append("lgwf_dsl_cli audit 未通过")
+        workflow_audits = collect_workflow_audits(target_abs, workspace_root, workflow_lgwf)
+        for item in workflow_audits:
+            rel_path = str(item.get("package_relative_path", ""))
+            ok = bool(item.get("ok"))
+            checks.append({"check": f"lgwf_dsl_cli audit {rel_path}", "path": item.get("path", ""), "ok": ok})
+            if not ok and rel_path != "wf/workflow.lgwf":
+                failures.append(f"lgwf_dsl_cli audit 未通过: {rel_path}")
     else:
         failures.append("缺少 wf/workflow.lgwf，无法运行 LGWF authoring audit")
+
+    needs_post_fix = bool(
+        workflow_lgwf.exists()
+        and (
+            not audit_result.get("ok")
+            or any(not item.get("ok") for item in workflow_audits)
+        )
+    )
 
     result = {
         "passed": not failures,
@@ -324,14 +555,13 @@ def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
         "target_package_abs": str(target_abs),
         "workflow_lgwf": str(workflow_lgwf),
         "stage_ids": required_stage_ids(step_designs),
-        "stage_dirs": scaffold_stage_dirs(scaffold_plan),
-        "scaffold_plan_used": bool(scaffold_plan),
-        "scaffold_create_dirs": scaffold_create_dirs,
-        "scaffold_create_files": scaffold_create_files,
+        "stage_dirs": stage_dirs_from_step_designs(step_designs),
+        "design_source": ".lgwf/step_designs.json",
         "checks": checks,
         "audit": audit_result,
+        "workflow_audits": workflow_audits,
         "failures": failures,
-        "needs_post_fix": bool(workflow_lgwf.exists() and not audit_result.get("ok")),
+        "needs_post_fix": needs_post_fix,
     }
     write_json(lgwf_dir / "implementation_audit_result.json", result)
     write_json(lgwf_dir / "implementation_observe.json", result)

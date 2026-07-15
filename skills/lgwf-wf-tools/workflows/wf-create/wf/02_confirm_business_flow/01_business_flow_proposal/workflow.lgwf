@@ -1,87 +1,35 @@
 WORKFLOW business_flow_proposal;
-ENTRY prepare_business_flow_proposal_react_feedback;
+ENTRY prepare_business_flow_context;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
 }
 
-PY prepare_business_flow_proposal_react_feedback
-  SCRIPT "scripts/prepare_react_feedback.py"
+PY prepare_business_flow_context
+  SCRIPT "scripts/prepare_business_flow_context.py"
   TIMEOUT 30
-  RESULT state.lgwf_wf_create.business_flow_proposal_react_feedback_prepare_result
+  RESULT state.lgwf_wf_create.business_flow_proposal_context_result
   CONTRACT {
-    WRITE workspace file ".lgwf/business_flow_proposal_quality_gate.json";
-    WRITE workspace file ".lgwf/business_flow_proposal_decision.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/business_flow_proposal_context.json";
   };
 
-REACT business_flow_proposal_react MAX 3
+CODEX propose_business_flow
+  PROMPT "agents/propose_business_flow.md"
+  CONTEXT workspace file ".lgwf/business_flow_proposal_context.json"
+  ANALYSIS_DIRS state.lgwf_wf_create.creation_context_dirs
+  ANALYSIS_FILES state.lgwf_wf_create.creation_context_files
+  OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
+  TIMEOUT 900
+  RESULT state.lgwf_wf_create.business_flow_proposal_result
   CONTRACT {
-  }
-  REASON PY
-    SCRIPT "scripts/prepare_react_context.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.business_flow_proposal_react_context_result
-    UPDATES_STATE
-    CONTRACT {
-      READ workspace file ".lgwf/business_flow.json";
-      READ workspace file ".lgwf/create_requirements.json";
-      READ workspace file ".lgwf/create_requirements_proposal.json";
-      READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
-      READ workspace file ".lgwf/business_flow_proposal_decision.json";
-      WRITE workspace file ".lgwf/business_flow_proposal_react_context.json";
-      WRITE state.lgwf_wf_create.business_flow_proposal_react_context;
-    }
-  ACT CODEX
-    PROMPT "agents/propose_business_flow.md"
-    CONTEXT workspace file ".lgwf/business_flow_proposal_react_context.json"
-    TARGET_DIRS state.lgwf_wf_create.creation_context_dirs
-    TARGET_FILES state.lgwf_wf_create.creation_context_files
-    OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
-    TIMEOUT 900
-    RESULT state.lgwf_wf_create.business_flow_proposal_result
-    CONTRACT {
-      READ state.lgwf_wf_create.creation_context_dirs;
-      READ state.lgwf_wf_create.creation_context_files;
-      READ workspace file ".lgwf/business_flow.json";
-      READ workspace file ".lgwf/create_requirements.json";
-      READ workspace file ".lgwf/create_requirements_proposal.json";
-      READ workspace file ".lgwf/business_flow_proposal_react_context.json";
-      READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
-      READ workspace file ".lgwf/business_flow_proposal_decision.json";
-      WRITE workspace file ".lgwf/business_flow_proposal.json";
-    }
-  OBSERVE PY
-    SCRIPT "scripts/validate_proposal.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.business_flow_proposal_quality_gate
-    UPDATES_STATE
-    CONTRACT {
-      READ workspace file ".lgwf/create_requirements.json";
-      READ workspace file ".lgwf/create_requirements_proposal.json";
-      READ workspace file ".lgwf/business_flow_proposal.json";
-      WRITE workspace file ".lgwf/business_flow_proposal_quality_gate.json";
-    }
-  DECIDE PY
-    SCRIPT "scripts/decide_react.py"
-    TIMEOUT 30
-    RESULT state.lgwf_wf_create.business_flow_proposal_decision_result
-    UPDATES_STATE
-    CONTRACT {
-      READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
-      WRITE workspace file ".lgwf/business_flow_proposal_decision.json";
-    };
-
-PY assert_business_flow_proposal_quality_gate
-  SCRIPT "scripts/assert_quality_gate.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.business_flow_proposal_quality_gate_assert_result
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
-    WRITE state.lgwf_wf_create.business_flow_proposal_quality_gate_asserted;
+    READ state.lgwf_wf_create.creation_context_dirs;
+    READ state.lgwf_wf_create.creation_context_files;
+    READ workspace file ".lgwf/business_flow_proposal_context.json";
+    WRITE workspace file ".lgwf/business_flow_proposal.json";
   };
 
-FLOW prepare_business_flow_proposal_react_feedback
-  THEN business_flow_proposal_react
-  THEN assert_business_flow_proposal_quality_gate;
+FLOW prepare_business_flow_context
+  THEN propose_business_flow;

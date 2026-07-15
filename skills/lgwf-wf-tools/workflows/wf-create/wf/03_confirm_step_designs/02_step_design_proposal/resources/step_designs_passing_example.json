@@ -1,0 +1,452 @@
+{
+  "workflow_id": "demo-pack",
+  "workflow_name": "demo pack",
+  "target_package_root": "skills/demo-pack",
+  "package_profile": "codex_skill",
+  "source_business_flow_stages": [
+    "01_prepare_context",
+    "02_write_summary"
+  ],
+  "directory_designs": [
+    {
+      "path": "wf",
+      "purpose": "承载 demo-pack 的 LGWF 入口、artifact contract 和阶段子流程。",
+      "owner_step": "package_contracts",
+      "expected_files": [
+        "wf/workflow.lgwf",
+        "wf/artifact_contracts.json"
+      ],
+      "forbidden": [
+        "不得承载运行时 .lgwf 状态文件"
+      ],
+      "source_refs": [
+        "step_design_validation_contract.required_file_designs"
+      ]
+    },
+    {
+      "path": "wf/01_prepare_context",
+      "purpose": "承载准备上下文阶段的 workflow 定义。",
+      "owner_step": "prepare_context",
+      "expected_files": [
+        "wf/01_prepare_context/workflow.lgwf"
+      ],
+      "forbidden": [
+        "不得写入确认后的步骤设计 artifact"
+      ],
+      "source_refs": [
+        "step_design_validation_contract.required_stage_workflows"
+      ]
+    },
+    {
+      "path": "wf/02_write_summary",
+      "purpose": "承载写入摘要阶段的 workflow 定义。",
+      "owner_step": "write_summary",
+      "expected_files": [
+        "wf/02_write_summary/workflow.lgwf"
+      ],
+      "forbidden": [
+        "不得绕过入口 contract"
+      ],
+      "source_refs": [
+        "step_design_validation_contract.required_stage_workflows"
+      ]
+    }
+  ],
+  "file_designs": [
+    {
+      "path": "AGENTS.md",
+      "kind": "markdown_doc",
+      "owner_step": "package_contracts",
+      "purpose": "说明模块定位、入口、依赖、状态边界、产物、验证和禁止事项。",
+      "required_structure": [
+        "包含定位、输入、输出、状态边界、验证和禁止事项小节。"
+      ],
+      "reads": [
+        "实现阶段读取模块契约和 step_designs。"
+      ],
+      "writes": [
+        "实现阶段写入 AGENTS.md。"
+      ],
+      "dependencies": [
+        "依赖模块契约和已确认步骤设计。"
+      ],
+      "acceptance_notes": [
+        "文档必须清楚覆盖定位、输入、输出、验证和禁止事项。"
+      ],
+      "forbidden": [
+        "不得写入完整源码字段。"
+      ],
+      "source_refs": [
+        "module-contract.md"
+      ],
+      "content_mode": "contract",
+      "markdown_contract": {
+        "sections": [
+          "????",
+          "??",
+          "??",
+          "??",
+          "??",
+          "????"
+        ]
+      }
+    },
+    {
+      "path": "README.md",
+      "kind": "markdown_doc",
+      "owner_step": "package_contracts",
+      "purpose": "说明用户入口、模块定位、输入输出、验证和禁止事项。",
+      "required_structure": [
+        "包含定位、入口、输入、输出、验证和禁止事项小节。"
+      ],
+      "reads": [
+        "实现阶段读取已确认需求和步骤设计。"
+      ],
+      "writes": [
+        "实现阶段写入 README.md。"
+      ],
+      "dependencies": [
+        "依赖 AGENTS.md 的模块边界。"
+      ],
+      "acceptance_notes": [
+        "文档必须说明定位、输入、输出、验证和禁止事项。"
+      ],
+      "forbidden": [
+        "不得复制仓库级共享规则全文。"
+      ],
+      "source_refs": [
+        "module-contract.md"
+      ],
+      "content_mode": "contract",
+      "markdown_contract": {
+        "sections": [
+          "????",
+          "??",
+          "??",
+          "??",
+          "??",
+          "????"
+        ]
+      }
+    },
+    {
+      "path": "entry_contract.json",
+      "kind": "json_contract",
+      "owner_step": "package_contracts",
+      "purpose": "定义 workflow 的入口输入、输出和消费方。",
+      "required_structure": [
+        "顶层字段包含 inputs、outputs 和 validation。",
+        "必填字段说明调用方必须提供的参数。",
+        "消费方为 wf/workflow.lgwf 和入口路由。"
+      ],
+      "reads": [
+        "入口路由读取 entry_contract.json。"
+      ],
+      "writes": [
+        "实现阶段写入 entry_contract.json。"
+      ],
+      "dependencies": [
+        "依赖已确认 requirements。"
+      ],
+      "acceptance_notes": [
+        "JSON 文件必须说明顶层字段、必填字段和消费方。"
+      ],
+      "forbidden": [
+        "不得包含绝对路径。"
+      ],
+      "source_refs": [
+        "create_requirements.json"
+      ],
+      "content_mode": "contract",
+      "json_contract": {
+        "top_level_fields": [
+          "status",
+          "data",
+          "errors"
+        ],
+        "required": [
+          "status"
+        ],
+        "consumer": "?? workflow ?????"
+      }
+    },
+    {
+      "path": "wf/workflow.lgwf",
+      "kind": "lgwf_workflow",
+      "owner_step": "package_contracts",
+      "purpose": "定义根工作流编排。",
+      "required_structure": [
+        "包含 WORKFLOW、ENTRY、阶段 WORKFLOW 节点、CONTRACT 和 FLOW。"
+      ],
+      "reads": [
+        "读取 entry_contract.json 和阶段 workflow。"
+      ],
+      "writes": [
+        "实现阶段写入 wf/workflow.lgwf。"
+      ],
+      "dependencies": [
+        "依赖 wf/01_prepare_context/workflow.lgwf 和 wf/02_write_summary/workflow.lgwf。"
+      ],
+      "acceptance_notes": [
+        "workflow.lgwf 必须声明 WORKFLOW、ENTRY、CONTRACT 和 FLOW。"
+      ],
+      "forbidden": [
+        "不得直接写运行时 .lgwf 状态。"
+      ],
+      "source_refs": [
+        "business_flow.json"
+      ],
+      "content_mode": "exact",
+      "exact_content": "WORKFLOW demo_pack;\nENTRY run_stage;\nPY run_stage\n  SCRIPT \"scripts/run.py\"\n  CONTRACT {\n    WRITE workspace file \".lgwf/demo_result.json\";\n  };\nFLOW run_stage;\n"
+    },
+    {
+      "path": "wf/artifact_contracts.json",
+      "kind": "json_contract",
+      "owner_step": "package_contracts",
+      "purpose": "定义工作流 artifact 的顶层字段、必填字段和消费关系。",
+      "required_structure": [
+        "顶层字段包含 runtime_outputs 和 final_outputs。",
+        "必填字段列出每个阶段产物。",
+        "消费方为根 workflow 和验证脚本。"
+      ],
+      "reads": [
+        "验证脚本读取 artifact contract。"
+      ],
+      "writes": [
+        "实现阶段写入 wf/artifact_contracts.json。"
+      ],
+      "dependencies": [
+        "依赖业务流阶段产物。"
+      ],
+      "acceptance_notes": [
+        "JSON 文件必须说明顶层字段、必填字段和消费方。"
+      ],
+      "forbidden": [
+        "不得包含源码正文。"
+      ],
+      "source_refs": [
+        "business_flow.json"
+      ],
+      "content_mode": "contract",
+      "json_contract": {
+        "top_level_fields": [
+          "status",
+          "data",
+          "errors"
+        ],
+        "required": [
+          "status"
+        ],
+        "consumer": "?? workflow ?????"
+      }
+    },
+    {
+      "path": "wf/01_prepare_context/workflow.lgwf",
+      "kind": "lgwf_workflow",
+      "owner_step": "prepare_context",
+      "purpose": "定义准备上下文阶段。",
+      "required_structure": [
+        "包含 WORKFLOW、ENTRY、PY 节点、CONTRACT 和 FLOW。"
+      ],
+      "reads": [
+        "读取入口输入和 contract。"
+      ],
+      "writes": [
+        "写入准备阶段运行产物。"
+      ],
+      "dependencies": [
+        "依赖根 workflow 编排。"
+      ],
+      "acceptance_notes": [
+        "workflow.lgwf 必须声明 WORKFLOW、ENTRY、CONTRACT 和 FLOW。"
+      ],
+      "forbidden": [
+        "不得读取目标 package 源码。"
+      ],
+      "source_refs": [
+        "business_flow.stages[01_prepare_context]"
+      ],
+      "content_mode": "exact",
+      "exact_content": "WORKFLOW demo_pack;\nENTRY run_stage;\nPY run_stage\n  SCRIPT \"scripts/run.py\"\n  CONTRACT {\n    WRITE workspace file \".lgwf/demo_result.json\";\n  };\nFLOW run_stage;\n"
+    },
+    {
+      "path": "wf/02_write_summary/workflow.lgwf",
+      "kind": "lgwf_workflow",
+      "owner_step": "write_summary",
+      "purpose": "定义写入摘要阶段。",
+      "required_structure": [
+        "包含 WORKFLOW、ENTRY、PY 节点、CONTRACT 和 FLOW。"
+      ],
+      "reads": [
+        "读取准备阶段产物。"
+      ],
+      "writes": [
+        "写入最终摘要产物。"
+      ],
+      "dependencies": [
+        "依赖 wf/01_prepare_context/workflow.lgwf。"
+      ],
+      "acceptance_notes": [
+        "workflow.lgwf 必须声明 WORKFLOW、ENTRY、CONTRACT 和 FLOW。"
+      ],
+      "forbidden": [
+        "不得绕过确认后的步骤设计。"
+      ],
+      "source_refs": [
+        "business_flow.stages[02_write_summary]"
+      ],
+      "content_mode": "exact",
+      "exact_content": "WORKFLOW demo_pack;\nENTRY run_stage;\nPY run_stage\n  SCRIPT \"scripts/run.py\"\n  CONTRACT {\n    WRITE workspace file \".lgwf/demo_result.json\";\n  };\nFLOW run_stage;\n"
+    }
+  ],
+  "step_designs": [
+    {
+      "step_slug": "package_contracts",
+      "step_name": "生成模块入口契约",
+      "stage_id": "01_prepare_context",
+      "goal": "建立模块入口、根 workflow 和 artifact contract。",
+      "inputs": [
+        "已确认 requirements",
+        "已确认 business_flow"
+      ],
+      "outputs": [
+        "AGENTS.md",
+        "README.md",
+        "entry_contract.json",
+        "wf/workflow.lgwf",
+        "wf/artifact_contracts.json"
+      ],
+      "dependencies": [
+        "模块契约",
+        "动态 step design contract"
+      ],
+      "implementation_suggestions": [
+        "按 schema 填写文档和 JSON contract，只描述结构不输出完整源码。"
+      ],
+      "acceptance_notes": [
+        "基础实现文件都有 file_design，且被 target_files 引用。"
+      ],
+      "out_of_scope": [
+        "不处理 lgwf-wf-prompt-fix。",
+        "不修改 lgwf-wf-tools。",
+        "不提供自动修复承诺。",
+        "不保证端到端运行保证。"
+      ],
+      "confirmation_points": [
+        "确认入口契约和根 workflow 编排。"
+      ],
+      "target_files": [
+        "AGENTS.md",
+        "README.md",
+        "entry_contract.json",
+        "wf/workflow.lgwf",
+        "wf/artifact_contracts.json"
+      ],
+      "target_dirs": [
+        "wf"
+      ],
+      "runtime_artifacts": [
+        ".lgwf/prepare_context_result.json"
+      ],
+      "source_refs": [
+        "step_design_validation_contract.required_file_designs"
+      ],
+      "risk_notes": [
+        "根 contract 与阶段 workflow 必须保持一致。"
+      ]
+    },
+    {
+      "step_slug": "prepare_context",
+      "step_name": "设计准备上下文阶段",
+      "stage_id": "01_prepare_context",
+      "goal": "设计准备上下文阶段 workflow。",
+      "inputs": [
+        "入口 contract"
+      ],
+      "outputs": [
+        "wf/01_prepare_context/workflow.lgwf"
+      ],
+      "dependencies": [
+        "根 workflow"
+      ],
+      "implementation_suggestions": [
+        "阶段 workflow 使用 PY 节点并声明读写 contract。"
+      ],
+      "acceptance_notes": [
+        "阶段 workflow target_file 覆盖 01_prepare_context。"
+      ],
+      "out_of_scope": [
+        "不处理 lgwf-wf-prompt-fix。",
+        "不修改 lgwf-wf-tools。",
+        "不提供自动修复承诺。",
+        "不保证端到端运行保证。"
+      ],
+      "confirmation_points": [
+        "确认阶段输入输出。"
+      ],
+      "target_files": [
+        "wf/01_prepare_context/workflow.lgwf"
+      ],
+      "target_dirs": [
+        "wf/01_prepare_context"
+      ],
+      "runtime_artifacts": [
+        ".lgwf/prepare_context_result.json"
+      ],
+      "source_refs": [
+        "business_flow.stages[01_prepare_context]"
+      ],
+      "risk_notes": [
+        "阶段 id 必须与动态 contract 对齐。"
+      ]
+    },
+    {
+      "step_slug": "write_summary",
+      "step_name": "设计摘要输出阶段",
+      "stage_id": "02_write_summary",
+      "goal": "设计摘要输出阶段 workflow。",
+      "inputs": [
+        "准备阶段产物"
+      ],
+      "outputs": [
+        "wf/02_write_summary/workflow.lgwf"
+      ],
+      "dependencies": [
+        "prepare_context"
+      ],
+      "implementation_suggestions": [
+        "阶段 workflow 声明读取准备结果并写入最终输出。"
+      ],
+      "acceptance_notes": [
+        "阶段 workflow target_file 覆盖 02_write_summary。"
+      ],
+      "out_of_scope": [
+        "不处理 lgwf-wf-prompt-fix。",
+        "不修改 lgwf-wf-tools。",
+        "不提供自动修复承诺。",
+        "不保证端到端运行保证。"
+      ],
+      "confirmation_points": [
+        "确认最终输出 artifact。"
+      ],
+      "target_files": [
+        "wf/02_write_summary/workflow.lgwf"
+      ],
+      "target_dirs": [
+        "wf/02_write_summary"
+      ],
+      "runtime_artifacts": [
+        ".lgwf/write_summary_result.json"
+      ],
+      "source_refs": [
+        "business_flow.stages[02_write_summary]"
+      ],
+      "risk_notes": [
+        "不得从 scaffold plan 之外补写目录。"
+      ]
+    }
+  ],
+  "design_rationale": [
+    "示例展示每个 target_file 都有 file_design，每个 target_dir 都有 directory_design，且每个阶段 workflow 都被 step 覆盖。"
+  ]
+}

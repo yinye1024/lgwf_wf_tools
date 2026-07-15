@@ -29,5 +29,34 @@ TOOL copy_assets
 - `file_replace`
 - `copy_file`
 - `copy_directory`
+- `lgwf_dsl_cli`
+
+`lgwf_dsl_cli` 用于在 workflow runtime 内执行受限的 `lgwf_dsl.cli` authoring 命令：
+
+- `compile`：把 `.lgwf` 编译为 workflow JSON，要求 `compile_output_path`。
+- `explain`：输出 workflow 结构摘要。
+- `lint`：检查 authoring 风险模式。
+- `audit`：输出机器可读 diagnostics，适合作为 observe gate。
+- `schema`：输出 DSL schema。
+
+示例：
+
+```lgwf
+TOOL audit_generated_workflow
+  USE lgwf_dsl_cli
+  OPTIONS {
+    "command": "audit",
+    "input": "skills/example/wf/workflow.lgwf",
+    "result_output_path": ".lgwf/example_audit_result.json",
+    "include_stdout": true,
+    "fail_on_command_failure": false
+  }
+  RESULT state.example.audit_result
+  CONTRACT {
+    WRITE workspace file ".lgwf/example_audit_result.json";
+  };
+```
+
+`lgwf_dsl_cli` 不暴露 `lgwf.py` 控制面能力；`run`、`status`、`stop`、`approval`、`review` 和 `runs` 仍由 facade 或主 agent 调用。权威字段 schema 以 `scripts/lgwf.py tool schema lgwf_dsl_cli` 返回结果为准；完整 descriptor 可用 `scripts/lgwf.py tool describe lgwf_dsl_cli` 查看。
 
 新增 tool 时扩展机器可读 tool catalog、共享 operation 和测试，不修改 `TOOL` parser、lowering 或 `exec.run_tool`。

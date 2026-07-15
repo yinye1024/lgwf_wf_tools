@@ -192,6 +192,48 @@ def result_status(results: list[dict[str, Any]]) -> str:
     return "ok"
 
 
+def result_remaining_risks(result: dict[str, Any]) -> list[str]:
+    raw_risks = result.get("remaining_risks", [])
+    if not isinstance(raw_risks, list):
+        return []
+    return [str(risk) for risk in raw_risks if str(risk).strip()]
+
+
+def is_blocking_result(result: dict[str, Any]) -> bool:
+    return str(result.get("status", "")).strip().lower() in {
+        "failed",
+        "error",
+        "partial",
+        "needs_review",
+    }
+
+
+def collect_blocking_risks(results: list[dict[str, Any]]) -> list[str]:
+    return [
+        risk
+        for result in results
+        if is_blocking_result(result)
+        for risk in result_remaining_risks(result)
+    ]
+
+
+def collect_unit_caveats(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    caveats: list[dict[str, Any]] = []
+    for result in results:
+        risks = result_remaining_risks(result)
+        if not risks:
+            continue
+        caveats.append(
+            {
+                "unit_id": str(result.get("unit_id", "")).strip(),
+                "status": str(result.get("status", "")).strip(),
+                "remaining_risks": risks,
+                "blocking": is_blocking_result(result),
+            }
+        )
+    return caveats
+
+
 def merge_implementation_results(root: Path, payload: Any) -> dict[str, Any]:
     lgwf_dir = root / ".lgwf"
     context = load_json(lgwf_dir / "implementation_context.json")
@@ -215,12 +257,8 @@ def merge_implementation_results(root: Path, payload: Any) -> dict[str, Any]:
         for result in results
         if str(result.get("status", "")).lower() in {"failed", "error"}
     ]
-    remaining_risks = [
-        str(risk)
-        for result in results
-        for risk in result.get("remaining_risks", [])
-        if isinstance(result.get("remaining_risks", []), list) and str(risk).strip()
-    ]
+    remaining_risks = collect_blocking_risks(results)
+    unit_caveats = collect_unit_caveats(results)
     validation: list[dict[str, Any]] = []
     for result in results:
         raw_validation = result.get("validation") or result.get("verification")
@@ -237,6 +275,7 @@ def merge_implementation_results(root: Path, payload: Any) -> dict[str, Any]:
         "unit_results": results,
         "failed_units": [unit for unit in failed_units if unit],
         "remaining_risks": remaining_risks,
+        "unit_caveats": unit_caveats,
         "selection_mode": units_payload.get("selection_mode", ""),
         "implementation_units": units_payload.get("implementation_units", []),
     }

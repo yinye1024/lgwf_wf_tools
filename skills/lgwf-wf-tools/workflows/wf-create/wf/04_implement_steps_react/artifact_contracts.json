@@ -1,0 +1,11 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/implementation_context.json",
+    ".lgwf/step_designs.json"
+  ],
+  "script_writes": [],
+  "final_outputs": [
+    ".lgwf/implementation_result.json",
+    ".lgwf/implementation_audit_result.json"
+  ]
+}

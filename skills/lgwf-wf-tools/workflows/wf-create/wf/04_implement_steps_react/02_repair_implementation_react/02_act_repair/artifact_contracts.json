@@ -1,0 +1,15 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/implementation_repair_reason.json",
+    ".lgwf/implementation_context.json",
+    ".lgwf/implementation_result.json"
+  ],
+  "final_outputs": [
+    ".lgwf/implementation_result.json"
+  ],
+  "script_writes": {
+    "publish_repair_result": [
+      ".lgwf/implementation_result.json"
+    ]
+  }
+}

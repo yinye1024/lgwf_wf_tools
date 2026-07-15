@@ -302,7 +302,7 @@ class StateHandoffContractTest(unittest.TestCase):
         self.assertIn('STEP post_fix_handoff\n  WORKFLOW "07_post_fix_handoff/workflow.lgwf"', workflow_text)
         self.assertNotIn("PY prepare_post_fix_handoff", workflow_text)
         self.assertIn("THEN summarize_create_result\n  THEN post_fix_handoff", workflow_text)
-        self.assertNotIn('workspace file ".lgwf/implementation_audit_result.json"', workflow_text)
+        self.assertIn('workspace file ".lgwf/implementation_audit_result.json"', workflow_text)
         self.assertNotIn('workspace file ".lgwf/implementation_observe.json"', workflow_text)
         self.assertNotIn('workspace file ".lgwf/implementation_decision.json"', workflow_text)
 
@@ -351,7 +351,7 @@ class StateHandoffContractTest(unittest.TestCase):
             ("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md", "requirements_confirmation_context"),
             ("02_confirm_business_flow/01_business_flow_proposal/agents/propose_business_flow.md", "business_flow_confirmation_context"),
             (
-                "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/agents/act_step_designs.md",
+                "03_confirm_step_designs/02_step_design_proposal/agents/generate_step_designs.md",
                 "step_design_confirmation_context",
             ),
         )

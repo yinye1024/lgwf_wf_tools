@@ -51,27 +51,22 @@ def find_workspace_root(start: Path) -> Path:
     raise RuntimeError(f"无法从运行目录推导仓库根目录: {start}")
 
 
+def confirmed_step_designs(data: dict[str, Any]) -> dict[str, Any]:
+    confirmed = data.get("confirmed")
+    return confirmed if isinstance(confirmed, dict) else data
+
+
 def load_confirmed_target(lgwf_dir: Path) -> dict[str, Any]:
-    requirements = load_json(lgwf_dir / "create_requirements.json").get("confirmed", {})
-    business_flow = load_json(lgwf_dir / "business_flow.json").get("confirmed", {})
-    scaffold = load_json(lgwf_dir / "scaffold_package_result.json").get("scaffold_plan", {})
-    sources = [scaffold, requirements, business_flow]
-    target_package_root = next(
-        (source.get("target_package_root") for source in sources if isinstance(source.get("target_package_root"), str)),
-        "",
-    )
-    workflow_name = next(
-        (source.get("workflow_name") for source in sources if isinstance(source.get("workflow_name"), str)),
-        "",
-    )
-    package_profile = next(
-        (source.get("package_profile") for source in sources if isinstance(source.get("package_profile"), str)),
-        "internal_workflow_package",
-    )
+    step_designs = confirmed_step_designs(load_json(lgwf_dir / "step_designs.json"))
+    target_package_root = step_designs.get("target_package_root")
+    workflow_name = step_designs.get("workflow_name")
+    package_profile = step_designs.get("package_profile")
     return {
-        "workflow_name": workflow_name or "unnamed-workflow",
+        "workflow_name": workflow_name if isinstance(workflow_name, str) and workflow_name.strip() else "unnamed-workflow",
         "target_package_root": normalize_relative_path(str(target_package_root), "target_package_root"),
-        "package_profile": package_profile or "internal_workflow_package",
+        "package_profile": package_profile
+        if isinstance(package_profile, str) and package_profile.strip()
+        else "internal_workflow_package",
     }
 
 

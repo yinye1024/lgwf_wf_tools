@@ -10,10 +10,6 @@ from typing import Iterable
 WORKFLOW_REF_RE = re.compile(r'WORKFLOW\s+"([^"]+)"')
 RESOURCE_REF_RE = re.compile(r'(SCRIPT|PROMPT|PROMPT_REF|SPEC)\s+"([^"]+)"')
 ALLOWED_DEEP_WORKFLOWS = {
-    "03_confirm_step_designs/02_step_design_proposal/01_reason_step_designs/workflow.lgwf",
-    "03_confirm_step_designs/02_step_design_proposal/02_act_step_designs/workflow.lgwf",
-    "03_confirm_step_designs/02_step_design_proposal/03_observe_step_designs/workflow.lgwf",
-    "03_confirm_step_designs/02_step_design_proposal/04_decide_step_designs/workflow.lgwf",
     "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf",
     "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/workflow.lgwf",
     "04_implement_steps_react/02_repair_implementation_react/02_act_repair/workflow.lgwf",
@@ -21,12 +17,6 @@ ALLOWED_DEEP_WORKFLOWS = {
     "04_implement_steps_react/02_repair_implementation_react/04_decide_repair/workflow.lgwf",
 }
 ALLOWED_DEEP_WORKFLOW_PARENTS = {
-    "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf": {
-        "01_reason_step_designs/workflow.lgwf",
-        "02_act_step_designs/workflow.lgwf",
-        "03_observe_step_designs/workflow.lgwf",
-        "04_decide_step_designs/workflow.lgwf",
-    },
     "04_implement_steps_react/01_implement_units/workflow.lgwf": {
         "01_implement_one_unit/workflow.lgwf"
     },

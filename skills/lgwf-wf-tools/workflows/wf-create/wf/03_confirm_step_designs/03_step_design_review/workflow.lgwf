@@ -28,13 +28,20 @@ REVIEW confirm_step_designs
   };
 
 PY prepare_step_design_revision_confirmation
-  SCRIPT "scripts/prepare_step_design_revision_confirmation.py"
+  SCRIPT "scripts/apply_revision.py"
   TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_step_design_revision_confirmation_result
-  UPDATES_STATE
+  RESULT state.lgwf_wf_create.step_design_revision_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.step_design_revision_result;
+    WRITE state.lgwf_wf_create.step_designs_proposal;
+    WRITE state.lgwf_wf_create.step_design_confirmation_context;
+    WRITE state.lgwf_wf_create.step_design_revision_context;
+  }
   CONTRACT {
     READ workspace file ".lgwf/step_designs_proposal.json";
     READ workspace file ".lgwf/step_design_confirmation_record.json";
+    WRITE workspace file ".lgwf/step_designs_proposal.json";
+    WRITE state.lgwf_wf_create.step_designs_proposal;
     WRITE state.lgwf_wf_create.step_design_confirmation_context;
     WRITE state.lgwf_wf_create.step_design_revision_context;
   };
@@ -59,9 +66,6 @@ PY prepare_implementation_context
   RESULT state.lgwf_wf_create.implementation_context
   UPDATES_STATE
   CONTRACT {
-    READ workspace file ".lgwf/business_flow.json";
-    READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/step_designs.json";
     WRITE workspace file ".lgwf/implementation_context.json";
   };

@@ -13,7 +13,6 @@ PY validate_repo_hint
   UPDATES_STATE
   CONTRACT {
     READ state.repo_path;
-    READ state.requested_extensions;
     WRITE state.git_diff_brief.normalized_repo_hint;
     WRITE state.git_diff_brief.request_scope_validation;
     WRITE state.git_diff_brief.scope_confirmation_input;
@@ -27,7 +26,6 @@ PY capture_request_context
   UPDATES_STATE
   CONTRACT {
     READ state.repo_path;
-    READ state.requested_extensions;
     READ state.git_diff_brief.normalized_repo_hint;
     READ state.git_diff_brief.request_scope_validation;
     WRITE state.git_diff_brief.repository_input_context;

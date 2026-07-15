@@ -44,10 +44,6 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             "01_implement_units/scripts/merge_implementation_results.py",
             "merge_implementation_results",
         )
-        cls.prepare_repair = load_module(
-            "02_repair_implementation_react/02_act_repair/scripts/prepare_repair_context.py",
-            "prepare_repair_context",
-        )
         cls.publish_repair = load_module(
             "02_repair_implementation_react/02_act_repair/scripts/publish_repair_result.py",
             "publish_repair_result",
@@ -73,6 +69,8 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             {
                 "confirmed": {
                     "workflow_name": "demo_workflow",
+                    "target_package_root": "skills/demo-workflow",
+                    "package_profile": "internal_workflow_package",
                     "source_business_flow_stages": [
                         {"stage_id": "collect_context"},
                         {"stage_id": "run_checks"},
@@ -84,80 +82,106 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
                             "stage_id": "collect_context",
                             "goal": "收集目标上下文。",
                             "inputs": [".lgwf/create_requirements.json"],
-                            "outputs": ["wf/01_collect_context/workflow.lgwf"],
+                            "outputs": [".lgwf/collect_context_result.json"],
                             "dependencies": [],
                             "implementation_suggestions": ["生成阶段 workflow 和私有资源。"],
                             "acceptance_notes": ["阶段目录自包含。"],
                             "out_of_scope": ["端到端运行保证"],
                             "confirmation_points": ["阶段边界正确"],
+                            "target_files": [
+                                "AGENTS.md",
+                                "README.md",
+                                "entry_contract.json",
+                                "wf/artifact_contracts.json",
+                                "wf/workflow.lgwf",
+                                "wf/01_collect_context/workflow.lgwf",
+                                "wf/01_collect_context/artifact_contracts.json",
+                                "wf/01_collect_context/agents/prompt.md",
+                                "wf/01_collect_context/scripts/run.py",
+                                "wf/01_collect_context/resources/README.md",
+                                "tests/README.md",
+                                "tests/test_workflow_structure.py",
+                            ],
+                            "target_dirs": [
+                                "scripts",
+                                "tests",
+                                "ws",
+                                "wf",
+                                "wf/shared",
+                                "wf/shared/scripts",
+                                "wf/01_collect_context",
+                                "wf/01_collect_context/agents",
+                                "wf/01_collect_context/scripts",
+                                "wf/01_collect_context/resources",
+                            ],
                         },
                         {
                             "step_slug": "run_checks",
                             "step_name": "运行检查",
                             "stage_id": "run_checks",
                             "goal": "运行目标检查。",
-                            "inputs": ["collect_context"],
-                            "outputs": ["wf/02_run_checks/workflow.lgwf"],
+                            "inputs": [".lgwf/collect_context_result.json"],
+                            "outputs": [".lgwf/run_checks_result.json"],
                             "dependencies": ["collect_context"],
                             "implementation_suggestions": ["生成检查阶段 workflow 和私有资源。"],
                             "acceptance_notes": ["检查阶段目录自包含。"],
                             "out_of_scope": ["自动修复"],
                             "confirmation_points": ["依赖关系正确"],
+                            "target_files": [
+                                "wf/02_run_checks/workflow.lgwf",
+                                "wf/02_run_checks/artifact_contracts.json",
+                                "wf/02_run_checks/agents/prompt.md",
+                                "wf/02_run_checks/scripts/run.py",
+                                "wf/02_run_checks/resources/README.md",
+                            ],
+                            "target_dirs": [
+                                "wf/02_run_checks",
+                                "wf/02_run_checks/agents",
+                                "wf/02_run_checks/scripts",
+                                "wf/02_run_checks/resources",
+                            ],
                         },
                     ],
-                }
-            },
-        )
-        write_json(
-            lgwf_dir / "scaffold_package_result.json",
-            {
-                "scaffold_plan": {
-                    "workflow_name": "demo_workflow",
-                    "target_package_root": "skills/demo-workflow",
-                    "package_profile": "internal_workflow_package",
-                    "stage_manifest": [
-                        {
-                            "stage_id": "collect_context",
-                            "stage_dir": "01_collect_context",
-                            "workflow_ref": "wf/01_collect_context/workflow.lgwf",
-                        },
-                        {
-                            "stage_id": "run_checks",
-                            "stage_dir": "02_run_checks",
-                            "workflow_ref": "wf/02_run_checks/workflow.lgwf",
-                        },
+                    "file_designs": [
+                        {"path": path, "owner_step": "collect_context"}
+                        for path in [
+                            "AGENTS.md",
+                            "README.md",
+                            "entry_contract.json",
+                            "wf/artifact_contracts.json",
+                            "wf/workflow.lgwf",
+                            "wf/01_collect_context/workflow.lgwf",
+                            "wf/01_collect_context/artifact_contracts.json",
+                            "wf/01_collect_context/agents/prompt.md",
+                            "wf/01_collect_context/scripts/run.py",
+                            "wf/01_collect_context/resources/README.md",
+                            "wf/02_run_checks/workflow.lgwf",
+                            "wf/02_run_checks/artifact_contracts.json",
+                            "wf/02_run_checks/agents/prompt.md",
+                            "wf/02_run_checks/scripts/run.py",
+                            "wf/02_run_checks/resources/README.md",
+                            "tests/README.md",
+                            "tests/test_workflow_structure.py",
+                        ]
                     ],
-                    "create_dirs": [
-                        "scripts",
-                        "tests",
-                        "ws",
-                        "wf",
-                        "wf/shared/scripts",
-                        "wf/01_collect_context",
-                        "wf/01_collect_context/agents",
-                        "wf/01_collect_context/scripts",
-                        "wf/01_collect_context/resources",
-                        "wf/02_run_checks",
-                        "wf/02_run_checks/agents",
-                        "wf/02_run_checks/scripts",
-                        "wf/02_run_checks/resources",
-                    ],
-                    "create_files": [
-                        "AGENTS.md",
-                        "README.md",
-                        "entry_contract.json",
-                        "wf/artifact_contracts.json",
-                        "wf/workflow.lgwf",
-                        "wf/01_collect_context/workflow.lgwf",
-                        "wf/01_collect_context/agents/prompt.md",
-                        "wf/01_collect_context/scripts/run.py",
-                        "wf/01_collect_context/resources/README.md",
-                        "wf/02_run_checks/workflow.lgwf",
-                        "wf/02_run_checks/agents/prompt.md",
-                        "wf/02_run_checks/scripts/run.py",
-                        "wf/02_run_checks/resources/README.md",
-                        "tests/README.md",
-                        "tests/test_workflow_structure.py",
+                    "directory_designs": [
+                        {"path": path, "owner_step": "collect_context"}
+                        for path in [
+                            "scripts",
+                            "tests",
+                            "ws",
+                            "wf",
+                            "wf/shared",
+                            "wf/shared/scripts",
+                            "wf/01_collect_context",
+                            "wf/01_collect_context/agents",
+                            "wf/01_collect_context/scripts",
+                            "wf/01_collect_context/resources",
+                            "wf/02_run_checks",
+                            "wf/02_run_checks/agents",
+                            "wf/02_run_checks/scripts",
+                            "wf/02_run_checks/resources",
+                        ]
                     ],
                 }
             },
@@ -204,6 +228,7 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertEqual(stage_unit["stage_dir"], "01_collect_context")
             self.assertEqual(stage_unit["workflow_ref"], "wf/01_collect_context/workflow.lgwf")
             self.assertIn("wf/01_collect_context/scripts/run.py", stage_unit["planned_files"])
+            self.assertIn("wf/01_collect_context/artifact_contracts.json", stage_unit["planned_files"])
             self.assertNotIn("wf", stage_unit["package_relative_dirs"])
             self.assertEqual(support_unit["package_relative_files"], ["tests/README.md", "tests/test_workflow_structure.py"])
             self.assertIn("scripts", support_unit["package_relative_dirs"])
@@ -216,6 +241,42 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertTrue(all(not Path(path).is_absolute() for path in all_files))
             self.assertIn("wf/workflow.lgwf", all_files)
             self.assertTrue((root / ".lgwf" / "implementation_units.json").is_file())
+
+    def test_prepare_units_includes_confirmed_file_design_paths_from_step_designs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            lgwf_dir = root / ".lgwf"
+            step_designs = json.loads((lgwf_dir / "step_designs.json").read_text(encoding="utf-8"))
+            confirmed = step_designs["confirmed"]
+            confirmed["step_designs"][0]["target_files"] = [
+                "wf/01_collect_context/scripts/prepare_context.py"
+            ]
+            confirmed["step_designs"][0]["target_dirs"] = ["wf/01_collect_context/scripts"]
+            confirmed["file_designs"] = [
+                {
+                    "path": "wf/01_collect_context/scripts/prepare_context.py",
+                    "kind": "python_script",
+                    "owner_step": "collect_context",
+                    "purpose": "准备上下文",
+                }
+            ]
+            confirmed["directory_designs"] = [
+                {
+                    "path": "wf/01_collect_context/scripts",
+                    "purpose": "阶段脚本目录",
+                    "owner_step": "collect_context",
+                }
+            ]
+            write_json(lgwf_dir / "step_designs.json", step_designs)
+
+            result = self.prepare_units.build_implementation_units(root)
+            stage_unit = next(unit for unit in result["implementation_units"] if unit["unit_id"] == "stage_01_collect_context")
+
+            self.assertIn("wf/01_collect_context/scripts/prepare_context.py", stage_unit["output_files"])
+            self.assertIn("wf/01_collect_context/scripts", stage_unit["output_dirs"])
+            self.assertEqual(stage_unit["file_designs"][0]["owner_step"], "collect_context")
+            self.assertEqual(stage_unit["directory_designs"][0]["owner_step"], "collect_context")
 
     def test_prepare_current_injects_package_json_output_schemas(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -233,10 +294,18 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertIn("wf/artifact_contracts.json", target_schemas)
             self.assertIn("input_schema", target_schemas["entry_contract.json"]["required"])
             self.assertIn("delivery_artifacts", target_schemas["wf/artifact_contracts.json"]["required"])
+            self.assertTrue(context["artifact_contract_guidance"]["required"])
+            self.assertIn("root_artifact_contract", context["artifact_contract_guidance"])
             self.assertIn("unit_id", result_schema["required"])
             self.assertIn("generated_files", result_schema["required"])
+            self.assertNotIn("implementation_reference_context", context)
             self.assertIn("缺少 schema 时记录 blocked_reason", instructions)
+            self.assertIn("content_mode=exact", instructions)
+            self.assertIn("LGWF_PLACEHOLDER", instructions)
             self.assertIn("不要递归搜索 .lgwf", instructions)
+            self.assertNotIn("resources/lgwf_dsl_authoring.md", instructions)
+            self.assertIn("exact_content", instructions)
+            self.assertIn("不生成、不筛选、不摘录 LGWF DSL schema", instructions)
 
     def test_merge_records_foreach_collected_failures_with_unit_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -287,6 +356,60 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertEqual(result["unit_count"], 1)
             self.assertEqual(result["unit_results"][0]["unit_id"], "package_contracts")
 
+    def test_merge_keeps_ok_unit_risks_as_caveats_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            result = self.merge_units.merge_implementation_results(
+                root,
+                {
+                    "unit_results": [
+                        {
+                            "unit_id": "package_contracts",
+                            "status": "ok",
+                            "generated_files": [{"path": "AGENTS.md"}],
+                            "remaining_risks": ["later units must publish stage files"],
+                        }
+                    ]
+                },
+            )
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["remaining_risks"], [])
+            self.assertEqual(
+                result["unit_caveats"],
+                [
+                    {
+                        "unit_id": "package_contracts",
+                        "status": "ok",
+                        "remaining_risks": ["later units must publish stage files"],
+                        "blocking": False,
+                    }
+                ],
+            )
+
+    def test_merge_promotes_non_ok_unit_risks_to_remaining_risks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            result = self.merge_units.merge_implementation_results(
+                root,
+                {
+                    "unit_results": [
+                        {
+                            "unit_id": "stage_02_run_checks",
+                            "status": "partial",
+                            "generated_files": [{"path": "wf/02_run_checks/workflow.lgwf"}],
+                            "remaining_risks": ["script missing validation branch"],
+                        }
+                    ]
+                },
+            )
+
+            self.assertEqual(result["status"], "partial")
+            self.assertEqual(result["remaining_risks"], ["script missing validation branch"])
+            self.assertEqual(result["unit_caveats"][0]["blocking"], True)
+
     def test_prepare_current_unit_materializes_child_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -303,14 +426,75 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             result = self.prepare_current.build_current_implementation_unit_context(root, unit)
 
             self.assertEqual(result["current_implementation_unit"]["unit_id"], "stage_01_collect_context")
+            self.assertEqual(result["unit_id"], "stage_01_collect_context")
+            self.assertIn("step_designs", result)
+            self.assertIn("file_designs", result)
+            self.assertIn("directory_designs", result)
             self.assertNotIn("target_package_abs", result)
             self.assertNotIn("target_package_abs", result["current_implementation_unit"])
             self.assertNotIn("workspace_root", result["current_implementation_unit"])
             self.assertEqual(result["output_files"], unit["output_files"])
+            self.assertNotIn("implementation_reference_context", result)
             self.assertEqual(result["unit_output_dir"], ".lgwf/implementation_stage/stage_01_collect_context")
             self.assertFalse((target_package / "wf" / "01_collect_context" / "workflow.lgwf").is_file())
             self.assertTrue((root / ".lgwf" / "implementation_stage" / "stage_01_collect_context").is_dir())
             self.assertTrue((root / ".lgwf" / "current_implementation_unit_context.json").is_file())
+            self.assertNotIn("lgwf_dsl_contract", result)
+            self.assertNotIn("resources/lgwf_dsl_authoring.md", "\n".join(result["instructions"]))
+            self.assertIn("exact_content", "\n".join(result["instructions"]))
+            script_source = (
+                IMPLEMENT_ROOT
+                / "01_implement_units/01_implement_one_unit/scripts/prepare_current_implementation_unit.py"
+            ).read_text(encoding="utf-8")
+            self.assertNotIn("def lgwf_dsl_contract", script_source)
+
+    def test_prepare_current_unit_injects_stage_artifact_contract_guidance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            units = self.prepare_units.build_implementation_units(root)["implementation_units"]
+            stage_unit = next(unit for unit in units if unit["unit_id"] == "stage_01_collect_context")
+            stage_unit["target_package_abs"] = str(target_package.resolve())
+
+            context = self.prepare_current.build_current_implementation_unit_context(root, stage_unit)
+
+            target_schemas = context["target_output_file_schemas"]
+            guidance = context["artifact_contract_guidance"]
+            self.assertIn("wf/01_collect_context/artifact_contracts.json", target_schemas)
+            self.assertIn("bootstrap_inputs", target_schemas["wf/01_collect_context/artifact_contracts.json"]["required"])
+            self.assertTrue(guidance["required"])
+            self.assertIn("wf/01_collect_context/artifact_contracts.json", guidance["stage_artifact_contracts"])
+            stage_guidance = guidance["stage_artifact_contracts"]["wf/01_collect_context/artifact_contracts.json"]
+            self.assertEqual(stage_guidance["bootstrap_inputs"], [".lgwf/create_requirements.json"])
+            self.assertEqual(stage_guidance["final_outputs"], [".lgwf/collect_context_result.json"])
+            self.assertEqual(stage_guidance["audit_scope"], "lgwf.py audit wf/01_collect_context/workflow.lgwf")
+
+    def test_prepare_current_unit_keeps_root_design_context_without_dynamic_dsl_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            units = self.prepare_units.build_implementation_units(root)["implementation_units"]
+            root_unit = next(unit for unit in units if unit["unit_id"] == "root_workflow")
+            root_unit["target_package_abs"] = str(target_package.resolve())
+
+            context = self.prepare_current.build_current_implementation_unit_context(root, root_unit)
+
+            self.assertNotIn("lgwf_dsl_contract", context)
+            guidance = context["artifact_contract_guidance"]
+            self.assertFalse(guidance["required"])
+            self.assertIn("不生成 artifact_contracts.json", guidance["reason"])
+            by_stage = {item.get("stage_id"): item for item in context["step_designs"]}
+            self.assertIn("wf/01_collect_context/workflow.lgwf", by_stage["collect_context"]["target_files"])
+            self.assertEqual(by_stage["collect_context"]["inputs"], [".lgwf/create_requirements.json"])
+            self.assertEqual(by_stage["collect_context"]["outputs"], [".lgwf/collect_context_result.json"])
+            self.assertIn("wf/02_run_checks/workflow.lgwf", by_stage["run_checks"]["target_files"])
+            self.assertEqual(by_stage["run_checks"]["inputs"], [".lgwf/collect_context_result.json"])
+            self.assertEqual(by_stage["run_checks"]["outputs"], [".lgwf/run_checks_result.json"])
+            instructions = "\n".join(context["instructions"])
+            self.assertNotIn("lgwf_dsl_contract", instructions)
+            self.assertNotIn("resources/lgwf_dsl_authoring.md", instructions)
+            self.assertIn("exact_content", instructions)
+            self.assertIn("artifact_contract_guidance", instructions)
 
     def test_publish_current_unit_materializes_staging_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -342,6 +526,37 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             self.assertEqual(result["generated_files"], [{"path": "wf/01_collect_context/workflow.lgwf"}])
             self.assertTrue(target_file.is_file())
             self.assertEqual(target_file.read_text(encoding="utf-8"), "WORKFLOW collect_context;\n")
+
+    def test_publish_current_unit_accepts_generated_files_with_unit_stage_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target_package = self.seed_context(root)
+            unit = {
+                "unit_id": "stage_01_collect_context",
+                "unit_type": "stage",
+                "target_package_abs": str(target_package.resolve()),
+                "output_files": ["wf/01_collect_context/workflow.lgwf"],
+                "output_dirs": ["wf/01_collect_context"],
+            }
+            context = self.prepare_current.build_current_implementation_unit_context(root, unit)
+            staged = root / context["workspace_output_files"][0]
+            staged.write_text("WORKFLOW collect_context;\n", encoding="utf-8")
+            write_json(
+                root / ".lgwf" / "current_implementation_unit_result.json",
+                {
+                    "unit_id": "stage_01_collect_context",
+                    "status": "ok",
+                    "generated_files": [
+                        ".lgwf/implementation_stage/stage_01_collect_context/wf/01_collect_context/workflow.lgwf"
+                    ],
+                },
+            )
+
+            result = self.publish_current.publish_current_implementation_unit_result(root)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["generated_files"], [{"path": "wf/01_collect_context/workflow.lgwf"}])
+            self.assertTrue((target_package / "wf" / "01_collect_context" / "workflow.lgwf").is_file())
 
     def test_publish_current_unit_publishes_all_staged_manifest_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -454,62 +669,13 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             )
             self.assertTrue((root / ".lgwf" / "implementation_result.json").is_file())
 
-    def test_prepare_repair_context_uses_reason_target_files(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            self.seed_context(root)
-            write_json(
-                root / ".lgwf" / "implementation_repair_reason.json",
-                {
-                    "repair_required": True,
-                    "repair_units": [
-                        {
-                            "unit_id": "repair_root_workflow",
-                            "target_files": ["wf/workflow.lgwf", "wf/workflow.lgwf"],
-                        },
-                        {
-                            "unit_id": "repair_stage",
-                            "target_files": ["wf/01_collect_context/workflow.lgwf"],
-                        },
-                    ],
-                },
-            )
-
-            result = self.prepare_repair.build_repair_context(root)
-
-            self.assertTrue(result["repair_required"])
-            self.assertEqual(result["target_files"], ["wf/workflow.lgwf", "wf/01_collect_context/workflow.lgwf"])
-            self.assertEqual(
-                result["workspace_output_files"],
-                [
-                    ".lgwf/implementation_repair_stage/wf/workflow.lgwf",
-                    ".lgwf/implementation_repair_stage/wf/01_collect_context/workflow.lgwf",
-                ],
-            )
-            self.assertTrue((root / ".lgwf" / "implementation_repair_context.json").is_file())
-
-    def test_prepare_repair_context_noops_when_audit_passed(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            self.seed_context(root)
-            write_json(
-                root / ".lgwf" / "implementation_repair_reason.json",
-                {"repair_required": False, "repair_units": [{"target_files": ["wf/workflow.lgwf"]}]},
-            )
-
-            result = self.prepare_repair.build_repair_context(root)
-
-            self.assertFalse(result["repair_required"])
-            self.assertEqual(result["target_files"], [])
-            self.assertEqual(result["workspace_output_files"], [])
-
     def test_publish_repair_result_updates_target_and_implementation_result(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             target_package = self.seed_context(root)
             (target_package / "wf").mkdir(parents=True, exist_ok=True)
             write_json(
-                root / ".lgwf" / "implementation_repair_context.json",
+                root / ".lgwf" / "implementation_repair_reason.json",
                 {
                     "repair_required": True,
                     "unit_output_dir": ".lgwf/implementation_repair_stage",
@@ -541,12 +707,12 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             )
             self.assertEqual(implementation_result["repair_rounds"][0]["status"], "ok")
 
-    def test_publish_repair_result_rejects_files_outside_repair_context(self) -> None:
+    def test_publish_repair_result_records_invalid_plan_for_files_outside_reason_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             self.seed_context(root)
             write_json(
-                root / ".lgwf" / "implementation_repair_context.json",
+                root / ".lgwf" / "implementation_repair_reason.json",
                 {
                     "repair_required": True,
                     "unit_output_dir": ".lgwf/implementation_repair_stage",
@@ -559,8 +725,43 @@ class ImplementationUnitScriptsTest(unittest.TestCase):
             )
             write_json(root / ".lgwf" / "implementation_result.json", {"status": "ok", "generated_files": []})
 
-            with self.assertRaises(ValueError):
-                self.publish_repair.publish_repair_result(root)
+            result = self.publish_repair.publish_repair_result(root)
+
+            self.assertEqual(result["status"], "invalid_plan")
+            implementation_result = json.loads(
+                (root / ".lgwf" / "implementation_result.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(implementation_result["repair_rounds"][0]["status"], "invalid_plan")
+            self.assertTrue(any("outside target_files" in item for item in result["failures"]))
+
+    def test_publish_repair_result_records_blocked_without_staging_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.seed_context(root)
+            write_json(
+                root / ".lgwf" / "implementation_repair_reason.json",
+                {
+                    "repair_required": True,
+                    "blocked": True,
+                    "unit_output_dir": ".lgwf/implementation_repair_stage",
+                    "target_files": [],
+                },
+            )
+            write_json(
+                root / ".lgwf" / "implementation_repair_result.json",
+                {"status": "blocked", "remaining_risks": ["audit runner missing"]},
+            )
+            write_json(root / ".lgwf" / "implementation_result.json", {"status": "ok", "generated_files": []})
+
+            result = self.publish_repair.publish_repair_result(root)
+
+            self.assertEqual(result["status"], "blocked")
+            self.assertFalse((root / ".lgwf" / "implementation_repair_stage").exists())
+            implementation_result = json.loads(
+                (root / ".lgwf" / "implementation_result.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(implementation_result["repair_rounds"][0]["status"], "blocked")
+            self.assertEqual(implementation_result["repair_rounds"][0]["remaining_risks"], ["audit runner missing"])
 
 
 if __name__ == "__main__":

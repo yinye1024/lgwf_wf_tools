@@ -116,6 +116,15 @@ def payload_from_implementation_result(root: Path) -> dict[str, Any]:
         return {}
     generated = implementation.get("generated", {})
     produced_files: list[str] = []
+    raw_generated_files = implementation.get("generated_files", [])
+    if isinstance(raw_generated_files, list):
+        for item in raw_generated_files:
+            if isinstance(item, dict):
+                raw_path = str(item.get("path", "")).strip()
+            else:
+                raw_path = str(item).strip()
+            if raw_path:
+                produced_files.append(raw_path)
     if isinstance(generated, dict):
         root_files = generated.get("root_files", [])
         if isinstance(root_files, list):
@@ -140,6 +149,28 @@ def payload_from_implementation_result(root: Path) -> dict[str, Any]:
         "workflow_name": workflow_name,
         "target_package_root": package_root,
     }
+    implementation_audit = load_json(root / ".lgwf" / "implementation_audit_result.json")
+    if implementation_audit:
+        payload["implementation_audit"] = implementation_audit
+    else:
+        status = str(implementation.get("status", "")).strip().lower()
+        failed_units = implementation.get("failed_units", [])
+        remaining_risks = implementation.get("remaining_risks", [])
+        failures: list[str] = []
+        if status in {"failed", "partial", "error", "needs_review"}:
+            failures.append(f"implementation_result status={status}")
+        if isinstance(failed_units, list):
+            failures.extend(f"failed_unit={unit}" for unit in failed_units if str(unit).strip())
+        if isinstance(remaining_risks, list):
+            failures.extend(f"remaining_risk={risk}" for risk in remaining_risks if str(risk).strip())
+        if failures:
+            payload["implementation_audit"] = {
+                "passed": False,
+                "status": "failed",
+                "needs_post_fix": False,
+                "failures": failures,
+                "source": "implementation_result",
+            }
     if produced_files:
         payload["produced_files"] = produced_files
     if validation_entry:
@@ -213,11 +244,12 @@ def build_summary(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(implementation_audit, dict):
         implementation_audit = {}
     audit_status = str(implementation_audit.get("status") or "").strip()
+    audit_passed = implementation_audit.get("passed")
     needs_post_fix = bool(implementation_audit.get("needs_post_fix"))
     status = "draft_structure_ready"
     if needs_post_fix:
         status = "draft_needs_post_fix"
-    elif audit_status and audit_status != "passed":
+    elif audit_passed is False or (audit_status and audit_status != "passed"):
         status = "draft_needs_implementation_repair"
 
     return {

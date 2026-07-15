@@ -65,27 +65,27 @@ CODEX reason
   KEEP_SESSION;
 ```
 
-`KEEP_SESSION` 不会保活 Codex 进程。每次节点执行仍会启动一次 `codex exec` 或 `codex exec resume <session_id>`，执行完成后进程退出。LGWF 只在 `<work_dir>\.lgwf\codex\sessions\` 保存逻辑 session 和 Codex 实际 session id 的映射。
+`KEEP_SESSION` 不会保活 Codex 进程。每次节点执行仍会启动一次 `codex exec` 或 `codex exec resume <session_id>`，执行完成后进程退出。未声明 key 时，LGWF 在 `<work_dir>\.lgwf\codex\sessions\` 保存逻辑 session 和 Codex 实际 session id 的映射。
 
 scope 由 runtime 自动推导：普通 `CODEX` 使用当前 run + node id；`REACT` 中的 `CODEX` slot 使用当前 run + ReAct 节点 + slot；`AGENT_LOOP` 中的 `CODEX` slot 使用当前 run + AgentLoop 节点 + slot；`RUN_WORKFLOW` 子 workflow 在自己的 work_dir/run 下隔离保存。checkpoint resume 会复用同一 run 下的 session；rerun 或新 run 会生成新的 session。
 
-需要让同一个 `workflow.lgwf` 内多个 Codex 节点或 slot 共享 session 时，使用 `KEEP_SESSION GROUP "name"`：
+需要在同一个 `work_dir` 内让多个 Codex 节点或 slot 共享 session 时，使用 `KEEP_SESSION KEY "name"`。典型场景是先用一个 Codex 节点加载重参考文件，再让父 workflow、`STEP ... WORKFLOW` 子 workflow、`REACT`、`AGENT_LOOP` 或 `FOREACH` 中的 Codex slot 复用这些上下文：
 
 ```lgwf
 CODEX implement
   PROMPT "agents/prepare.md"
-  KEEP_SESSION GROUP "reason";
+  KEEP_SESSION KEY "reason";
 
 REACT fix_loop MAX 5
   REASON CODEX
     PROMPT "agents/reason.md"
-    KEEP_SESSION GROUP "reason"
+    KEEP_SESSION KEY "reason"
   ACT CODEX PROMPT "agents/act.md"
   OBSERVE PY SCRIPT "scripts/observe.py"
   DECIDE PY SCRIPT "scripts/decide.py";
 ```
 
-`GROUP` 只在当前 authoring workflow 文件内共享；父 workflow、`STEP ... WORKFLOW` 子 workflow 和 `RUN_WORKFLOW` 子进程都不会共享这个 group。同一 workflow 内同名 group 会共享同一个 Codex session，命名冲突由 workflow 作者负责避免。
+`KEY` manifest 保存在 `<work_dir>\.lgwf\codex_key_session\`。同一个 `work_dir` 内同名 key 会共享同一个 Codex session，命名冲突由 workflow 作者负责避免；`RUN_WORKFLOW` 使用独立隔离 `work_dir` 时不会共享该 key。同一个 key 的 Codex 调用会串行执行，避免并发 resume 串话。
 
 打包命令：
 
@@ -201,10 +201,17 @@ python <skill-dir>\scripts\lgwf.py runs get-eval-suite --work-dir <work_dir> --r
 ```powershell
 python <skill-dir>\scripts\lgwf.py tool list
 python <skill-dir>\scripts\lgwf.py tool describe copy_file
+python <skill-dir>\scripts\lgwf.py tool schema copy_file
 python <skill-dir>\scripts\lgwf.py tool run copy_file --options-json '{"source":"a.bin","destination":"b.bin"}'
 ```
 
-公开 tools 为 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`。前三者要求 `--work-dir`；复制 CLI 可使用绝对路径或基于当前目录的相对路径。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
+公开 tools 包括 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`、`lgwf_dsl_cli` 和 sandbox 系列工具。需要查看权威 options schema 时使用：
+
+```powershell
+python <skill-dir>\scripts\lgwf.py tool schema lgwf_dsl_cli
+```
+
+`lgwf_dsl_cli` 只暴露 `lgwf_dsl.cli` 的白名单 authoring 命令：`compile`、`explain`、`lint`、`audit` 和 `schema`。它用于 workflow runtime 内的确定性 DSL gate，不调用 `lgwf.py`，也不处理 `run`、`status`、`approval`、`review` 或 `runs` 控制面命令。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
 
 ## Codex Token Status
 
@@ -267,6 +274,24 @@ TOOL ensure_output
 ```
 
 `TOOL` 的 options 会在 audit 和 runtime 中按 tool catalog 校验，workflow 路径始终限制在 `work_dir`。旧 `exec.run_python builtin_script` JSON 保持兼容。
+
+`lgwf_dsl_cli` 示例：
+
+```lgwf
+TOOL audit_generated_workflow
+  USE lgwf_dsl_cli
+  OPTIONS {
+    "command": "audit",
+    "input": "skills/example/wf/workflow.lgwf",
+    "result_output_path": ".lgwf/example_audit_result.json",
+    "include_stdout": true,
+    "fail_on_command_failure": false
+  }
+  RESULT state.example.audit_result
+  CONTRACT {
+    WRITE workspace file ".lgwf/example_audit_result.json";
+  };
+```
 
 ```json
 {

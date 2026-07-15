@@ -36,8 +36,9 @@ def build_context(root: Path) -> dict:
     context["revision_request"] = revision_request
     context["revision_persist"] = ".lgwf/step_design_confirmation_record.json"
     context["instruction"] = (
-        "请主 agent 根据 revision_request.changes 调整步骤设计对象；"
-        "确认可继续时返回 decision=approve，并提供完整 JSON，不要只返回局部 diff。"
+        "canonical proposal 已根据上一轮 revise value 写回；"
+        "请主 agent 展示修订后的完整步骤设计对象。确认可继续时只返回 decision=approve；"
+        "如仍需调整，再次返回 decision=revise 并提交完整 JSON，不要只返回局部 diff。"
     )
     return context
 

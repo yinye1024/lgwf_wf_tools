@@ -29,13 +29,20 @@ REVIEW confirm_requirements
   };
 
 PY prepare_requirements_revision_confirmation
-  SCRIPT "scripts/prepare_revision_confirmation.py"
+  SCRIPT "scripts/apply_revision.py"
   TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_requirements_revision_confirmation_result
-  UPDATES_STATE
+  RESULT state.lgwf_wf_create.requirements_revision_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create.requirements_revision_result;
+    WRITE state.lgwf_wf_create.create_requirements_proposal;
+    WRITE state.lgwf_wf_create.requirements_confirmation_context;
+    WRITE state.lgwf_wf_create.requirements_revision_context;
+  }
   CONTRACT {
     READ workspace file ".lgwf/create_requirements_proposal.json";
     READ workspace file ".lgwf/create_requirements_approval.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE state.lgwf_wf_create.create_requirements_proposal;
     WRITE state.lgwf_wf_create.requirements_confirmation_context;
     WRITE state.lgwf_wf_create.requirements_revision_context;
   };

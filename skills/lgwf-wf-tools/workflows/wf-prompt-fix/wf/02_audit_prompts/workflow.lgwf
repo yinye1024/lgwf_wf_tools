@@ -20,7 +20,7 @@ CODEX audit_target_prompts
   CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/action-prompt.md"
   CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/audit-prompt.md"
   CONTEXT workspace file ".lgwf/prompt_acceptance/reference_context/prompt-assist/normal-prompt.md"
-  TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+  ANALYSIS_DIRS state.lgwf_wf_prompt_fix.target_dirs
   OUTPUT_JSON ".lgwf/prompt_acceptance/audit.json" AS_FILE
   RESULT state.lgwf_wf_prompt_fix.prompt_audit_result
   CONTRACT {

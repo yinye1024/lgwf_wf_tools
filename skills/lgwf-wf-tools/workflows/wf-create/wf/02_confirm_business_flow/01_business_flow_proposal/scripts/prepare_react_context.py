@@ -64,7 +64,6 @@ def build_context(root: Path) -> dict[str, Any]:
     lgwf_dir = root / ".lgwf"
     requirements = read_json(lgwf_dir / "create_requirements.json")
     requirements_proposal = read_json(lgwf_dir / "create_requirements_proposal.json")
-    existing_business_flow = read_json(lgwf_dir / "business_flow.json")
     gate = read_json(lgwf_dir / "business_flow_proposal_quality_gate.json")
     decision = read_json(lgwf_dir / "business_flow_proposal_decision.json")
     candidates = identity_candidates(requirements, requirements_proposal)
@@ -83,7 +82,7 @@ def build_context(root: Path) -> dict[str, Any]:
         },
         "confirmed_requirements": nested_dict(requirements, "confirmed") or requirements,
         "requirements_proposal": requirements_proposal,
-        "previous_business_flow": nested_dict(existing_business_flow, "confirmed") or existing_business_flow,
+        "previous_business_flow": {},
         "previous_quality_gate": {
             "exists": has_previous_gate,
             "passed": passed,

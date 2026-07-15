@@ -29,7 +29,6 @@ EXPECTED_CALL_ORDER = [
     "inspect_repo_state",
     "identify_change_themes",
     "compose_markdown_brief",
-    "present_brief",
 ]
 OUTPUT_JSON_FILES = [
     ".lgwf/request_scope_capture.json",
@@ -773,39 +772,73 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
         *,
         session_id: str,
         approval_id: str,
+        approval_payload: dict[str, Any],
         submit_value: dict[str, Any],
         work_dir: Path,
         env: dict[str, str],
         scenario_id: str,
         index: int,
     ) -> None:
+        del session_id
         trace_root = trace_dir(work_dir, scenario_id)
         value_file = trace_root / f"approval_submit_{index:02d}.json"
-        write_json(value_file, submit_value)
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(PACKAGE_ROOT.parent / "lgwf-wf-tools" / "workflows" / "wf-fix" / "scripts" / "safe_approval_submit.py"),
-                "--work-dir",
-                str(work_dir),
-                "--request-id",
-                approval_id,
-                "--decision",
-                "approve",
-                "--value-file",
-                str(value_file),
-                "--comment",
-                f"runtime fake approval {index}",
-            ],
-            cwd=REPO_ROOT,
-            env=env,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=30,
-        )
+        route = str(submit_value.get("approval", submit_value.get("decision", "approve"))).strip().lower()
+        self.assertIn(route, {"approve", "revise", "reject"}, submit_value)
+        comment = str(submit_value.get("comment", f"runtime fake approval {index}"))
+        if route == "revise":
+            review_context = approval_payload.get("review_context_json")
+            if not isinstance(review_context, dict):
+                review_context = approval_payload.get("context")
+            if not isinstance(review_context, dict):
+                review_context = {}
+            review_value = dict(submit_value)
+            review_value["route"] = "revise"
+            review_value["updated_context"] = review_context
+            write_json(value_file, review_value)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(PACKAGE_ROOT.parent / "lgwf-wf-tools" / "scripts" / "safe_approval_submit.py"),
+                    "--kind",
+                    "review",
+                    "--work-dir",
+                    str(work_dir),
+                    "--request-id",
+                    approval_id,
+                    "--route",
+                    "revise",
+                    "--value-file",
+                    str(value_file),
+                    "--comment",
+                    comment,
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+            )
+        else:
+            write_json(value_file, submit_value)
+            result = run_lgwf(
+                [
+                    "review",
+                    "submit",
+                    "--work-dir",
+                    str(work_dir),
+                    "--request-id",
+                    approval_id,
+                    "--route",
+                    route,
+                    "--comment",
+                    comment,
+                ],
+                env=env,
+                timeout=30,
+            )
         response_payload: dict[str, Any]
         try:
             response_payload = parse_json_object(result.stdout)
@@ -933,6 +966,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
                 self._approval_submit(
                     session_id=session_id,
                     approval_id=approval_id,
+                    approval_payload=approval_payload,
                     submit_value=expected_step["submit_value"],
                     work_dir=work_dir,
                     env=env,
@@ -1067,7 +1101,7 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
 
         calls = self._read_calls(work_dir)
         self.assertEqual([item["resolved_node_id"] for item in calls], EXPECTED_CALL_ORDER)
-        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1, 1])
+        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1])
         self._assert_no_unmapped_calls(calls, work_dir)
 
     def test_scope_revise_then_approve(self) -> None:
@@ -1101,8 +1135,8 @@ class GitDiffBriefRuntimeFakeE2ETest(unittest.TestCase):
             [item["resolved_node_id"] for item in calls],
             EXPECTED_CALL_ORDER,
         )
-        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1, 1])
-        self.assertEqual([item["resolved_node_id"] for item in calls].count("present_brief"), 1)
+        self.assertEqual([item["call_index"] for item in calls], [1, 1, 1])
+        self.assertEqual([item["resolved_node_id"] for item in calls].count("present_brief"), 0)
         self._assert_no_unmapped_calls(calls, work_dir)
 
 

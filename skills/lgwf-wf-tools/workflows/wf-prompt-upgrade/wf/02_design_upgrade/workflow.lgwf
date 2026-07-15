@@ -33,7 +33,7 @@ REACT design_prompt_upgrade MAX 3
   REASON CODEX
     PROMPT "agents/reason.md"
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal_review.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    ANALYSIS_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/analysis.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_reason_result
     CONTRACT {
@@ -45,7 +45,7 @@ REACT design_prompt_upgrade MAX 3
   ACT CODEX
     PROMPT "agents/act.md"
     CONTEXT design_prompt_upgrade_analysis_context
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    ANALYSIS_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/proposal.json" AS_FILE
     RESULT state.lgwf_wf_prompt_upgrade.design_act_result
     CONTRACT {
@@ -58,7 +58,7 @@ REACT design_prompt_upgrade MAX 3
     PROMPT "agents/observe.md"
     CONTEXT design_prompt_upgrade_analysis_context
     CONTEXT workspace file ".lgwf/prompt_upgrade/proposal.json"
-    TARGET_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
+    ANALYSIS_DIRS state.lgwf_wf_prompt_upgrade.target_dirs
     OUTPUT_JSON ".lgwf/prompt_upgrade/proposal_review.json"
     RESULT state.lgwf_wf_prompt_upgrade.design_observe_result
     CONTRACT {

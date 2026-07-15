@@ -47,12 +47,76 @@ def unwrap_approval(payload: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def require_approve(approval: dict[str, Any]) -> None:
-    raw_approval = approval.get("approval", approval.get("decision", ""))
+    if approval_decision(approval) != "approve":
+        raise ValueError("只有 approval=approve 才能固化 confirmed artifact")
+
+
+def approval_decision(approval: dict[str, Any]) -> str:
+    raw_approval = approval.get("approval", approval.get("decision", approval.get("route", "")))
     if isinstance(raw_approval, dict):
         raw_approval = raw_approval.get("value", raw_approval.get("approval", raw_approval.get("decision", "")))
-    decision = str(raw_approval).strip().lower()
-    if decision != "approve":
-        raise ValueError("只有 approval=approve 才能固化 confirmed artifact")
+    return str(raw_approval).strip().lower()
+
+
+def require_revise(approval: dict[str, Any]) -> None:
+    if approval_decision(approval) != "revise":
+        raise ValueError("只有 approval=revise 才能重写 proposal")
+
+
+def revision_proposal_from_approval(approval: dict[str, Any]) -> dict[str, Any]:
+    """从 REVIEW revise record 中提取完整修订后的 proposal。"""
+    candidates: list[Any] = []
+    value = approval.get("value")
+    if isinstance(value, dict):
+        candidates.extend(
+            [
+                value.get("proposal"),
+                value.get("updated_proposal"),
+                value.get("updated_context"),
+                value.get("review_context_json"),
+            ]
+        )
+    candidates.extend(
+        [
+            approval.get("proposal"),
+            approval.get("updated_proposal"),
+            approval.get("updated_context"),
+            approval.get("review_context_json"),
+        ]
+    )
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        proposal = candidate.get("proposal")
+        if isinstance(proposal, dict) and proposal:
+            return proposal
+        if candidate:
+            return candidate
+    raise ValueError("revise 必须提交完整修订后的 proposal JSON")
+
+
+def write_revised_proposal(
+    *,
+    lgwf_dir: Path,
+    approval_file: str,
+    approval_key: str,
+    proposal_file: str,
+    normalized_path_fields: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    approval = unwrap_approval(load_json(lgwf_dir / approval_file), approval_key)
+    require_revise(approval)
+    proposal = revision_proposal_from_approval(approval)
+    for field in normalized_path_fields:
+        value = proposal.get(field)
+        if isinstance(value, str) and value.strip():
+            proposal[field] = normalize_relative_path(value, field)
+    write_json(lgwf_dir / proposal_file, proposal)
+    return {
+        "artifact_path": f".lgwf/{proposal_file}",
+        "source_approval_file": f".lgwf/{approval_file}",
+        "decision": "revise",
+        "proposal": proposal,
+    }
 
 
 def confirmed_from_proposal(lgwf_dir: Path, approval: dict[str, Any], proposal_file: str) -> dict[str, Any]:

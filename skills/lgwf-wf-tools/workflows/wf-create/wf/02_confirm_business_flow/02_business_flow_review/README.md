@@ -7,19 +7,19 @@
 ## 输入
 
 - `.lgwf/business_flow_proposal.json`
-- `.lgwf/business_flow_proposal_quality_gate.json`
 - `state.lgwf_wf_create.business_flow_confirmation_context`
 
 ## 输出
 
 - `state.lgwf_wf_create.business_flow_confirmation_context`
 - `state.lgwf_wf_create.business_flow_revision_context`
+- `state.lgwf_wf_create.business_flow_revision_result`
 - `state.lgwf_wf_create.business_flow`
 
 ## 产物
 
 - `.lgwf/business_flow_approval.json`
-- `.lgwf/business_flow_revision_approval.json`
+- `.lgwf/business_flow_proposal.json`（`revise` 后由 `apply_business_flow_revision` 写回）
 - `.lgwf/business_flow.json`
 
 ## 验证
@@ -31,4 +31,4 @@
 
 - 不重新生成业务流 proposal。
 - `approve` 不携带业务 value，只固化已经展示并确认的 proposal。
-- `revise` 只重入本 REVIEW 子流程，不绕过人工确认直接写 confirmed artifact。
+- `revise` 必须携带完整修订 proposal，先写回 `.lgwf/business_flow_proposal.json`，再重入本 REVIEW 子流程。

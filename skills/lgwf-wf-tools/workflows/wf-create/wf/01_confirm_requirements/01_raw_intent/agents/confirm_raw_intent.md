@@ -20,7 +20,7 @@
 3. 只要求用户判断当前候选 `raw_intent_request` 是否足以作为后续需求 proposal 节点的输入。不要声称当前节点已经读取、总结或吸收 `creation_context_dirs` / `creation_context_files` 指向的资料内容。
 4. 让用户在 `approve`、`revise`、`reject` 中选择。
 5. 用户选择 `approve` 时，只提交决策，不提交业务 value；后续 `apply_confirmed_raw_intent` 会把当前 proposal 固化为 `.lgwf/raw_intent_request.json`。
-6. 用户选择 `revise` 时，主 agent 必须基于用户要求和当前 `review_context_json` 生成完整更新后的 `review_context_json`，并用 revise value 提交；不要提交局部 patch、数组或自由文本。
+6. 用户选择 `revise` 时，主 agent 必须基于用户要求和当前 `review_context_json` 生成完整更新后的 `review_context_json`，并用 revise value 提交；后续 `apply_raw_intent_revision` 会先把其中的 `proposal` 写回 `.lgwf/raw_intent_request_proposal.json`，不要提交局部 patch、数组或自由文本。
 7. 用户选择 `reject` 时，只提交拒绝决策和说明，workflow 会终止。
 
 ## Output
@@ -29,7 +29,7 @@ REVIEW 节点会把主 agent 提交的 decision record 持久化为 `.lgwf/raw_i
 
 `approve` 后，`apply_confirmed_raw_intent` 会读取当前 proposal 并写入 `.lgwf/raw_intent_request.json`。
 
-`revise` 后，workflow 会重新进入 `confirm_raw_intent`，主 agent 必须再次展示更新后的完整 `review_context_json` 并等待用户确认。
+`revise` 后，workflow 会先写回 canonical proposal，再重新进入 `confirm_raw_intent`，主 agent 必须再次展示更新后的完整 `review_context_json` 并等待用户确认。
 
 ## Output Format
 
@@ -84,4 +84,4 @@ REVIEW 节点会把主 agent 提交的 decision record 持久化为 `.lgwf/raw_i
 - `revise` 才允许提交完整业务 JSON，且必须是完整更新后的 `review_context_json`。
 - 不要把 `creation_context_dirs` 或 `creation_context_files` 当成目标 workflow 输出目录；目标输出目录应由后续需求 proposal 明确。
 - 不得读取、摘要或执行 `creation_context_dirs` / `creation_context_files` 指向的内容；这些路径只交给后续需求 proposal 节点作为只读参考。
-- 不直接写 `.lgwf/create_requirements_proposal.json` 或 `.lgwf/create_requirements.json`。
+- 不直接写 `.lgwf/create_requirements_proposal.json` 或 `.lgwf/create_requirements.json`；revise 只提交完整修订对象，由 workflow 的 apply revision 节点写回 proposal。

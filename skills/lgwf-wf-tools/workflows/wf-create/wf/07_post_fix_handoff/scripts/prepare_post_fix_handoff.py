@@ -21,6 +21,10 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
     package_root = str(summary.get("target_package_root", "")).strip()
     if not package_root:
         raise ValueError("summary_result 缺少 target_package_root")
+    status = str(summary.get("status", "")).strip()
+    implementation_audit = summary.get("implementation_audit", {})
+    failures = implementation_audit.get("failures", []) if isinstance(implementation_audit, dict) else []
+    blocked_before_post_fix = status == "draft_needs_implementation_repair"
     target_workflow_lgwf = workflow_lgwf_from_package_root(package_root)
     input_payload = {
         "post_fix_target": {
@@ -28,6 +32,8 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
             "target_package_root": package_root,
             "target_dirs": [package_root],
             "mode": "manual",
+            "blocked_before_post_fix": blocked_before_post_fix,
+            "blocking_failures": failures if isinstance(failures, list) else [],
         }
     }
     input_json_file = work_dir / ".lgwf" / "post_fix_handoff_input.json"
@@ -54,6 +60,8 @@ def build_handoff_payload(summary: dict[str, Any], work_dir: Path) -> dict[str, 
         "source_artifacts": source_artifacts,
         "requires_user_confirmation": True,
         "auto_execute": False,
+        "blocked_before_post_fix": blocked_before_post_fix,
+        "blocking_failures": failures if isinstance(failures, list) else [],
         "payload": input_payload,
     }
 

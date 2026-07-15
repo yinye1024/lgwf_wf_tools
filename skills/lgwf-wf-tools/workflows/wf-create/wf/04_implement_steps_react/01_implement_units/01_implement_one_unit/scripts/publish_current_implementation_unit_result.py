@@ -100,7 +100,15 @@ def output_dirs_from_context(context: dict[str, Any], output_files: list[str]) -
     return unique(result)
 
 
-def generated_file_paths(result: dict[str, Any]) -> list[str]:
+def strip_unit_output_prefix(raw_path: str, unit_output_dir: str) -> str:
+    cleaned = raw_path.strip().replace("\\", "/").strip("/")
+    unit_prefix = unit_output_dir.strip().replace("\\", "/").strip("/")
+    if unit_prefix and cleaned.startswith(f"{unit_prefix}/"):
+        return cleaned[len(unit_prefix) + 1 :]
+    return cleaned
+
+
+def generated_file_paths(result: dict[str, Any], unit_output_dir: str) -> list[str]:
     raw_items = result.get("generated_files", [])
     paths: list[str] = []
     if isinstance(raw_items, list):
@@ -110,7 +118,7 @@ def generated_file_paths(result: dict[str, Any]) -> list[str]:
             else:
                 raw_path = str(item).strip()
             if raw_path:
-                paths.append(normalize_output_path(raw_path))
+                paths.append(normalize_output_path(strip_unit_output_prefix(raw_path, unit_output_dir)))
     return unique(paths)
 
 
@@ -151,7 +159,7 @@ def publish_current_implementation_unit_result(root: Path) -> dict[str, Any]:
         rel_dir = "" if output_dir == "." else output_dir
         ensure_within(target_abs / rel_dir, target_abs, "target_output_dir").mkdir(parents=True, exist_ok=True)
 
-    generated_paths = generated_file_paths(result)
+    generated_paths = generated_file_paths(result, unit_output_dir)
     generated_outside_manifest = [path for path in generated_paths if path not in output_file_set]
     if generated_outside_manifest:
         raise ValueError(f"generated_files 包含 output_files 外路径: {generated_outside_manifest}")

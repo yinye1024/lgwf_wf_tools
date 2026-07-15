@@ -33,7 +33,7 @@ PY route_delivery_review
     WRITE state.git_diff_brief.delivery_review_input;
     WRITE state.git_diff_brief.prepare_delivery_review_result;
     WRITE state.__route__route_delivery_review;
-    WRITE workspace file ".lgwf/delivery_decision.json";
+    WRITE workspace file ".lgwf/delivery_review_context.json";
   };
 
 REVIEW confirm_delivery_or_revision
@@ -67,17 +67,19 @@ PY finalize_output
     WRITE state.git_diff_brief.commit_plan;
     WRITE state.git_diff_brief.run_artifact_index;
     WRITE state.git_diff_brief.finalize_output_result;
+    WRITE workspace file ".lgwf/delivery_decision.json";
     WRITE workspace file ".lgwf/commit_plan.json";
   };
 
 FLOW {
   confirm_delivery_or_revision
     WHEN "approve" THEN finalize_output
-    WHEN "revise" THEN confirm_delivery_or_revision
+    WHEN "revise" THEN present_brief
     WHEN "reject" THEN FAIL_ALL;
 }
 
 FLOW present_brief THEN route_delivery_review;
+FLOW route_delivery_review THEN confirm_delivery_or_revision;
 
 ROUTE route_delivery_review
   WHEN "review" THEN confirm_delivery_or_revision

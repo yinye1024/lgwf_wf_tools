@@ -17,6 +17,9 @@
         "SKILL.md",
         "AGENTS.md",
         "README.md"
+      ],
+      "stage_private_dirs": [
+        "scripts"
       ]
     }
   },
@@ -47,7 +50,7 @@
   ],
   "placeholders": {
     "wf": "唯一 workflow package root；真实入口为 wf/workflow.lgwf",
-    "wf/<stage>": "第一层子 workflow 目录；必须自包含 workflow.lgwf、agents/、scripts/、resources/，不得再嵌套子 workflow",
+    "wf/<stage>": "第一层子 workflow 目录；必须自包含 workflow.lgwf、artifact_contracts.json、agents/、scripts/、resources/，不得再嵌套子 workflow",
     "tests/test_scaffold_package_rules.py": "覆盖路径规则、关键文件存在性和状态边界的最小验证入口",
     "ws": "work dir 根目录；运行状态写入 ws/.lgwf",
     "SKILL.md": "仅在 package_profile=skill_wrapped_workflow 时生成；作为 Codex skill 入口，不承载内部 workflow 细节"

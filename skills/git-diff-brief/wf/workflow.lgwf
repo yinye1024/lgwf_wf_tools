@@ -11,7 +11,6 @@ STEP request_scope_alignment
   WORKFLOW "01_request_scope_alignment/workflow.lgwf"
   CONTRACT {
     READ state.repo_path;
-    READ state.requested_extensions;
     WRITE workspace file ".lgwf/request_scope_capture.json";
     WRITE workspace file ".lgwf/request_scope_confirmation.json";
   };

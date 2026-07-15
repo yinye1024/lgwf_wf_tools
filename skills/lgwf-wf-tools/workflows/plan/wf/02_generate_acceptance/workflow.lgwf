@@ -29,8 +29,8 @@ REACT generate_acceptance_proposal MAX 3
     PROMPT "00_generate_acceptance_proposal/agents/reason.md"
     CONTEXT workspace file ".lgwf/react_task_plan_observe.json"
     CONTEXT workspace file ".lgwf/react_acceptance_observe.json"
-    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
-    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    ANALYSIS_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    ANALYSIS_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_acceptance_reason.json" AS_FILE
     RESULT state.lgwf_plan.acceptance_reason_result
     CONTRACT {
@@ -43,8 +43,8 @@ REACT generate_acceptance_proposal MAX 3
   ACT CODEX
     PROMPT "00_generate_acceptance_proposal/agents/act.md"
     CONTEXT workspace file ".lgwf/react_acceptance_reason.json"
-    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
-    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    ANALYSIS_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    ANALYSIS_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_acceptance_proposal.json" AS_FILE
     RESULT state.lgwf_plan.acceptance_act_result
     CONTRACT {
@@ -57,8 +57,8 @@ REACT generate_acceptance_proposal MAX 3
   OBSERVE CODEX
     PROMPT "00_generate_acceptance_proposal/agents/observe.md"
     CONTEXT workspace file ".lgwf/react_acceptance_proposal.json"
-    TARGET_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
-    TARGET_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
+    ANALYSIS_DIRS state.lgwf_plan.plan_target_validation.analysis_target_dirs
+    ANALYSIS_FILES state.lgwf_plan.plan_target_validation.analysis_target_files
     OUTPUT_JSON ".lgwf/react_acceptance_observe.json"
     RESULT state.lgwf_plan.acceptance_observe_result
     CONTRACT {

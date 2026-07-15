@@ -1,4 +1,4 @@
-"""把实现阶段拆成可由 FOREACH 独立处理的 implementation units。"""
+"""把已确认步骤设计拆成可由 FOREACH 独立处理的 implementation units。"""
 
 from __future__ import annotations
 
@@ -6,6 +6,15 @@ import json
 import re
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+
+PACKAGE_CONTRACT_FILE_ALLOWLIST = {
+    "AGENTS.md",
+    "README.md",
+    "entry_contract.json",
+    "wf/artifact_contracts.json",
+}
+IGNORED_WF_STAGE_DIRS = {"docs", "shared"}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -20,21 +29,9 @@ def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig")
-
-
 def confirmed_payload(data: dict[str, Any]) -> dict[str, Any]:
     confirmed = data.get("confirmed")
     return confirmed if isinstance(confirmed, dict) else data
-
-
-def load_scaffold_plan(root: Path) -> dict[str, Any]:
-    payload = load_json(root / ".lgwf" / "scaffold_package_result.json")
-    plan = payload.get("scaffold_plan", payload)
-    return plan if isinstance(plan, dict) else {}
 
 
 def as_dict_list(value: Any) -> list[dict[str, Any]]:
@@ -76,8 +73,6 @@ def unique(items: list[str]) -> list[str]:
 
 
 def direct_parent_dirs_for_files(files: list[str]) -> list[str]:
-    """从目标文件反推当前 unit 的最小直接父目录。"""
-
     dirs: list[str] = []
     for raw_path in files:
         path = PurePosixPath(normalize_package_path(raw_path))
@@ -111,145 +106,163 @@ def step_design_items(step_designs: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
-def plan_string_list(plan: dict[str, Any], key: str) -> list[str]:
-    value = plan.get(key, [])
-    if not isinstance(value, list):
-        return []
-    result: list[str] = []
-    for item in value:
-        if isinstance(item, str) and item.strip():
-            result.append(normalize_package_path(item))
-    return unique(result)
+def file_design_items(step_designs: dict[str, Any]) -> list[dict[str, Any]]:
+    return as_dict_list(confirmed_payload(step_designs).get("file_designs", []))
 
 
-def stage_dir_from_workflow_ref(raw_path: str) -> str:
+def directory_design_items(step_designs: dict[str, Any]) -> list[dict[str, Any]]:
+    return as_dict_list(confirmed_payload(step_designs).get("directory_designs", []))
+
+
+def selected_designs_by_path(items: list[dict[str, Any]], paths: list[str]) -> list[dict[str, Any]]:
+    expected = {normalize_package_path(path) for path in paths}
+    selected: list[dict[str, Any]] = []
+    for item in items:
+        raw_path = item.get("path")
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            continue
+        try:
+            normalized = normalize_package_path(raw_path)
+        except ValueError:
+            continue
+        if normalized in expected:
+            selected.append(item)
+    return selected
+
+
+def design_paths(items: list[dict[str, Any]]) -> list[str]:
+    paths: list[str] = []
+    for item in items:
+        raw_path = item.get("path")
+        if isinstance(raw_path, str) and raw_path.strip():
+            paths.append(normalize_package_path(raw_path))
+    return unique(paths)
+
+
+def step_target_paths(items: list[dict[str, Any]], field: str) -> list[str]:
+    paths: list[str] = []
+    for item in items:
+        value = item.get(field)
+        if not isinstance(value, list):
+            continue
+        for raw_path in value:
+            if isinstance(raw_path, str) and raw_path.strip():
+                paths.append(normalize_package_path(raw_path))
+    return unique(paths)
+
+
+def package_design_files(file_paths: list[str]) -> list[str]:
+    return [
+        path
+        for path in file_paths
+        if path in PACKAGE_CONTRACT_FILE_ALLOWLIST or ("/" not in path and not path.startswith("tests"))
+    ]
+
+
+def root_workflow_files(file_paths: list[str]) -> list[str]:
+    return [path for path in file_paths if path == "wf/workflow.lgwf"]
+
+
+def support_design_files(file_paths: list[str]) -> list[str]:
+    return [path for path in file_paths if path.startswith("tests/") or path.startswith("wf/shared/")]
+
+
+def support_design_dirs(dir_paths: list[str]) -> list[str]:
+    return [
+        path
+        for path in dir_paths
+        if path == "tests" or path.startswith("tests/") or path == "wf/shared" or path.startswith("wf/shared/")
+    ]
+
+
+def stage_dir_from_file_path(raw_path: str) -> str:
     path = PurePosixPath(normalize_package_path(raw_path))
     parts = path.parts
-    if len(parts) == 3 and parts[0] == "wf" and parts[2] == "workflow.lgwf":
-        stage_dir = parts[1]
-        if stage_dir not in {"docs", "shared"}:
-            return stage_dir
+    if len(parts) >= 3 and parts[0] == "wf" and parts[1] not in IGNORED_WF_STAGE_DIRS:
+        return parts[1]
     return ""
 
 
-def stage_manifest_items(plan: dict[str, Any]) -> list[dict[str, Any]]:
-    return as_dict_list(plan.get("stage_manifest", []))
+def stage_dir_from_dir_path(raw_path: str) -> str:
+    path = PurePosixPath(normalize_package_path(raw_path))
+    parts = path.parts
+    if len(parts) >= 2 and parts[0] == "wf" and parts[1] not in IGNORED_WF_STAGE_DIRS:
+        return parts[1]
+    return ""
 
 
-def stage_dirs_from_plan(plan: dict[str, Any], fallback_stage_ids: list[str]) -> list[str]:
-    result = [
-        normalize_package_path(f"wf/{item['stage_dir']}").split("/", 1)[1]
-        for item in stage_manifest_items(plan)
-        if isinstance(item.get("stage_dir"), str) and str(item.get("stage_dir")).strip()
-    ]
-    for rel_path in plan_string_list(plan, "create_files"):
-        stage_dir = stage_dir_from_workflow_ref(rel_path)
+def stage_dir_for_step(item: dict[str, Any], fallback_index: int) -> str:
+    stage_id = str(item.get("stage_id") or item.get("stage") or "").strip()
+    target_files = step_target_paths([item], "target_files")
+    for rel_path in target_files:
+        stage_dir = stage_dir_from_file_path(rel_path)
+        if stage_dir and rel_path == f"wf/{stage_dir}/workflow.lgwf":
+            return stage_dir
+    for rel_path in target_files:
+        stage_dir = stage_dir_from_file_path(rel_path)
         if stage_dir:
-            result.append(stage_dir)
-    if result:
-        return unique(result)
-    return unique([slugify(stage_id, f"stage_{index:02d}") for index, stage_id in enumerate(fallback_stage_ids, start=1)])
+            return stage_dir
+    for rel_path in step_target_paths([item], "target_dirs"):
+        stage_dir = stage_dir_from_dir_path(rel_path)
+        if stage_dir:
+            return stage_dir
+    return numbered_stage_dir(fallback_index, slugify(stage_id, f"stage_{fallback_index:02d}"))
 
 
-def stage_manifest_entry(plan: dict[str, Any], stage_dir: str, index: int) -> dict[str, Any]:
-    for item in stage_manifest_items(plan):
-        if str(item.get("stage_dir", "")).strip() == stage_dir:
-            return item
-    logical_stage_id = strip_numeric_prefix(stage_dir) or f"stage_{index:02d}"
-    return {
-        "stage_id": slugify(logical_stage_id, f"stage_{index:02d}"),
-        "stage_dir": stage_dir,
-        "workflow_ref": f"wf/{stage_dir}/workflow.lgwf",
-    }
+def stage_groups(
+    step_designs_payload: dict[str, Any],
+    step_items: list[dict[str, Any]],
+    file_paths: list[str],
+    dir_paths: list[str],
+) -> list[dict[str, Any]]:
+    groups: list[dict[str, Any]] = []
+    by_dir: dict[str, dict[str, Any]] = {}
+    for index, item in enumerate(step_items, start=1):
+        stage_id = slugify(
+            str(item.get("stage_id") or item.get("stage") or "").strip(),
+            f"stage_{index:02d}",
+        )
+        stage_dir = stage_dir_for_step(item, index)
+        group = by_dir.get(stage_dir)
+        if group is None:
+            group = {"stage_id": stage_id, "stage_dir": stage_dir, "step_designs": []}
+            by_dir[stage_dir] = group
+            groups.append(group)
+        group["step_designs"].append(item)
 
+    for rel_path in file_paths:
+        stage_dir = stage_dir_from_file_path(rel_path)
+        if not stage_dir or stage_dir in by_dir:
+            continue
+        stage_id = slugify(strip_numeric_prefix(stage_dir), strip_numeric_prefix(stage_dir) or stage_dir)
+        group = {"stage_id": stage_id, "stage_dir": stage_dir, "step_designs": []}
+        by_dir[stage_dir] = group
+        groups.append(group)
+    for rel_path in dir_paths:
+        stage_dir = stage_dir_from_dir_path(rel_path)
+        if not stage_dir or stage_dir in by_dir:
+            continue
+        stage_id = slugify(strip_numeric_prefix(stage_dir), strip_numeric_prefix(stage_dir) or stage_dir)
+        group = {"stage_id": stage_id, "stage_dir": stage_dir, "step_designs": []}
+        by_dir[stage_dir] = group
+        groups.append(group)
 
-def stage_planned_files(plan: dict[str, Any], stage_dir: str) -> list[str]:
-    prefix = f"wf/{stage_dir}/"
-    files = [path for path in plan_string_list(plan, "create_files") if path.startswith(prefix)]
-    return files or [
-        f"wf/{stage_dir}/workflow.lgwf",
-        f"wf/{stage_dir}/agents/prompt.md",
-        f"wf/{stage_dir}/scripts/run.py",
-        f"wf/{stage_dir}/resources/README.md",
+    if groups:
+        return groups
+
+    return [
+        {"stage_id": stage_id, "stage_dir": numbered_stage_dir(index, stage_id), "step_designs": []}
+        for index, stage_id in enumerate(source_stage_ids(step_designs_payload), start=1)
     ]
 
 
-def stage_planned_dirs(plan: dict[str, Any], stage_dir: str) -> list[str]:
-    prefix = f"wf/{stage_dir}/"
-    dirs = [path for path in plan_string_list(plan, "create_dirs") if path == f"wf/{stage_dir}" or path.startswith(prefix)]
-    return dirs or [
-        f"wf/{stage_dir}",
-        f"wf/{stage_dir}/agents",
-        f"wf/{stage_dir}/scripts",
-        f"wf/{stage_dir}/resources",
-    ]
-
-
-def package_contract_files(plan: dict[str, Any]) -> list[str]:
-    files = [
-        path
-        for path in plan_string_list(plan, "create_files")
-        if ("/" not in path and not path.startswith("tests")) or path == "wf/artifact_contracts.json"
-    ]
-    return files or ["AGENTS.md", "README.md", "entry_contract.json", "wf/artifact_contracts.json"]
-
-
-def package_contract_dirs(plan: dict[str, Any]) -> list[str]:
-    return direct_parent_dirs_for_files(package_contract_files(plan))
-
-
-def root_workflow_files() -> list[str]:
-    return ["wf/workflow.lgwf"]
-
-
-def root_workflow_dirs() -> list[str]:
-    return direct_parent_dirs_for_files(root_workflow_files())
-
-
-def support_files(plan: dict[str, Any]) -> list[str]:
-    files = [
-        path
-        for path in plan_string_list(plan, "create_files")
-        if path.startswith("tests/") or path.startswith("wf/shared/")
-    ]
-    return files or ["tests/README.md", "tests/test_workflow_structure.py"]
-
-
-def support_dirs(plan: dict[str, Any]) -> list[str]:
-    dirs = [
-        path
-        for path in plan_string_list(plan, "create_dirs")
-        if path == "tests" or path.startswith("tests/") or path.startswith("wf/shared")
-    ]
-    return dirs or ["tests", "wf/shared", "wf/shared/scripts"]
-
-
-def support_unit_dirs(plan: dict[str, Any], allocated_dirs: list[str]) -> list[str]:
-    allocated = {normalize_package_path(path) for path in allocated_dirs}
-    unallocated_scaffold_dirs = [
-        path for path in plan_string_list(plan, "create_dirs") if normalize_package_path(path) not in allocated
-    ]
-    return unique(
-        [
-            *support_dirs(plan),
-            *direct_parent_dirs_for_files(support_files(plan)),
-            *unallocated_scaffold_dirs,
-        ]
-    )
-
-
-def stage_step_designs(items: list[dict[str, Any]], stage_id: str) -> list[dict[str, Any]]:
-    selected: list[dict[str, Any]] = []
-    expected = {slugify(stage_id, stage_id), slugify(strip_numeric_prefix(stage_id), strip_numeric_prefix(stage_id) or stage_id)}
-    for item in items:
-        item_stage = str(item.get("stage_id") or item.get("stage") or "").strip()
-        item_values = {
-            slugify(item_stage, item_stage),
-            slugify(strip_numeric_prefix(item_stage), strip_numeric_prefix(item_stage) or item_stage),
-        }
-        if item_stage and expected.intersection(item_values):
-            selected.append(item)
-    return selected
+def stage_path_filter(paths: list[str], stage_dir: str, *, directory: bool = False) -> list[str]:
+    selected: list[str] = []
+    for path in paths:
+        candidate_stage_dir = stage_dir_from_dir_path(path) if directory else stage_dir_from_file_path(path)
+        if candidate_stage_dir == stage_dir:
+            selected.append(path)
+    return unique(selected)
 
 
 def unit_payload(
@@ -261,6 +274,8 @@ def unit_payload(
     package_relative_dirs: list[str],
     implementation_context: dict[str, Any],
     step_designs: list[dict[str, Any]],
+    file_designs: list[dict[str, Any]] | None = None,
+    directory_designs: list[dict[str, Any]] | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     package_relative_files = unique([normalize_package_path(path) for path in package_relative_files])
@@ -277,6 +292,8 @@ def unit_payload(
         "output_files": package_relative_files,
         "output_dirs": package_relative_dirs,
         "step_designs": step_designs,
+        "file_designs": file_designs or [],
+        "directory_designs": directory_designs or [],
     }
     if extra:
         payload.update(extra)
@@ -286,68 +303,94 @@ def unit_payload(
 def all_units(
     implementation_context: dict[str, Any],
     step_designs_payload: dict[str, Any],
-    scaffold_plan: dict[str, Any],
 ) -> list[dict[str, Any]]:
     items = step_design_items(step_designs_payload)
-    fallback_stage_ids = source_stage_ids(step_designs_payload)
-    stage_dirs = stage_dirs_from_plan(scaffold_plan, fallback_stage_ids)
-    package_files = package_contract_files(scaffold_plan)
-    package_dirs = package_contract_dirs(scaffold_plan)
-    root_files = root_workflow_files()
-    root_dirs = root_workflow_dirs()
-    support_unit_files = support_files(scaffold_plan)
+    file_designs = file_design_items(step_designs_payload)
+    directory_designs = directory_design_items(step_designs_payload)
+    file_design_paths = design_paths(file_designs)
+    directory_design_paths = design_paths(directory_designs)
+    package_files = package_design_files(file_design_paths)
+    package_dirs = direct_parent_dirs_for_files(package_files)
+    root_files = root_workflow_files(file_design_paths)
+    root_dirs = direct_parent_dirs_for_files(root_files)
+    support_unit_files = support_design_files(file_design_paths)
+    support_unit_dirs_from_design = support_design_dirs(directory_design_paths)
     allocated_dirs = unique([*package_dirs, *root_dirs])
-    units: list[dict[str, Any]] = [
-        unit_payload(
-            unit_id="package_contracts",
-            unit_type="package",
-            objective="生成或修复目标 package 入口文档、入口契约和 artifact contract。",
-            package_relative_files=package_files,
-            package_relative_dirs=package_dirs,
-            implementation_context=implementation_context,
-            step_designs=[],
-            extra={
-                "scaffold_plan": scaffold_plan,
-                "package_profile": scaffold_plan.get("package_profile", implementation_context.get("package_profile", "")),
-                "planned_files": package_files,
-                "planned_dirs": package_dirs,
-            },
-        ),
-        unit_payload(
-            unit_id="root_workflow",
-            unit_type="root_workflow",
-            objective="生成或修复根 wf/workflow.lgwf，按已确认步骤设计 JSON 编排阶段顺序。",
-            package_relative_files=root_files,
-            package_relative_dirs=root_dirs,
-            implementation_context=implementation_context,
-            step_designs=items,
-            extra={
-                "scaffold_plan": scaffold_plan,
-                "stage_manifest": stage_manifest_items(scaffold_plan),
-                "planned_files": root_files,
-                "planned_dirs": root_dirs,
-            },
-        ),
-    ]
-    for index, stage_dir in enumerate(stage_dirs, start=1):
-        manifest = stage_manifest_entry(scaffold_plan, stage_dir, index)
-        stage_id = slugify(str(manifest.get("stage_id", "")).strip(), strip_numeric_prefix(stage_dir) or f"stage_{index:02d}")
-        planned_files = stage_planned_files(scaffold_plan, stage_dir)
-        planned_dirs = stage_planned_dirs(scaffold_plan, stage_dir)
+    allocated_files = unique([*package_files, *root_files, *support_unit_files])
+    units: list[dict[str, Any]] = []
+    if package_files or package_dirs:
+        units.append(
+            unit_payload(
+                unit_id="package_contracts",
+                unit_type="package",
+                objective="按已确认文件级设计生成或修复目标 package 入口文档、入口契约和 artifact contract。",
+                package_relative_files=package_files,
+                package_relative_dirs=package_dirs,
+                implementation_context=implementation_context,
+                step_designs=items,
+                file_designs=selected_designs_by_path(file_designs, package_files),
+                directory_designs=selected_designs_by_path(directory_designs, package_dirs),
+                extra={
+                    "package_profile": implementation_context.get("package_profile", ""),
+                    "planned_files": package_files,
+                    "planned_dirs": package_dirs,
+                },
+            )
+        )
+    if root_files or root_dirs:
+        units.append(
+            unit_payload(
+                unit_id="root_workflow",
+                unit_type="root_workflow",
+                objective="按已确认步骤设计 JSON 生成或修复根 wf/workflow.lgwf。",
+                package_relative_files=root_files,
+                package_relative_dirs=root_dirs,
+                implementation_context=implementation_context,
+                step_designs=items,
+                file_designs=selected_designs_by_path(file_designs, root_files),
+                directory_designs=selected_designs_by_path(directory_designs, root_dirs),
+                extra={
+                    "planned_files": root_files,
+                    "planned_dirs": root_dirs,
+                },
+            )
+        )
+
+    for group in stage_groups(step_designs_payload, items, file_design_paths, directory_design_paths):
+        stage_dir = str(group.get("stage_dir", "")).strip()
+        if not stage_dir:
+            continue
+        stage_items = as_dict_list(group.get("step_designs", []))
+        stage_target_files = stage_path_filter(step_target_paths(stage_items, "target_files"), stage_dir)
+        stage_target_dirs = stage_path_filter(step_target_paths(stage_items, "target_dirs"), stage_dir, directory=True)
+        stage_design_files = stage_path_filter(file_design_paths, stage_dir)
+        stage_design_dirs = stage_path_filter(directory_design_paths, stage_dir, directory=True)
+        planned_files = unique([*stage_target_files, *stage_design_files])
+        planned_dirs = unique(
+            [
+                *stage_target_dirs,
+                *stage_design_dirs,
+                *direct_parent_dirs_for_files(planned_files),
+            ]
+        )
+        if not planned_files and not planned_dirs:
+            continue
         allocated_dirs = unique([*allocated_dirs, *planned_dirs])
-        workflow_ref = str(manifest.get("workflow_ref") or f"wf/{stage_dir}/workflow.lgwf")
+        allocated_files = unique([*allocated_files, *planned_files])
+        workflow_ref = f"wf/{stage_dir}/workflow.lgwf"
         units.append(
             unit_payload(
                 unit_id=f"stage_{stage_dir}",
                 unit_type="stage",
-                objective=f"生成或修复阶段 `{stage_dir}` 的自包含 workflow、prompt、script 和 resource。",
+                objective=f"按已确认文件级和步骤级设计生成或修复阶段 `{stage_dir}` 的自包含 workflow、prompt、script 和 resource。",
                 package_relative_files=planned_files,
                 package_relative_dirs=planned_dirs,
                 implementation_context=implementation_context,
-                step_designs=stage_step_designs(items, stage_id),
+                step_designs=stage_items,
+                file_designs=selected_designs_by_path(file_designs, planned_files),
+                directory_designs=selected_designs_by_path(directory_designs, planned_dirs),
                 extra={
-                    "scaffold_plan": scaffold_plan,
-                    "stage_id": stage_id,
+                    "stage_id": group.get("stage_id", ""),
                     "stage_dir": stage_dir,
                     "workflow_ref": workflow_ref,
                     "planned_files": planned_files,
@@ -355,23 +398,35 @@ def all_units(
                 },
             )
         )
-    support_unit_output_dirs = support_unit_dirs(scaffold_plan, allocated_dirs)
-    units.append(
-        unit_payload(
-            unit_id="shared_helpers_tests",
-            unit_type="support",
-            objective="生成或修复共享 helper、最小测试和验证辅助文件。",
-            package_relative_files=support_unit_files,
-            package_relative_dirs=support_unit_output_dirs,
-            implementation_context=implementation_context,
-            step_designs=[],
-            extra={
-                "scaffold_plan": scaffold_plan,
-                "planned_files": support_unit_files,
-                "planned_dirs": support_unit_output_dirs,
-            },
-        )
+
+    unallocated_design_files = [path for path in file_design_paths if path not in set(allocated_files)]
+    unallocated_design_dirs = [path for path in directory_design_paths if path not in set(allocated_dirs)]
+    support_unit_files = unique([*support_unit_files, *unallocated_design_files])
+    support_unit_output_dirs = unique(
+        [
+            *support_unit_dirs_from_design,
+            *unallocated_design_dirs,
+            *direct_parent_dirs_for_files(support_unit_files),
+        ]
     )
+    if support_unit_files or support_unit_output_dirs:
+        units.append(
+            unit_payload(
+                unit_id="shared_helpers_tests",
+                unit_type="support",
+                objective="按已确认文件级设计生成或修复共享 helper、最小测试和验证辅助文件。",
+                package_relative_files=support_unit_files,
+                package_relative_dirs=support_unit_output_dirs,
+                implementation_context=implementation_context,
+                step_designs=[],
+                file_designs=selected_designs_by_path(file_designs, support_unit_files),
+                directory_designs=selected_designs_by_path(directory_designs, support_unit_output_dirs),
+                extra={
+                    "planned_files": support_unit_files,
+                    "planned_dirs": support_unit_output_dirs,
+                },
+            )
+        )
     return units
 
 
@@ -379,21 +434,23 @@ def build_implementation_units(root: Path) -> dict[str, Any]:
     lgwf_dir = root / ".lgwf"
     implementation_context = load_json(lgwf_dir / "implementation_context.json")
     step_designs_payload = load_json(lgwf_dir / "step_designs.json")
-    scaffold_plan = load_scaffold_plan(root)
     units = all_units(
         implementation_context,
         step_designs_payload,
-        scaffold_plan,
     )
     result = {
         "selection_mode": "full",
+        "design_source": ".lgwf/step_designs.json",
         "unit_count": len(units),
         "implementation_units": units,
         "all_unit_ids": [str(unit.get("unit_id", "")) for unit in units],
         "failure_count": 0,
         "failures": [],
-        "scaffold_plan_used": bool(scaffold_plan),
-        "stage_manifest": stage_manifest_items(scaffold_plan),
+        "stage_groups": [
+            {"stage_id": unit.get("stage_id", ""), "stage_dir": unit.get("stage_dir", "")}
+            for unit in units
+            if unit.get("unit_type") == "stage"
+        ],
     }
     write_json(lgwf_dir / "implementation_units.json", result)
     return result

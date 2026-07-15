@@ -47,7 +47,7 @@ REACT repair_target_prompts MAX 3
   REASON CODEX
     PROMPT "agents/reason_prompt_fix.md"
     CONTEXT workspace file ".lgwf/prompt_acceptance/react_history.json"
-    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    ANALYSIS_DIRS state.lgwf_wf_prompt_fix.target_dirs
     OUTPUT_JSON ".lgwf/prompt_acceptance/repair_plan.json" AS_FILE
     RESULT state.lgwf_wf_prompt_fix.prompt_repair_reason_result
     CONTRACT {
@@ -65,7 +65,7 @@ REACT repair_target_prompts MAX 3
   ACT CODEX
     PROMPT "agents/apply_prompt_fix.md"
     CONTEXT workspace file ".lgwf/prompt_acceptance/repair_plan.json"
-    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    ANALYSIS_DIRS state.lgwf_wf_prompt_fix.target_dirs
     RESULT state.lgwf_wf_prompt_fix.prompt_repair_act_result
     CONTRACT {
       READ workspace file ".lgwf/prompt_acceptance/audit.json";
@@ -80,7 +80,7 @@ REACT repair_target_prompts MAX 3
     }
   OBSERVE CODEX
     PROMPT "agents/observe_prompt_fix.md"
-    TARGET_DIRS state.lgwf_wf_prompt_fix.target_dirs
+    ANALYSIS_DIRS state.lgwf_wf_prompt_fix.target_dirs
     OUTPUT_JSON ".lgwf/prompt_acceptance/repair_review.json"
     RESULT state.lgwf_wf_prompt_fix.prompt_repair_observe_result
     CONTRACT {

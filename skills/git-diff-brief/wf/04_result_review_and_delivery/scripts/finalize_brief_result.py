@@ -346,6 +346,11 @@ def main() -> None:
         target_path="artifacts/git-diff-brief.md",
         commit_message_suggestion=commit_suggestion,
     )
+    delivery_decision_path = lgwf_dir / "delivery_decision.json"
+    delivery_decision_path.write_text(
+        json.dumps(result["delivery_decision"], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     commit_plan_path = lgwf_dir / "commit_plan.json"
     commit_plan_path.write_text(json.dumps(commit_plan, ensure_ascii=False, indent=2), encoding="utf-8")
     payload = {

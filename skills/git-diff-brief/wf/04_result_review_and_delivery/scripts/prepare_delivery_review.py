@@ -218,9 +218,12 @@ def build_delivery_review_input(
         repo_path = string_from_nested(runtime_input, ["repo_path", "target_repo", "repository"])
         if repo_path:
             delivery_input["repo_path"] = repo_path
-    delivery_input["final_change_brief_markdown"] = string_from_nested(
-        delivery_input, ["final_change_brief_markdown"]
-    ) or markdown
+    existing_markdown = value_from_nested(delivery_input, ["final_change_brief_markdown"])
+    delivery_input["final_change_brief_markdown"] = (
+        existing_markdown
+        if isinstance(existing_markdown, str) and existing_markdown.strip()
+        else markdown
+    )
     delivery_input["commit_message_suggestion"] = string_from_nested(
         delivery_input, ["commit_message_suggestion", "suggested_commit_message"]
     ) or string_from_nested(summary_context, ["commit_message_suggestion", "suggested_commit_message"])
@@ -282,21 +285,27 @@ def main() -> None:
     markdown = load_markdown(Path(".lgwf/change_brief_markdown.json"))
     runtime_input = load_runtime_input()
     delivery_input = build_delivery_review_input(review, summary, markdown, runtime_input)
-    auto_decision = build_auto_delivery_decision(runtime_input, delivery_input)
-    decision = auto_decision.get("decision")
-    if not isinstance(decision, dict):
-        decision = {
-            "decision": "pending_review",
-            "commit_action": "none",
-            "stage_scope": "target_scope",
-            "commit_message": str(delivery_input.get("commit_message_suggestion", "")).strip(),
-            "comment": "等待人工确认；此占位决策应由 REVIEW 节点覆盖。",
-            "changes": [],
-        }
-    Path(".lgwf/delivery_decision.json").write_text(
-        json.dumps(decision, ensure_ascii=False, indent=2),
+    review["delivery_review_input"] = delivery_input
+    review["final_change_brief_markdown"] = delivery_input["final_change_brief_markdown"]
+    review["commit_message_suggestion"] = delivery_input["commit_message_suggestion"]
+    review["commit_message_suggestion_zh"] = delivery_input["commit_message_suggestion_zh"]
+    review["commit_message_rationale"] = delivery_input["commit_message_rationale"]
+    review["commit_action_options"] = delivery_input["commit_action_options"]
+    review["default_commit_action"] = delivery_input["default_commit_action"]
+    review["open_delivery_questions"] = delivery_input["open_delivery_questions"]
+    Path(".lgwf/delivery_review_context.json").write_text(
+        json.dumps(review, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    auto_decision = build_auto_delivery_decision(runtime_input, delivery_input)
+    decision = auto_decision.get("decision")
+    decision_file = ""
+    if isinstance(decision, dict):
+        decision_file = ".lgwf/delivery_decision.json"
+        Path(decision_file).write_text(
+            json.dumps(decision, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
     payload = {
         "git_diff_brief.delivery_review_input": delivery_input,
         "__route__route_delivery_review": auto_decision["route"],
@@ -304,8 +313,8 @@ def main() -> None:
             "ok": True,
             "source_file": ".lgwf/delivery_review_context.json",
             "route": auto_decision["route"],
-            "auto_decision_file": ".lgwf/delivery_decision.json" if auto_decision.get("decision") else "",
-            "decision_file": ".lgwf/delivery_decision.json",
+            "auto_decision_file": decision_file,
+            "decision_file": decision_file,
         },
     }
     print(json.dumps(payload, ensure_ascii=False))

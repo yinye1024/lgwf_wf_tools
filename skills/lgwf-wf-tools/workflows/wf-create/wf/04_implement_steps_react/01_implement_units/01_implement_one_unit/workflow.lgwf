@@ -31,15 +31,11 @@ PY prepare_current_implementation_unit
 CODEX implement_current_unit
   PROMPT "agents/act_unit.md"
   CONTEXT workspace file ".lgwf/current_implementation_unit_context.json"
-  CONTEXT workspace file ".lgwf/create_reference_context/implementation-reference-index.md"
-  CONTEXT workspace dir ".lgwf/create_reference_context"
   OUTPUT_JSON ".lgwf/current_implementation_unit_result.json" AS_FILE
   TIMEOUT 1200
   RESULT state.lgwf_wf_create.current_implementation_unit_result
   CONTRACT {
     READ state.lgwf_wf_create.current_implementation_unit;
-    READ workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
-    READ workspace dir ".lgwf/create_reference_context";
     READ workspace file ".lgwf/current_implementation_unit_context.json";
     WRITE state.lgwf_wf_create.current_implementation_unit_result;
     WRITE workspace dir ".lgwf/implementation_stage";

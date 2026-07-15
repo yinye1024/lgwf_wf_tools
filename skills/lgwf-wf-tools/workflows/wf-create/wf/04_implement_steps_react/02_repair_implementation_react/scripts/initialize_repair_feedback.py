@@ -25,6 +25,7 @@ def main() -> None:
     analysis = {
         "recommended_next": "continue",
         "reason": "initial repair iteration",
+        "failure_signatures": [],
         "repeat_issue_signatures": [],
         "no_progress_risk": False,
     }

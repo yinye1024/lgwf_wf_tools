@@ -1,6 +1,6 @@
 # create_reference_context 索引
 
-本索引用于 `design_steps_react` 和后续 Codex 节点按需读取参考资料。默认先阅读本文件，不要一次性读取整个 `create_reference_context` 目录。
+本索引用于 `step_design_proposal` 的首轮设计和后续修复 Codex 节点按需读取参考资料。默认先阅读本文件，不要一次性读取整个 `create_reference_context` 目录。
 
 ## 读取顺序
 

@@ -1,23 +1,10 @@
 WORKFLOW decide_repair;
-ENTRY decide_repair;
+ENTRY write_repair_decision;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 900;
 }
-
-CODEX decide_repair
-  PROMPT "agents/decide_repair.md"
-  CONTEXT workspace file ".lgwf/implementation_audit_result.json"
-  CONTEXT workspace file ".lgwf/implementation_observe.json"
-  OUTPUT_JSON ".lgwf/implementation_repair_decision_analysis.json" AS_FILE
-  TIMEOUT 300
-  RESULT state.lgwf_wf_create.repair_decision_analysis_result
-  CONTRACT {
-    READ workspace file ".lgwf/implementation_audit_result.json";
-    READ workspace file ".lgwf/implementation_observe.json";
-    WRITE workspace file ".lgwf/implementation_repair_decision_analysis.json";
-  };
 
 PY write_repair_decision
   SCRIPT "scripts/decide_repair_implementation.py"
@@ -27,9 +14,8 @@ PY write_repair_decision
   CONTRACT {
     READ workspace file ".lgwf/implementation_audit_result.json";
     READ workspace file ".lgwf/implementation_observe.json";
-    READ workspace file ".lgwf/implementation_repair_decision_analysis.json";
+    WRITE workspace file ".lgwf/implementation_repair_decision_analysis.json";
     WRITE workspace file ".lgwf/implementation_decision.json";
   };
 
-FLOW decide_repair
-  THEN write_repair_decision;
+FLOW write_repair_decision;

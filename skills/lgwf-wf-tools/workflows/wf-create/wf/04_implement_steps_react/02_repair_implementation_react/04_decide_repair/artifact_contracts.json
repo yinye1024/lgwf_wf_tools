@@ -9,6 +9,7 @@
   ],
   "script_writes": {
     "decide_repair_implementation": [
+      ".lgwf/implementation_repair_decision_analysis.json",
       ".lgwf/implementation_decision.json"
     ]
   }

@@ -17,6 +17,8 @@ from typing import Any
 
 TEMPLATE_PATH = Path(__file__).resolve().parents[1] / "resources" / "scaffold_package_template.json"
 VALIDATOR_PATH = Path(__file__).resolve().parents[3] / "shared" / "scripts" / "validate_two_layer_workflow.py"
+ROOT_PACKAGE_FILES = {"SKILL.md", "AGENTS.md", "README.md", "entry_contract.json"}
+PACKAGE_FILE_PATTERN = re.compile(r"[\w./-]+\.(?:md|py|json|lgwf)")
 
 DEFAULT_REQUEST = {
     "workflow_name": "lgwf-wf-create-example",
@@ -94,6 +96,60 @@ def unique(items: list[str]) -> list[str]:
     return result
 
 
+def flatten_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return "\n".join(flatten_text(child) for child in value.values())
+    if isinstance(value, list):
+        return "\n".join(flatten_text(child) for child in value)
+    return str(value) if value is not None else ""
+
+
+def semantic_required_package_files(*sources: dict[str, Any]) -> list[str]:
+    """从已确认需求/业务流文本中提取目标 package 的显式文件要求。"""
+
+    blob = "\n".join(flatten_text(source) for source in sources if isinstance(source, dict))
+    files: list[str] = []
+    for match in PACKAGE_FILE_PATTERN.findall(blob.replace("\\", "/")):
+        candidate = match.strip("`'\"“”‘’，,。；;：:（）()[]{}<>")
+        if not candidate:
+            continue
+        try:
+            path = normalize_relative_path(candidate)
+        except ValueError:
+            continue
+        parts = PurePosixPath(path).parts
+        if not parts:
+            continue
+        if parts[0] in {".lgwf", "ws"}:
+            continue
+        if path in ROOT_PACKAGE_FILES or parts[0] in {"scripts", "tests", "wf"}:
+            files.append(path)
+    return unique(files)
+
+
+def infer_package_profile(
+    template: dict[str, Any],
+    raw_profile: Any,
+    target_package_root: str,
+    semantic_files: list[str],
+    *sources: dict[str, Any],
+) -> str:
+    if isinstance(raw_profile, str) and raw_profile.strip():
+        return raw_profile.strip()
+    profiles = template.get("profiles", {})
+    default_profile = str(template.get("default_profile", "internal_workflow_package"))
+    text_blob = "\n".join(flatten_text(source) for source in sources if isinstance(source, dict)).lower()
+    looks_like_skill = (
+        "SKILL.md" in semantic_files
+        or "codex skill" in text_blob
+        or "skill_wrapped_workflow" in text_blob
+        or "外层模块：codex_skill" in text_blob
+    )
+    if looks_like_skill and isinstance(profiles, dict) and "skill_wrapped_workflow" in profiles:
+        return "skill_wrapped_workflow"
+    return default_profile
+
+
 def slugify_id(raw_value: str, fallback: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", raw_value.strip()).strip("_")
     return cleaned or fallback
@@ -140,17 +196,30 @@ def stage_dirs_from_manifest(stage_manifest: list[dict[str, Any]]) -> list[str]:
     return unique([str(item.get("stage_dir", "")).strip() for item in stage_manifest])
 
 
-def stage_placeholder_files(stage_dirs: list[str]) -> list[str]:
+def profile_string_list(
+    profile: dict[str, Any],
+    template: dict[str, Any],
+    key: str,
+    *,
+    template_key: str | None = None,
+) -> list[str]:
+    if key in profile:
+        return require_string_list(profile.get(key, []), f"profile.{key}")
+    fallback_key = template_key or key
+    return require_string_list(template.get(fallback_key, []), f"template.{fallback_key}")
+
+
+def stage_scaffold_files(stage_dirs: list[str], stage_private_dirs: list[str]) -> list[str]:
     files: list[str] = []
     for stage_dir in stage_dirs:
-        files.extend(
-            [
-                f"wf/{stage_dir}/workflow.lgwf",
-                f"wf/{stage_dir}/agents/prompt.md",
-                f"wf/{stage_dir}/scripts/run.py",
-                f"wf/{stage_dir}/resources/README.md",
-            ]
-        )
+        files.append(f"wf/{stage_dir}/workflow.lgwf")
+        files.append(f"wf/{stage_dir}/artifact_contracts.json")
+        if "agents" in stage_private_dirs:
+            files.append(f"wf/{stage_dir}/agents/prompt.md")
+        if "scripts" in stage_private_dirs:
+            files.append(f"wf/{stage_dir}/scripts/run.py")
+        if "resources" in stage_private_dirs:
+            files.append(f"wf/{stage_dir}/resources/README.md")
     return files
 
 
@@ -184,13 +253,24 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
     """根据确认后的输入生成确定性脚手架计划。"""
 
     template = load_scaffold_template()
-    package_profile, profile = select_template_profile(template, request.get("package_profile"))
     target_package_root = normalize_relative_path(str(request["target_package_root"]))
-    workflow_name = str(request.get("workflow_name", "")).strip()
     business_flow = request.get("business_flow", {})
+    semantic_files = semantic_required_package_files(request, business_flow)
+    package_profile, profile = select_template_profile(
+        template,
+        infer_package_profile(
+            template,
+            request.get("package_profile"),
+            target_package_root,
+            semantic_files,
+            request,
+            business_flow if isinstance(business_flow, dict) else {},
+        ),
+    )
+    workflow_name = str(request.get("workflow_name", "")).strip()
     stages = business_flow.get("stages", [])
     step_dirs = require_string_list(template.get("step_dirs", []), "template.step_dirs")
-    step_private_dirs = require_string_list(template.get("step_private_dirs", []), "template.step_private_dirs")
+    step_private_dirs = profile_string_list(profile, template, "stage_private_dirs", template_key="step_private_dirs")
     stage_manifest = build_stage_manifest(stages, step_dirs)
     stage_dirs = stage_dirs_from_manifest(stage_manifest)
 
@@ -229,8 +309,9 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
             *require_string_list(profile.get("root_files", []), f"template.profiles.{package_profile}.root_files"),
             "entry_contract.json",
             *require_string_list(template.get("workflow_files", []), "template.workflow_files"),
-            *stage_placeholder_files(stage_dirs),
+            *stage_scaffold_files(stage_dirs, step_private_dirs),
             *require_string_list(template.get("test_files", []), "template.test_files"),
+            *semantic_files,
             ]
         ),
         "placeholders": template.get("placeholders", {}),
@@ -268,6 +349,10 @@ def build_scaffold_plan_from_root(root: Path) -> dict[str, Any]:
         "workflow_name": requirements.get("workflow_name", business_flow.get("workflow_name", "")),
         "target_package_root": requirements.get("target_package_root", business_flow.get("target_package_root", "")),
         "package_profile": requirements.get("package_profile", business_flow.get("package_profile", "")),
+        "purpose": requirements.get("purpose", business_flow.get("business_goal", "")),
+        "expected_outputs": requirements.get("expected_outputs", []),
+        "package_source_files": requirements.get("package_source_files", []),
+        "proposal_notes": requirements.get("proposal_notes", []),
         "business_flow": business_flow,
     }
     return build_scaffold_plan(request)

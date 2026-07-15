@@ -170,17 +170,7 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
 
     def test_prepare_implementation_context_resolves_target_from_repo_root_not_run_cwd(self) -> None:
         write_json(
-            self.work_dir / ".lgwf" / "scaffold_package_result.json",
-            {
-                "scaffold_plan": {
-                    "workflow_name": "git-diff-brief",
-                    "target_package_root": "skills/git-diff-brief",
-                    "package_profile": "internal_workflow_package",
-                }
-            },
-        )
-        write_json(
-            self.work_dir / ".lgwf" / "create_requirements.json",
+            self.work_dir / ".lgwf" / "step_designs.json",
             {
                 "confirmed": {
                     "workflow_name": "git-diff-brief",
@@ -215,9 +205,9 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
             },
         )
         write_json(
-            self.work_dir / ".lgwf" / "scaffold_package_result.json",
+            self.work_dir / ".lgwf" / "step_designs.json",
             {
-                "scaffold_plan": {
+                "confirmed": {
                     "workflow_name": "git-diff-brief",
                     "target_package_root": "skills/git-diff-brief",
                     "package_profile": "internal_workflow_package",
@@ -275,6 +265,33 @@ class RuntimeMirrorPathsTest(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("# git-diff-brief 结果汇总", report)
+
+    def test_summarize_create_result_uses_top_level_generated_files_and_audit_status(self) -> None:
+        write_json(
+            self.work_dir / ".lgwf" / "implementation_result.json",
+            {
+                "workflow_name": "git-diff-brief",
+                "target_package_root": "skills/git-diff-brief",
+                "status": "failed",
+                "generated_files": [{"path": "skills/git-diff-brief/wf/workflow.lgwf"}],
+                "failed_units": ["root_workflow"],
+            },
+        )
+        write_json(
+            self.work_dir / ".lgwf" / "implementation_audit_result.json",
+            {
+                "passed": False,
+                "status": "failed",
+                "needs_post_fix": False,
+                "failures": ["root workflow failed"],
+            },
+        )
+
+        result = self.run_script("06_summarize_create_result/scripts/summarize_create_result.py")
+
+        self.assertEqual(result["status"], "draft_needs_implementation_repair")
+        self.assertEqual(result["produced_files"], ["wf/workflow.lgwf"])
+        self.assertEqual(result["implementation_audit"]["failures"], ["root workflow failed"])
 
 
 if __name__ == "__main__":

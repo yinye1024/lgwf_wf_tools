@@ -8,7 +8,6 @@
 
 - `.lgwf/create_requirements.json`
 - `.lgwf/create_requirements_proposal.json`
-- 可选的 `.lgwf/business_flow.json`
 - `state.lgwf_wf_create.creation_context_dirs`
 - `state.lgwf_wf_create.creation_context_files`
 
@@ -19,14 +18,13 @@
 
 ## 子流程
 
-- `01_business_flow_proposal`：生成业务流 proposal，并执行质量闸。
+- `01_business_flow_proposal`：通过单个 Codex 节点生成业务流 proposal。
 - `02_business_flow_review`：处理人工确认、修订和正式业务流固化。
 - `03_scaffold_package`：把已确认需求和业务流转转换成脚手架计划。
 
 ## 产物
 
 - `.lgwf/business_flow_proposal.json`
-- `.lgwf/business_flow_proposal_quality_gate.json`
 - `.lgwf/business_flow_approval.json`
 - `.lgwf/business_flow.json`
 - `.lgwf/scaffold_package_result.json`
@@ -35,7 +33,6 @@
 
 - `python -m unittest tests.test_workflow_integrity`
 - `python -m unittest tests.test_artifact_io_contracts`
-- `python -m unittest tests.test_proposal_quality_gate`
 - `python -m unittest tests.test_scaffold_package_rules`
 
 ## 禁止事项

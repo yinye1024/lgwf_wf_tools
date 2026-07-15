@@ -34,8 +34,8 @@ REACT real_positive_e2e_react MAX 3
     PROMPT "01_design/agents/reason.md"
     CONTEXT workspace file ".lgwf/e2e_business_flow_summary.json"
     CONTEXT workspace file ".lgwf/e2e_real_positive_observe.json"
-    TARGET_DIRS state.lgwf_e2e.target_dirs
-    TARGET_FILES state.lgwf_e2e.target_files
+    ANALYSIS_DIRS state.lgwf_e2e.target_dirs
+    ANALYSIS_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_real_positive_design.json"
     RESULT state.lgwf_e2e.real_positive_reason_result
     CONTRACT {
@@ -49,8 +49,8 @@ REACT real_positive_e2e_react MAX 3
   ACT CODEX
     PROMPT "02_generate/agents/act.md"
     CONTEXT real_positive_e2e_design_context
-    TARGET_DIRS state.lgwf_e2e.target_dirs
-    TARGET_FILES state.lgwf_e2e.target_files
+    ANALYSIS_DIRS state.lgwf_e2e.target_dirs
+    ANALYSIS_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_real_positive_generation.json"
     RESULT state.lgwf_e2e.real_positive_act_result
     CONTRACT {
@@ -64,8 +64,8 @@ REACT real_positive_e2e_react MAX 3
     PROMPT "03_validate/agents/observe.md"
     CONTEXT real_positive_e2e_design_context
     CONTEXT workspace file ".lgwf/e2e_real_positive_generation.json"
-    TARGET_DIRS state.lgwf_e2e.target_dirs
-    TARGET_FILES state.lgwf_e2e.target_files
+    ANALYSIS_DIRS state.lgwf_e2e.target_dirs
+    ANALYSIS_FILES state.lgwf_e2e.target_files
     OUTPUT_JSON ".lgwf/e2e_real_positive_observe.json"
     RESULT state.lgwf_e2e.real_positive_observe_result
     CONTRACT {

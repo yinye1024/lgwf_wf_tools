@@ -9,20 +9,17 @@ DEFAULTS {
 STEP business_flow_proposal
   WORKFLOW "01_business_flow_proposal/workflow.lgwf"
   CONTRACT {
-    READ workspace file ".lgwf/business_flow.json";
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/create_requirements_proposal.json";
     READ state.lgwf_wf_create.creation_context_dirs;
     READ state.lgwf_wf_create.creation_context_files;
     WRITE workspace file ".lgwf/business_flow_proposal.json";
-    WRITE workspace file ".lgwf/business_flow_proposal_quality_gate.json";
   };
 
 STEP business_flow_review
   WORKFLOW "02_business_flow_review/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/business_flow_proposal.json";
-    READ workspace file ".lgwf/business_flow_proposal_quality_gate.json";
     WRITE workspace file ".lgwf/business_flow_approval.json";
     WRITE workspace file ".lgwf/business_flow.json";
     WRITE state.lgwf_wf_create.business_flow;
