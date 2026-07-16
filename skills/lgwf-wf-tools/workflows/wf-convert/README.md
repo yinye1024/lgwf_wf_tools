@@ -1,6 +1,6 @@
 # lgwf-wf-convert
 
-`lgwf-wf-convert` 用于把现有 prompt workflow 目录转换为 `wf-create-fast` 可消费的输入包。它是 `lgwf-wf-tools` 的内部 workflow package。
+`lgwf-wf-convert` 用于把现有 prompt workflow 目录转换为 `wf-create-fast` 可消费的完整 target file。它是 `lgwf-wf-tools` 的内部 workflow package。
 
 ## 当前范围
 
@@ -9,9 +9,9 @@
 - 使用 ReAct 分析源 prompt workflow 的结构、职责、业务契约和缺口。
 - 区分必须迁移的业务逻辑与不迁移的 prompt 执行技巧，例如执行矩阵、预填充、few-shot、角色强化和格式诱导。
 - 使用 ReAct 生成 `wf-create-fast` 创建输入 proposal、`conversion_mapping` 和 `parity_requirements`。
-- 人工确认 proposal 后固化为 `.lgwf/wf_create_fast_payload.json`。
-- 通过映射节点提取 `wf-create-fast` 输入，把 `source_root` 作为新版 `request.target_dir` 只读资料目录传给下游。
-- 写入 `.lgwf/wf_create_fast_handoff.json`，并 HANDOFF 给主 agent 启动后续 `wf-create-fast`。
+- 人工确认 proposal 后固化为 `.lgwf/wf_create_fast_input.json`。
+- 写入 `.lgwf/wf_create_fast_handoff.json` 作为完整 handoff target file。
+- HANDOFF 给主 agent，由主 agent 把该 handoff target file 作为 `wf-create-fast` 的 `request.target_file` 启动后续创建流程。
 
 ## 不做的事
 
@@ -25,17 +25,17 @@
 
 运行状态只写入 `ws/.lgwf`。目标 package 根目录不得写入 `.lgwf`。
 
-## `wf-create-fast` 输入
+## `wf-create-fast` handoff
 
-`wf-convert` 固化的 `wf-create-fast` 输入必须保留顶层 `raw_intent`，并可附带 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。源 prompt workflow 目录通过 `request.target_dir` 传给 `wf-create-fast`，只作为创建阶段的只读上下文，不表示目标输出目录。
+`.lgwf/wf_create_fast_handoff.json` 是 `wf-convert` 交给 `wf-create-fast` 的完整 target file，包含 `raw_intent`、`workflow_name`、`target_package_root`、`source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。
 
-`map_wf_create_fast_input.py` 只读取 `{ "wf_create_fast_payload": ... }` 或已经扁平化的创建输入；交给主 agent 启动 `wf-create-fast` 前必须有非空 `raw_intent`。
+主 agent 接手后创建一个小的 `wf-create-fast` 启动输入，其中 `request.target_file` 指向 `.lgwf/wf_create_fast_handoff.json`。
 
 ## ReAct 反馈闭环
 
 `propose_create_input_react` 的 `observe` 必须输出结构化 `issues`。每个 issue 包含 `blocking`：
 
-- `blocking=true`：会阻塞人工确认、confirmed 原样复用或 payload 固化，`decide_create_input.py` 会继续下一轮 ReAct。
+- `blocking=true`：会阻塞人工确认、confirmed 原样复用或 handoff target 固化，`decide_create_input.py` 会继续下一轮 ReAct。
 - `blocking=false`：只影响人工关注或后续运行质量，`decide_create_input.py` 会退出到 `confirm_create_input`，由人工确认处理。
 
 下一轮 `reason` 同时读取 `.lgwf/wf_create_fast_input_observe.json` 和 `.lgwf/wf_create_fast_input_proposal.json`，必须生成 `issue_resolution_plan`。`act` 按该计划最小修复上一轮 proposal，避免无关重写。第一轮由 `index_prompt_files.py` 创建空的 `.lgwf/wf_create_fast_input_proposal.json` 占位文件，确保 context 文件存在。

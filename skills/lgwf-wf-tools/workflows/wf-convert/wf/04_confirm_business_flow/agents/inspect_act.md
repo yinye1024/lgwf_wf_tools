@@ -22,7 +22,7 @@
 - `gaps` 和 `risks` 会区分基础规范问题与设计/协作问题，避免把基础修复事项伪装成设计升级结论。
 - `detected_stages` 与 `prompt_contracts` 的每一项都必须显式体现证据强度、下游 proposal 消费用途，以及证据不足时的降级规则。
 - 低证据内容若不足以支撑 `stages`、`prompt_contracts`、`raw_intent` 或 approval 参考，不得停留在模糊事实表述，必须明确降级到 `assumptions`、人工确认点或 `gaps`。
-- `gaps` 与 `risks` 的每一项都必须指出其主要阻塞面：阻塞 approval、阻塞 payload 固化，还是仅影响 proposal 可读性。
+- `gaps` 与 `risks` 的每一项都必须指出其主要阻塞面：阻塞 approval、阻塞 handoff target 固化，还是仅影响 proposal 可读性。
 - `source_business_contract` 只包含可追溯的业务目标、输入输出、阶段、决策规则、审批点、错误路径和不变量。
 - `prompt_execution_mechanics`、`presentation_constraints` 和 `discarded_prompt_techniques` 能支撑后续 proposal 生成 `conversion_mapping` 与 `parity_requirements`。
 
@@ -71,8 +71,8 @@
 - `prompt_execution_mechanics`：记录 prompt 执行技巧，例如执行矩阵、预填充、few-shot、角色强化、格式诱导。
 - `presentation_constraints`：记录 JSON schema、报告结构、字段名等可能影响下游消费但不等同于业务规则的约束。
 - `discarded_prompt_techniques`：记录明确不迁移的 prompt 技巧及剥离原因。
-- `gaps`：记录会影响后续 `wf-create-fast` 输入质量的缺失信息；每条需标明更偏向基础规范缺失、引用/契约不完整，还是业务设计证据不足，并说明其阻塞级别与建议降级去向。阻塞级别至少要让下游看出是阻塞 approval、阻塞 payload 固化，还是仅影响 proposal 可读性。
-- `risks`：记录转换时需要提示人工注意的风险；每条需说明是基础规范风险、设计风险，还是上下游消费风险，并说明其阻塞级别与影响链路。若风险会导致 confirmed 漂移、payload 回退到人工修订，必须直接写出链路。
+- `gaps`：记录会影响后续 `wf-create-fast` 输入质量的缺失信息；每条需标明更偏向基础规范缺失、引用/契约不完整，还是业务设计证据不足，并说明其阻塞级别与建议降级去向。阻塞级别至少要让下游看出是阻塞 approval、阻塞 handoff target 固化，还是仅影响 proposal 可读性。
+- `risks`：记录转换时需要提示人工注意的风险；每条需说明是基础规范风险、设计风险，还是上下游消费风险，并说明其阻塞级别与影响链路。若风险会导致 confirmed 漂移或 handoff target 回退到人工修订，必须直接写出链路。
 - `assumptions`：记录无法确认但可能需要在 proposal 中显式呈现的假设。
 
 ## 条目建模要求
@@ -86,7 +86,7 @@
 ## 约束
 
 - 不修改源目录、目标 package 或 `.lgwf/prompt_file_index.json`。
-- 不直接生成 `wf-create-fast` payload；这里只做源 workflow inspection。
-- 不直接生成 proposal、payload 或任何 confirmed 结论；这里只提供可被 proposal 消费的事实基线。
+- 不直接生成 `wf-create-fast` handoff target；这里只做源 workflow inspection。
+- 不直接生成 proposal、handoff target 或任何 confirmed 结论；这里只提供可被 proposal 消费的事实基线。
 - 事实应带来源路径；推断必须能从文件索引或内容合理支持。
 - 不生成最终 `conversion_mapping` 或 `parity_requirements`，但 inspection 必须提供足够证据让 proposal 阶段生成它们。

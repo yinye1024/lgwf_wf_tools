@@ -11,11 +11,11 @@
 
 ## 目标
 
-`wf-convert` 面向 prompt workflow 转换场景：读取现有 prompt workflow 目录，分析 prompt、agent、resource 和说明文件，产出可交给 `wf-create-fast` 的创建输入包、源业务契约和转换映射。
+`wf-convert` 面向 prompt workflow 转换场景：读取现有 prompt workflow 目录，分析 prompt、agent、resource 和说明文件，产出可交给 `wf-create-fast` 的完整 handoff target file、源业务契约和转换映射。
 
 `wf-convert` 不在自身流程内完成最终目标 LGWF workflow 实现，也不直接启动下游创建 workflow。转换输入通过人工确认后，它生成 `wf-create-fast` 的输入并 HANDOFF 给主 agent；主 agent 负责启动 `wf-create-fast`。`wf-convert` 不自动调用标准创建实现链路、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-fix` 或 `wf-post-fix`。
 
-`wf-convert` 先通过 `prepare_wf_create_fast_payload` 生成 `wf-create-fast` 的输入，其中 `source_root` 会映射为 `request.target_dir`，作为下游创建阶段可读取的只读资料目录；再通过 `map_wf_create_fast_input` 把 `state.lgwf_wf_convert.wf_create_fast_payload` 映射为 `state.lgwf_wf_convert.wf_create_fast_input`。最后 `prepare_wf_create_fast_handoff` 写入 `.lgwf/wf_create_fast_handoff.json`，`HANDOFF handoff_to_wf_create_fast` 交给主 agent 启动 `wf-create-fast`。
+`wf-convert` 通过 `prepare_wf_create_fast_payload` 生成下游 handoff target file `.lgwf/wf_create_fast_handoff.json` 和启动输入 `.lgwf/wf_create_fast_launch_input.json`。target file 包含创建目标、业务契约、转换映射和 prompt workflow 上下文。`HANDOFF handoff_to_wf_create_fast` 交给主 agent 后，主 agent 先提交 handoff ack，再按 payload 中的 `input_json_file` 启动 `wf-create-fast`。
 
 ## 目录边界
 
@@ -48,25 +48,22 @@
 - `.lgwf/wf_create_fast_input_proposal.json`
 - `.lgwf/wf_create_fast_input_approval.json`
 - `.lgwf/wf_create_fast_input.json`
-- `.lgwf/wf_create_fast_payload.json`
-- `.lgwf/wf_create_fast_input_for_wf_create_fast.json`
 - `.lgwf/wf_create_fast_handoff.json`
 - `state.lgwf_wf_convert.wf_create_fast_input`
-- `state.lgwf_wf_convert.wf_create_fast_handoff_payload`
 - `state.lgwf_wf_convert.wf_create_fast_handoff`
 
 ## 下游 `wf-create-fast`
 
-转换完成后，`wf-convert` handoff payload 要求主 agent 使用：
+转换完成后，`wf-convert` handoff context 要求主 agent 使用：
 
 - workflow id：`wf-create-fast`
 - workflow：`workflows/wf-create-fast/wf/workflow.lgwf`
 - work dir：`workflows/wf-create-fast/ws`
-- input file：`.lgwf/wf_create_fast_input_for_wf_create_fast.json`
+- target file：`.lgwf/wf_create_fast_handoff.json`
 
 `wf-create-fast` 保留需求确认、业务流确认、scaffold 落盘和主 agent handoff 边界，不生成 `step_designs.json`，也不调用标准创建实现链路。
 
-`wf-convert` 传给 `wf-create-fast` 的输入保持 `raw_intent` 入口形态，同时在可用时附带 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。`source_root` 会作为 `request.target_dir` 传入，只表示创建 workflow 时可参考的源 prompt workflow 目录，不是目标 workflow 输出目录；目标输出目录仍由 `raw_intent`、需求确认和后续 `target_package_root` 确认收敛。
+`wf-convert` 生成的 handoff target file 保持 `raw_intent` 入口形态，同时附带已确认的 `source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。主 agent 启动 `wf-create-fast` 时，把该文件路径放入 `request.target_file`。
 
 ## Codex 节点监控约束
 

@@ -58,7 +58,7 @@
 {
   "workflow_id": "目标 workflow 稳定标识",
   "workflow_name": "目标 workflow 名称",
-  "target_package_root": "目标 package 相对目录",
+  "target_package_root": "目标 package 目录，可以是绝对路径或相对路径",
   "business_goal": "业务流转要解决的问题",
   "stages": [
     {

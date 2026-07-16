@@ -97,6 +97,17 @@ class MaterializeScaffoldTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def read_scaffold_plan(self, work_dir: Path) -> dict:
+        return json.loads((work_dir / ".lgwf" / "scaffold_package_result.json").read_text(encoding="utf-8"))[
+            "scaffold_plan"
+        ]
+
+    def write_raw_scaffold_plan(self, work_dir: Path, plan: dict) -> None:
+        (work_dir / ".lgwf" / "scaffold_package_result.json").write_text(
+            json.dumps({"scaffold_plan": plan}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
     def test_materializes_minimal_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             workspace_root = Path(tmp)
@@ -105,7 +116,7 @@ class MaterializeScaffoldTests(unittest.TestCase):
 
             result = self.module.materialize_scaffold(work_dir)
 
-            target = workspace_root / "skills" / "demo-workflow"
+            target = work_dir / "skills" / "demo-workflow"
             self.assertEqual(result["status"], "ok")
             self.assertEqual(result["target_package_root"], "skills/demo-workflow")
             self.assertTrue((target / "AGENTS.md").is_file())
@@ -117,11 +128,12 @@ class MaterializeScaffoldTests(unittest.TestCase):
             self.assertIn('WORKFLOW "02_execute/workflow.lgwf"', workflow_text)
             written = json.loads((work_dir / ".lgwf" / "materialize_scaffold_result.json").read_text(encoding="utf-8"))
             self.assertTrue(written["handoff_ready"])
+            self.assertEqual(Path(result["target_package_abs"]), target.resolve())
+            self.assertIn('"', result["validation_commands"][0])
+            self.assertIn(" audit --workflow-lgwf ", result["validation_commands"][0])
 
     def test_rejects_unsafe_target_package_root(self) -> None:
         bad_roots = [
-            "D:/bad-workflow",
-            "/bad-workflow",
             "../bad-workflow",
             "https://example.com/workflow",
             "skills/.lgwf/bad-workflow",
@@ -138,7 +150,7 @@ class MaterializeScaffoldTests(unittest.TestCase):
             workspace_root = Path(tmp)
             work_dir = self.make_work_dir(workspace_root)
             self.write_scaffold_plan(work_dir)
-            readme = workspace_root / "skills" / "demo-workflow" / "README.md"
+            readme = work_dir / "skills" / "demo-workflow" / "README.md"
             readme.parent.mkdir(parents=True)
             readme.write_text("keep me\n", encoding="utf-8")
 
@@ -147,6 +159,50 @@ class MaterializeScaffoldTests(unittest.TestCase):
             self.assertEqual(result["status"], "partial_existing_files")
             self.assertIn("README.md", result["skipped_existing_files"])
             self.assertEqual(readme.read_text(encoding="utf-8"), "keep me\n")
+
+    def test_materializes_absolute_target_package_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace_root = Path(tmp)
+            work_dir = self.make_work_dir(workspace_root)
+            absolute_target = workspace_root / "absolute-demo-workflow"
+            self.write_scaffold_plan(work_dir, target_package_root=str(absolute_target))
+
+            result = self.module.materialize_scaffold(work_dir)
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(Path(result["target_package_abs"]), absolute_target.resolve())
+            self.assertTrue((absolute_target / "AGENTS.md").is_file())
+            self.assertTrue((absolute_target / "wf" / "workflow.lgwf").is_file())
+            self.assertIn(str(absolute_target.resolve()), result["validation_commands"][0])
+            self.assertIn('"', result["validation_commands"][1])
+
+    def test_rejects_dangerous_absolute_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace_root = Path(tmp)
+            work_dir = self.make_work_dir(workspace_root)
+            bad_roots = [
+                workspace_root,
+                work_dir,
+                Path(workspace_root.anchor),
+                Path.home(),
+            ]
+            for bad_root in bad_roots:
+                with self.subTest(bad_root=str(bad_root)):
+                    self.write_scaffold_plan(work_dir, target_package_root=str(bad_root))
+                    with self.assertRaises(ValueError):
+                        self.module.materialize_scaffold(work_dir)
+
+    def test_rejects_absolute_package_internal_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace_root = Path(tmp)
+            work_dir = self.make_work_dir(workspace_root)
+            self.write_scaffold_plan(work_dir)
+            plan = self.read_scaffold_plan(work_dir)
+            plan["create_files"].append(str(workspace_root / "outside.py"))
+            self.write_raw_scaffold_plan(work_dir, plan)
+
+            with self.assertRaises(ValueError):
+                self.module.materialize_scaffold(work_dir)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@
 1. `target_dir` 指向现有 prompt workflow 或 prompt 集合目录。
 2. `entry_files` 包含源目录中最可能代表入口、说明或主 prompt 的文件。
 3. `target_workflow_name` 是后续 `wf-create-fast` 可使用的 workflow 名称，不含路径。
-4. `target_package_root` 是工作区相对路径，且不是运行状态目录。
+4. `target_package_root` 是目标 LGWF package 目录，可以是绝对路径或相对路径；相对路径由下游 `wf-create-fast` 按当前 run 的 work dir 解析，且不是运行状态目录。
 5. `constraints` 明确记录当前转换边界，尤其是“不直接生成最终 LGWF workflow”和“不自动调用 wf-create-fast”。
 
 ## 输出
@@ -46,7 +46,7 @@
 - `target_dir`：待分析的源 prompt workflow 目录，可以是工作区相对路径或用户明确提供的绝对路径。
 - `entry_files`：相对 `target_dir` 的入口候选文件列表；不确定时优先包含 `README.md`、主 prompt、workflow 说明文件。
 - `target_workflow_name`：建议创建的目标 LGWF workflow 名称。
-- `target_package_root`：目标 LGWF package 的工作区相对路径。
+- `target_package_root`：目标 LGWF package 目录，可以是绝对路径或相对路径。
 - `constraints`：本次转换必须遵守的业务和写入边界。
 
 ## Output Format
@@ -58,7 +58,7 @@
 ## 约束
 
 - `target_dir` 可以是工作区内相对路径或用户明确提供的绝对路径。
-- `target_package_root` 必须是工作区相对路径，不得包含盘符、绝对路径、`..` 或 `.lgwf`。
-- 本节点只收集目标，不分析和不生成 payload。
+- `target_package_root` 可以是绝对路径或相对路径；不得包含 URL、`..` 或 `.lgwf`。
+- 本节点只收集目标，不分析和不生成 handoff target。
 - 不要把缺失信息伪造成事实；无法确认的内容写入 `constraints` 或后续 proposal 的 `assumptions`。
 - 不要写入源 prompt workflow 目录或目标 package 目录。

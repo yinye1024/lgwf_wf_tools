@@ -18,7 +18,7 @@
 
 - 运行状态仍写入当前 work dir 的 `.lgwf/`。
 - 目标 package 不得写入 `.lgwf/`。
-- `target_package_root` 是 workspace root 相对路径。
+- `target_package_root` 可以是绝对路径或相对路径；相对路径按当前 run 的 work dir 解析。
 
 ## 验证
 

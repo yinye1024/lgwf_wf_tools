@@ -322,36 +322,62 @@ class ScriptFlowE2ETests(unittest.TestCase):
     def test_case_prepare_wf_create_fast_payload_confirmed_input(self):
         module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
         with isolated_workdir() as workdir:
-            confirmed = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/confirmed")
+            confirmed = make_full_proposal(target_package_root="C:/Users/Administrator/Desktop/tmp3/lgwf_wf")
             confirmed["workflow_name"] = "confirmed-workflow"
             confirmed["raw_intent"] = "使用 confirmed 输入"
             write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input.json", confirmed)
 
             confirmed_result = runtime_guard_and_capture_stdout_json(module.main)
-            confirmed_payload = json.loads((workdir / ".lgwf" / "wf_create_fast_payload.json").read_text(encoding="utf-8"))
-            confirmed_input_for_wf_create_fast = json.loads(
-                (workdir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json").read_text(encoding="utf-8")
-            )
+            handoff_target = json.loads((workdir / ".lgwf" / "wf_create_fast_handoff.json").read_text(encoding="utf-8"))
+            handoff_state = confirmed_result["lgwf_wf_convert.wf_create_fast_handoff_payload"]
             self.assertEqual(
-                confirmed_result["lgwf_wf_convert.wf_create_fast_payload"]["prompt_convert_payload"]["workflow_name"],
+                handoff_target["workflow_name"],
                 "confirmed-workflow",
             )
             self.assertEqual(
-                confirmed_payload["prompt_convert_payload"]["target_package_root"],
-                "skills/lgwf-wf-tools/workflows/confirmed",
+                handoff_target["target_package_root"],
+                "C:\\Users\\Administrator\\Desktop\\tmp3\\lgwf_wf",
             )
-            self.assertEqual(confirmed_payload["wf_create_fast_payload"]["raw_intent"], "使用 confirmed 输入")
-            self.assertNotIn("wf_create_payload", confirmed_payload)
-            self.assertEqual(confirmed_input_for_wf_create_fast["raw_intent"], "使用 confirmed 输入")
-            self.assertTrue((workdir / ".lgwf" / "wf_create_fast_payload.json").exists())
-            self.assertTrue((workdir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json").exists())
+            self.assertEqual(handoff_target["raw_intent"], "使用 confirmed 输入")
+            self.assertNotIn("source_root", handoff_target)
+            self.assertNotIn("request", handoff_target)
+            self.assertEqual(
+                handoff_state["wf_create_fast_launch_input"]["request"]["target_file"],
+                str((workdir / ".lgwf" / "wf_create_fast_handoff.json").resolve()),
+            )
+            launch_input_path = workdir / ".lgwf" / "wf_create_fast_launch_input.json"
+            launch_input = json.loads(launch_input_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                launch_input,
+                handoff_state["wf_create_fast_launch_input"],
+            )
+            self.assertEqual(handoff_state["input_json_file"], str(launch_input_path.resolve()))
+            self.assertEqual(handoff_state["workflow_lgwf"], "workflows/wf-create-fast/wf/workflow.lgwf")
+            self.assertEqual(handoff_state["work_dir"], "workflows/wf-create-fast/ws")
+            self.assertIn("wf_create_fast_launch_input.json", handoff_state["suggested_command"])
+            self.assertTrue(handoff_state["handoff_ack_required"])
+            self.assertTrue((workdir / ".lgwf" / "wf_create_fast_handoff.json").exists())
+            self.assertTrue(launch_input_path.exists())
+            self.assertFalse((workdir / ".lgwf" / "wf_create_fast_payload.json").exists())
+            self.assertFalse((workdir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json").exists())
+
+    def test_case_prepare_wf_create_fast_payload_requires_finalized_input(self):
+        module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
+        with isolated_workdir() as workdir:
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", make_full_proposal())
+            with self.assertRaisesRegex(FileNotFoundError, "wf_create_fast_input.json"):
+                module.main()
 
     def test_case_prepare_wf_create_fast_payload_path_guardrails(self):
         module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
-        for raw_path in (".", "/absolute/path", "C:/illegal/path", "../outside", "inside/.lgwf/state"):
+        for raw_path in (".", "../outside", "inside/.lgwf/state", "https://example.com/workflow"):
             with self.subTest(target_package_root=raw_path):
                 with self.assertRaises(ValueError):
                     module.normalize_package_path(raw_path, "target_package_root")
+        for raw_path in ("/absolute/path", "C:/absolute/path", "skills/example"):
+            with self.subTest(target_package_root=raw_path):
+                normalized = module.normalize_package_path(raw_path, "target_package_root")
+                self.assertEqual(normalized.replace("\\", "/"), raw_path)
 
         with isolated_workdir() as workdir:
             proposal = make_full_proposal(target_package_root="../outside")
@@ -359,6 +385,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.main()
             self.assertFalse((workdir / ".lgwf" / "wf_create_fast_payload.json").exists())
+            self.assertFalse((workdir / ".lgwf" / "wf_create_fast_handoff.json").exists())
 
     def test_guard_markers_document_forbidden_runtime_patterns(self):
         guard_source = (PACKAGE_ROOT / "tests" / "test_wf_script_flow_e2e.py").read_text(encoding="utf-8")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -24,6 +24,26 @@ def normalize_relative_path(raw_path: str, field_name: str) -> str:
     if not normalized:
         raise ValueError(f"{field_name} 不能为空")
     return normalized
+
+
+def normalize_target_package_root(raw_path: str, field_name: str = "target_package_root") -> str:
+    """规范化目标 package root。
+
+    用户入口经常提供绝对路径；这里允许绝对路径和 workspace 相对路径，
+    但仍禁止 URL、上跳路径和 `.lgwf` 运行态目录。
+    """
+
+    cleaned = raw_path.strip()
+    if "://" in cleaned:
+        raise ValueError(f"{field_name} 禁止 URL 路径")
+    if not cleaned or cleaned == ".":
+        raise ValueError(f"{field_name} 不能为空")
+    parts = PureWindowsPath(cleaned).parts if ":" in cleaned else PurePosixPath(cleaned.replace("\\", "/")).parts
+    if any(part == ".." for part in parts):
+        raise ValueError(f"{field_name} 禁止 `..`")
+    if any(part == ".lgwf" for part in parts):
+        raise ValueError(f"{field_name} 禁止写入目标 package 根目录 `.lgwf`")
+    return str(PureWindowsPath(cleaned)) if ":" in cleaned else PurePosixPath(cleaned.replace("\\", "/")).as_posix().rstrip("/")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -109,7 +129,10 @@ def write_revised_proposal(
     for field in normalized_path_fields:
         value = proposal.get(field)
         if isinstance(value, str) and value.strip():
-            proposal[field] = normalize_relative_path(value, field)
+            if field == "target_package_root":
+                proposal[field] = normalize_target_package_root(value, field)
+            else:
+                proposal[field] = normalize_relative_path(value, field)
     write_json(lgwf_dir / proposal_file, proposal)
     return {
         "artifact_path": f".lgwf/{proposal_file}",

@@ -24,37 +24,14 @@ STEP analyze_source
 PY prepare_payload
   SCRIPT "07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py"
   TIMEOUT 60
-  RESULT state.lgwf_wf_convert.wf_create_fast_payload
+  RESULT state.lgwf_wf_convert.wf_create_fast_handoff_payload
   UPDATES_STATE {
-    WRITE state.lgwf_wf_convert.wf_create_fast_payload;
+    WRITE state.lgwf_wf_convert.wf_create_fast_handoff_payload;
   }
   CONTRACT {
     READ workspace file ".lgwf/wf_create_fast_input.json";
-    WRITE workspace file ".lgwf/wf_create_fast_input_for_wf_create_fast.json";
-    WRITE workspace file ".lgwf/wf_create_fast_payload.json";
-    WRITE state.lgwf_wf_convert.wf_create_fast_payload;
-  };
-
-PY map_wf_create_fast_input
-  SCRIPT "scripts/map_wf_create_fast_input.py"
-  INPUT state.lgwf_wf_convert.wf_create_fast_payload
-  RESULT state.lgwf_wf_convert.wf_create_fast_input
-  UPDATES_STATE
-  CONTRACT {
-    READ state.lgwf_wf_convert.wf_create_fast_payload;
-    WRITE state.lgwf_wf_convert.wf_create_fast_input;
-  };
-
-PY prepare_wf_create_fast_handoff
-  SCRIPT "scripts/prepare_wf_create_fast_handoff.py"
-  INPUT state.lgwf_wf_convert.wf_create_fast_input
-  RESULT state.lgwf_wf_convert.wf_create_fast_handoff_payload
-  UPDATES_STATE
-  CONTRACT {
-    READ state.lgwf_wf_convert.wf_create_fast_input;
-    READ workspace file ".lgwf/wf_create_fast_payload.json";
-    READ workspace file ".lgwf/wf_create_fast_input_for_wf_create_fast.json";
     WRITE workspace file ".lgwf/wf_create_fast_handoff.json";
+    WRITE workspace file ".lgwf/wf_create_fast_launch_input.json";
     WRITE state.lgwf_wf_convert.wf_create_fast_handoff_payload;
   };
 
@@ -70,6 +47,4 @@ HANDOFF handoff_to_wf_create_fast
 FLOW collect_target
   THEN analyze_source
   THEN prepare_payload
-  THEN map_wf_create_fast_input
-  THEN prepare_wf_create_fast_handoff
   THEN handoff_to_wf_create_fast;

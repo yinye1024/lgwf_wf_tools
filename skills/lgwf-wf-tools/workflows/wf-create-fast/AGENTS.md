@@ -37,7 +37,7 @@ python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-id wf-creat
 
 - 运行状态只写入 `workflows/wf-create-fast/ws/.lgwf/`。
 - 目标 workflow package 只由 `03_materialize_scaffold` 按已确认 `target_package_root` 落盘。
-- `target_package_root` 是 workspace root 相对路径，不是 `ws/` 相对路径。
+- `target_package_root` 可以是绝对路径或相对路径；绝对路径按用户给定位置落盘，相对路径按当前 run 的 work dir 解析。
 - 目标 package 根目录不得写入 `.lgwf/`、`.tmp/`、`__pycache__/` 或其他运行态目录。
 
 ## 产物
@@ -60,7 +60,9 @@ python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-id wf-creat
 
 ## Handoff 纪律
 
-- `HANDOFF` 后主 agent 应继续当前创建任务，读取 `.lgwf/main_agent_authoring_handoff.json` 和其中列出的 `source_artifacts`。
+- `HANDOFF` pending action 出现后，主 agent 先使用 `handoff submit` ack，记录已接收，再继续当前创建任务。
+- ack 后主 agent 读取 `.lgwf/main_agent_authoring_handoff.json`。
+- 主 agent 必读输入只包括 handoff 中的 `confirmed_requirements`、`confirmed_business_flow` 和 `target_package`：前两个字段是 confirmed artifact 文件路径，`target_package` 是目标 package 定位和验证信息。
 - 主 agent 只修改 handoff payload 中的 `edit_dirs`。
 - 主 agent 直接完善目标 package scaffold 文件。
 - 主 agent 不生成 `step_designs.json`。

@@ -6,6 +6,12 @@ from typing import Any
 
 
 STATE_KEY = "lgwf_wf_create_fast.main_agent_handoff_payload"
+INTERNAL_ARTIFACTS = {
+    "requirements": ".lgwf/create_requirements.json",
+    "business_flow": ".lgwf/business_flow.json",
+    "scaffold_package_result": ".lgwf/scaffold_package_result.json",
+    "materialize_scaffold_result": ".lgwf/materialize_scaffold_result.json",
+}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -17,16 +23,50 @@ def read_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def read_required_json(root: Path, relative_path: str) -> dict[str, Any]:
+    path = root / relative_path
+    data = read_json(path)
+    if not data:
+        raise ValueError(f"{relative_path} 不存在或为空，无法生成 main agent handoff")
+    return data
+
+
 def write_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def quote_command_arg(path: Path) -> str:
+    return '"' + str(path).replace('"', '\\"') + '"'
+
+
+def unwrap_confirmed(data: dict[str, Any]) -> dict[str, Any]:
+    confirmed = data.get("confirmed")
+    return confirmed if isinstance(confirmed, dict) else data
+
+
+def unwrap_scaffold_plan(data: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(data.get("scaffold_plan"), dict):
+        return data["scaffold_plan"]
+    for key in (
+        "lgwf_wf_create_fast.scaffold_package_result",
+        "scaffold_package_result",
+    ):
+        wrapped = data.get(key)
+        if isinstance(wrapped, dict) and isinstance(wrapped.get("scaffold_plan"), dict):
+            return wrapped["scaffold_plan"]
+    raise ValueError(".lgwf/scaffold_package_result.json 缺少 scaffold_plan")
+
+
 def build_handoff_payload(root: Path) -> dict[str, Any]:
-    lgwf_dir = root / ".lgwf"
-    materialize_result = read_json(lgwf_dir / "materialize_scaffold_result.json")
-    if not materialize_result:
-        raise ValueError(".lgwf/materialize_scaffold_result.json 不存在或为空")
+    artifacts = {
+        name: read_required_json(root, relative_path)
+        for name, relative_path in INTERNAL_ARTIFACTS.items()
+    }
+    requirements = unwrap_confirmed(artifacts["requirements"])
+    business_flow = unwrap_confirmed(artifacts["business_flow"])
+    scaffold_plan = unwrap_scaffold_plan(artifacts["scaffold_package_result"])
+    materialize_result = artifacts["materialize_scaffold_result"]
     target_package_root = str(materialize_result.get("target_package_root", "")).strip()
     target_package_abs = str(materialize_result.get("target_package_abs", "")).strip()
     if not target_package_root:
@@ -35,34 +75,48 @@ def build_handoff_payload(root: Path) -> dict[str, Any]:
         raise ValueError("materialize_scaffold_result 缺少 target_package_abs")
 
     validation_commands = materialize_result.get("validation_commands")
+    target_abs_path = Path(target_package_abs)
     if not isinstance(validation_commands, list):
         validation_commands = [
-            f"python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py audit --workflow-lgwf {target_package_root}/wf/workflow.lgwf",
-            f"python -m unittest discover {target_package_root}/tests",
+            "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py "
+            f"audit --workflow-lgwf {quote_command_arg(target_abs_path / 'wf' / 'workflow.lgwf')}",
+            f"python -m unittest discover {quote_command_arg(target_abs_path / 'tests')}",
         ]
+    validation_command_list = [str(item) for item in validation_commands if isinstance(item, str)]
+    workflow_name = (
+        str(materialize_result.get("workflow_name") or scaffold_plan.get("workflow_name") or requirements.get("workflow_name") or "")
+        .strip()
+    )
+    package_profile = str(scaffold_plan.get("package_profile") or requirements.get("package_profile") or "").strip()
 
     return {
+        "handoff_schema_version": 4,
         "workflow_id": "wf-create-fast",
         "next_action": "main_agent_authoring",
-        "target_package_root": target_package_root,
-        "target_package_abs": target_package_abs,
-        "target_workflow_lgwf": f"{target_package_root}/wf/workflow.lgwf",
-        "edit_dirs": [target_package_root],
-        "source_artifacts": [
-            ".lgwf/create_requirements.json",
-            ".lgwf/business_flow.json",
-            ".lgwf/scaffold_package_result.json",
-            ".lgwf/materialize_scaffold_result.json",
+        "agent_instruction": "handle_main_agent_authoring",
+        "handoff_mode": "confirmed_artifacts_and_target_package",
+        "handoff_status": "ready_for_main_agent",
+        "handoff_ack_required": True,
+        "required_context": [
+            "confirmed_requirements",
+            "confirmed_business_flow",
+            "target_package",
         ],
-        "main_agent_instruction": (
-            "基于已确认需求、业务流和已落盘 scaffold，直接完善目标 workflow package；"
-            "不要生成 step_designs.json；不要进入 wf-create 的 03/04 实现链路。"
-        ),
-        "validation_commands": [str(item) for item in validation_commands if isinstance(item, str)],
+        "confirmed_requirements": INTERNAL_ARTIFACTS["requirements"],
+        "confirmed_business_flow": INTERNAL_ARTIFACTS["business_flow"],
+        "target_package": {
+            "workflow_name": workflow_name,
+            "package_profile": package_profile,
+            "root_input": target_package_root,
+            "root_abs": target_package_abs,
+            "workflow_lgwf": str(target_abs_path / "wf" / "workflow.lgwf"),
+            "work_dir": str(target_abs_path / "ws"),
+            "tests_dir": str(target_abs_path / "tests"),
+            "edit_dirs": [target_package_abs],
+            "validation_commands": validation_command_list,
+        },
         "requires_user_confirmation": False,
         "auto_execute_downstream_workflow": False,
-        "materialize_status": materialize_result.get("status", ""),
-        "skipped_existing_files": materialize_result.get("skipped_existing_files", []),
     }
 
 

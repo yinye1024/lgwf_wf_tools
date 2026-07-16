@@ -79,83 +79,6 @@ def build_runtime_authoring_package(root: Path) -> Path:
     ignore = shutil.ignore_patterns("ws", ".lgwf", "__pycache__", "*.pyc", "*.pyo")
     shutil.copytree(PACKAGE_ROOT, package_root, ignore=ignore)
     shutil.copytree(WF_CREATE_FAST_WORKFLOW_ROOT.parent, child_target, ignore=ignore)
-    runtime_fake_scripts_dir = package_root / "wf" / "scripts"
-    runtime_fake_scripts_dir.mkdir(parents=True, exist_ok=True)
-    runtime_fake_map_script = runtime_fake_scripts_dir / "runtime_fake_map_wf_create_fast_input.py"
-    runtime_fake_map_script.write_text(
-        textwrap.dedent(
-            """
-            from __future__ import annotations
-
-            import json
-            import sys
-
-
-            def main() -> None:
-                payload = json.load(sys.stdin)
-                child_input = payload.get("wf_create_fast_payload") if isinstance(payload, dict) else None
-                if not isinstance(child_input, dict):
-                    raise ValueError("wf_create_fast_payload 缺少 wf-create-fast 输入")
-                print(
-                    json.dumps(
-                        {"lgwf_wf_convert.runtime_fake_wf_create_fast_input": child_input},
-                        ensure_ascii=False,
-                    )
-                )
-
-
-            if __name__ == "__main__":
-                main()
-            """
-        ).lstrip(),
-        encoding="utf-8",
-    )
-    root_workflow_path = package_root / "wf" / "workflow.lgwf"
-    root_workflow_text = root_workflow_path.read_text(encoding="utf-8")
-    map_start = root_workflow_text.find("PY map_wf_create_fast_input\n")
-    flow_start = root_workflow_text.find("FLOW collect_target\n", map_start)
-    if map_start < 0 or flow_start < 0:
-        raise AssertionError("runtime fake 根 workflow 镜像补丁锚点失效")
-    root_workflow_text = (
-        root_workflow_text[:map_start]
-        +
-        'PY runtime_fake_map_wf_create_fast_input\n'
-        '  SCRIPT "scripts/runtime_fake_map_wf_create_fast_input.py"\n'
-        '  INPUT state.lgwf_wf_convert.wf_create_fast_payload\n'
-        '  RESULT state.lgwf_wf_convert.runtime_fake_wf_create_fast_input\n'
-        '  UPDATES_STATE\n'
-        '  CONTRACT {\n'
-        '    READ state.lgwf_wf_convert.wf_create_fast_payload;\n'
-        '    WRITE state.lgwf_wf_convert.runtime_fake_wf_create_fast_input;\n'
-        '  };\n\n'
-        'PY prepare_wf_create_fast_handoff\n'
-        '  SCRIPT "scripts/prepare_wf_create_fast_handoff.py"\n'
-        '  INPUT state.lgwf_wf_convert.runtime_fake_wf_create_fast_input\n'
-        '  RESULT state.lgwf_wf_convert.wf_create_fast_handoff_payload\n'
-        '  UPDATES_STATE\n'
-        '  CONTRACT {\n'
-        '    READ state.lgwf_wf_convert.runtime_fake_wf_create_fast_input;\n'
-        '    READ workspace file ".lgwf/wf_create_fast_payload.json";\n'
-        '    READ workspace file ".lgwf/wf_create_fast_input_for_wf_create_fast.json";\n'
-        '    WRITE workspace file ".lgwf/wf_create_fast_handoff.json";\n'
-        '    WRITE state.lgwf_wf_convert.wf_create_fast_handoff_payload;\n'
-        '  };\n\n'
-        'HANDOFF handoff_to_wf_create_fast\n'
-        '  CONTEXT state.lgwf_wf_convert.wf_create_fast_handoff_payload\n'
-        '  PROMPT "handoff_wf_create_fast.md"\n'
-        '  RESULT state.lgwf_wf_convert.wf_create_fast_handoff\n'
-        '  CONTRACT {\n'
-        '    READ state.lgwf_wf_convert.wf_create_fast_handoff_payload;\n'
-        '    WRITE state.lgwf_wf_convert.wf_create_fast_handoff;\n'
-        '  };\n\n'
-        'FLOW collect_target\n'
-        '  THEN analyze_source\n'
-        '  THEN prepare_payload\n'
-        '  THEN runtime_fake_map_wf_create_fast_input\n'
-        '  THEN prepare_wf_create_fast_handoff\n'
-        '  THEN handoff_to_wf_create_fast;\n'
-    )
-    root_workflow_path.write_text(root_workflow_text, encoding="utf-8")
     return package_root / "wf" / "workflow.lgwf"
 
 
@@ -413,7 +336,7 @@ class WorkflowRuntimeHarness:
         happy_confirmed = {
             "workflow_name": "demo-converted-workflow",
             "target_package_root": workflow_root,
-            "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的创建输入。",
+            "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的完整 handoff target。",
             "source_root": source_root,
             "stages": [{"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}],
             "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
@@ -431,11 +354,11 @@ class WorkflowRuntimeHarness:
         revise_confirmed = {
             "workflow_name": "demo-converted-workflow",
             "target_package_root": workflow_root,
-            "raw_intent": "把现有 prompt workflow 转成可交给 wf-create-fast 的创建输入包；本 workflow 负责分析、proposal、人工确认、payload，并在确认后 handoff 给主 agent 启动 wf-create-fast。",
+            "raw_intent": "把现有 prompt workflow 转成可交给 wf-create-fast 的完整 handoff target；本 workflow 负责分析、proposal、人工确认，并在确认后 handoff 给主 agent 启动 wf-create-fast。",
             "source_root": source_root,
             "stages": [
                 {"id": "discover", "summary": "索引入口与 prompt 资源"},
-                {"id": "analyze", "summary": "分析业务结构并整理给 wf-create-fast 的创建输入"},
+                {"id": "analyze", "summary": "分析业务结构并整理给 wf-create-fast 的 handoff target"},
             ],
             "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
             "source_business_contract": {},
@@ -467,7 +390,7 @@ class WorkflowRuntimeHarness:
         proposal_first = {
             "workflow_name": "demo-converted-workflow",
             "target_package_root": workflow_root,
-            "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的创建输入。",
+            "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的完整 handoff target。",
             "source_root": source_root,
             "stages": [{"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}],
             "prompt_contracts": happy_confirmed["prompt_contracts"],
@@ -1051,22 +974,24 @@ class RuntimeFakeE2ETests(unittest.TestCase):
             notes_text = json.dumps(confirmed["run_workflow_notes_for_wf_create_fast"], ensure_ascii=False)
             self.assertIn("主 agent 启动 wf-create-fast", notes_text)
 
-        payload = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_payload.json")
-        self.assertIn("prompt_convert_payload", payload)
-        self.assertIn("wf_create_fast_payload", payload)
-        self.assertFalse(str(payload["prompt_convert_payload"]["target_package_root"]).startswith("/"))
-        self.assertEqual(payload["wf_create_fast_payload"]["raw_intent"], confirmed.get("raw_intent", proposal["raw_intent"]))
-        wf_create_fast_input = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json")
-        self.assertEqual(wf_create_fast_input["raw_intent"], payload["wf_create_fast_payload"]["raw_intent"])
-        handoff = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_handoff.json")
-        self.assertEqual(handoff["downstream_workflow_id"], "wf-create-fast")
-        self.assertEqual(handoff["next_action"], "start_workflow")
-        self.assertEqual(handoff["next_workflow_id"], "wf-create-fast")
-        self.assertTrue(
-            handoff["input_json_file"].replace("\\", "/").endswith("/.lgwf/wf_create_fast_input_for_wf_create_fast.json")
-        )
-        self.assertEqual(handoff["wf_create_fast_input"], wf_create_fast_input)
-        self.assertFalse(handoff["auto_execute_downstream_workflow"])
+        handoff_target = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_handoff.json")
+        self.assertEqual(handoff_target["input_mode"], "converted_contract")
+        self.assertFalse(str(handoff_target["target_package_root"]).startswith("/"))
+        self.assertEqual(handoff_target["raw_intent"], confirmed.get("raw_intent", proposal["raw_intent"]))
+        self.assertNotIn("source_root", handoff_target)
+        self.assertNotIn("request", handoff_target)
+        self.assertFalse((work_dir / ".lgwf" / "wf_create_fast_payload.json").exists())
+        self.assertFalse((work_dir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json").exists())
+        launch_input = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_launch_input.json")
+        self.assertEqual(launch_input["request"]["target_file"], str((work_dir / ".lgwf" / "wf_create_fast_handoff.json").resolve()))
+        pending_files = sorted((work_dir / ".lgwf" / "handoff").glob("*.pending.json"))
+        self.assertTrue(pending_files, "缺少 handoff pending 文件")
+        pending = read_utf8_json(pending_files[-1])
+        pending_text = json.dumps(pending, ensure_ascii=False)
+        self.assertIn("wf_create_fast_launch_input", pending_text)
+        self.assertEqual(pending["input_json_file"], str((work_dir / ".lgwf" / "wf_create_fast_launch_input.json").resolve()))
+        self.assertIn("target_file", pending_text)
+        self.assertIn("wf_create_fast_handoff.json", pending_text.replace("\\", "/"))
         run_workflow_trace = work_dir / RUNTIME_TRACE_DIRNAME / "run_workflow_trace.jsonl"
         self.assertFalse(run_workflow_trace.exists(), "wf-convert 不应直接启动 wf-create-fast")
 
@@ -1121,7 +1046,7 @@ class RuntimeFakeE2ETests(unittest.TestCase):
                         "confirmed": {
                             "workflow_name": "demo-converted-workflow",
                             "target_package_root": "skills/lgwf-wf-tools/workflows/generated/demo-converted-workflow",
-                            "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的创建输入。",
+                            "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的完整 handoff target。",
                             "source_root": "<temp_fixture_root>/sample_prompt_workflow",
                             "stages": [
                                 {"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}
@@ -1190,7 +1115,7 @@ class RuntimeFakeE2ETests(unittest.TestCase):
                         "approval": "revise",
                         "comment": "先修订 proposal，再继续",
                         "changes": [
-                            "raw_intent 需要明确“只产出 wf-create-fast 输入包，并 handoff 给主 agent 启动 wf-create-fast”",
+                            "raw_intent 需要明确“只产出 wf-create-fast handoff target，并 handoff 给主 agent 启动 wf-create-fast”",
                             "run_workflow_notes_for_wf_create_fast 需要补充用户确认后再接续的说明",
                         ],
                     },
@@ -1203,11 +1128,11 @@ class RuntimeFakeE2ETests(unittest.TestCase):
                         "confirmed": {
                             "workflow_name": "demo-converted-workflow",
                             "target_package_root": "skills/lgwf-wf-tools/workflows/generated/demo-converted-workflow",
-                            "raw_intent": "把现有 prompt workflow 转成可交给 wf-create-fast 的创建输入包；本 workflow 负责分析、proposal、人工确认、payload，并在确认后 handoff 给主 agent 启动 wf-create-fast。",
+                            "raw_intent": "把现有 prompt workflow 转成可交给 wf-create-fast 的完整 handoff target；本 workflow 负责分析、proposal、人工确认，并在确认后 handoff 给主 agent 启动 wf-create-fast。",
                             "source_root": "<temp_fixture_root>/sample_prompt_workflow",
                             "stages": [
                                 {"id": "discover", "summary": "索引入口与 prompt 资源"},
-                                {"id": "analyze", "summary": "分析业务结构并整理给 wf-create-fast 的创建输入"},
+                                {"id": "analyze", "summary": "分析业务结构并整理给 wf-create-fast 的 handoff target"},
                             ],
                             "prompt_contracts": [
                                 {"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}

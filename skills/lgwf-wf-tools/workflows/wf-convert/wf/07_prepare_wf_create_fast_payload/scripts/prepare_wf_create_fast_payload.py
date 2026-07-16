@@ -1,84 +1,40 @@
 from __future__ import annotations
 
 import json
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any
 
 
-REQUEST_SCALAR_FIELDS = ("target_dir", "target_file")
-REQUEST_LIST_FIELDS = ("target_dirs", "target_files")
 DOWNSTREAM_WORKFLOW_ID = "wf-create-fast"
 DOWNSTREAM_WORKFLOW_LGWF = "workflows/wf-create-fast/wf/workflow.lgwf"
+DOWNSTREAM_WORK_DIR = "workflows/wf-create-fast/ws"
+DOWNSTREAM_TARGET_FILE = ".lgwf/wf_create_fast_handoff.json"
+DOWNSTREAM_LAUNCH_INPUT_FILE = ".lgwf/wf_create_fast_launch_input.json"
 
 
 def normalize_package_path(raw_path: str, field_name: str) -> str:
     cleaned = raw_path.strip()
-    candidate = PurePosixPath(cleaned.replace("\\", "/"))
+    if "://" in cleaned:
+        raise ValueError(f"{field_name} 禁止 URL 路径")
     if not cleaned or cleaned == ".":
         raise ValueError(f"{field_name} 不能为空")
-    if candidate.is_absolute():
-        raise ValueError(f"{field_name} 禁止绝对路径")
     if ":" in cleaned:
-        raise ValueError(f"{field_name} 禁止盘符路径")
-    if any(part == ".." for part in candidate.parts):
+        candidate = PureWindowsPath(cleaned)
+        if not candidate.is_absolute():
+            raise ValueError(f"{field_name} 盘符路径必须是绝对路径")
+        parts = candidate.parts
+        normalized = str(candidate)
+    else:
+        candidate = PurePosixPath(cleaned.replace("\\", "/"))
+        parts = candidate.parts
+        normalized = candidate.as_posix().rstrip("/")
+    if any(part == ".." for part in parts):
         raise ValueError(f"{field_name} 禁止 `..`")
-    if any(part == ".lgwf" for part in candidate.parts):
+    if any(part == ".lgwf" for part in parts):
         raise ValueError(f"{field_name} 禁止写入 `.lgwf`")
-    return candidate.as_posix().strip("/")
-
-
-def as_string_list(value: Any) -> list[str]:
-    if isinstance(value, str):
-        stripped = value.strip()
-        return [stripped] if stripped else []
-    if isinstance(value, list):
-        result: list[str] = []
-        for item in value:
-            if isinstance(item, str) and item.strip():
-                result.append(item.strip())
-        return result
-    return []
-
-
-def dedupe_strings(values: list[str]) -> list[str]:
-    result: list[str] = []
-    seen: set[str] = set()
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
-
-
-def normalize_creation_request(raw_request: Any) -> dict[str, Any]:
-    if not isinstance(raw_request, dict):
-        return {}
-    request: dict[str, Any] = {}
-    for field in REQUEST_SCALAR_FIELDS:
-        values = as_string_list(raw_request.get(field))
-        if values:
-            request[field] = values[0]
-    for field in REQUEST_LIST_FIELDS:
-        values = dedupe_strings(as_string_list(raw_request.get(field)))
-        if values:
-            request[field] = values
-    return request
-
-
-def with_source_root_request(request: dict[str, Any], source_root: str) -> dict[str, Any]:
-    cleaned_source_root = source_root.strip()
-    if not cleaned_source_root:
-        return request
-    if not request.get("target_dir"):
-        request["target_dir"] = cleaned_source_root
-        return request
-    if request.get("target_dir") == cleaned_source_root:
-        return request
-    target_dirs = as_string_list(request.get("target_dirs"))
-    target_dirs.append(cleaned_source_root)
-    request["target_dirs"] = dedupe_strings(target_dirs)
-    return request
+    if not normalized:
+        raise ValueError(f"{field_name} 不能为空")
+    return normalized
 
 
 def build_payload(
@@ -95,11 +51,9 @@ def build_payload(
     if not raw_intent:
         raw_intent = f"基于现有 prompt workflow 创建 LGWF workflow：{workflow_name}"
     payload = {
-        "downstream_workflow_id": DOWNSTREAM_WORKFLOW_ID,
-        "downstream_workflow_lgwf": DOWNSTREAM_WORKFLOW_LGWF,
+        "input_mode": "converted_contract",
         "workflow_name": workflow_name,
         "target_package_root": target_package_root,
-        "source_root": str(confirmed_input.get("source_root", "")),
         "package_profile": package_profile,
         "raw_intent": raw_intent,
         "source_business_contract": confirmed_input.get("source_business_contract", {}),
@@ -115,24 +69,75 @@ def build_payload(
             "out_of_scope": confirmed_input.get("out_of_scope", []),
         },
     }
-    request = normalize_creation_request(confirmed_input.get("request"))
-    if request:
-        payload["request"] = request
     return payload
 
 
-def build_wf_create_fast_input(payload: dict[str, Any]) -> dict[str, Any]:
+def build_wf_create_fast_target(payload: dict[str, Any]) -> dict[str, Any]:
     raw_intent = str(payload.get("raw_intent", "")).strip()
-    child_input: dict[str, Any] = {"raw_intent": raw_intent}
-    request = normalize_creation_request(payload.get("request"))
-    request = with_source_root_request(request, str(payload.get("source_root", "")))
-    if request:
-        child_input["request"] = request
+    target: dict[str, Any] = {
+        "input_mode": "converted_contract",
+        "workflow_name": str(payload.get("workflow_name", "")).strip(),
+        "target_package_root": str(payload.get("target_package_root", "")).strip(),
+        "package_profile": str(payload.get("package_profile", "")).strip(),
+        "raw_intent": raw_intent,
+    }
     for field in ("source_business_contract", "conversion_mapping", "prompt_workflow_context"):
         value = payload.get(field)
         if value:
-            child_input[field] = value
-    return child_input
+            target[field] = value
+    return {key: value for key, value in target.items() if value not in ("", [], {})}
+
+
+def build_wf_create_fast_launch_input(target_file: str) -> dict[str, Any]:
+    return {
+        "raw_intent": "读取 wf-convert 生成的完整 handoff target file，并据此创建 LGWF workflow。",
+        "request": {
+            "target_file": target_file,
+        },
+    }
+
+
+def quote_command_arg(value: str) -> str:
+    return '"' + value.replace('"', '\\"') + '"'
+
+
+def build_handoff_state(
+    *,
+    target_file: str,
+    target_file_for_launch: str,
+    launch_input_file: str,
+) -> dict[str, Any]:
+    launch_input = build_wf_create_fast_launch_input(target_file_for_launch)
+    return {
+        "workflow_id": DOWNSTREAM_WORKFLOW_ID,
+        "next_workflow_id": DOWNSTREAM_WORKFLOW_ID,
+        "next_action": "start_workflow",
+        "agent_instruction": "handle_handoff",
+        "handoff_status": "ready_for_main_agent_ack",
+        "handoff_ack_required": True,
+        "downstream_workflow_id": DOWNSTREAM_WORKFLOW_ID,
+        "downstream_workflow_lgwf": DOWNSTREAM_WORKFLOW_LGWF,
+        "downstream_work_dir": DOWNSTREAM_WORK_DIR,
+        "workflow_lgwf": DOWNSTREAM_WORKFLOW_LGWF,
+        "work_dir": DOWNSTREAM_WORK_DIR,
+        "input_json_file": launch_input_file,
+        "target_file": target_file,
+        "target_file_for_launch": target_file_for_launch,
+        "wf_create_fast_launch_input": launch_input,
+        "input_mode": "target_file",
+        "launch_steps": [
+            "主 agent 先提交 handoff ack，记录已接收。",
+            "使用 input_json_file 指向的 UTF-8 no BOM JSON 文件启动 wf-create-fast。",
+            "target_file 是 wf-create-fast 要读取的创建资料。",
+        ],
+        "suggested_command": (
+            "python skills/lgwf-wf-tools/scripts/run_skill_workflow.py "
+            f"--workflow-id {DOWNSTREAM_WORKFLOW_ID} "
+            f"--input-json-file {quote_command_arg(launch_input_file)}"
+        ),
+        "requires_user_confirmation": True,
+        "auto_execute_downstream_workflow": False,
+    }
 
 
 def main() -> None:
@@ -146,20 +151,25 @@ def main() -> None:
         confirmed_input=confirmed_input,
         package_profile=str(confirmed_input.get("package_profile", "internal_workflow_package")),
     )
-    wf_create_fast_input = build_wf_create_fast_input(payload)
-    wf_create_fast_input_path = lgwf_dir / "wf_create_fast_input_for_wf_create_fast.json"
-    wf_create_fast_input_path.write_text(
-        json.dumps(wf_create_fast_input, ensure_ascii=False, indent=2),
+    wf_create_fast_target = build_wf_create_fast_target(payload)
+    wf_create_fast_target_path = lgwf_dir / "wf_create_fast_handoff.json"
+    wf_create_fast_target_path.write_text(
+        json.dumps(wf_create_fast_target, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    output = {
-        "downstream_workflow_id": DOWNSTREAM_WORKFLOW_ID,
-        "prompt_convert_payload": payload,
-        "wf_create_fast_payload": wf_create_fast_input,
-    }
-    output_path = lgwf_dir / "wf_create_fast_payload.json"
-    output_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"lgwf_wf_convert.wf_create_fast_payload": output}, ensure_ascii=False, indent=2))
+    target_file_for_launch = str(wf_create_fast_target_path.resolve())
+    launch_input_path = root / DOWNSTREAM_LAUNCH_INPUT_FILE
+    launch_input = build_wf_create_fast_launch_input(target_file_for_launch)
+    launch_input_path.write_text(
+        json.dumps(launch_input, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    handoff_state = build_handoff_state(
+        target_file=DOWNSTREAM_TARGET_FILE,
+        target_file_for_launch=target_file_for_launch,
+        launch_input_file=str(launch_input_path.resolve()),
+    )
+    print(json.dumps({"lgwf_wf_convert.wf_create_fast_handoff_payload": handoff_state}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

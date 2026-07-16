@@ -19,9 +19,9 @@
 3. `detected_stages` 和 `prompt_contracts` 中的事实应能追溯到源文件路径。
 4. `detected_stages` 和 `prompt_contracts` 必须显式体现证据强度或等价表达、proposal 消费用途，以及证据不足时的降级规则；缺少这些内容不得判 `pass`。
 5. 低证据内容若被伪装成高置信事实，或与 `assumptions` / `gaps` 的分流不清，必须返回 `revise`，并指出会污染 proposal 的哪类字段。
-6. `gaps` 与 `risks` 应体现阻塞级别或影响链路；如果无法判断是否阻塞 approval 或 payload 固化，不能误判通过。
+6. `gaps` 与 `risks` 应体现阻塞级别或影响链路；如果无法判断是否阻塞 approval 或 handoff target 固化，不能误判通过。
 7. 信息不足时应进入 `issues`，不能因为数组为空而误判通过。
-8. 对“缺少证据强度”“未执行降级”“事实与 assumptions 混写”这类问题，应优先给出 `high` 或等价高优先级 issue，并在文案中指出对 approval、payload 或 `raw_intent`/`stages`/`prompt_contracts` 的影响链路。
+8. 对“缺少证据强度”“未执行降级”“事实与 assumptions 混写”这类问题，应优先给出 `high` 或等价高优先级 issue，并在文案中指出对 approval、handoff target 固化或 `raw_intent`/`stages`/`prompt_contracts` 的影响链路。
 9. 如果 inspection 让下游无法判断某条事实是否足以进入 proposal 原样 confirmed，或无法看出其应改写为 `assumptions` / 人工确认点，也必须返回 `revise`。
 10. `source_business_contract` 中的业务规则不得混入执行矩阵、预填充、few-shot、角色强化或格式诱导；这类内容必须进入 `prompt_execution_mechanics` 或 `discarded_prompt_techniques`。
 11. inspection 必须能支撑后续 proposal 生成 `conversion_mapping` 和 `parity_requirements`；如果缺少业务规则到目标设计的映射证据，应返回 `revise`。
@@ -53,9 +53,9 @@
 - JSON 顶层字段固定为 `verdict` 和 `issues`。
 - `verdict` 只能是 `pass` 或 `revise`。
 - `issues` 中每个对象至少包含 `field`、`issue`、`severity` 和 `suggested_fix`。
-- `issues` 应明确指出问题会影响 proposal 的哪类消费链路，例如 `raw_intent`、`stages`、`prompt_contracts`、approval 或 payload 固化；若字段结构不能新增，可直接写在 `issue` 或 `suggested_fix` 中。
+- `issues` 应明确指出问题会影响 proposal 的哪类消费链路，例如 `raw_intent`、`stages`、`prompt_contracts`、approval 或 handoff target 固化；若字段结构不能新增，可直接写在 `issue` 或 `suggested_fix` 中。
 - 若 issue 指向低证据事实未降级或会污染 proposal 固化链路，`severity` 不得弱化为含糊等级，应让下游一眼看出这是阻塞性问题。
-- 若 issue 指向证据强度缺失、来源摘要缺失或 confirmed 可复用性不明，文案必须点名阻塞 approval 原样确认、payload 固化，或导致 `raw_intent` / `stages` / `prompt_contracts` 漂移的具体链路。
+- 若 issue 指向证据强度缺失、来源摘要缺失或 confirmed 可复用性不明，文案必须点名阻塞 approval 原样确认、handoff target 固化，或导致 `raw_intent` / `stages` / `prompt_contracts` 漂移的具体链路。
 
 ## 约束
 

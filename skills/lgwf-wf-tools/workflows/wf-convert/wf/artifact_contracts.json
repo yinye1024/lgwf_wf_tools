@@ -12,9 +12,8 @@
     ".lgwf/prompt_workflow_inspection.json",
     ".lgwf/wf_create_fast_input_approval.json",
     ".lgwf/wf_create_fast_input.json",
-    ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
-    ".lgwf/wf_create_fast_payload.json",
-    ".lgwf/wf_create_fast_handoff.json"
+    ".lgwf/wf_create_fast_handoff.json",
+    ".lgwf/wf_create_fast_launch_input.json"
   ],
   "script_writes": {
     "act_codex_42": [
@@ -39,11 +38,8 @@
       ".lgwf/wf_create_fast_input.json"
     ],
     "prepare_payload": [
-      ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
-      ".lgwf/wf_create_fast_payload.json"
-    ],
-    "prepare_wf_create_fast_handoff": [
-      ".lgwf/wf_create_fast_handoff.json"
+      ".lgwf/wf_create_fast_handoff.json",
+      ".lgwf/wf_create_fast_launch_input.json"
     ],
     "reason_codex_31": [
       ".lgwf/prompt_workflow_inspection_reason.json"

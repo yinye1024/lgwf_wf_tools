@@ -40,6 +40,7 @@ STEP main_agent_handoff
     READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/materialize_scaffold_result.json";
     WRITE workspace file ".lgwf/main_agent_authoring_handoff.json";
+    WRITE state.lgwf_wf_create_fast.main_agent_handoff_payload;
     WRITE state.lgwf_wf_create_fast.main_agent_handoff;
   };
 

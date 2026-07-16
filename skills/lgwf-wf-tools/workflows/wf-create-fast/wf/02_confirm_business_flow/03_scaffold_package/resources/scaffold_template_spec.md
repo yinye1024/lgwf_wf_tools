@@ -40,8 +40,9 @@
 
 ## 路径规则
 
-- 所有 `target_package_root` 和 resource path 必须使用包内相对路径。
-- 禁止绝对路径、盘符路径、URL、`..` 和指向 `.lgwf` 的路径。
+- `target_package_root` 可以使用绝对路径或相对路径；相对路径按当前 run 的 work dir 解析。
+- resource path、`create_dirs` 和 `create_files` 必须使用包内相对路径。
+- 禁止 URL、`..` 和指向 `.lgwf` 的路径；包内 resource path 额外禁止绝对路径和盘符路径。
 - 生成文件必须落在目标 package 内。
 - `workflow.lgwf` 只能出现在 `wf/workflow.lgwf` 与 `wf/<stage>/workflow.lgwf` 两类位置。
 - `ws/` 与 `wf/` 同级，只作为 LGWF work-dir；运行态只能写入 `ws/.lgwf`。

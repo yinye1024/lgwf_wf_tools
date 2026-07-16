@@ -31,12 +31,12 @@
 - 输出聚焦 proposal 规划，不直接产出正式 proposal。
 - `proposal_plan` 能说明关键字段来源、组织方式和边界处理。
 - 无法确认的内容进入 `known_limits`，并保持 `assumption_policy` 明确可执行。
-- `proposal_plan` 会明确 `target_package_root`、`raw_intent`、`stages`、`prompt_contracts`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create_fast` 在后续固化或人工确认链路中的用途，以及证据不足时的降级去向。
+- `proposal_plan` 会明确 `target_package_root`、`raw_intent`、`stages`、`prompt_contracts`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create_fast` 在后续 handoff target 固化或人工确认链路中的用途，以及证据不足时的降级去向。
 - 对 inspection 中证据不足的阶段、契约或确认点，不默认纳入 `stages` / `prompt_contracts`，而是提前规划其降级到 `assumptions`、`known_limits` 或人工确认提示的规则。
-- 已知会阻塞 approval 或 payload 的关键路径/兼容性问题，需在 `known_limits` 中点名，不留到脚本报错后才暴露。
-- `proposal_plan` 对每个关键字段都要明确主要消费方，例如 approval、confirmed、payload 固化、`wf_create_fast_input_for_wf_create_fast.json` 或仅供人工理解。
+- 已知会阻塞 approval 或 handoff target 固化的关键路径/兼容性问题，需在 `known_limits` 中点名，不留到脚本报错后才暴露。
+- `proposal_plan` 对每个关键字段都要明确主要消费方，例如 approval、confirmed、handoff target 固化、`wf_create_fast_handoff.json` 或仅供人工理解。
 - `raw_intent` 的规划必须至少覆盖：目标 workflow 目的、核心阶段、关键输入输出、人工确认点和首版非目标。
-- `raw_intent` 的规划必须说明它为何能脱离其它结构化字段独立被 `wf_create_fast_input_for_wf_create_fast.json` 和 approval 消费；若 inspection 证据不足，应预先规划改写边界或降级到 `assumptions` / `known_limits`，而不是把空泛表述留给 act 阶段补救。
+- `raw_intent` 的规划必须说明它为何能脱离其它结构化字段独立被 `wf_create_fast_handoff.json` 和 approval 消费；若 inspection 证据不足，应预先规划改写边界或降级到 `assumptions` / `known_limits`，而不是把空泛表述留给 act 阶段补救。
 
 ## 输出
 
@@ -92,13 +92,13 @@
 - `proposal_plan` 中至少要对 `target_package_root`、`raw_intent`、`stages`、`prompt_contracts`、`source_business_contract`、`conversion_mapping`、`parity_requirements`、`assumptions`、`out_of_scope` 和 `run_workflow_notes_for_wf_create_fast` 分别给出主要消费方，避免把多个字段合并成“后续使用”的笼统描述。
 - `assumption_policy` 必须清楚表达：低证据 inspection 条目不得直接固化为 `stages`、`prompt_contracts` 或已确认事实。
 - `known_limits` 至少记录当前已知的路径合法性风险、confirmed 兼容性风险或仍需人工拍板的结构性限制。
-- `proposal_plan` 中涉及 `raw_intent` 的条目，必须额外说明其对 `wf_create_fast_input_for_wf_create_fast.json` 的消费意义，以及如果 inspection 证据不足时应如何降级或补人工确认。
-- `known_limits` 至少覆盖当前已知的 approval 风险、payload 固化风险，以及任何会让 `run_workflow_notes_for_wf_create_fast` 承载过量阻塞信息的结构问题。
-- `proposal_plan` 若将某字段标记为“仅供人工理解”或“仅供 notes”，必须同时说明为什么它不应直接进入 confirmed / payload，避免把阻塞问题后移。
+- `proposal_plan` 中涉及 `raw_intent` 的条目，必须额外说明其对 `wf_create_fast_handoff.json` 的消费意义，以及如果 inspection 证据不足时应如何降级或补人工确认。
+- `known_limits` 至少覆盖当前已知的 approval 风险、handoff target 固化风险，以及任何会让 `run_workflow_notes_for_wf_create_fast` 承载过量阻塞信息的结构问题。
+- `proposal_plan` 若将某字段标记为“仅供人工理解”或“仅供 notes”，必须同时说明为什么它不应直接进入 confirmed / handoff target，避免把阻塞问题后移。
 
 ## 约束
 
 - 只做 proposal 计划，不写 `.lgwf/wf_create_fast_input_proposal.json`。
-- 不把 reason 写成 proposal 正文，也不替脚本执行路径归一化或 payload 生成。
+- 不把 reason 写成 proposal 正文，也不替脚本执行路径归一化或 handoff target 生成。
 - 不生成最终 LGWF workflow。
 - 不自动调用 `wf-create-fast`。

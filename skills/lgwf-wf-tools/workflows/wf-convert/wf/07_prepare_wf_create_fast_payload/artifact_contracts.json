@@ -1,0 +1,16 @@
+{
+  "workflow_id": "prepare_wf_create_fast_payload",
+  "bootstrap_inputs": [
+    ".lgwf/wf_create_fast_input.json"
+  ],
+  "final_outputs": [
+    ".lgwf/wf_create_fast_handoff.json",
+    ".lgwf/wf_create_fast_launch_input.json"
+  ],
+  "script_writes": {
+    "prepare_wf_create_fast_payload": [
+      ".lgwf/wf_create_fast_handoff.json",
+      ".lgwf/wf_create_fast_launch_input.json"
+    ]
+  }
+}

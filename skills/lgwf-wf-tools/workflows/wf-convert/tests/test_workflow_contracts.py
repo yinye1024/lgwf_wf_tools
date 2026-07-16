@@ -64,7 +64,7 @@ class PreparePayloadTests(unittest.TestCase):
         payload = module.build_payload(
             confirmed_input={
                 "workflow_name": "wf-convert",
-                "target_package_root": "skills/lgwf-wf-tools/workflows/wf-convert",
+                "target_package_root": "C:/Users/Administrator/Desktop/tmp3/lgwf_wf",
                 "source_root": "samples/source-flow",
                 "report_fields": ["summary"],
                 "source_business_contract": source_business_contract,
@@ -75,14 +75,16 @@ class PreparePayloadTests(unittest.TestCase):
             package_profile="internal_workflow_package",
         )
         self.assertEqual(payload["workflow_name"], "wf-convert")
-        self.assertEqual(payload["source_root"], "samples/source-flow")
+        self.assertEqual(payload["target_package_root"], "C:\\Users\\Administrator\\Desktop\\tmp3\\lgwf_wf")
+        self.assertNotIn("source_root", payload)
+        self.assertNotIn("request", payload)
         self.assertEqual(payload["package_profile"], "internal_workflow_package")
         self.assertEqual(payload["source_business_contract"], source_business_contract)
         self.assertEqual(payload["conversion_mapping"], conversion_mapping)
         self.assertEqual(payload["prompt_workflow_context"]["parity_requirements"][0]["requirement_id"], "audit")
         self.assertEqual(payload["prompt_workflow_context"]["discarded_prompt_techniques"][0]["technique"], "prefill")
 
-    def test_build_wf_create_fast_input_preserves_raw_intent_and_structured_context(self):
+    def test_build_wf_create_fast_target_preserves_raw_intent_and_structured_context(self):
         module = load_module(
             "wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py",
             "prepare_wf_create_fast_payload_structured",
@@ -96,15 +98,15 @@ class PreparePayloadTests(unittest.TestCase):
                 "conversion_mapping": [{"mapping_type": "preserve_business_logic"}],
             },
         )
-        child_input = module.build_wf_create_fast_input(payload)
-        self.assertEqual(child_input["raw_intent"], "创建审批路由 workflow")
-        self.assertEqual(child_input["source_business_contract"], {"goal": "审批路由"})
-        self.assertEqual(child_input["conversion_mapping"], [{"mapping_type": "preserve_business_logic"}])
+        target = module.build_wf_create_fast_target(payload)
+        self.assertEqual(target["raw_intent"], "创建审批路由 workflow")
+        self.assertEqual(target["source_business_contract"], {"goal": "审批路由"})
+        self.assertEqual(target["conversion_mapping"], [{"mapping_type": "preserve_business_logic"}])
 
-        minimal_child_input = module.build_wf_create_fast_input({"raw_intent": "minimal intent"})
-        self.assertEqual(minimal_child_input, {"raw_intent": "minimal intent"})
+        minimal_target = module.build_wf_create_fast_target({"raw_intent": "minimal intent"})
+        self.assertEqual(minimal_target, {"input_mode": "converted_contract", "raw_intent": "minimal intent"})
 
-    def test_build_wf_create_fast_input_passes_source_root_as_creation_context_request(self):
+    def test_launch_input_passes_handoff_as_target_file(self):
         module = load_module(
             "wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py",
             "prepare_wf_create_fast_payload_request_context",
@@ -119,58 +121,22 @@ class PreparePayloadTests(unittest.TestCase):
             },
         )
 
-        child_input = module.build_wf_create_fast_input(payload)
+        target = module.build_wf_create_fast_target(payload)
+        launch_input = module.build_wf_create_fast_launch_input(".lgwf/wf_create_fast_handoff.json")
+        handoff = module.build_handoff_state(
+            target_file=".lgwf/wf_create_fast_handoff.json",
+            target_file_for_launch="D:/tmp/.lgwf/wf_create_fast_handoff.json",
+            launch_input_file="D:/tmp/.lgwf/wf_create_fast_launch_input.json",
+        )
 
-        self.assertEqual(child_input["request"]["target_dir"], "skills/source-prompt-workflow")
-        self.assertEqual(child_input["request"]["target_file"], "skills/source-prompt-workflow/README.md")
-        self.assertNotIn("target_package_root", child_input["request"])
-
-
-class MapWfCreateFastInputTests(unittest.TestCase):
-    def test_extract_wf_create_fast_input_accepts_nested_payload(self):
-        module = load_module("wf/scripts/map_wf_create_fast_input.py", "map_wf_create_fast_input_nested")
-        payload = {
-            "prompt_convert_payload": {"workflow_name": "demo"},
-            "wf_create_fast_payload": {
-                "raw_intent": "创建 demo workflow",
-                "request": {"target_dir": "skills/source-prompt-workflow"},
-            },
-        }
-
-        child_input = module.extract_wf_create_fast_input(payload)
-
-        self.assertEqual(child_input["raw_intent"], "创建 demo workflow")
-        self.assertEqual(child_input["request"]["target_dir"], "skills/source-prompt-workflow")
-
-    def test_extract_wf_create_fast_input_accepts_flat_wf_create_fast_input(self):
-        module = load_module("wf/scripts/map_wf_create_fast_input.py", "map_wf_create_fast_input_flat")
-        payload = {
-            "raw_intent": "创建 demo workflow",
-            "request": {"target_dir": "skills/source-prompt-workflow"},
-        }
-
-        self.assertEqual(module.extract_wf_create_fast_input(payload), payload)
-
-    def test_extract_wf_create_fast_input_accepts_fast_nested_payload(self):
-        module = load_module("wf/scripts/map_wf_create_fast_input.py", "map_wf_create_fast_input_fast")
-        payload = {
-            "prompt_convert_payload": {"workflow_name": "demo"},
-            "wf_create_fast_payload": {
-                "raw_intent": "创建 fast demo workflow",
-                "request": {"target_dir": "skills/source-prompt-workflow"},
-            },
-        }
-
-        child_input = module.extract_wf_create_fast_input(payload)
-
-        self.assertEqual(child_input["raw_intent"], "创建 fast demo workflow")
-        self.assertEqual(child_input["request"]["target_dir"], "skills/source-prompt-workflow")
-
-    def test_extract_wf_create_fast_input_rejects_missing_raw_intent(self):
-        module = load_module("wf/scripts/map_wf_create_fast_input.py", "map_wf_create_fast_input_invalid")
-
-        with self.assertRaises(ValueError):
-            module.extract_wf_create_fast_input({"wf_create_fast_payload": {"request": {"target_dir": "source"}}})
+        self.assertNotIn("source_root", target)
+        self.assertNotIn("request", target)
+        self.assertEqual(launch_input["request"]["target_file"], ".lgwf/wf_create_fast_handoff.json")
+        self.assertEqual(handoff["next_action"], "start_workflow")
+        self.assertEqual(handoff["input_json_file"], "D:/tmp/.lgwf/wf_create_fast_launch_input.json")
+        self.assertIn("wf_create_fast_launch_input.json", handoff["suggested_command"])
+        self.assertTrue(handoff["requires_user_confirmation"])
+        self.assertFalse(handoff["auto_execute_downstream_workflow"])
 
 
 class SelfImproveContractTests(unittest.TestCase):
@@ -224,11 +190,6 @@ class RunWorkflowTests(unittest.TestCase):
     def test_workflow_handoffs_wf_create_fast_to_main_agent(self):
         workflow_text = (PACKAGE_ROOT / "wf/workflow.lgwf").read_text(encoding="utf-8")
         self.assertNotIn("RUN_WORKFLOW wf_create_fast", workflow_text)
-        self.assertIn("PY map_wf_create_fast_input", workflow_text)
-        self.assertIn('SCRIPT "scripts/map_wf_create_fast_input.py"', workflow_text)
-        self.assertIn("RESULT state.lgwf_wf_convert.wf_create_fast_input", workflow_text)
-        self.assertIn("PY prepare_wf_create_fast_handoff", workflow_text)
-        self.assertIn('SCRIPT "scripts/prepare_wf_create_fast_handoff.py"', workflow_text)
         self.assertIn("RESULT state.lgwf_wf_convert.wf_create_fast_handoff_payload", workflow_text)
         self.assertIn("WRITE workspace file \".lgwf/wf_create_fast_handoff.json\"", workflow_text)
         self.assertIn("HANDOFF handoff_to_wf_create_fast", workflow_text)
@@ -247,35 +208,9 @@ class RunWorkflowTests(unittest.TestCase):
         self.assertNotIn("HANDOFF handoff_wf_post_fix", workflow_text)
         self.assertNotIn("SCRIPT \"10_handoff_wf_create_fast/scripts/handoff_wf_create_fast.py\"", workflow_text)
         self.assertIn(
-            "THEN map_wf_create_fast_input\n  THEN prepare_wf_create_fast_handoff\n  THEN handoff_to_wf_create_fast;",
+            "THEN prepare_payload\n  THEN handoff_to_wf_create_fast;",
             workflow_text,
         )
-
-    def test_prepare_handoff_payload_points_main_agent_to_wf_create_fast(self):
-        module = load_module("wf/scripts/prepare_wf_create_fast_handoff.py", "prepare_wf_create_fast_handoff_contract")
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            lgwf_dir = root / ".lgwf"
-            lgwf_dir.mkdir()
-            child_input = {"raw_intent": "创建 demo workflow", "request": {"target_dir": "samples/demo"}}
-            (lgwf_dir / "wf_create_fast_input_for_wf_create_fast.json").write_text(
-                json.dumps(child_input, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            (lgwf_dir / "wf_create_fast_payload.json").write_text(
-                json.dumps({"prompt_convert_payload": {"workflow_name": "demo"}}, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            payload = module.build_handoff_payload(child_input, root)
-
-        self.assertEqual(payload["next_action"], "start_workflow")
-        self.assertEqual(payload["next_workflow_id"], "wf-create-fast")
-        self.assertEqual(payload["downstream_workflow_id"], "wf-create-fast")
-        self.assertTrue(
-            payload["input_json_file"].replace("\\", "/").endswith("/.lgwf/wf_create_fast_input_for_wf_create_fast.json")
-        )
-        self.assertEqual(payload["wf_create_fast_input"]["raw_intent"], "创建 demo workflow")
-        self.assertFalse(payload["auto_execute_downstream_workflow"])
 
 
 if __name__ == "__main__":

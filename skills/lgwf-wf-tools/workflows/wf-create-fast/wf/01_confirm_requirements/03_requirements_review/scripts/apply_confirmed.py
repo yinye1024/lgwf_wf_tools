@@ -11,7 +11,7 @@ SHARED_SCRIPTS = Path(__file__).resolve().parents[3] / "shared" / "scripts"
 if str(SHARED_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SHARED_SCRIPTS))
 
-from confirmation_io import confirmed_from_proposal, load_json, normalize_relative_path, unwrap_approval, write_json
+from confirmation_io import confirmed_from_proposal, load_json, normalize_target_package_root, unwrap_approval, write_json
 
 
 APPROVAL_FILE = "create_requirements_approval.json"
@@ -35,7 +35,7 @@ def write_confirmed_artifact(root: Path) -> dict[str, Any]:
     confirmed_payload = resolve_confirmed_payload(lgwf_dir, approval)
     target_root = confirmed_payload.get("target_package_root")
     if isinstance(target_root, str) and target_root.strip():
-        confirmed_payload["target_package_root"] = normalize_relative_path(target_root, "target_package_root")
+        confirmed_payload["target_package_root"] = normalize_target_package_root(target_root, "target_package_root")
     confirmed = {
         "artifact_kind": "create_requirements",
         "artifact_path": f".lgwf/{OUTPUT_FILE}",

@@ -7,11 +7,11 @@
 
 from __future__ import annotations
 
-import json
 import importlib.util
+import json
 import re
 import sys
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -71,16 +71,43 @@ def normalize_relative_path(raw_path: str) -> str:
     cleaned = raw_path.strip()
     candidate = PurePosixPath(cleaned.replace("\\", "/"))
     if not cleaned or cleaned == ".":
-        raise ValueError("target_package_root 不能为空")
+        raise ValueError("包内路径不能为空")
     if candidate.is_absolute():
-        raise ValueError("target_package_root 只使用相对路径，禁止绝对路径")
+        raise ValueError("包内路径只使用相对路径，禁止绝对路径")
     if any(part == ".." for part in candidate.parts):
-        raise ValueError("target_package_root 禁止 `..`")
+        raise ValueError("包内路径禁止 `..`")
     if ":" in cleaned:
-        raise ValueError("target_package_root 禁止盘符路径")
-    if any(part == ".lgwf" for part in candidate.parts):
-        raise ValueError("target_package_root 禁止指向 `.lgwf` 运行状态目录")
+        raise ValueError("包内路径禁止盘符路径")
+    if any(part.lower() == ".lgwf" for part in candidate.parts):
+        raise ValueError("包内路径禁止指向 `.lgwf` 运行状态目录")
     normalized = candidate.as_posix().strip("/")
+    if not normalized:
+        raise ValueError("包内路径不能为空")
+    return normalized
+
+
+def normalize_target_package_root(raw_path: str) -> str:
+    """允许目标 package root 使用绝对路径或 workspace 相对路径。"""
+
+    cleaned = raw_path.strip()
+    if "://" in cleaned:
+        raise ValueError("target_package_root 禁止 URL 路径")
+    if not cleaned or cleaned == ".":
+        raise ValueError("target_package_root 不能为空")
+    if ":" in cleaned:
+        candidate = PureWindowsPath(cleaned)
+        if not candidate.is_absolute():
+            raise ValueError("target_package_root 盘符路径必须是绝对路径")
+        parts = candidate.parts
+        normalized = str(candidate)
+    else:
+        candidate = PurePosixPath(cleaned.replace("\\", "/"))
+        parts = candidate.parts
+        normalized = candidate.as_posix().rstrip("/")
+    if any(part == ".." for part in parts):
+        raise ValueError("target_package_root 禁止 `..`")
+    if any(part.lower() == ".lgwf" for part in parts):
+        raise ValueError("target_package_root 禁止指向 `.lgwf` 运行状态目录")
     if not normalized:
         raise ValueError("target_package_root 不能为空")
     return normalized
@@ -253,7 +280,7 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
     """根据确认后的输入生成确定性脚手架计划。"""
 
     template = load_scaffold_template()
-    target_package_root = normalize_relative_path(str(request["target_package_root"]))
+    target_package_root = normalize_target_package_root(str(request["target_package_root"]))
     business_flow = request.get("business_flow", {})
     semantic_files = semantic_required_package_files(request, business_flow)
     package_profile, profile = select_template_profile(
@@ -286,8 +313,8 @@ def build_scaffold_plan(request: dict[str, Any]) -> dict[str, Any]:
         },
         "rules": {
             "path_policy": [
-                "只使用相对路径",
-                "禁止绝对路径",
+                "target_package_root 可使用绝对路径或 workspace 相对路径",
+                "包内 create_dirs/create_files 只使用相对路径",
                 "禁止 `..`",
             ],
             "state_boundary": [

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -55,9 +56,34 @@ def normalize_relative_path(raw_path: str, field_name: str) -> str:
         raise ValueError(f"{field_name} 禁止盘符路径")
     if any(part == ".." for part in candidate.parts):
         raise ValueError(f"{field_name} 禁止 `..`")
-    if any(part == ".lgwf" for part in candidate.parts):
+    if any(part.lower() == ".lgwf" for part in candidate.parts):
         raise ValueError(f"{field_name} 禁止指向 `.lgwf` 运行状态目录")
     normalized = candidate.as_posix().strip("/")
+    if not normalized:
+        raise ValueError(f"{field_name} 不能为空")
+    return normalized
+
+
+def normalize_target_package_root(raw_path: str, field_name: str = "target_package_root") -> str:
+    cleaned = raw_path.strip()
+    if "://" in cleaned:
+        raise ValueError(f"{field_name} 禁止 URL 路径")
+    if not cleaned or cleaned == ".":
+        raise ValueError(f"{field_name} 不能为空")
+    if ":" in cleaned:
+        candidate = PureWindowsPath(cleaned)
+        if not candidate.is_absolute():
+            raise ValueError(f"{field_name} 盘符路径必须是绝对路径")
+        parts = candidate.parts
+        normalized = str(candidate)
+    else:
+        candidate = PurePosixPath(cleaned.replace("\\", "/"))
+        parts = candidate.parts
+        normalized = candidate.as_posix().rstrip("/")
+    if any(part == ".." for part in parts):
+        raise ValueError(f"{field_name} 禁止 `..`")
+    if any(part.lower() == ".lgwf" for part in parts):
+        raise ValueError(f"{field_name} 禁止指向 `.lgwf` 运行状态目录")
     if not normalized:
         raise ValueError(f"{field_name} 不能为空")
     return normalized
@@ -92,6 +118,60 @@ def ensure_within(path: Path, root: Path, label: str) -> Path:
     except ValueError as exc:
         raise ValueError(f"{label} 必须位于 {root.as_posix()} 内: {resolved.as_posix()}") from exc
     return resolved
+
+
+def is_absolute_target(raw_path: str) -> bool:
+    cleaned = raw_path.strip()
+    return PureWindowsPath(cleaned).is_absolute() if ":" in cleaned else PurePosixPath(cleaned.replace("\\", "/")).is_absolute()
+
+
+def resolve_target_package_root(target_package_root: str, work_dir: Path) -> Path:
+    if is_absolute_target(target_package_root):
+        return Path(target_package_root).resolve()
+    return ensure_within(work_dir / target_package_root, work_dir, "target_package_abs")
+
+
+def path_is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def protected_system_roots() -> list[Path]:
+    roots: list[Path] = []
+    for key in ("SystemRoot", "WINDIR", "ProgramFiles", "ProgramFiles(x86)", "ProgramData"):
+        value = os.environ.get(key)
+        if value:
+            roots.append(Path(value))
+    return roots
+
+
+def assert_safe_target_abs(target_abs: Path, *, workspace_root: Path, work_dir: Path) -> None:
+    resolved = target_abs.resolve()
+    anchor = Path(resolved.anchor).resolve() if resolved.anchor else resolved
+    if resolved == anchor:
+        raise ValueError(f"target_package_root 禁止指向文件系统根目录: {resolved}")
+
+    home = Path.home().resolve()
+    exact_forbidden = {
+        workspace_root.resolve(): "仓库根目录",
+        work_dir.resolve(): "当前 run work dir 根目录",
+        home: "用户 home 根目录",
+    }
+    for forbidden, label in exact_forbidden.items():
+        if resolved == forbidden:
+            raise ValueError(f"target_package_root 禁止指向{label}: {resolved}")
+
+    for root in protected_system_roots():
+        root_resolved = root.resolve()
+        if resolved == root_resolved or path_is_relative_to(resolved, root_resolved):
+            raise ValueError(f"target_package_root 禁止指向系统目录: {resolved}")
+
+
+def quote_command_arg(value: Path) -> str:
+    return '"' + str(value).replace('"', '\\"') + '"'
 
 
 def safe_identifier(raw: str, fallback: str = "workflow") -> str:
@@ -438,9 +518,10 @@ def materialize_scaffold(root: Path) -> dict[str, Any]:
     business_flow = unwrap_confirmed(read_json(lgwf_dir / "business_flow.json"))
     scaffold_plan = unwrap_scaffold_plan(read_json(lgwf_dir / "scaffold_package_result.json"))
 
-    target_package_root = normalize_relative_path(str(scaffold_plan.get("target_package_root", "")), "target_package_root")
+    target_package_root = normalize_target_package_root(str(scaffold_plan.get("target_package_root", "")), "target_package_root")
     workspace_root = find_workspace_root(root)
-    target_abs = ensure_within(workspace_root / target_package_root, workspace_root, "target_package_abs")
+    target_abs = resolve_target_package_root(target_package_root, root.resolve())
+    assert_safe_target_abs(target_abs, workspace_root=workspace_root, work_dir=root.resolve())
     target_abs.mkdir(parents=True, exist_ok=True)
 
     create_dirs = [normalize_relative_path(path, "create_dirs") for path in string_list(scaffold_plan.get("create_dirs"))]
@@ -464,8 +545,9 @@ def materialize_scaffold(root: Path) -> dict[str, Any]:
         created_files.append(rel_file)
 
     validation_commands = [
-        f"python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py audit --workflow-lgwf {target_package_root}/wf/workflow.lgwf",
-        f"python -m unittest discover {target_package_root}/tests",
+        "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py "
+        f"audit --workflow-lgwf {quote_command_arg(target_abs / 'wf' / 'workflow.lgwf')}",
+        f"python -m unittest discover {quote_command_arg(target_abs / 'tests')}",
     ]
     result = {
         "status": "partial_existing_files" if skipped_existing_files else "ok",

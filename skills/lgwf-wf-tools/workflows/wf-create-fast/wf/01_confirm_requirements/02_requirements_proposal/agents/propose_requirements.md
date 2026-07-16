@@ -50,7 +50,7 @@
 {
   "workflow_id": "目标 workflow 稳定标识",
   "workflow_name": "目标 workflow 名称",
-  "target_package_root": "目标 package 相对目录",
+  "target_package_root": "目标 package 目录，可以是绝对路径或相对路径",
   "purpose": "workflow 目的",
   "target_users": ["目标用户"],
   "expected_inputs": ["预期输入"],
@@ -70,7 +70,7 @@
 - 不读取确认后的需求契约；当前 run 不得依赖已经存在的 confirmed requirements artifact。
 - 不修改 `.lgwf/create_requirements_proposal_quality_gate.json` 或 `.lgwf/create_requirements_proposal_decision.json`。
 - `workflow_id` / `workflow_name` 必须可读、稳定，适合后续目录和文档引用；若上游未提供独立 `workflow_id`，可使用与 `workflow_name` 相同的稳定值。
-- `target_package_root` 必须来自 raw intent 的目标目录语义，优先使用相对路径；不得把 `creation_context_dirs` 或 `creation_context_files` 误写成目标输出目录。
+- `target_package_root` 必须来自 raw intent 的目标目录语义，可以使用绝对路径或相对路径；相对路径由 materialize 阶段按当前 run 的 work dir 解析；不得把 `creation_context_dirs` 或 `creation_context_files` 误写成目标输出目录。
 - `workflow_shape` 描述目标 workflow 的建议形态，不是当前内部 `requirements_proposal_react` 的实现方式。
 - `expected_inputs` 与 `expected_outputs` 必须足以支撑下游业务流转设计，不能只写宽泛自然语言。
 - 参考资料中的目标 package 源文件路径必须保留为可检索字符串；若包含 `scripts/build_context_pack.py` 这类文件名，proposal 中必须出现完全相同的相对路径。

@@ -66,7 +66,7 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
                     "entry_files": ["README.md", "flow/workflow.md"],
                     "target_workflow_name": "static-approval-router",
                     "target_package_root": target_package_root,
-                    "constraints": ["生成 wf-create-fast 输入并 handoff 给主 agent", "创建输入需要保留审批路由业务语义"],
+                    "constraints": ["生成 wf-create-fast handoff target 并 handoff 给主 agent", "handoff target 需要保留审批路由业务语义"],
                 }
             },
         )
@@ -172,7 +172,7 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
                     "entry_files": ["README.md", "flow/workflow.md"],
                     "target_workflow_name": "static-approval-router",
                     "target_package_root": target_package_root,
-                    "constraints": ["生成 wf-create-fast 输入并 handoff 给主 agent", "创建输入需要保留审批路由业务语义"],
+                    "constraints": ["生成 wf-create-fast handoff target 并 handoff 给主 agent", "handoff target 需要保留审批路由业务语义"],
                 }
             else:
                 value = {
@@ -200,7 +200,7 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
             return {
                 "decision": "approve",
                 "confirmed": proposal,
-                "comment": "真实 E2E 原样确认 wf-create-fast 输入 proposal",
+                "comment": "真实 E2E 原样确认 wf-create-fast handoff target proposal",
             }
         if "confirm_requirements" in prompt:
             proposal = self.read_required_json(child_work_dir / ".lgwf" / "create_requirements_proposal.json")
@@ -248,34 +248,46 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
         for relative in [
             ".lgwf/prompt_workflow_inspection.json",
             ".lgwf/wf_create_fast_input_proposal.json",
-            ".lgwf/wf_create_fast_payload.json",
-            ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
+            ".lgwf/wf_create_fast_input.json",
             ".lgwf/wf_create_fast_handoff.json",
         ]:
             self.assertTrue((work_dir / relative).is_file(), f"缺少父流程产物: {relative}")
+        for relative in [
+            ".lgwf/wf_create_fast_payload.json",
+            ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
+        ]:
+            self.assertFalse((work_dir / relative).exists(), f"不应再生成旧父流程产物: {relative}")
 
     def assert_handoff_payload(self, work_dir: Path, target_package_root: str) -> None:
-        child_input = self.read_required_json(work_dir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json")
-        handoff = self.read_required_json(work_dir / ".lgwf" / "wf_create_fast_handoff.json")
-        self.assertEqual(handoff.get("next_action"), "start_workflow")
-        self.assertEqual(handoff.get("next_workflow_id"), "wf-create-fast")
-        self.assertEqual(handoff.get("downstream_workflow_id"), "wf-create-fast")
-        self.assertEqual(handoff.get("wf_create_fast_input"), child_input)
-        self.assertFalse(handoff.get("auto_execute_downstream_workflow"))
-        input_json_file = str(handoff.get("input_json_file") or "").replace("\\", "/")
-        self.assertTrue(input_json_file.endswith("/.lgwf/wf_create_fast_input_for_wf_create_fast.json"), handoff)
-        combined = json.dumps(child_input, ensure_ascii=False).lower()
+        handoff_target = self.read_required_json(work_dir / ".lgwf" / "wf_create_fast_handoff.json")
+        self.assertEqual(handoff_target.get("input_mode"), "converted_contract")
+        self.assertEqual(handoff_target.get("target_package_root"), target_package_root)
+        self.assertNotIn("source_root", handoff_target)
+        self.assertNotIn("request", handoff_target)
+        combined = json.dumps(handoff_target, ensure_ascii=False).lower()
         self.assertIn(target_package_root.lower(), combined)
         for keyword in ["approval", "risk", "audit"]:
-            self.assertIn(keyword, combined, f"handoff 输入未保留业务关键词 {keyword}: {child_input}")
+            self.assertIn(keyword, combined, f"handoff target 未保留业务关键词 {keyword}: {handoff_target}")
         self.assertTrue(
             "human_review" in combined or "human review" in combined or "人工" in combined,
-            f"handoff 输入未体现人工复核分支: {child_input}",
+            f"handoff target 未体现人工复核分支: {handoff_target}",
         )
         self.assertTrue(
             "auto_approve" in combined or "auto approve" in combined or "自动" in combined,
-            f"handoff 输入未体现自动通过分支: {child_input}",
+            f"handoff target 未体现自动通过分支: {handoff_target}",
         )
+        pending_files = sorted((work_dir / ".lgwf" / "handoff").glob("*.pending.json"))
+        self.assertTrue(pending_files, "缺少主 agent handoff pending 文件")
+        pending = self.read_required_json(pending_files[-1])
+        pending_text = json.dumps(pending, ensure_ascii=False)
+        self.assertIn("wf_create_fast_launch_input", pending_text)
+        self.assertEqual(
+            pending["input_json_file"],
+            str((work_dir / ".lgwf" / "wf_create_fast_launch_input.json").resolve()),
+        )
+        self.assertIn("request", pending_text)
+        self.assertIn("target_file", pending_text)
+        self.assertIn("wf_create_fast_handoff.json", pending_text.replace("\\", "/"))
 
 
 class WorkflowRuntimeHarness:

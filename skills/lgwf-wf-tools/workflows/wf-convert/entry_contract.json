@@ -34,7 +34,7 @@
   "auto_human_policy": "conditional",
   "target_scope": {
     "fields": ["prompt_convert_target.target_dir", "prompt_convert_target.target_package_root"],
-    "write_scope": "wf-convert only prepares and confirms the wf-create-fast input, then hands off to the main agent to start wf-create-fast."
+    "write_scope": "wf-convert only prepares and confirms the wf-create-fast handoff target file, then hands off to the main agent to start wf-create-fast."
   },
   "state_boundary": {
     "work_dir": "workflows/wf-convert/ws",
@@ -42,9 +42,7 @@
     "target_writes": "target_package_root approved by conversion plan"
   },
   "outputs": {
-    "wf_create_fast_payload": ".lgwf/wf_create_fast_payload.json",
-    "wf_create_fast_input": ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
-    "handoff": ".lgwf/wf_create_fast_handoff.json"
+    "wf_create_fast_handoff": ".lgwf/wf_create_fast_handoff.json"
   },
   "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
 }

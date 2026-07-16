@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 
@@ -34,21 +34,26 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def has_valid_target_package_root(value: Any) -> bool:
     raw = str(value or "").strip()
-    candidate = PurePosixPath(raw.replace("\\", "/"))
+    if "://" in raw:
+        return False
     if not raw or raw == ".":
         return False
-    if candidate.is_absolute():
-        return False
     if ":" in raw:
+        candidate = PureWindowsPath(raw)
+        if not candidate.is_absolute():
+            return False
+        parts = candidate.parts
+    else:
+        candidate = PurePosixPath(raw.replace("\\", "/"))
+        parts = candidate.parts
+    if any(part == ".." for part in parts):
         return False
-    if any(part == ".." for part in candidate.parts):
-        return False
-    if any(part == ".lgwf" for part in candidate.parts):
+    if any(part == ".lgwf" for part in parts):
         return False
     return True
 
 
-def has_required_payload_shape(proposal: dict[str, Any]) -> bool:
+def has_required_handoff_target_shape(proposal: dict[str, Any]) -> bool:
     if not all(field in proposal for field in REQUIRED_FIELDS):
         return False
     if not str(proposal.get("workflow_name", "")).strip():
@@ -75,7 +80,7 @@ def has_blocking_issue(observe: dict[str, Any]) -> bool:
 
 
 def decide_next(proposal: dict[str, Any], observe: dict[str, Any]) -> str:
-    if not has_required_payload_shape(proposal):
+    if not has_required_handoff_target_shape(proposal):
         return "continue"
     if observe.get("verdict") == "pass":
         return "exit"
@@ -93,4 +98,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

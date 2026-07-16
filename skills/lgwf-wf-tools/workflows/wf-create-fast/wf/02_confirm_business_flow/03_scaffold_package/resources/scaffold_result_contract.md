@@ -12,7 +12,7 @@
 {
   "scaffold_plan": {
     "workflow_name": "目标 workflow 名称",
-    "target_package_root": "目标 package 相对目录",
+    "target_package_root": "目标 package 目录，可以是绝对路径或相对路径",
     "package_profile": "internal_workflow_package",
     "template": {
       "template_id": "workflow_packaged_skill",
@@ -21,7 +21,7 @@
       "profile_description": "当前 profile 的用途说明"
     },
     "rules": {
-      "path_policy": ["只使用相对路径", "禁止绝对路径", "禁止 `..`"],
+      "path_policy": ["target_package_root 可绝对或相对", "包内路径只使用相对路径", "禁止 `..`"],
       "state_boundary": [
         "脚手架只生成目标 package 框架计划",
         "不创建或覆盖目标 package 真实文件",
@@ -48,7 +48,7 @@
 
 ## 规则说明
 
-- `target_package_root` 只允许使用相对路径，禁止绝对路径、盘符路径和 `..`。
+- `target_package_root` 允许绝对路径或相对路径；相对路径按当前 run 的 work dir 解析；禁止 URL、`..` 和 `.lgwf`。
 - `package_profile=internal_workflow_package` 时，`create_files` 必须包含 `AGENTS.md` 与 `wf/workflow.lgwf`，不得包含根 `SKILL.md`。
 - `package_profile=skill_wrapped_workflow` 时，`create_files` 必须包含根 `SKILL.md`；该文件只作为 Codex skill 入口和路由封装，不承载内部 workflow 细节。
 - 已确认需求中显式列出的 package 源文件，例如 `scripts/*.py`、`tests/*.py`、`wf/shared/scripts/*.py`，必须进入 `create_files`；这些文件后续由 `03_materialize_scaffold` 创建最小初稿，再由主 agent 替换为真实实现。

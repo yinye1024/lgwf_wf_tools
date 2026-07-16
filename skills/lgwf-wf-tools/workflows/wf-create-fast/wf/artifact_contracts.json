@@ -49,7 +49,7 @@
     ]
   },
   "notes": [
-    "wf-create-fast 在 scaffold 落盘和主 agent handoff 后停止。",
+    "wf-create-fast 在 scaffold 落盘后发布 next_action=main_agent_authoring 的 runtime handoff，由主 agent ack 后继续 authoring。",
     "本 workflow 不生成 step_designs.json 或 implementation_result.json。"
   ]
 }

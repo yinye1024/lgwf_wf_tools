@@ -9,7 +9,11 @@ DEFAULTS {
 PY prepare_wf_create_fast_payload
   SCRIPT "scripts/prepare_wf_create_fast_payload.py"
   TIMEOUT 60
-  RESULT state.lgwf_wf_convert.wf_create_fast_payload
+  RESULT state.lgwf_wf_convert.wf_create_fast_handoff_payload
   UPDATES_STATE
   CONTRACT {
+    READ workspace file ".lgwf/wf_create_fast_input.json";
+    WRITE workspace file ".lgwf/wf_create_fast_handoff.json";
+    WRITE workspace file ".lgwf/wf_create_fast_launch_input.json";
+    WRITE state.lgwf_wf_convert.wf_create_fast_handoff_payload;
   };
