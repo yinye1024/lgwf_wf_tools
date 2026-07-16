@@ -1,99 +1,22 @@
+"""只根据 canonical proposal Observe 决定 ReAct 是否继续。"""
+
 from __future__ import annotations
 
 import json
-from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any
+import sys
+from pathlib import Path
 
 
-REQUIRED_FIELDS = (
-    "workflow_name",
-    "target_package_root",
-    "raw_intent",
-    "source_root",
-    "stages",
-    "prompt_contracts",
-    "source_business_contract",
-    "prompt_execution_mechanics",
-    "presentation_constraints",
-    "discarded_prompt_techniques",
-    "conversion_mapping",
-    "parity_requirements",
-    "human_approval_points",
-    "assumptions",
-    "out_of_scope",
-    "run_workflow_notes_for_wf_create_fast",
-)
+SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
 
-
-def load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8-sig"))
-    return data if isinstance(data, dict) else {}
-
-
-def has_valid_target_package_root(value: Any) -> bool:
-    raw = str(value or "").strip()
-    if "://" in raw:
-        return False
-    if not raw or raw == ".":
-        return False
-    if ":" in raw:
-        candidate = PureWindowsPath(raw)
-        if not candidate.is_absolute():
-            return False
-        parts = candidate.parts
-    else:
-        candidate = PurePosixPath(raw.replace("\\", "/"))
-        parts = candidate.parts
-    if any(part == ".." for part in parts):
-        return False
-    if any(part == ".lgwf" for part in parts):
-        return False
-    return True
-
-
-def has_required_handoff_target_shape(proposal: dict[str, Any]) -> bool:
-    if not all(field in proposal for field in REQUIRED_FIELDS):
-        return False
-    if not str(proposal.get("workflow_name", "")).strip():
-        return False
-    if not str(proposal.get("raw_intent", "")).strip():
-        return False
-    if not str(proposal.get("source_root", "")).strip():
-        return False
-    return has_valid_target_package_root(proposal.get("target_package_root"))
-
-
-def has_blocking_issue(observe: dict[str, Any]) -> bool:
-    issues = observe.get("issues", [])
-    if not isinstance(issues, list):
-        return True
-    for issue in issues:
-        if not isinstance(issue, dict):
-            return True
-        if issue.get("blocking") is True:
-            return True
-        if "blocking" not in issue and observe.get("verdict") != "pass":
-            return True
-    return False
-
-
-def decide_next(proposal: dict[str, Any], observe: dict[str, Any]) -> str:
-    if not has_required_handoff_target_shape(proposal):
-        return "continue"
-    if observe.get("verdict") == "pass":
-        return "exit"
-    if has_blocking_issue(observe):
-        return "continue"
-    return "exit"
+from observe_protocol import decide_next
 
 
 def main() -> None:
-    root = Path.cwd()
-    proposal = load_json(root / ".lgwf" / "wf_create_fast_input_proposal.json")
-    observe = load_json(root / ".lgwf" / "wf_create_fast_input_observe.json")
-    print(json.dumps({"next": decide_next(proposal, observe)}, ensure_ascii=False))
+    observe_path = Path.cwd() / ".lgwf" / "wf_create_fast_input_observe.json"
+    print(json.dumps({"next": decide_next(observe_path, expected_stage="proposal")}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,47 @@
+WORKFLOW inspection_quality_gate;
+ENTRY validate_inspection;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY validate_inspection
+  SCRIPT "scripts/validate_inspection.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.inspect_python_observe_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_file_index.json";
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    WRITE workspace file ".lgwf/prompt_workflow_inspection_observe_py.json";
+  };
+
+CODEX semantic_observe
+  PROMPT "agents/semantic_observe.md"
+  CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
+  CONTEXT workspace file ".lgwf/prompt_workflow_inspection_observe_py.json"
+  OUTPUT_JSON ".lgwf/prompt_workflow_inspection_observe_codex.json"
+  TIMEOUT 900
+  RESULT state.lgwf_wf_convert.inspect_codex_observe_result
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    READ workspace file ".lgwf/prompt_workflow_inspection_observe_py.json";
+    WRITE workspace file ".lgwf/prompt_workflow_inspection_observe_codex.json";
+  };
+
+PY merge_observe
+  SCRIPT "scripts/merge_observe.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.inspect_observe_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    READ workspace file ".lgwf/prompt_workflow_inspection_observe_py.json";
+    READ workspace file ".lgwf/prompt_workflow_inspection_observe_codex.json";
+    WRITE workspace file ".lgwf/prompt_workflow_inspection_observe.json";
+  };
+
+FLOW validate_inspection
+  THEN semantic_observe
+  THEN merge_observe;

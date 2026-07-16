@@ -13,6 +13,7 @@ CONTEXT_SET inspect_prompt_workflow_shared_context {
 CONTEXT_SET propose_create_input_shared_context {
   workspace file ".lgwf/prompt_convert_target.json";
   workspace file ".lgwf/prompt_workflow_inspection.json";
+  workspace file ".lgwf/prompt_workflow_inspection_observe.json";
   workspace file ".lgwf/wf_create_fast_input_proposal.json";
 }
 
@@ -52,12 +53,11 @@ REACT inspect_prompt_workflow_react MAX 3
       READ workspace file ".lgwf/prompt_workflow_inspection_reason.json";
       WRITE workspace file ".lgwf/prompt_workflow_inspection.json";
     }
-  OBSERVE CODEX
-    PROMPT "agents/inspect_observe.md"
-    CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
-    OUTPUT_JSON ".lgwf/prompt_workflow_inspection_observe.json"
+  OBSERVE WORKFLOW inspection_quality_gate
+    WORKFLOW "inspection_quality_gate/workflow.lgwf"
     RESULT state.lgwf_wf_convert.inspect_observe_result
     CONTRACT {
+      READ workspace file ".lgwf/prompt_file_index.json";
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
       WRITE workspace file ".lgwf/prompt_workflow_inspection_observe.json";
     }
@@ -66,7 +66,6 @@ REACT inspect_prompt_workflow_react MAX 3
     RESULT state.lgwf_wf_convert.inspect_decide_result
     UPDATES_STATE
     CONTRACT {
-      READ workspace file ".lgwf/prompt_workflow_inspection.json";
       READ workspace file ".lgwf/prompt_workflow_inspection_observe.json";
     };
 
@@ -83,6 +82,7 @@ REACT propose_create_input_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/prompt_convert_target.json";
       READ workspace file ".lgwf/prompt_workflow_inspection.json";
+      READ workspace file ".lgwf/prompt_workflow_inspection_observe.json";
       READ workspace file ".lgwf/wf_create_fast_input_observe.json";
       READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
       WRITE workspace file ".lgwf/wf_create_fast_input_reason.json";
@@ -98,11 +98,11 @@ REACT propose_create_input_react MAX 3
       READ workspace file ".lgwf/wf_create_fast_input_reason.json";
       WRITE workspace file ".lgwf/wf_create_fast_input_proposal.json";
     }
-  OBSERVE CODEX
-    PROMPT "agents/propose_observe.md"
-    OUTPUT_JSON ".lgwf/wf_create_fast_input_observe.json"
+  OBSERVE WORKFLOW create_input_quality_gate
+    WORKFLOW "create_input_quality_gate/workflow.lgwf"
     RESULT state.lgwf_wf_convert.propose_observe_result
     CONTRACT {
+      READ workspace file ".lgwf/prompt_workflow_inspection.json";
       READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
       WRITE workspace file ".lgwf/wf_create_fast_input_observe.json";
     }
@@ -112,18 +112,30 @@ REACT propose_create_input_react MAX 3
     UPDATES_STATE
     CONTRACT {
       READ workspace file ".lgwf/wf_create_fast_input_observe.json";
-      READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
     };
+
+PY prepare_create_input_confirmation_context
+  SCRIPT "scripts/prepare_create_input_confirmation_context.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_convert.wf_create_fast_input_confirmation_context
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
+    READ workspace file ".lgwf/wf_create_fast_input_observe.json";
+    WRITE workspace file ".lgwf/wf_create_fast_input_confirmation_context.json";
+    WRITE state.lgwf_wf_convert.wf_create_fast_input_confirmation_context;
+  };
 
 REVIEW confirm_create_input
   PROMPT_REF "confirm_create_input.md"
-  CONTEXT state.lgwf_wf_convert.wf_create_fast_input_proposal
+  CONTEXT state.lgwf_wf_convert.wf_create_fast_input_confirmation_context
   RESULT state.lgwf_wf_convert.wf_create_fast_input_decision_result
   PERSIST ".lgwf/wf_create_fast_input_approval.json"
   OPTIONS ["approve", "revise", "reject"]
   CONTRACT {
     WRITE workspace file ".lgwf/wf_create_fast_input_approval.json";
-    READ state.lgwf_wf_convert.wf_create_fast_input_proposal;
+    READ state.lgwf_wf_convert.wf_create_fast_input_confirmation_context;
+    READ workspace file ".lgwf/wf_create_fast_input_confirmation_context.json";
   };
 
 PY finalize_create_input
@@ -138,7 +150,7 @@ PY finalize_create_input
   };
 
 FLOW {
-  index_prompt_files THEN inspect_prompt_workflow_react THEN propose_create_input_react THEN confirm_create_input;
+  index_prompt_files THEN inspect_prompt_workflow_react THEN propose_create_input_react THEN prepare_create_input_confirmation_context THEN confirm_create_input;
 
   confirm_create_input
     WHEN "approve" THEN finalize_create_input

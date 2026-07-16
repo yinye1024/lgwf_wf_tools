@@ -33,9 +33,17 @@
 
 ## ReAct 反馈闭环
 
-`propose_create_input_react` 的 `observe` 必须输出结构化 `issues`。每个 issue 包含 `blocking`：
+`inspect_prompt_workflow_react` 和 `propose_create_input_react` 的 `observe` 都拆成三个步骤：
 
-- `blocking=true`：会阻塞人工确认、confirmed 原样复用或 handoff target 固化，`decide_create_input.py` 会继续下一轮 ReAct。
-- `blocking=false`：只影响人工关注或后续运行质量，`decide_create_input.py` 会退出到 `confirm_create_input`，由人工确认处理。
+1. Python observer 检查 schema、固定枚举、引用、覆盖关系等确定性规则。
+2. Codex observer 只检查职责边界、业务语义、迁移意图和人工可理解性，不重复 Python 检查。
+3. Python merge 合并两个报告，生成唯一 canonical observe。
 
-下一轮 `reason` 同时读取 `.lgwf/wf_create_fast_input_observe.json` 和 `.lgwf/wf_create_fast_input_proposal.json`，必须生成 `issue_resolution_plan`。`act` 按该计划最小修复上一轮 proposal，避免无关重写。第一轮由 `index_prompt_files.py` 创建空的 `.lgwf/wf_create_fast_input_proposal.json` 占位文件，确保 context 文件存在。
+两个 canonical observe 分别写入 `.lgwf/prompt_workflow_inspection_observe.json` 和 `.lgwf/wf_create_fast_input_observe.json`。`decide_inspection.py` 与 `decide_create_input.py` 只允许读取 canonical observe；文件缺失、schema 非法、阶段不匹配或结论冲突时一律 fail closed，继续下一轮 ReAct。
+
+canonical observe 中每个 issue 都包含 `blocking`：
+
+- `blocking=true`：当前产物不能进入下一阶段，Decide 继续下一轮 ReAct。
+- `blocking=false`：允许流程继续，但反馈不能丢失。inspection 的非阻塞 issue 会进入 proposal 的 `reason`；proposal 的非阻塞 issue 会写入 `.lgwf/wf_create_fast_input_confirmation_context.json`，由人工确认处理。
+
+下一轮 `reason` 同时读取当前业务产物和上一轮 canonical observe，必须生成 `issue_resolution_plan`；`act` 按该计划最小修复，避免无关重写。第一轮由 `index_prompt_files.py` 创建带 `verdict=initial` 的 canonical observe 占位文件和空业务产物，确保 context 文件存在。

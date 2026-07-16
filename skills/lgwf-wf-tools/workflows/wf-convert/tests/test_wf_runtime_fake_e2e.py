@@ -333,19 +333,97 @@ class WorkflowRuntimeHarness:
     def _build_responses(self) -> dict[str, list[dict[str, Any]]]:
         workflow_root = "skills/lgwf-wf-tools/workflows/generated/demo-converted-workflow"
         source_root = "<temp_fixture_root>/sample_prompt_workflow"
+        inspection_stage = {
+            "stage_id": "discover",
+            "name": "发现源 workflow",
+            "responsibility": "索引源 prompt workflow 的入口、说明和 agent prompt",
+            "inputs": ["prompt workflow 目录"],
+            "outputs": ["源文件索引和职责摘要"],
+            "source_files": ["README.md", "flow/workflow.lgwf"],
+            "evidence_strength": "high",
+            "proposal_consumer": ["raw_intent", "stages"],
+            "degrade_target": "none",
+            "evidence_summary": "README 与 workflow.lgwf 明确给出源 workflow 入口",
+        }
+        inspection_prompt_contract = {
+            "prompt_path": "flow/agents/inspect.md",
+            "responsibility": "分析源流程职责与输入输出约束",
+            "inputs": ["源 workflow 文件"],
+            "outputs": ["职责与契约摘要"],
+            "constraints": ["不修改源目录"],
+            "source_files": ["flow/agents/inspect.md"],
+            "evidence_strength": "high",
+            "proposal_consumer": ["prompt_contracts"],
+            "degrade_target": "none",
+            "evidence_summary": "inspect.md 明确声明分析职责与输入输出约束",
+        }
+        source_business_contract = {
+            "goal": "分析源 prompt workflow 并整理创建输入",
+            "inputs": [],
+            "outputs": [],
+            "stages": [
+                {
+                    "rule_id": "stage_rule_001",
+                    "statement": "必须先索引源 workflow，再整理创建输入",
+                    "source_files": ["README.md", "flow/workflow.lgwf"],
+                    "evidence_strength": "high",
+                }
+            ],
+            "decision_rules": [],
+            "approval_points": [],
+            "error_paths": [],
+            "invariants": [],
+        }
+        conversion_mapping = [
+            {
+                "mapping_id": "mapping_001",
+                "source_rule_ids": ["stage_rule_001"],
+                "mapping_type": "convert_to_lgwf_node",
+                "target_design": "索引与分析节点",
+                "rationale": "保留先索引后分析的业务顺序",
+            }
+        ]
+        parity_requirements = [
+            {
+                "requirement_id": "parity_001",
+                "source_rule_ids": ["stage_rule_001"],
+                "description": "保持先索引后分析的顺序",
+                "verification": "检查目标 workflow 的节点顺序",
+            }
+        ]
+        proposal_stage = {
+            "stage_id": "discover",
+            "name": "发现源 workflow",
+            "responsibility": "索引源 prompt workflow 的入口、说明和 agent prompt",
+            "inputs": ["prompt workflow 目录"],
+            "outputs": ["源文件索引和职责摘要"],
+            "source_files": ["README.md", "flow/workflow.lgwf"],
+            "evidence_strength": "high",
+            "evidence_summary": "README 与 workflow.lgwf 明确给出源 workflow 入口",
+        }
+        proposal_prompt_contract = {
+            "prompt_path": "flow/agents/inspect.md",
+            "responsibility": "分析源流程职责与输入输出约束",
+            "inputs": ["源 workflow 文件"],
+            "outputs": ["职责与契约摘要"],
+            "constraints": ["不修改源目录"],
+            "source_files": ["flow/agents/inspect.md"],
+            "evidence_strength": "high",
+            "evidence_summary": "inspect.md 明确声明分析职责与输入输出约束",
+        }
         happy_confirmed = {
             "workflow_name": "demo-converted-workflow",
             "target_package_root": workflow_root,
             "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的完整 handoff target。",
             "source_root": source_root,
-            "stages": [{"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}],
-            "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
-            "source_business_contract": {},
+            "stages": [proposal_stage],
+            "prompt_contracts": [proposal_prompt_contract],
+            "source_business_contract": source_business_contract,
             "prompt_execution_mechanics": [],
             "presentation_constraints": [],
             "discarded_prompt_techniques": [],
-            "conversion_mapping": [],
-            "parity_requirements": [],
+            "conversion_mapping": conversion_mapping,
+            "parity_requirements": parity_requirements,
             "human_approval_points": ["confirm_create_input"],
             "assumptions": ["源目录文本文件均可按 UTF-8 读取"],
             "out_of_scope": ["不直接生成最终 workflow package"],
@@ -356,17 +434,14 @@ class WorkflowRuntimeHarness:
             "target_package_root": workflow_root,
             "raw_intent": "把现有 prompt workflow 转成可交给 wf-create-fast 的完整 handoff target；本 workflow 负责分析、proposal、人工确认，并在确认后 handoff 给主 agent 启动 wf-create-fast。",
             "source_root": source_root,
-            "stages": [
-                {"id": "discover", "summary": "索引入口与 prompt 资源"},
-                {"id": "analyze", "summary": "分析业务结构并整理给 wf-create-fast 的 handoff target"},
-            ],
-            "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
-            "source_business_contract": {},
+            "stages": [proposal_stage],
+            "prompt_contracts": [proposal_prompt_contract],
+            "source_business_contract": source_business_contract,
             "prompt_execution_mechanics": [],
             "presentation_constraints": [],
             "discarded_prompt_techniques": [],
-            "conversion_mapping": [],
-            "parity_requirements": [],
+            "conversion_mapping": conversion_mapping,
+            "parity_requirements": parity_requirements,
             "human_approval_points": ["confirm_create_input"],
             "assumptions": ["样例源目录只覆盖文本文件索引与转换输入整理，不覆盖真实业务 happy path"],
             "out_of_scope": ["不直接生成最终 workflow package"],
@@ -376,23 +451,39 @@ class WorkflowRuntimeHarness:
             ],
         }
         inspection_payload = {
-            "analysis_plan": ["索引入口文件", "识别业务阶段", "提取 prompt 契约"],
-            "priority_files": ["README.md", "flow/workflow.lgwf", "flow/agents/inspect.md"],
+            "analysis_plan": [
+                {"goal": "识别业务阶段", "method": "读取入口和 workflow 文件", "expected_evidence": "阶段职责"}
+            ],
+            "issue_resolution_plan": [],
+            "priority_files": [
+                {"path": "README.md", "reason": "入口说明", "expected_signal": "阶段与约束"}
+            ],
             "gap_checks": ["缺少外部资源引用", "缺少输入输出说明"],
             "known_limits": ["样例目录不覆盖真实业务 happy path"],
         }
         inspection_result = {
-            "source_summary": ["发现 1 个 workflow", "识别 1 个 agent prompt"],
-            "detected_stages": [{"id": "discover", "summary": "索引 prompt workflow 入口与资源"}],
-            "prompt_contracts": [{"file": "flow/agents/inspect.md", "purpose": "分析源流程职责与输入输出约束"}],
-            "risks": ["未覆盖真实业务 happy path"],
+            "source_summary": [
+                {"path": "README.md", "role": "入口说明", "evidence": "说明这是 sample prompt workflow"},
+                {"path": "flow/workflow.lgwf", "role": "workflow 入口", "evidence": "声明 WORKFLOW prompt_demo"},
+                {"path": "flow/agents/inspect.md", "role": "分析 prompt", "evidence": "声明分析职责与输入输出约束"},
+            ],
+            "detected_stages": [inspection_stage],
+            "prompt_contracts": [inspection_prompt_contract],
+            "source_business_contract": source_business_contract,
+            "prompt_execution_mechanics": [],
+            "presentation_constraints": [],
+            "discarded_prompt_techniques": [],
+            "human_approval_points": [],
+            "gaps": [],
+            "risks": [],
+            "assumptions": ["样例目录不覆盖真实业务 happy path"],
         }
         proposal_first = {
             "workflow_name": "demo-converted-workflow",
             "target_package_root": workflow_root,
             "raw_intent": "把现有 prompt workflow 转成 LGWF workflow，并输出可交给 wf-create-fast 的完整 handoff target。",
             "source_root": source_root,
-            "stages": [{"id": "discover", "summary": "索引源 prompt workflow 的入口、说明和 agent prompt"}],
+            "stages": [proposal_stage],
             "prompt_contracts": happy_confirmed["prompt_contracts"],
             "source_business_contract": happy_confirmed["source_business_contract"],
             "prompt_execution_mechanics": happy_confirmed["prompt_execution_mechanics"],
@@ -424,17 +515,6 @@ class WorkflowRuntimeHarness:
             "run_workflow_notes_for_wf_create_fast": revise_confirmed["run_workflow_notes_for_wf_create_fast"],
         }
         proposal_with_evidence = dict(proposal_second)
-        proposal_with_evidence["stages"] = [
-            {
-                "name": "分析源 prompt workflow",
-                "responsibility": "索引 prompt 文件并整理可交给 wf-create-fast 的输入方案",
-                "inputs": ["prompt_convert_target", "prompt_file_index"],
-                "outputs": ["wf_create_fast_input_proposal"],
-                "source_files": ["README.md", "flow/workflow.lgwf"],
-                "source_summary": "来自源 README 和 workflow.lgwf 的阶段职责",
-                "evidence_strength": "high",
-            }
-        ]
         propose_reason_first = {
             "proposal_plan": [{"field": "raw_intent", "source": "inspection + target approval"}],
             "issue_resolution_plan": [],
@@ -465,6 +545,34 @@ class WorkflowRuntimeHarness:
             "assumption_policy": "证据不足时降级到 assumptions",
             "known_limits": [],
         }
+        inspection_semantic_pass = {
+            "schema_version": 1,
+            "stage": "inspection",
+            "observer": "codex",
+            "issues": [],
+        }
+        proposal_semantic_pass = {
+            "schema_version": 1,
+            "stage": "proposal",
+            "observer": "codex",
+            "issues": [],
+        }
+        proposal_semantic_revise = {
+            "schema_version": 1,
+            "stage": "proposal",
+            "observer": "codex",
+            "issues": [
+                {
+                    "observer": "codex",
+                    "code": "APPROVAL_NOT_REUSABLE",
+                    "field": "stages",
+                    "blocking": True,
+                    "severity": "high",
+                    "issue": "stage 证据摘要不足，approval 无法原样确认",
+                    "required_change": "补充可供 approval 判断的 stage 证据说明",
+                }
+            ],
+        }
         mapping = {
             "wf/04_confirm_business_flow/agents/inspect_reason.md": [
                 {"call_index": 1, "payload": inspection_payload, "summary": "inspection reason"},
@@ -472,8 +580,8 @@ class WorkflowRuntimeHarness:
             "wf/04_confirm_business_flow/agents/inspect_act.md": [
                 {"call_index": 1, "payload": inspection_result, "summary": "inspection act"},
             ],
-            "wf/04_confirm_business_flow/agents/inspect_observe.md": [
-                {"call_index": 1, "payload": {"verdict": "pass", "issues": []}, "summary": "inspection observe"},
+            "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": [
+                {"call_index": 1, "payload": inspection_semantic_pass, "summary": "inspection semantic observe"},
             ],
         }
         if self.scenario["scenario_id"] == "happy_path":
@@ -485,11 +593,11 @@ class WorkflowRuntimeHarness:
                     "wf/04_confirm_business_flow/agents/propose_act.md": [
                         {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
                     ],
-                    "wf/04_confirm_business_flow/agents/propose_observe.md": [
+                    "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
                         {
                             "call_index": 1,
-                            "payload": {"verdict": "pass", "issues": []},
-                            "summary": "proposal observe 1",
+                            "payload": proposal_semantic_pass,
+                            "summary": "proposal semantic observe 1",
                         },
                     ],
                 }
@@ -505,27 +613,16 @@ class WorkflowRuntimeHarness:
                         {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
                         {"call_index": 2, "payload": proposal_with_evidence, "summary": "proposal act 2"},
                     ],
-                    "wf/04_confirm_business_flow/agents/propose_observe.md": [
+                    "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
                         {
                             "call_index": 1,
-                            "payload": {
-                                "verdict": "revise",
-                                "issues": [
-                                    {
-                                        "field": "stages",
-                                        "blocking": True,
-                                        "severity": "high",
-                                        "issue": "stage 缺少 evidence_strength，approval 无法原样确认",
-                                        "required_change": "为每个 stage 补充 evidence_strength",
-                                    }
-                                ],
-                            },
-                            "summary": "proposal observe 1",
+                            "payload": proposal_semantic_revise,
+                            "summary": "proposal semantic observe 1",
                         },
                         {
                             "call_index": 2,
-                            "payload": {"verdict": "pass", "issues": []},
-                            "summary": "proposal observe 2",
+                            "payload": proposal_semantic_pass,
+                            "summary": "proposal semantic observe 2",
                         },
                     ],
                 }
@@ -541,16 +638,16 @@ class WorkflowRuntimeHarness:
                         {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
                         {"call_index": 2, "payload": proposal_second, "summary": "proposal act 2"},
                     ],
-                    "wf/04_confirm_business_flow/agents/propose_observe.md": [
+                    "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
                         {
                             "call_index": 1,
-                            "payload": {"verdict": "pass", "issues": []},
-                            "summary": "proposal observe 1",
+                            "payload": proposal_semantic_pass,
+                            "summary": "proposal semantic observe 1",
                         },
                         {
                             "call_index": 2,
-                            "payload": {"verdict": "pass", "issues": []},
-                            "summary": "proposal observe 2",
+                            "payload": proposal_semantic_pass,
+                            "summary": "proposal semantic observe 2",
                         },
                     ],
                 }
@@ -1088,10 +1185,10 @@ class RuntimeFakeE2ETests(unittest.TestCase):
             {
                 "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
                 "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
-                "wf/04_confirm_business_flow/agents/inspect_observe.md": 1,
+                "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": 1,
                 "wf/04_confirm_business_flow/agents/propose_reason.md": 1,
                 "wf/04_confirm_business_flow/agents/propose_act.md": 1,
-                "wf/04_confirm_business_flow/agents/propose_observe.md": 1,
+                "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": 1,
             },
         )
 
@@ -1175,10 +1272,10 @@ class RuntimeFakeE2ETests(unittest.TestCase):
             {
                 "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
                 "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
-                "wf/04_confirm_business_flow/agents/inspect_observe.md": 1,
+                "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": 1,
                 "wf/04_confirm_business_flow/agents/propose_reason.md": 2,
                 "wf/04_confirm_business_flow/agents/propose_act.md": 2,
-                "wf/04_confirm_business_flow/agents/propose_observe.md": 2,
+                "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": 2,
             },
         )
         propose_call_indexes = [
@@ -1225,10 +1322,10 @@ class RuntimeFakeE2ETests(unittest.TestCase):
             {
                 "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
                 "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
-                "wf/04_confirm_business_flow/agents/inspect_observe.md": 1,
+                "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": 1,
                 "wf/04_confirm_business_flow/agents/propose_reason.md": 2,
                 "wf/04_confirm_business_flow/agents/propose_act.md": 2,
-                "wf/04_confirm_business_flow/agents/propose_observe.md": 2,
+                "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": 2,
             },
         )
         proposal = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_input_proposal.json")

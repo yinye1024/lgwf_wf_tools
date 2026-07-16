@@ -10,17 +10,42 @@
     ".lgwf/prompt_convert_target_approval.json",
     ".lgwf/prompt_convert_target.json",
     ".lgwf/prompt_workflow_inspection.json",
+    ".lgwf/prompt_workflow_inspection_observe.json",
+    ".lgwf/wf_create_fast_input_proposal.json",
+    ".lgwf/wf_create_fast_input_observe.json",
+    ".lgwf/wf_create_fast_input_confirmation_context.json",
     ".lgwf/wf_create_fast_input_approval.json",
     ".lgwf/wf_create_fast_input.json",
     ".lgwf/wf_create_fast_handoff.json",
     ".lgwf/wf_create_fast_launch_input.json"
   ],
   "script_writes": {
-    "act_codex_42": [
+    "inspect_act": [
       ".lgwf/prompt_workflow_inspection.json"
     ],
-    "act_codex_84": [
+    "inspect_python_observe": [
+      ".lgwf/prompt_workflow_inspection_observe_py.json"
+    ],
+    "inspect_codex_observe": [
+      ".lgwf/prompt_workflow_inspection_observe_codex.json"
+    ],
+    "merge_inspection_observe": [
+      ".lgwf/prompt_workflow_inspection_observe.json"
+    ],
+    "propose_act": [
       ".lgwf/wf_create_fast_input_proposal.json"
+    ],
+    "propose_python_observe": [
+      ".lgwf/wf_create_fast_input_observe_py.json"
+    ],
+    "propose_codex_observe": [
+      ".lgwf/wf_create_fast_input_observe_codex.json"
+    ],
+    "merge_proposal_observe": [
+      ".lgwf/wf_create_fast_input_observe.json"
+    ],
+    "prepare_create_input_confirmation_context": [
+      ".lgwf/wf_create_fast_input_confirmation_context.json"
     ],
     "prepare_prompt_convert_target_context": [
       ".lgwf/prompt_convert_target_proposal.json"
@@ -41,10 +66,10 @@
       ".lgwf/wf_create_fast_handoff.json",
       ".lgwf/wf_create_fast_launch_input.json"
     ],
-    "reason_codex_31": [
+    "inspect_reason": [
       ".lgwf/prompt_workflow_inspection_reason.json"
     ],
-    "reason_codex_72": [
+    "propose_reason": [
       ".lgwf/wf_create_fast_input_reason.json"
     ]
   }

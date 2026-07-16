@@ -167,25 +167,76 @@ class SelfImproveContractTests(unittest.TestCase):
 
 class RunWorkflowTests(unittest.TestCase):
     def test_convert_prompts_require_business_contract_and_prompt_technique_separation(self):
-        prompt_paths = [
-            PACKAGE_ROOT / "wf/04_confirm_business_flow/agents/inspect_prompt_workflow_react.md",
-            PACKAGE_ROOT / "wf/04_confirm_business_flow/agents/inspect_observe.md",
-            PACKAGE_ROOT / "wf/04_confirm_business_flow/agents/propose_act.md",
-            PACKAGE_ROOT / "wf/04_confirm_business_flow/agents/propose_observe.md",
-            PACKAGE_ROOT / "wf/04_confirm_business_flow/confirm_create_input.md",
-        ]
-        required_terms = [
-            "source_business_contract",
-            "prompt_execution_mechanics",
-            "discarded_prompt_techniques",
-            "conversion_mapping",
-            "parity_requirements",
-        ]
-        for path in prompt_paths:
+        prompt_paths = {
+            PACKAGE_ROOT / "wf/04_confirm_business_flow/agents/inspect_prompt_workflow_react.md": [
+                "source_business_contract",
+                "prompt_execution_mechanics",
+                "discarded_prompt_techniques",
+            ],
+            PACKAGE_ROOT / "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": [
+                "source_business_contract",
+                "prompt_execution_mechanics",
+                "discarded_prompt_techniques",
+                "conversion_mapping",
+                "parity_requirements",
+            ],
+            PACKAGE_ROOT / "wf/04_confirm_business_flow/agents/propose_act.md": [
+                "source_business_contract",
+                "prompt_execution_mechanics",
+                "discarded_prompt_techniques",
+                "conversion_mapping",
+                "parity_requirements",
+            ],
+            PACKAGE_ROOT / "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
+                "source_business_contract",
+                "prompt_execution_mechanics",
+                "conversion_mapping",
+                "parity_requirements",
+            ],
+            PACKAGE_ROOT / "wf/04_confirm_business_flow/confirm_create_input.md": [
+                "source_business_contract",
+                "prompt_execution_mechanics",
+                "discarded_prompt_techniques",
+                "conversion_mapping",
+                "parity_requirements",
+            ],
+        }
+        for path, required_terms in prompt_paths.items():
             text = path.read_text(encoding="utf-8")
             for term in required_terms:
                 with self.subTest(path=path.name, term=term):
                     self.assertIn(term, text)
+
+    def test_react_uses_composite_observe_and_thin_decide_contracts(self):
+        workflow_text = (
+            PACKAGE_ROOT / "wf/04_confirm_business_flow/workflow.lgwf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("OBSERVE WORKFLOW inspection_quality_gate", workflow_text)
+        self.assertIn("OBSERVE WORKFLOW create_input_quality_gate", workflow_text)
+        self.assertNotIn('PROMPT "agents/inspect_observe.md"', workflow_text)
+        self.assertNotIn('PROMPT "agents/propose_observe.md"', workflow_text)
+
+        inspection_decide_contract = workflow_text.split(
+            'SCRIPT "scripts/decide_inspection.py"', 1
+        )[1].split("};", 1)[0]
+        self.assertIn('READ workspace file ".lgwf/prompt_workflow_inspection_observe.json"', inspection_decide_contract)
+        self.assertNotIn('READ workspace file ".lgwf/prompt_workflow_inspection.json"', inspection_decide_contract)
+
+        proposal_decide_contract = workflow_text.split(
+            'SCRIPT "scripts/decide_create_input.py"', 1
+        )[1].split("};", 1)[0]
+        self.assertIn('READ workspace file ".lgwf/wf_create_fast_input_observe.json"', proposal_decide_contract)
+        self.assertNotIn('READ workspace file ".lgwf/wf_create_fast_input_proposal.json"', proposal_decide_contract)
+
+    def test_semantic_observe_prompts_delegate_deterministic_checks_to_python(self):
+        for relative_path in (
+            "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md",
+            "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md",
+        ):
+            text = (PACKAGE_ROOT / relative_path).read_text(encoding="utf-8")
+            self.assertIn("Python Observe 已负责", text)
+            self.assertIn("不要重复检查", text)
+            self.assertIn("不要输出顶层 `verdict`", text)
 
     def test_workflow_handoffs_wf_create_fast_to_main_agent(self):
         workflow_text = (PACKAGE_ROOT / "wf/workflow.lgwf").read_text(encoding="utf-8")

@@ -45,12 +45,33 @@
 - `.lgwf/prompt_convert_target.json`
 - `.lgwf/prompt_file_index.json`
 - `.lgwf/prompt_workflow_inspection.json`
+- `.lgwf/prompt_workflow_inspection_observe_py.json`
+- `.lgwf/prompt_workflow_inspection_observe_codex.json`
+- `.lgwf/prompt_workflow_inspection_observe.json`
 - `.lgwf/wf_create_fast_input_proposal.json`
+- `.lgwf/wf_create_fast_input_observe_py.json`
+- `.lgwf/wf_create_fast_input_observe_codex.json`
+- `.lgwf/wf_create_fast_input_observe.json`
+- `.lgwf/wf_create_fast_input_confirmation_context.json`
 - `.lgwf/wf_create_fast_input_approval.json`
 - `.lgwf/wf_create_fast_input.json`
 - `.lgwf/wf_create_fast_handoff.json`
+- `state.lgwf_wf_convert.prompt_workflow_inspection_observe`
+- `state.lgwf_wf_convert.wf_create_fast_input_observe`
+- `state.lgwf_wf_convert.wf_create_fast_input_confirmation_context`
 - `state.lgwf_wf_convert.wf_create_fast_input`
 - `state.lgwf_wf_convert.wf_create_fast_handoff`
+
+## ReAct 观察与判定边界
+
+`inspect_prompt_workflow_react` 和 `propose_create_input_react` 都使用阶段内部质量门子 workflow 完成 `observe`：先由 Python 执行确定性结构、枚举、引用和覆盖检查，再由 Codex 只检查语义完整性，最后由 Python 合并为唯一 canonical observe。
+
+- inspection canonical observe：`.lgwf/prompt_workflow_inspection_observe.json`
+- proposal canonical observe：`.lgwf/wf_create_fast_input_observe.json`
+- `decide_inspection.py` 和 `decide_create_input.py` 只能读取对应 canonical observe，不得读取业务产物或单个 observer 报告补充判断。
+- canonical observe 缺失、schema 非法、阶段不匹配或结论自相矛盾时必须 fail closed，继续下一轮 ReAct。
+- inspection 的非阻塞 issue 必须进入 proposal 的 `reason`；proposal 的非阻塞 issue 必须进入 `.lgwf/wf_create_fast_input_confirmation_context.json`，供人工确认查看。
+- Python/Codex 中间报告用于诊断，不得作为父 workflow 的判定输入或对外状态契约。
 
 ## 下游 `wf-create-fast`
 
@@ -79,4 +100,5 @@
 ```powershell
 python -m unittest discover skills\lgwf-wf-tools\workflows\wf-convert\tests
 python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py audit skills\lgwf-wf-tools\workflows\wf-convert\wf\workflow.lgwf
+python skills\lgwf-wf-tools\scripts\doctor_lgwf_wf_tools.py --deep
 ```

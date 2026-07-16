@@ -115,6 +115,40 @@ def make_full_proposal(*, target_package_root: str = "skills/lgwf-wf-tools/workf
     }
 
 
+def make_canonical_observe(stage: str, issues: list[dict] | None = None) -> dict:
+    normalized_issues = list(issues or [])
+    blocking = any(item.get("blocking") is True for item in normalized_issues)
+    status = "revise" if normalized_issues else "pass"
+    return {
+        "schema_version": 1,
+        "stage": stage,
+        "artifact": {
+            "path": (
+                ".lgwf/prompt_workflow_inspection.json"
+                if stage == "inspection"
+                else ".lgwf/wf_create_fast_input_proposal.json"
+            ),
+            "sha256": "0" * 64,
+        },
+        "verdict": status,
+        "blocking": blocking,
+        "observer_status": {"python": status, "codex": "pass"},
+        "issues": normalized_issues,
+    }
+
+
+def make_issue(*, blocking: bool, field: str = "field", code: str = "TEST_ISSUE") -> dict:
+    return {
+        "observer": "python",
+        "code": code,
+        "field": field,
+        "blocking": blocking,
+        "severity": "high" if blocking else "low",
+        "issue": "测试问题",
+        "required_change": "执行测试修订",
+    }
+
+
 class ScriptFlowE2ETests(unittest.TestCase):
     def test_case_index_prompt_files_bootstrap_inventory(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/index_prompt_files.py")
@@ -154,9 +188,17 @@ class ScriptFlowE2ETests(unittest.TestCase):
                 inventory["prompt_candidates"],
                 ["flow/agents/inspect.md", "flow/notes.txt", "flow/definition.prompt"],
             )
-            for name in ("prompt_workflow_inspection_observe.json", "wf_create_fast_input_observe.json"):
+            expected_stages = {
+                "prompt_workflow_inspection_observe.json": "inspection",
+                "wf_create_fast_input_observe.json": "proposal",
+            }
+            for name, stage in expected_stages.items():
                 placeholder = json.loads((workdir / ".lgwf" / name).read_text(encoding="utf-8"))
-                self.assertEqual(placeholder, {"verdict": "initial", "issues": []})
+                self.assertEqual(placeholder["schema_version"], 1)
+                self.assertEqual(placeholder["stage"], stage)
+                self.assertEqual(placeholder["verdict"], "initial")
+                self.assertFalse(placeholder["blocking"])
+                self.assertEqual(placeholder["issues"], [])
             proposal_placeholder = json.loads(
                 (workdir / ".lgwf" / "wf_create_fast_input_proposal.json").read_text(encoding="utf-8")
             )
@@ -165,10 +207,9 @@ class ScriptFlowE2ETests(unittest.TestCase):
     def test_case_decide_inspection_continue_on_gap(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
         with isolated_workdir() as workdir:
-            write_utf8_json(workdir / ".lgwf" / "prompt_workflow_inspection.json", {"source_summary": ["only"]})
             write_utf8_json(
                 workdir / ".lgwf" / "prompt_workflow_inspection_observe.json",
-                {"verdict": "revise", "issues": ["字段不完整"]},
+                make_canonical_observe("inspection", [make_issue(blocking=True, field="source_summary")]),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
@@ -179,16 +220,8 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "prompt_workflow_inspection.json",
-                {
-                    "source_summary": ["summary"],
-                    "detected_stages": [{"id": "stage-1"}],
-                    "prompt_contracts": [{"name": "contract"}],
-                },
-            )
-            write_utf8_json(
                 workdir / ".lgwf" / "prompt_workflow_inspection_observe.json",
-                {"verdict": "pass", "issues": []},
+                make_canonical_observe("inspection"),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
@@ -198,10 +231,9 @@ class ScriptFlowE2ETests(unittest.TestCase):
     def test_case_decide_create_input_continue_on_gap(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
-            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", {"workflow_name": "wf"})
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
-                {"verdict": "revise", "issues": ["缺少字段"]},
+                make_canonical_observe("proposal", [make_issue(blocking=True, field="workflow_name")]),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
@@ -212,23 +244,8 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_fast_input_proposal.json",
-                make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
-            )
-            write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
-                {
-                    "verdict": "revise",
-                    "issues": [
-                        {
-                            "field": "stages",
-                            "blocking": True,
-                            "issue": "缺少 evidence_strength，approval 无法原样确认",
-                            "required_change": "为每个 stage 补充 evidence_strength",
-                            "severity": "high",
-                        }
-                    ],
-                },
+                make_canonical_observe("proposal", [make_issue(blocking=True, field="stages")]),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
@@ -239,23 +256,11 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_fast_input_proposal.json",
-                make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
-            )
-            write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
-                {
-                    "verdict": "revise",
-                    "issues": [
-                        {
-                            "field": "run_workflow_notes_for_wf_create_fast",
-                            "blocking": False,
-                            "issue": "建议在人工确认时关注剩余上下文",
-                            "required_change": "交给 confirm_create_input 人工确认",
-                            "severity": "low",
-                        }
-                    ],
-                },
+                make_canonical_observe(
+                    "proposal",
+                    [make_issue(blocking=False, field="run_workflow_notes_for_wf_create_fast")],
+                ),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
@@ -270,7 +275,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", proposal)
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
-                {"verdict": "pass", "issues": []},
+                make_canonical_observe("proposal"),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
@@ -281,17 +286,59 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_fast_input_proposal.json",
-                make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
-            )
-            write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
-                {"verdict": "pass", "issues": []},
+                make_canonical_observe("proposal"),
             )
 
             result = runtime_guard_and_capture_stdout_json(module.main)
 
             self.assertEqual(result, {"next": "exit"})
+
+    def test_case_decide_fail_closed_when_observe_missing_or_invalid(self):
+        inspection_decide = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
+        proposal_decide = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        with isolated_workdir() as workdir:
+            self.assertEqual(runtime_guard_and_capture_stdout_json(inspection_decide.main), {"next": "continue"})
+            self.assertEqual(runtime_guard_and_capture_stdout_json(proposal_decide.main), {"next": "continue"})
+
+            missing_status = make_canonical_observe("proposal")
+            missing_status.pop("observer_status")
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
+                missing_status,
+            )
+            self.assertEqual(runtime_guard_and_capture_stdout_json(proposal_decide.main), {"next": "continue"})
+
+            invalid_artifact = make_canonical_observe("proposal")
+            invalid_artifact["artifact"]["sha256"] = "not-a-sha256"
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
+                invalid_artifact,
+            )
+            self.assertEqual(runtime_guard_and_capture_stdout_json(proposal_decide.main), {"next": "continue"})
+            write_utf8_json(
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
+                {"schema_version": 1, "stage": "proposal", "verdict": "pass", "blocking": False, "issues": [make_issue(blocking=True)]},
+            )
+            self.assertEqual(runtime_guard_and_capture_stdout_json(proposal_decide.main), {"next": "continue"})
+
+    def test_case_prepare_confirmation_context_preserves_non_blocking_issues(self):
+        module = load_script_module(
+            "wf/04_confirm_business_flow/scripts/prepare_create_input_confirmation_context.py"
+        )
+        with isolated_workdir() as workdir:
+            proposal = make_full_proposal()
+            observe = make_canonical_observe(
+                "proposal",
+                [make_issue(blocking=False, field="run_workflow_notes_for_wf_create_fast")],
+            )
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", proposal)
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_observe.json", observe)
+            result = runtime_guard_and_capture_stdout_json(module.main)
+            context = result["lgwf_wf_convert.wf_create_fast_input_confirmation_context"]
+            self.assertEqual(context["proposal"], proposal)
+            self.assertEqual(len(context["non_blocking_issues"]), 1)
+            self.assertFalse(context["observe_summary"]["blocking"])
 
     def test_case_confirm_create_input_approve_route_and_finalize(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/finalize_create_input.py")

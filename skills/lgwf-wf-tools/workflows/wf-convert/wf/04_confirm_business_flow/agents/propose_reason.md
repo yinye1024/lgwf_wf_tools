@@ -8,6 +8,7 @@
 
 - `.lgwf/prompt_convert_target.json`：已确认转换目标。
 - `.lgwf/prompt_workflow_inspection.json`：源 prompt workflow 分析结果。
+- `.lgwf/prompt_workflow_inspection_observe.json`：inspection canonical Observe，包含需要传递的非阻塞问题。
 - `.lgwf/wf_create_fast_input_observe.json`：上一轮 proposal 审查结果。
 - `.lgwf/wf_create_fast_input_proposal.json`：上一轮 proposal；第一轮可能不存在或为空。
 
@@ -25,6 +26,7 @@
 10. 把 `raw_intent` 作为独立关键字段规划，明确其最小业务语义清单，确保脱离结构化字段后仍可指导 `wf-create-fast` 创建方向。
 11. 如果上一轮 observe 包含 `blocking=true` 的 issues，本轮必须逐条生成 `issue_resolution_plan`，说明对应字段、修复动作、是否修改 proposal、无法确认时降级到 `assumptions`、`out_of_scope` 或 `run_workflow_notes_for_wf_create_fast` 的规则。
 12. 如果上一轮 proposal 已存在，本轮优先做最小定向修复，不重新设计无关字段。
+13. 将 inspection Observe 中的 `blocking=false` issues 明确降级到 `assumptions`、`run_workflow_notes_for_wf_create_fast` 或人工确认点，不能丢失，也不能重新写成确定事实。
 
 ## Success Criteria
 

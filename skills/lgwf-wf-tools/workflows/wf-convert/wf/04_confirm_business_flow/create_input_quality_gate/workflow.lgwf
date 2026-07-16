@@ -1,0 +1,49 @@
+WORKFLOW create_input_quality_gate;
+ENTRY validate_create_input;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY validate_create_input
+  SCRIPT "scripts/validate_create_input.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.propose_python_observe_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
+    WRITE workspace file ".lgwf/wf_create_fast_input_observe_py.json";
+  };
+
+CODEX semantic_observe
+  PROMPT "agents/semantic_observe.md"
+  CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
+  CONTEXT workspace file ".lgwf/wf_create_fast_input_proposal.json"
+  CONTEXT workspace file ".lgwf/wf_create_fast_input_observe_py.json"
+  OUTPUT_JSON ".lgwf/wf_create_fast_input_observe_codex.json"
+  TIMEOUT 900
+  RESULT state.lgwf_wf_convert.propose_codex_observe_result
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_workflow_inspection.json";
+    READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
+    READ workspace file ".lgwf/wf_create_fast_input_observe_py.json";
+    WRITE workspace file ".lgwf/wf_create_fast_input_observe_codex.json";
+  };
+
+PY merge_observe
+  SCRIPT "scripts/merge_observe.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_convert.propose_observe_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/wf_create_fast_input_proposal.json";
+    READ workspace file ".lgwf/wf_create_fast_input_observe_py.json";
+    READ workspace file ".lgwf/wf_create_fast_input_observe_codex.json";
+    WRITE workspace file ".lgwf/wf_create_fast_input_observe.json";
+  };
+
+FLOW validate_create_input
+  THEN semantic_observe
+  THEN merge_observe;

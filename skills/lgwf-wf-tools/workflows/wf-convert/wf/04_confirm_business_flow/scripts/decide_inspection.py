@@ -1,25 +1,23 @@
+"""只根据 canonical inspection Observe 决定 ReAct 是否继续。"""
+
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 
-def load_json(path: Path) -> dict:
-    if not path.exists():
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8-sig"))
-    return data if isinstance(data, dict) else {}
+SHARED_SCRIPTS = Path(__file__).resolve().parents[2] / "shared" / "scripts"
+if str(SHARED_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SHARED_SCRIPTS))
+
+from observe_protocol import decide_next
 
 
 def main() -> None:
-    root = Path.cwd()
-    inspection = load_json(root / ".lgwf" / "prompt_workflow_inspection.json")
-    observe = load_json(root / ".lgwf" / "prompt_workflow_inspection_observe.json")
-    has_required = all(key in inspection for key in ("source_summary", "detected_stages", "prompt_contracts"))
-    passed = has_required and observe.get("verdict", "pass") == "pass"
-    print(json.dumps({"next": "exit" if passed else "continue"}, ensure_ascii=False))
+    observe_path = Path.cwd() / ".lgwf" / "prompt_workflow_inspection_observe.json"
+    print(json.dumps({"next": decide_next(observe_path, expected_stage="inspection")}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
     main()
-

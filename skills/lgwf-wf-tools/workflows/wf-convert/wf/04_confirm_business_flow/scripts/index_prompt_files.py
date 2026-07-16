@@ -61,11 +61,26 @@ def main() -> None:
     output_path = work_root / ".lgwf" / "prompt_file_index.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(inventory, ensure_ascii=False, indent=2), encoding="utf-8")
-    for feedback_name in ("prompt_workflow_inspection_observe.json", "wf_create_fast_input_observe.json"):
+    feedback_stages = {
+        "prompt_workflow_inspection_observe.json": "inspection",
+        "wf_create_fast_input_observe.json": "proposal",
+    }
+    for feedback_name, stage in feedback_stages.items():
         feedback_path = output_path.parent / feedback_name
         if not feedback_path.exists():
             feedback_path.write_text(
-                json.dumps({"verdict": "initial", "issues": []}, ensure_ascii=False, indent=2),
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "stage": stage,
+                        "verdict": "initial",
+                        "blocking": False,
+                        "observer_status": {"python": "initial", "codex": "initial"},
+                        "issues": [],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
                 encoding="utf-8",
             )
     proposal_path = output_path.parent / "wf_create_fast_input_proposal.json"

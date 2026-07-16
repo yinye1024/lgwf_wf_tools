@@ -29,7 +29,7 @@
 - `状态边界`：运行状态只写入声明的 work dir 下 `.lgwf/`；workflow source root 与 work dir 必须分离。
 - `产物`：列出主要 `.lgwf/` 文件、报告目录和 handoff payload。
 - `验证`：提供 `lgwf.py audit` 和对应测试命令；只改文档时至少确认 UTF-8 和路径示例。
-- `禁止事项`：资源路径必须相对，禁止绝对路径和 `..`；不得在子 workflow 下继续创建孙级 `workflow.lgwf`，不得绕过 approval。
+- `禁止事项`：资源路径必须相对，禁止绝对路径和 `..`；允许按模块化开发指引创建一层受控的阶段内部子 workflow，但该层不得继续嵌套更深的 `workflow.lgwf`，且必须声明职责、输入、输出和验证；不得绕过 approval。
 
 ## tool_workflow 契约
 
