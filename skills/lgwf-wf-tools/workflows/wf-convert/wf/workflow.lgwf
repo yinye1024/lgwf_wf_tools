@@ -18,132 +18,58 @@ STEP analyze_source
   CONTRACT {
     READ workspace file ".lgwf/prompt_convert_target.json";
     WRITE workspace file ".lgwf/prompt_workflow_inspection.json";
-    WRITE workspace file ".lgwf/wf_create_input.json";
+    WRITE workspace file ".lgwf/wf_create_fast_input.json";
   };
 
 PY prepare_payload
-  SCRIPT "07_confirm_step_designs/scripts/prepare_wf_create_payload.py"
+  SCRIPT "07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py"
   TIMEOUT 60
-  RESULT state.lgwf_wf_convert.wf_create_payload
+  RESULT state.lgwf_wf_convert.wf_create_fast_payload
   UPDATES_STATE {
-    WRITE state.lgwf_wf_convert.wf_create_payload;
+    WRITE state.lgwf_wf_convert.wf_create_fast_payload;
   }
   CONTRACT {
-    READ workspace file ".lgwf/wf_create_input.json";
-    WRITE workspace file ".lgwf/wf_create_input_for_wf_create.json";
-    WRITE workspace file ".lgwf/wf_create_payload.json";
+    READ workspace file ".lgwf/wf_create_fast_input.json";
+    WRITE workspace file ".lgwf/wf_create_fast_input_for_wf_create_fast.json";
+    WRITE workspace file ".lgwf/wf_create_fast_payload.json";
+    WRITE state.lgwf_wf_convert.wf_create_fast_payload;
   };
 
-PY declare_wf_create_payload_contract
-  SCRIPT "scripts/map_wf_create_input.py"
-  INPUT state.lgwf_wf_convert.wf_create_payload
-  RESULT state.lgwf_wf_convert.contract_markers.wf_create_payload
-  CONTRACT {
-    WRITE state.lgwf_wf_convert.wf_create_payload;
-  };
-
-PY map_wf_create_input
-  SCRIPT "scripts/map_wf_create_input.py"
-  INPUT state.lgwf_wf_convert.wf_create_payload
-  RESULT state.lgwf_wf_convert.wf_create_input
+PY map_wf_create_fast_input
+  SCRIPT "scripts/map_wf_create_fast_input.py"
+  INPUT state.lgwf_wf_convert.wf_create_fast_payload
+  RESULT state.lgwf_wf_convert.wf_create_fast_input
   UPDATES_STATE
   CONTRACT {
-    READ state.lgwf_wf_convert.wf_create_payload;
+    READ state.lgwf_wf_convert.wf_create_fast_payload;
+    WRITE state.lgwf_wf_convert.wf_create_fast_input;
   };
 
-PY declare_wf_create_input_contract
-  SCRIPT "scripts/map_wf_create_input.py"
-  INPUT state.lgwf_wf_convert.wf_create_input
-  RESULT state.lgwf_wf_convert.contract_markers.wf_create_input
-  CONTRACT {
-    WRITE state.lgwf_wf_convert.wf_create_input;
-  };
-
-RUN_WORKFLOW wf_create
-  WORKFLOW "workflows/wf-create/wf/workflow.lgwf"
-  WORK_DIR "workflows/wf-create/ws"
-  INPUT state.lgwf_wf_convert.wf_create_input
-  RESULT state.lgwf_wf_convert.wf_create_result
-  CONTRACT {
-    READ state.lgwf_wf_convert.wf_create_input;
-    READ workspace file "workflows/wf-create/wf/workflow.lgwf";
-    WRITE workspace dir "workflows/wf-create/ws";
-  };
-
-PY declare_wf_create_result_contract
-  SCRIPT "scripts/capture_wf_create_result.py"
-  INPUT state.lgwf_wf_convert.wf_create_result
-  RESULT state.lgwf_wf_convert.contract_markers.wf_create_result
-  CONTRACT {
-    WRITE state.lgwf_wf_convert.wf_create_result;
-  };
-
-PY capture_wf_create_result
-  SCRIPT "scripts/capture_wf_create_result.py"
-  INPUT state.lgwf_wf_convert.wf_create_result
-  RESULT state.lgwf_wf_convert.wf_create_result_summary
+PY prepare_wf_create_fast_handoff
+  SCRIPT "scripts/prepare_wf_create_fast_handoff.py"
+  INPUT state.lgwf_wf_convert.wf_create_fast_input
+  RESULT state.lgwf_wf_convert.wf_create_fast_handoff_payload
   UPDATES_STATE
   CONTRACT {
-    READ state.lgwf_wf_convert.wf_create_result;
+    READ state.lgwf_wf_convert.wf_create_fast_input;
+    READ workspace file ".lgwf/wf_create_fast_payload.json";
+    READ workspace file ".lgwf/wf_create_fast_input_for_wf_create_fast.json";
+    WRITE workspace file ".lgwf/wf_create_fast_handoff.json";
+    WRITE state.lgwf_wf_convert.wf_create_fast_handoff_payload;
   };
 
-PY declare_wf_create_result_summary_contract
-  SCRIPT "scripts/capture_wf_create_result.py"
-  INPUT state.lgwf_wf_convert.wf_create_result_summary
-  RESULT state.lgwf_wf_convert.contract_markers.wf_create_result_summary
+HANDOFF handoff_to_wf_create_fast
+  CONTEXT state.lgwf_wf_convert.wf_create_fast_handoff_payload
+  PROMPT "handoff_wf_create_fast.md"
+  RESULT state.lgwf_wf_convert.wf_create_fast_handoff
   CONTRACT {
-    WRITE state.lgwf_wf_convert.wf_create_result_summary;
-  };
-
-PY verify_business_parity
-  SCRIPT "scripts/verify_business_parity.py"
-  INPUT state.lgwf_wf_convert.wf_create_result_summary
-  RESULT state.lgwf_wf_convert.business_parity_report
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/wf_create_payload.json";
-    WRITE workspace file ".lgwf/business_parity_report.json";
-    READ state.lgwf_wf_convert.wf_create_result_summary;
-  };
-
-PY summarize_result
-  SCRIPT "09_summarize_create_result/scripts/summarize_convert_result.py"
-  TIMEOUT 60
-  RESULT state.lgwf_wf_convert.summary_result
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/business_parity_report.json";
-    READ workspace file ".lgwf/prompt_workflow_inspection.json";
-    READ workspace file ".lgwf/wf_create_payload.json";
-  };
-
-PY prepare_post_fix_handoff
-  SCRIPT "scripts/prepare_post_fix_handoff.py"
-  INPUT state.lgwf_wf_convert.wf_create_result_summary
-  RESULT state.lgwf_wf_convert.post_fix_handoff_payload
-  UPDATES_STATE
-  CONTRACT {
-    READ state.lgwf_wf_convert.wf_create_result_summary;
-  };
-
-HANDOFF handoff_wf_post_fix
-  CONTEXT state.lgwf_wf_convert.post_fix_handoff_payload
-  PROMPT "handoff_wf_post_fix.md"
-  RESULT state.lgwf_wf_convert.post_fix_handoff
-  CONTRACT {
+    READ state.lgwf_wf_convert.wf_create_fast_handoff_payload;
+    WRITE state.lgwf_wf_convert.wf_create_fast_handoff;
   };
 
 FLOW collect_target
   THEN analyze_source
   THEN prepare_payload
-  THEN declare_wf_create_payload_contract
-  THEN map_wf_create_input
-  THEN declare_wf_create_input_contract
-  THEN wf_create
-  THEN declare_wf_create_result_contract
-  THEN capture_wf_create_result
-  THEN declare_wf_create_result_summary_contract
-  THEN verify_business_parity
-  THEN summarize_result
-  THEN prepare_post_fix_handoff
-  THEN handoff_wf_post_fix;
+  THEN map_wf_create_fast_input
+  THEN prepare_wf_create_fast_handoff
+  THEN handoff_to_wf_create_fast;

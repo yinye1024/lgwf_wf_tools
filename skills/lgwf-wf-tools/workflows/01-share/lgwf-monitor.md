@@ -27,8 +27,10 @@ python vendor/lgwf-client-assist/scripts/lgwf.py codex token-status --work-dir <
 推荐判断顺序：
 
 1. 先用 `status` 判断 workflow 当前节点、是否 `waiting_human`、是否完成或失败。
-2. 如果当前能力是 Codex 节点，再用 `codex token-status` 判断 token 是否在增长。
-3. 如果 workflow status 看似停留在旧节点，但 `current_instruction_id` 已变化或 token 增长，应按 token status 判断为仍在推进。
-4. 只有在 token status 长时间不更新、产物没有落盘、进程仍未结束时，才按运行异常排查，不要提前重启 workflow。
+2. 如果当前能力是 Codex 节点，再用 `codex token-status` 判断 token 是否在增长；`total_tokens=0` 或 `seconds_since_update` 增大只能说明 live status 暂未刷新，不能单独作为失败依据。
+3. 如果 workflow status 看似停留在旧节点，但 `current_instruction_id` 已变化、token 增长、track dir 的 `stdout.txt` 继续写入，或 process log 出现节点推进记录，应按仍在推进处理。
+4. Codex 节点未达到自身 `timeout_seconds` 前，主 agent 不得自行判定失败，不得自行 `stop`、`rerun` 或跳过节点；只能把疑似无进展的证据提醒用户，并等待用户决定。
+5. 只有出现明确终态证据时才可判失败：process log 出现 `node failed`、track dir `metadata.json` 中 `exit_code` 非 0、`timed_out=true`，或后台进程已退出且没有节点完成记录和目标产物。
+6. 排查疑似卡住时必须同时检查 workflow `status`、后台 process log、当前 Codex track dir 的 `metadata.json` / `stdout.txt` / `stderr.txt`，以及后台 `pid` 是否仍存在。
 
 如果已有旧数据，按 vendor 指引让用户选择 `continue`、`resume` 或 `rerun`。

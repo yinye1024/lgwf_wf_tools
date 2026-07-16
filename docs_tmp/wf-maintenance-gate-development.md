@@ -28,7 +28,7 @@
 - `doctor_lgwf_wf_tools.py` 可做 facade 健康检查，`--deep` 可生成完整诊断报告。
 - `self-improve pre-release` 可串联 doctor、changed files、self eval、workflow health、trace eval、scorecard 和 upgrade report。
 - `package_lgwf_wf_tools_zip.py` 可把整个 facade skill 打包为 zip，并排除 `.local/`、`.lgwf/` 等运行态目录。
-- `wf-create`、`wf-fix`、`wf-convert`、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-dsl-upgrade`、`e2e-test-generator`、`wf-post-fix` 和 `skill-packaging` 分别覆盖创建、修复、转换、prompt 质量、DSL 升级、测试生成、后续验收和打包特定场景。
+- `wf-create`、`wf-fix`、`wf-convert`、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-audit-fix`、`e2e-test-generator`、`wf-post-fix` 和 `skill-packaging` 分别覆盖创建、修复、转换、prompt 质量、DSL 静态 audit 修复、测试生成、后续验收和打包特定场景。
 
 当前缺口不是单项能力不足，而是缺少一个面向日常开发收尾的统一 gate：当维护者修改了 workflow、prompt、脚本、registry、文档或 vendor 后，需要先判断影响范围，再选择最小但足够的验证集合，最后汇总是否可以打包或发布。这个判断目前依赖人工经验，容易出现验证过重、验证遗漏或结果分散的问题。
 
@@ -45,7 +45,7 @@
 5. 执行只读健康检查、相关测试、可选 deep doctor、可选 self-improve pre-release、可选 zip 打包 smoke。
 6. 汇总验证结论、失败项、关键产物、建议路由和后续动作。
 
-该 workflow 的定位是“维护 gate”和“发布准备前检查”，不是替代具体修复 workflow。发现问题后，应建议路由到 `wf-fix`、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-dsl-upgrade`、`e2e-test-generator` 或 `self-improve`。
+该 workflow 的定位是“维护 gate”和“发布准备前检查”，不是替代具体修复 workflow。发现问题后，应建议路由到 `wf-fix`、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-audit-fix`、`e2e-test-generator` 或 `self-improve`。
 
 ## 非目标
 
@@ -106,7 +106,7 @@
 
 - `scope`：建议支持 `changed_files`、`explicit_files` 和 `full_facade`。默认 `changed_files`。
 - `changed_files`：可选。为空时由 workflow 通过 `git status --short` 和 `git diff --name-only` 收集。
-- `target_workflows`：可选。维护者已知影响的 workflow id，例如 `wf-create`、`wf-dsl-upgrade`。
+- `target_workflows`：可选。维护者已知影响的 workflow id，例如 `wf-create`、`wf-audit-fix`。
 - `intent`：建议支持 `local_check`、`pre_release_check`、`package_ready`。默认 `local_check`。
 - `verification_level`：建议支持 `light`、`standard`、`full`。默认 `standard`。
 - `allow_deep_doctor`：是否允许执行 `doctor --deep` 并写入 `.local/doctor/`。
@@ -252,7 +252,7 @@
 - 已执行验证命令和结果。
 - 关键产物路径。
 - 失败项摘要。
-- 建议路由：例如失败项属于 DSL audit 则建议 `wf-dsl-upgrade` 或 `wf-fix`，prompt 契约问题建议 `wf-prompt-fix`，发布前治理问题建议 `self-improve`。
+- 建议路由：例如失败项属于 DSL audit 则建议 `wf-audit-fix` 或 `wf-fix`，prompt 契约问题建议 `wf-prompt-fix`，发布前治理问题建议 `self-improve`。
 - 后续建议：是否可以继续打包、是否需要人工复核、是否建议运行更高等级验证。
 
 ## 推荐目录结构

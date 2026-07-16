@@ -1,0 +1,47 @@
+{
+  "id": "wf-create-fast",
+  "kind": "lgwf",
+  "version": 1,
+  "workflow_lgwf": "workflows/wf-create-fast/wf/workflow.lgwf",
+  "work_dir": "workflows/wf-create-fast/ws",
+  "input_mode": "input_json_required",
+  "input_schema": {
+    "type": "object",
+    "required": ["raw_intent"],
+    "properties": {
+      "raw_intent": {"type": "string"},
+      "request": {
+        "type": "object",
+        "properties": {
+          "target_dir": {"type": "string"},
+          "target_file": {"type": "string"},
+          "target_dirs": {"type": "array"},
+          "target_files": {"type": "array"}
+        }
+      }
+    },
+    "example": {
+      "raw_intent": "创建一个简单 LGWF workflow，先确认需求和业务流，生成 scaffold 后交给主 agent 完善实现。",
+      "request": {
+        "target_file": "D:/example/workflow-plan.md"
+      }
+    }
+  },
+  "input_file_policy": "Use UTF-8 no BOM --input-json-file when raw_intent contains Chinese or nested JSON.",
+  "auto_human_policy": "conditional",
+  "target_scope": {
+    "fields": ["raw_intent", "request.target_dir", "request.target_file", "request.target_dirs", "request.target_files"],
+    "read_scope": "request.target_* fields are read-only creation context. If they point to execution plans, fix lists, migration steps, or test commands, wf-create-fast extracts requirements and acceptance constraints but must not execute those instructions.",
+    "write_scope": "Creates or updates only the package path approved by the workflow confirmations; existing non-empty files are not overwritten by scaffold materialization."
+  },
+  "state_boundary": {
+    "work_dir": "workflows/wf-create-fast/ws",
+    "runtime_state": ".lgwf/",
+    "target_writes": "approved generated workflow package scaffold"
+  },
+  "outputs": {
+    "materialize_result": ".lgwf/materialize_scaffold_result.json",
+    "handoff": ".lgwf/main_agent_authoring_handoff.json"
+  },
+  "resume_policy": "Use the facade continue/resume/rerun flow for the fixed work_dir."
+}

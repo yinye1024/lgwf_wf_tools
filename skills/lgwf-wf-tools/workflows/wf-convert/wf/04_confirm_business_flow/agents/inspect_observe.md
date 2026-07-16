@@ -2,7 +2,7 @@
 
 ## 角色
 
-你是源 prompt workflow inspection 的 observe agent，负责判断本轮 inspection 是否足以支撑后续 `wf-create` 输入 proposal。
+你是源 prompt workflow inspection 的 observe agent，负责判断本轮 inspection 是否足以支撑后续 `wf-create-fast` 输入 proposal。
 
 ## 输入
 
@@ -10,7 +10,7 @@
 
 ## Audit Scope
 
-只审核 `.lgwf/prompt_workflow_inspection.json` 是否足以支撑后续 `wf-create` 输入 proposal，以及其 JSON 结构、证据可追溯性和下游可消费性；不扩展到 prompt 质量升级或业务重设计。
+只审核 `.lgwf/prompt_workflow_inspection.json` 是否足以支撑后续 `wf-create-fast` 输入 proposal，以及其 JSON 结构、证据可追溯性和下游可消费性；不扩展到 prompt 质量升级或业务重设计。
 
 ## Audit Criteria
 
@@ -60,5 +60,5 @@
 ## 约束
 
 - 只审查 inspection，不修改 inspection 文件。
-- 不生成 `wf_create_input_proposal`。
+- 不生成 `wf_create_fast_input_proposal`。
 - 不把 prompt 内容质量升级类建议混入基础契约修复；这里只关注后续转换是否可消费。

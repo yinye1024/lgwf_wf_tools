@@ -48,28 +48,25 @@ def parse_json_object(text: str) -> dict[str, Any]:
 class RunWfConvertRealPositiveE2E(unittest.TestCase):
     maxDiff = None
 
-    def test_static_prompt_workflow_converts_and_wf_create_generates_package(self) -> None:
+    def test_static_prompt_workflow_converts_and_handoffs_wf_create_fast_input(self) -> None:
         self.require_runtime_prerequisites()
         temp_root = Path(tempfile.mkdtemp(prefix="wf-convert-real-positive-"))
         source_root = temp_root / "static_prompt_workflow"
         work_dir = temp_root / "runtime"
         input_json_path = temp_root / "input.json"
         target_package_root = f"workflows/generated/e2e-static-approval-router-{temp_root.name}"
-        target_abs = SKILL_ROOT / target_package_root
         shutil.copytree(FIXTURE_ROOT, source_root)
         work_dir.mkdir(parents=True, exist_ok=True)
-        if target_abs.exists():
-            shutil.rmtree(target_abs)
 
         write_utf8_json(
             input_json_path,
             {
                 "prompt_convert_target": {
                     "target_dir": str(source_root),
-                    "entry_files": ["README.md", "flow/workflow.lgwf"],
+                    "entry_files": ["README.md", "flow/workflow.md"],
                     "target_workflow_name": "static-approval-router",
                     "target_package_root": target_package_root,
-                    "constraints": ["完整跑完 wf-create", "生成结果需要保留审批路由业务语义"],
+                    "constraints": ["生成 wf-create-fast 输入并 handoff 给主 agent", "创建输入需要保留审批路由业务语义"],
                 }
             },
         )
@@ -95,6 +92,15 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
                     break
                 if phase in {"failed", "stopped"}:
                     raise AssertionError(f"workflow 终态失败: {last_status}")
+                if self.has_handoff_pending(work_dir):
+                    phase_history.append(
+                        {
+                            "phase": "waiting_handoff",
+                            "current_node": "handoff_to_wf_create_fast",
+                            "pending_action": pending_action,
+                        }
+                    )
+                    break
                 if isinstance(pending_action, dict):
                     request_id = str(pending_action.get("request_id") or pending_action.get("child_request_id") or "")
                     if request_id and request_id not in handled_requests:
@@ -107,11 +113,7 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
                 raise AssertionError(f"等待完整 workflow 完成超时: last_status={last_status}")
 
             self.assert_expected_parent_outputs(work_dir)
-            child_record = self.assert_child_workflow_completed(work_dir)
-            child_work_dir = Path(str(child_record["work_dir"]))
-            child_workspace = Path(str(child_record["workspace"]))
-            self.assert_expected_child_outputs(child_work_dir, target_package_root)
-            self.assert_generated_package_matches_prompt_business(child_workspace / target_package_root)
+            self.assert_handoff_payload(work_dir, target_package_root)
             cleanup = True
         except Exception as exc:
             raise AssertionError(
@@ -119,7 +121,6 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
                 f"保留临时目录: {temp_root}\n"
                 f"源 fixture 副本: {source_root}\n"
                 f"父 work_dir: {work_dir}\n"
-                f"目标 package: {target_abs}\n"
                 f"最后状态: {json.dumps(last_status, ensure_ascii=False) if last_status else '<none>'}"
             ) from exc
         finally:
@@ -132,7 +133,10 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
                         pass
             if cleanup:
                 shutil.rmtree(temp_root, ignore_errors=True)
-                shutil.rmtree(target_abs, ignore_errors=True)
+
+    def has_handoff_pending(self, work_dir: Path) -> bool:
+        handoff_dir = work_dir / ".lgwf" / "handoff"
+        return handoff_dir.is_dir() and any(handoff_dir.glob("*.pending.json"))
 
     def require_runtime_prerequisites(self) -> None:
         self.assertTrue(FIXTURE_ROOT.is_dir(), f"缺少固定 prompt workflow fixture: {FIXTURE_ROOT}")
@@ -165,10 +169,10 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
             if "collect_prompt_workflow_target" in prompt:
                 value = {
                     "target_dir": str(source_root),
-                    "entry_files": ["README.md", "flow/workflow.lgwf"],
+                    "entry_files": ["README.md", "flow/workflow.md"],
                     "target_workflow_name": "static-approval-router",
                     "target_package_root": target_package_root,
-                    "constraints": ["完整跑完 wf-create", "生成结果需要保留审批路由业务语义"],
+                    "constraints": ["生成 wf-create-fast 输入并 handoff 给主 agent", "创建输入需要保留审批路由业务语义"],
                 }
             else:
                 value = {
@@ -192,11 +196,11 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
     def review_value_for_action(self, action: dict[str, Any], child_work_dir: Path, target_package_root: str) -> dict[str, Any]:
         prompt = json.dumps(action, ensure_ascii=False)
         if "confirm_create_input" in prompt:
-            proposal = self.read_required_json(child_work_dir / ".lgwf" / "wf_create_input_proposal.json")
+            proposal = self.read_required_json(child_work_dir / ".lgwf" / "wf_create_fast_input_proposal.json")
             return {
                 "decision": "approve",
                 "confirmed": proposal,
-                "comment": "真实 E2E 原样确认 wf-create 输入 proposal",
+                "comment": "真实 E2E 原样确认 wf-create-fast 输入 proposal",
             }
         if "confirm_requirements" in prompt:
             proposal = self.read_required_json(child_work_dir / ".lgwf" / "create_requirements_proposal.json")
@@ -207,9 +211,6 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
             proposal = self.read_required_json(child_work_dir / ".lgwf" / "business_flow_proposal.json")
             proposal.setdefault("workflow_name", "static-approval-router")
             proposal["target_package_root"] = target_package_root
-            return proposal
-        if "confirm_step_designs" in prompt:
-            proposal = self.read_required_json(child_work_dir / ".lgwf" / "step_designs_proposal.json")
             return proposal
         raise AssertionError(f"未知 review 节点: {action}")
 
@@ -246,70 +247,34 @@ class RunWfConvertRealPositiveE2E(unittest.TestCase):
     def assert_expected_parent_outputs(self, work_dir: Path) -> None:
         for relative in [
             ".lgwf/prompt_workflow_inspection.json",
-            ".lgwf/wf_create_input_proposal.json",
-            ".lgwf/wf_create_payload.json",
-            "reports/convert-workflow/convert_result_report.md",
+            ".lgwf/wf_create_fast_input_proposal.json",
+            ".lgwf/wf_create_fast_payload.json",
+            ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
+            ".lgwf/wf_create_fast_handoff.json",
         ]:
             self.assertTrue((work_dir / relative).is_file(), f"缺少父流程产物: {relative}")
 
-    def assert_child_workflow_completed(self, work_dir: Path) -> dict[str, Any]:
-        record = self.read_required_json(work_dir / ".lgwf" / "child-runs" / "wf_create.json")
-        self.assertEqual(record.get("node_id"), "wf_create")
-        self.assertEqual(record.get("status"), "completed", f"子 workflow 未成功完成: {record}")
-        self.assertTrue(
-            str(record.get("declared_work_dir", "")).replace("\\", "/").endswith("workflows/wf-create/ws"),
-            f"子 workflow 缺少声明 work_dir: {record}",
-        )
-        self.assertTrue(
-            str(record.get("workspace", "")).replace("\\", "/").endswith(
-                "/.lgwf/isolations/run_workflow/wf_create/workspace"
-            ),
-            f"子 workflow 未记录隔离 workspace: {record}",
-        )
-        self.assertTrue(
-            str(record.get("work_dir", "")).replace("\\", "/").endswith(
-                "/.lgwf/isolations/run_workflow/wf_create/work_dir"
-            ),
-            f"子 workflow 未使用隔离 work_dir: {record}",
-        )
-        self.assertNotIn("failure", record, f"子 workflow 失败: {record}")
-        return record
-
-    def assert_expected_child_outputs(self, child_work_dir: Path, target_package_root: str) -> None:
-        for relative in [
-            ".lgwf/create_requirements.json",
-            ".lgwf/business_flow.json",
-            ".lgwf/step_designs.json",
-            ".lgwf/implementation_result.json",
-            ".lgwf/create_result_summary.json",
-            "reports/create-workflow/create_result_report.md",
-        ]:
-            self.assertTrue((child_work_dir / relative).is_file(), f"缺少 wf-create 产物: {relative}")
-        summary = self.read_required_json(child_work_dir / ".lgwf" / "create_result_summary.json")
-        self.assertEqual(summary.get("target_package_root"), target_package_root)
-
-    def assert_generated_package_matches_prompt_business(self, target_abs: Path) -> None:
-        self.assertTrue(target_abs.is_dir(), f"wf-create 未生成目标 package: {target_abs}")
-        expected_files = [
-            target_abs / "AGENTS.md",
-            target_abs / "README.md",
-            target_abs / "wf" / "workflow.lgwf",
-        ]
-        self.assertTrue(any(path.is_file() for path in expected_files), f"目标 package 缺少基础文件: {target_abs}")
-        text_parts = []
-        for path in target_abs.rglob("*"):
-            if path.is_file() and path.suffix.lower() in {".md", ".lgwf", ".py", ".json"}:
-                text_parts.append(path.read_text(encoding="utf-8", errors="ignore"))
-        combined = "\n".join(text_parts).lower()
+    def assert_handoff_payload(self, work_dir: Path, target_package_root: str) -> None:
+        child_input = self.read_required_json(work_dir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json")
+        handoff = self.read_required_json(work_dir / ".lgwf" / "wf_create_fast_handoff.json")
+        self.assertEqual(handoff.get("next_action"), "start_workflow")
+        self.assertEqual(handoff.get("next_workflow_id"), "wf-create-fast")
+        self.assertEqual(handoff.get("downstream_workflow_id"), "wf-create-fast")
+        self.assertEqual(handoff.get("wf_create_fast_input"), child_input)
+        self.assertFalse(handoff.get("auto_execute_downstream_workflow"))
+        input_json_file = str(handoff.get("input_json_file") or "").replace("\\", "/")
+        self.assertTrue(input_json_file.endswith("/.lgwf/wf_create_fast_input_for_wf_create_fast.json"), handoff)
+        combined = json.dumps(child_input, ensure_ascii=False).lower()
+        self.assertIn(target_package_root.lower(), combined)
         for keyword in ["approval", "risk", "audit"]:
-            self.assertIn(keyword, combined, f"生成 package 未保留业务关键词 {keyword}: {target_abs}")
+            self.assertIn(keyword, combined, f"handoff 输入未保留业务关键词 {keyword}: {child_input}")
         self.assertTrue(
             "human_review" in combined or "human review" in combined or "人工" in combined,
-            f"生成 package 未体现人工复核分支: {target_abs}",
+            f"handoff 输入未体现人工复核分支: {child_input}",
         )
         self.assertTrue(
             "auto_approve" in combined or "auto approve" in combined or "自动" in combined,
-            f"生成 package 未体现自动通过分支: {target_abs}",
+            f"handoff 输入未体现自动通过分支: {child_input}",
         )
 
 

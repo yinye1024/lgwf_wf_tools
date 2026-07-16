@@ -17,8 +17,8 @@ python scripts/list_workflows.py
 | Workflow id | 使用时机 |
 | --- | --- |
 | `wf-fix` | 目标是运行失败、卡住、产物不对、需要自动诊断修复。 |
-| `wf-create` | 目标是从原始意图创建新的 LGWF workflow 初稿；使用 `wf-create`，并按 [LGWF_WF_MODULAR_DEVELOPMENT.md](LGWF_WF_MODULAR_DEVELOPMENT.md) 约束 workflow、子 workflow、复杂 step 和目录边界。 |
-| `wf-convert` | 目标是把现有 prompt workflow 转换为 `wf-create` 可消费的创建输入包和转换报告。 |
+| `wf-create-fast` | 目标是从原始意图创建新的 LGWF workflow，包含简单、轻量或普通创建请求；确认需求和业务流后落盘 scaffold，再交由主 agent 直接完善。 |
+| `wf-convert` | 目标是把现有 prompt workflow 转换为创建 workflow 入口可消费的输入包和转换报告。 |
 | `wf-prompt-fix` | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足。 |
 | `wf-prompt-upgrade` | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量。 |
 | `wf-audit-fix` | 目标是修复 LGWF authoring audit 静态诊断，包括缺失 `CONTRACT`、读写消费链、DSL 语法或编译问题。 |
@@ -31,8 +31,8 @@ python scripts/list_workflows.py
 - 用户说“修复 workflow audit”或只要求修复 DSL / audit 静态问题，且明确不需要运行目标 workflow：使用内部 `wf-audit-fix`。
 - 用户说“优化 prompt”，但目标 workflow 已经有明确运行失败证据：使用 `wf-fix`。
 - 用户说“生成测试”，但目标 `workflow.lgwf` 不能解析或基础契约明显缺失：报告前置阻塞，并建议转入 `wf-fix` 或 `wf-prompt-fix`。
-- 目标目录还没有可解析的 `workflow.lgwf`，且用户目标是创建新的 LGWF workflow：使用 `wf-create`。
-- 目标目录是 prompt workflow 或主要由 prompt/Markdown/JSON/YAML 文件组成，且用户目标是先生成 `wf-create` 输入包：使用 `wf-convert`。
+- 目标目录还没有可解析的 `workflow.lgwf`，且用户目标是创建新的 LGWF workflow：使用 `wf-create-fast`。
+- 目标目录是 prompt workflow 或主要由 prompt/Markdown/JSON/YAML 文件组成，且用户目标是先生成创建 workflow 入口输入包：使用 `wf-convert`。
 - 用户要求交付质量治理：从 `wf-prompt-fix` 开始；阶段完成后，基于结果证据决定是否重新路由。
 
 ## 连续路由
@@ -53,10 +53,10 @@ python scripts\run_skill_workflow.py --workflow-id <id> --input-json-file <utf8-
 
 启动、监控、approval 和收尾按 [facade-dispatch.md](facade-dispatch.md) 执行。
 
-## `wf-create` 启动约束
+## `wf-create-fast` 启动约束
 
-命中 `wf-create` 后，主 agent 必须启动或继续 `wf-create` run，并按 `workflows/wf-create/AGENTS.md` 处理 approval、resume、monitor 和 handoff。
+命中 `wf-create-fast` 后，主 agent 必须启动或继续 `wf-create-fast` run，并按 `workflows/wf-create-fast/AGENTS.md` 处理 approval、resume、monitor 和 handoff。
 
-禁止主 agent 直接手工创建目标 workflow package、直接写目标 DSL 或 registry entry，或用 `apply_patch` 脚手架替代 `wf-create` 的确认阶段。只有在 `wf-create` 已启动或继续后出现可复核的 runtime/子进程异常，且用户基于证据明确确认恢复方案时，才允许人工恢复。
+`wf-create-fast` 是 registry 中唯一对外可见、可启动的创建 workflow 入口。`wf-create` 不在 registry 中；不要选择、启动、继续或建议用户运行 `wf-create`，也不要通过底层 `lgwf.py run` 绕过 registry 直接启动旧 `workflows/wf-create`。
 
-`wf-create` 的需求、业务流、步骤设计和初稿实现阶段必须读取 [LGWF_WF_MODULAR_DEVELOPMENT.md](LGWF_WF_MODULAR_DEVELOPMENT.md)，用该文档决定阶段是否拆为子 workflow、保留为复杂 step，以及对应目录、状态和验证边界。
+`wf-create-fast` 必须运行到 `materialize_scaffold` 和 `main_agent_handoff`。它不生成 `.lgwf/step_designs.json`，不进入 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后由主 agent 读取 payload 和 source artifacts，只修改 payload 中的 `edit_dirs`，直接完善目标 package。

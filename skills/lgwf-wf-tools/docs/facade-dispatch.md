@@ -70,11 +70,12 @@ python $lgwfPy codex token-status --work-dir <work_dir>
 
 - `current_instruction_id` 变化，说明 Codex 已进入新的 instruction。
 - `token_usage.total_tokens`、`input_tokens`、`output_tokens`、`reasoning_output_tokens` 或 `turn_count` 增长，说明 Codex 进程仍在产生调用或输出，可视为节点仍存活且在推进。
-- `updated_at_unix` 更新，说明 live status 新鲜；若命令返回 `health.stale=true`，再结合产物、stdout/stderr 和进程状态排查。
+- `updated_at_unix` 更新，说明 live status 新鲜；`updated_at_unix` 不更新、`seconds_since_update` 增大或 `token_usage.total_tokens=0` 只表示 live snapshot 暂无新数据，不能单独判定失败。
 - workflow `status` 看似停在旧节点，但 token status 已进入下一 instruction 时，以 token status 作为 Codex 子任务进度依据。
 - token status 本身新鲜但 token 数长时间不增长时，不要立即判定死亡；先检查是否正在等待模型首包、工具调用、文件 I/O、approval 或外部命令返回，再看 stdout/stderr、目标产物和进程状态。
+- Codex 节点未达到自身 `timeout_seconds` 前，主 agent 不得自行判定失败、停止、重启或跳过节点；只能向用户提醒疑似无进展，并展示 `status`、token snapshot、process log、track dir `metadata.json` 和 `stdout/stderr` 的关键证据。
 
-只有 token status 长时间不更新、目标产物没有写出、进程也没有结束时，才把它当作疑似卡住处理；不要因为 `status` 中 `current_node` 短时间重复就重启或 rerun。
+只有出现明确终态证据时才可判失败：process log 出现 `node failed`、track dir `metadata.json` 中 `exit_code` 非 0、`timed_out=true`，或后台进程已退出且没有节点完成记录和目标产物。不要因为 `status` 中 `current_node` 重复、token status 长时间不更新或 token 为 0 就重启或 rerun。
 
 ## Approval 和 waiting_human
 

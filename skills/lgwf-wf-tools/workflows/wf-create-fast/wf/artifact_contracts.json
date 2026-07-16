@@ -1,0 +1,55 @@
+{
+  "workflow_id": "wf-create-fast",
+  "bootstrap_inputs": [
+    ".lgwf/create_requirements.json",
+    ".lgwf/business_flow.json",
+    ".lgwf/scaffold_package_result.json"
+  ],
+  "runtime_artifacts": [
+    ".lgwf/raw_intent_request_proposal.json",
+    ".lgwf/raw_intent_approval.json",
+    ".lgwf/create_requirements_proposal.json",
+    ".lgwf/create_requirements_approval.json",
+    ".lgwf/create_requirements.json",
+    ".lgwf/business_flow_proposal.json",
+    ".lgwf/business_flow_approval.json",
+    ".lgwf/business_flow.json",
+    ".lgwf/scaffold_package_result.json",
+    ".lgwf/materialize_scaffold_result.json",
+    ".lgwf/main_agent_authoring_handoff.json"
+  ],
+  "final_outputs": [
+    ".lgwf/raw_intent_request_proposal.json",
+    ".lgwf/raw_intent_approval.json",
+    ".lgwf/create_requirements_proposal.json",
+    ".lgwf/create_requirements_approval.json",
+    ".lgwf/create_requirements.json",
+    ".lgwf/business_flow_proposal.json",
+    ".lgwf/business_flow_approval.json",
+    ".lgwf/business_flow.json",
+    ".lgwf/scaffold_package_result.json",
+    ".lgwf/materialize_scaffold_result.json",
+    ".lgwf/main_agent_authoring_handoff.json"
+  ],
+  "handoff_artifacts": [
+    ".lgwf/main_agent_authoring_handoff.json"
+  ],
+  "target_artifacts": [
+    "target_package_root/AGENTS.md",
+    "target_package_root/README.md",
+    "target_package_root/entry_contract.json",
+    "target_package_root/wf/workflow.lgwf"
+  ],
+  "script_writes": {
+    "materialize_scaffold": [
+      ".lgwf/materialize_scaffold_result.json"
+    ],
+    "prepare_main_agent_handoff": [
+      ".lgwf/main_agent_authoring_handoff.json"
+    ]
+  },
+  "notes": [
+    "wf-create-fast 在 scaffold 落盘和主 agent handoff 后停止。",
+    "本 workflow 不生成 step_designs.json 或 implementation_result.json。"
+  ]
+}

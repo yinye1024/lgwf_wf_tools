@@ -12,7 +12,7 @@
 ## 任务
 
 1. 根据文件索引识别入口说明、主 prompt、agent prompt、配置文件和可能的 workflow 描述。
-2. 按对后续 `wf-create` 输入 proposal 的重要性排序。
+2. 按对后续 `wf-create-fast` 输入 proposal 的重要性排序。
 3. 明确本轮需要验证的阶段线索、输入输出契约、人工确认点和缺口类型。
 4. 如果 observe 指出上一轮缺失字段，优先规划这些补齐动作。
 

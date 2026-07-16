@@ -1,0 +1,20 @@
+WORKFLOW scaffold_package;
+ENTRY scaffold_package;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY scaffold_package
+  SCRIPT "scripts/scaffold_package.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create_fast.scaffold_package_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/create_requirements.json";
+    WRITE workspace file ".lgwf/scaffold_package_result.json";
+  };
+
+FLOW scaffold_package;

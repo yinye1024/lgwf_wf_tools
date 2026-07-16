@@ -107,7 +107,7 @@ class RunSkillWorkflowTests(unittest.TestCase):
 
         payload = '{"raw_intent":"创建 workflow"}'
         with mock.patch.object(run_skill_workflow.subprocess, "run", fake_run):
-            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create", "--input-json", payload])
+            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create-fast", "--input-json", payload])
 
         self.assertEqual(exit_code, 0)
         self.assertIn("--input-json-file", calls[0])
@@ -117,7 +117,7 @@ class RunSkillWorkflowTests(unittest.TestCase):
     def test_workflow_id_requires_input_for_input_json_required_contract(self) -> None:
         stderr = io.StringIO()
         with mock.patch.object(run_skill_workflow.subprocess, "run") as run_mock, mock.patch.object(sys, "stderr", stderr):
-            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create"])
+            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create-fast"])
 
         self.assertEqual(exit_code, 2)
         self.assertIn("requires input JSON", stderr.getvalue())
@@ -132,6 +132,15 @@ class RunSkillWorkflowTests(unittest.TestCase):
         self.assertIn("forbids --auto-human", stderr.getvalue())
         run_mock.assert_not_called()
 
+    def test_legacy_wf_create_id_is_not_registered(self) -> None:
+        stderr = io.StringIO()
+        with mock.patch.object(run_skill_workflow.subprocess, "run") as run_mock, mock.patch.object(sys, "stderr", stderr):
+            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create", "--input-json", '{"raw_intent":"x"}'])
+
+        self.assertEqual(exit_code, 2)
+        self.assertIn("unknown workflow id: wf-create", stderr.getvalue())
+        run_mock.assert_not_called()
+
     def test_workflow_id_passes_auto_human_when_contract_is_conditional(self) -> None:
         calls: list[list[str]] = []
 
@@ -140,7 +149,7 @@ class RunSkillWorkflowTests(unittest.TestCase):
             return subprocess.CompletedProcess(args=args, returncode=0)
 
         with mock.patch.object(run_skill_workflow.subprocess, "run", fake_run):
-            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create", "--input-json", '{"raw_intent":"x"}', "--auto-human"])
+            exit_code = run_skill_workflow.main(["--workflow-id", "wf-create-fast", "--input-json", '{"raw_intent":"x"}', "--auto-human"])
 
         self.assertEqual(exit_code, 0)
         self.assertIn("--auto-human", calls[0])

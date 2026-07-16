@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -10,7 +11,7 @@ SHARED = PACKAGE_ROOT / "wf" / "shared" / "scripts"
 if str(SHARED) not in sys.path:
     sys.path.insert(0, str(SHARED))
 
-from maintenance_gate_common import classify_path
+from maintenance_gate_common import classify_path, find_workspace_root
 
 
 class ImpactClassificationTests(unittest.TestCase):
@@ -43,6 +44,16 @@ class ImpactClassificationTests(unittest.TestCase):
         result = classify_path("docs/notes.md", ["wf-create"])
         self.assertEqual(result["category"], "docs_only")
         self.assertEqual(result["risk"], "low")
+
+    def test_find_workspace_root_prefers_git_root_over_facade_nested_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / ".git").mkdir()
+            facade = repo / "skills" / "lgwf-wf-tools"
+            work_dir = facade / "workflows" / "wf-maintenance-gate" / "ws"
+            work_dir.mkdir(parents=True)
+            (facade / "skills").mkdir()
+            self.assertEqual(repo.resolve(), find_workspace_root(work_dir))
 
 
 if __name__ == "__main__":

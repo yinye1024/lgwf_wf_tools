@@ -36,5 +36,6 @@
     ".lgwf/step_designs_proposal_decision.json",
     ".lgwf/step_designs.json",
     ".lgwf/implementation_context.json"
-  ]
+  ],
+  "script_writes": {}
 }

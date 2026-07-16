@@ -1,0 +1,49 @@
+WORKFLOW lgwf_wf_create_fast;
+ENTRY define_requirements;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+  result_path "lgwf_wf_create_fast.results.{node}";
+}
+
+STEP define_requirements
+  WORKFLOW "01_confirm_requirements/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/create_requirements.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+  };
+
+STEP design_structure
+  WORKFLOW "02_confirm_business_flow/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/business_flow.json";
+    WRITE workspace file ".lgwf/scaffold_package_result.json";
+  };
+
+STEP materialize_scaffold
+  WORKFLOW "03_materialize_scaffold/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    WRITE workspace file ".lgwf/materialize_scaffold_result.json";
+  };
+
+STEP main_agent_handoff
+  WORKFLOW "04_main_agent_handoff/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/materialize_scaffold_result.json";
+    WRITE workspace file ".lgwf/main_agent_authoring_handoff.json";
+    WRITE state.lgwf_wf_create_fast.main_agent_handoff;
+  };
+
+FLOW define_requirements
+  THEN design_structure
+  THEN materialize_scaffold
+  THEN main_agent_handoff;

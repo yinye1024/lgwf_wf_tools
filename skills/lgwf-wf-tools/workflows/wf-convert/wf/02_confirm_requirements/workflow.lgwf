@@ -1,20 +1,57 @@
 WORKFLOW collect_convert_target;
-ENTRY collect_prompt_workflow_target;
+ENTRY prepare_prompt_convert_target_context;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 300;
 }
 
-APPROVAL collect_prompt_workflow_target
-  PROMPT_REF "confirm_prompt_workflow_target.md"
-  READ state.lgwf_wf_convert.target_context
-  WRITE state.lgwf_wf_convert.prompt_convert_target
-  RESULT state.lgwf_wf_convert.prompt_convert_target_result
-  PERSIST ".lgwf/prompt_convert_target.json"
-  POLL 1
+PY prepare_prompt_convert_target_context
+  SCRIPT "scripts/prepare_prompt_convert_target_context.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_convert.prepare_prompt_convert_target_context_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_convert.prepare_prompt_convert_target_context_result;
+    WRITE state.lgwf_wf_convert.prompt_convert_target_context;
+  }
   CONTRACT {
+    WRITE workspace file ".lgwf/prompt_convert_target_proposal.json";
+    WRITE state.lgwf_wf_convert.prepare_prompt_convert_target_context_result;
+    WRITE state.lgwf_wf_convert.prompt_convert_target_context;
+  };
+
+REVIEW collect_prompt_workflow_target
+  PROMPT_REF "confirm_prompt_workflow_target.md"
+  CONTEXT state.lgwf_wf_convert.prompt_convert_target_context
+  RESULT state.lgwf_wf_convert.prompt_convert_target_result
+  PERSIST ".lgwf/prompt_convert_target_approval.json"
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_convert_target_proposal.json";
+    READ state.lgwf_wf_convert.prompt_convert_target_context;
+    WRITE workspace file ".lgwf/prompt_convert_target_approval.json";
+  };
+
+PY finalize_prompt_convert_target
+  SCRIPT "scripts/finalize_prompt_convert_target.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_convert.prompt_convert_target
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_convert.prompt_convert_target;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/prompt_convert_target_approval.json";
+    READ workspace file ".lgwf/prompt_convert_target_proposal.json";
     WRITE workspace file ".lgwf/prompt_convert_target.json";
-    READ state.lgwf_wf_convert.target_context;
     WRITE state.lgwf_wf_convert.prompt_convert_target;
   };
+
+FLOW {
+  prepare_prompt_convert_target_context
+  THEN collect_prompt_workflow_target;
+
+  collect_prompt_workflow_target
+    WHEN "approve" THEN finalize_prompt_convert_target
+    WHEN "revise" THEN collect_prompt_workflow_target
+    WHEN "reject" THEN FAIL_ALL;
+}

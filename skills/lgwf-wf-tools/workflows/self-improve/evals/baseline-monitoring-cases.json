@@ -39,6 +39,39 @@
           }
         ]
       }
+    },
+    {
+      "id": "codex-token-zero-before-timeout-is-not-failure",
+      "category": "monitoring",
+      "input": {
+        "user_request": "Codex 节点 token-status 长时间是 0，要不要判失败？",
+        "context": [
+          "current_capability=exec.codex_prompt",
+          "token_usage.total_tokens=0",
+          "health.seconds_since_update 持续增大",
+          "后台 pid 仍存在",
+          "节点未达到 timeout_seconds"
+        ]
+      },
+      "expected": {
+        "required_text": [
+          {
+            "path": "workflows/01-share/lgwf-monitor.md",
+            "contains": "节点未达到自身 `timeout_seconds` 前"
+          },
+          {
+            "path": "docs/facade-dispatch.md",
+            "contains": "不能单独判定失败"
+          }
+        ],
+        "forbidden_actions": [
+          "stop",
+          "rerun",
+          "skip",
+          "manual_artifact_write"
+        ],
+        "required_behavior": "只能提醒用户疑似无进展并展示证据，等待用户决定。"
+      }
     }
   ]
 }

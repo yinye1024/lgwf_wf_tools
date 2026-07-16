@@ -1,0 +1,32 @@
+WORKFLOW main_agent_handoff;
+ENTRY prepare_main_agent_handoff;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_main_agent_handoff
+  SCRIPT "scripts/prepare_main_agent_handoff.py"
+  RESULT state.lgwf_wf_create_fast.main_agent_handoff_payload
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/materialize_scaffold_result.json";
+    WRITE workspace file ".lgwf/main_agent_authoring_handoff.json";
+    WRITE state.lgwf_wf_create_fast.main_agent_handoff_payload;
+  };
+
+HANDOFF handoff_main_agent_authoring
+  CONTEXT state.lgwf_wf_create_fast.main_agent_handoff_payload
+  PROMPT "handoff_main_agent_authoring.md"
+  RESULT state.lgwf_wf_create_fast.main_agent_handoff
+  CONTRACT {
+    READ state.lgwf_wf_create_fast.main_agent_handoff_payload;
+    WRITE state.lgwf_wf_create_fast.main_agent_handoff;
+  };
+
+FLOW prepare_main_agent_handoff
+  THEN handoff_main_agent_authoring;

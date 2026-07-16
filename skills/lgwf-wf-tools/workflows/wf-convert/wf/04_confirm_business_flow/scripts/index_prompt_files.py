@@ -38,7 +38,7 @@ def build_inventory(root: Path) -> dict[str, Any]:
             "size_bytes": path.stat().st_size,
         }
         files.append(item)
-        if path.name == "workflow.lgwf":
+        if path.name in {"workflow.lgwf", "workflow.md"}:
             workflow_files.append(relative)
         if path.suffix.lower() in {".md", ".txt", ".prompt"}:
             prompt_candidates.append(relative)
@@ -61,14 +61,14 @@ def main() -> None:
     output_path = work_root / ".lgwf" / "prompt_file_index.json"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(inventory, ensure_ascii=False, indent=2), encoding="utf-8")
-    for feedback_name in ("prompt_workflow_inspection_observe.json", "wf_create_input_observe.json"):
+    for feedback_name in ("prompt_workflow_inspection_observe.json", "wf_create_fast_input_observe.json"):
         feedback_path = output_path.parent / feedback_name
         if not feedback_path.exists():
             feedback_path.write_text(
                 json.dumps({"verdict": "initial", "issues": []}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-    proposal_path = output_path.parent / "wf_create_input_proposal.json"
+    proposal_path = output_path.parent / "wf_create_fast_input_proposal.json"
     if not proposal_path.exists():
         proposal_path.write_text(json.dumps({}, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({"lgwf_wf_convert.prompt_file_index": inventory}, ensure_ascii=False, indent=2))

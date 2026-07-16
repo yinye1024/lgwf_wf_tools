@@ -1,0 +1,21 @@
+WORKFLOW materialize_scaffold;
+ENTRY materialize_scaffold;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY materialize_scaffold
+  SCRIPT "scripts/materialize_scaffold.py"
+  RESULT state.lgwf_wf_create_fast.materialize_scaffold_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/business_flow.json";
+    READ workspace file ".lgwf/scaffold_package_result.json";
+    WRITE workspace file ".lgwf/materialize_scaffold_result.json";
+    WRITE state.lgwf_wf_create_fast.materialize_scaffold_result;
+  };
+
+FLOW materialize_scaffold;

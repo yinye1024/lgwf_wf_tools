@@ -2,42 +2,54 @@
   "bootstrap_inputs": [
     ".lgwf/prompt_workflow_inspection.json",
     ".lgwf/prompt_workflow_inspection_observe.json",
-    ".lgwf/wf_create_input_observe.json",
-    ".lgwf/wf_create_input_proposal.json"
+    ".lgwf/prompt_convert_target_proposal.json",
+    ".lgwf/wf_create_fast_input_observe.json",
+    ".lgwf/wf_create_fast_input_proposal.json"
   ],
   "final_outputs": [
-    ".lgwf/business_parity_report.json",
-    ".lgwf/wf_create_input_approval.json",
-    ".lgwf/wf_create_input_for_wf_create.json"
+    ".lgwf/prompt_convert_target_approval.json",
+    ".lgwf/prompt_convert_target.json",
+    ".lgwf/prompt_workflow_inspection.json",
+    ".lgwf/wf_create_fast_input_approval.json",
+    ".lgwf/wf_create_fast_input.json",
+    ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
+    ".lgwf/wf_create_fast_payload.json",
+    ".lgwf/wf_create_fast_handoff.json"
   ],
   "script_writes": {
     "act_codex_42": [
       ".lgwf/prompt_workflow_inspection.json"
     ],
     "act_codex_84": [
-      ".lgwf/wf_create_input_proposal.json"
+      ".lgwf/wf_create_fast_input_proposal.json"
+    ],
+    "prepare_prompt_convert_target_context": [
+      ".lgwf/prompt_convert_target_proposal.json"
     ],
     "collect_prompt_workflow_target": [
+      ".lgwf/prompt_convert_target_approval.json"
+    ],
+    "finalize_prompt_convert_target": [
       ".lgwf/prompt_convert_target.json"
     ],
     "confirm_create_input": [
-      ".lgwf/wf_create_input_approval.json"
+      ".lgwf/wf_create_fast_input_approval.json"
     ],
     "finalize_create_input": [
-      ".lgwf/wf_create_input.json"
+      ".lgwf/wf_create_fast_input.json"
     ],
     "prepare_payload": [
-      ".lgwf/wf_create_input_for_wf_create.json",
-      ".lgwf/wf_create_payload.json"
+      ".lgwf/wf_create_fast_input_for_wf_create_fast.json",
+      ".lgwf/wf_create_fast_payload.json"
+    ],
+    "prepare_wf_create_fast_handoff": [
+      ".lgwf/wf_create_fast_handoff.json"
     ],
     "reason_codex_31": [
       ".lgwf/prompt_workflow_inspection_reason.json"
     ],
     "reason_codex_72": [
-      ".lgwf/wf_create_input_reason.json"
-    ],
-    "verify_business_parity": [
-      ".lgwf/business_parity_report.json"
+      ".lgwf/wf_create_fast_input_reason.json"
     ]
   }
 }

@@ -21,7 +21,7 @@ REQUIRED_FIELDS = (
     "human_approval_points",
     "assumptions",
     "out_of_scope",
-    "run_workflow_notes_for_wf_create",
+    "run_workflow_notes_for_wf_create_fast",
 )
 
 
@@ -86,8 +86,8 @@ def decide_next(proposal: dict[str, Any], observe: dict[str, Any]) -> str:
 
 def main() -> None:
     root = Path.cwd()
-    proposal = load_json(root / ".lgwf" / "wf_create_input_proposal.json")
-    observe = load_json(root / ".lgwf" / "wf_create_input_observe.json")
+    proposal = load_json(root / ".lgwf" / "wf_create_fast_input_proposal.json")
+    observe = load_json(root / ".lgwf" / "wf_create_fast_input_observe.json")
     print(json.dumps({"next": decide_next(proposal, observe)}, ensure_ascii=False))
 
 

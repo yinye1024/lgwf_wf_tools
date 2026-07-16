@@ -111,7 +111,7 @@ def make_full_proposal(*, target_package_root: str = "skills/lgwf-wf-tools/workf
         "human_approval_points": ["confirm_create_input"],
         "assumptions": ["源目录可读"],
         "out_of_scope": ["真实 runtime 验证"],
-        "run_workflow_notes_for_wf_create": ["交给 wf-create 继续生成"],
+        "run_workflow_notes_for_wf_create_fast": ["交给 wf-create-fast 继续生成"],
     }
 
 
@@ -148,11 +148,11 @@ class ScriptFlowE2ETests(unittest.TestCase):
                 inventory["prompt_candidates"],
                 ["flow/agents/inspect.md", "flow/notes.txt", "flow/definition.prompt"],
             )
-            for name in ("prompt_workflow_inspection_observe.json", "wf_create_input_observe.json"):
+            for name in ("prompt_workflow_inspection_observe.json", "wf_create_fast_input_observe.json"):
                 placeholder = json.loads((workdir / ".lgwf" / name).read_text(encoding="utf-8"))
                 self.assertEqual(placeholder, {"verdict": "initial", "issues": []})
             proposal_placeholder = json.loads(
-                (workdir / ".lgwf" / "wf_create_input_proposal.json").read_text(encoding="utf-8")
+                (workdir / ".lgwf" / "wf_create_fast_input_proposal.json").read_text(encoding="utf-8")
             )
             self.assertEqual(proposal_placeholder, {})
 
@@ -192,9 +192,9 @@ class ScriptFlowE2ETests(unittest.TestCase):
     def test_case_decide_create_input_continue_on_gap(self):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", {"workflow_name": "wf"})
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", {"workflow_name": "wf"})
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_observe.json",
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
                 {"verdict": "revise", "issues": ["缺少字段"]},
             )
 
@@ -206,11 +206,11 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_proposal.json",
+                workdir / ".lgwf" / "wf_create_fast_input_proposal.json",
                 make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
             )
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_observe.json",
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
                 {
                     "verdict": "revise",
                     "issues": [
@@ -233,16 +233,16 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_proposal.json",
+                workdir / ".lgwf" / "wf_create_fast_input_proposal.json",
                 make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
             )
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_observe.json",
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
                 {
                     "verdict": "revise",
                     "issues": [
                         {
-                            "field": "run_workflow_notes_for_wf_create",
+                            "field": "run_workflow_notes_for_wf_create_fast",
                             "blocking": False,
                             "issue": "建议在人工确认时关注剩余上下文",
                             "required_change": "交给 confirm_create_input 人工确认",
@@ -261,9 +261,9 @@ class ScriptFlowE2ETests(unittest.TestCase):
         with isolated_workdir() as workdir:
             proposal = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated")
             proposal["source_root"] = str((workdir / "source_prompt_workflow").resolve())
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", proposal)
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", proposal)
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_observe.json",
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
                 {"verdict": "pass", "issues": []},
             )
 
@@ -275,11 +275,11 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_proposal.json",
+                workdir / ".lgwf" / "wf_create_fast_input_proposal.json",
                 make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated"),
             )
             write_utf8_json(
-                workdir / ".lgwf" / "wf_create_input_observe.json",
+                workdir / ".lgwf" / "wf_create_fast_input_observe.json",
                 {"verdict": "pass", "issues": []},
             )
 
@@ -291,7 +291,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
         module = load_script_module("wf/04_confirm_business_flow/scripts/finalize_create_input.py")
         with isolated_workdir() as workdir:
             proposal = make_full_proposal()
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", proposal)
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", proposal)
 
             result = capture_stdout_json(module.main)
 
@@ -301,9 +301,9 @@ class ScriptFlowE2ETests(unittest.TestCase):
             )
             finalize_result = result["lgwf_wf_convert.finalize_create_input_result"]
             self.assertEqual(finalize_result["decision"], "approve")
-            self.assertEqual(finalize_result["proposal_path"], ".lgwf/wf_create_input_proposal.json")
-            self.assertEqual(finalize_result["confirmed_path"], ".lgwf/wf_create_input.json")
-            confirmed = json.loads((workdir / ".lgwf" / "wf_create_input.json").read_text(encoding="utf-8"))
+            self.assertEqual(finalize_result["proposal_path"], ".lgwf/wf_create_fast_input_proposal.json")
+            self.assertEqual(finalize_result["confirmed_path"], ".lgwf/wf_create_fast_input.json")
+            confirmed = json.loads((workdir / ".lgwf" / "wf_create_fast_input.json").read_text(encoding="utf-8"))
             self.assertEqual(confirmed["workflow_name"], proposal["workflow_name"])
             self.assertEqual(confirmed["raw_intent"], proposal["raw_intent"])
 
@@ -318,22 +318,22 @@ class ScriptFlowE2ETests(unittest.TestCase):
             'WHEN "reject" THEN FAIL_ALL',
         )
         with isolated_workdir():
-            with self.assertRaisesRegex(FileNotFoundError, "wf_create_input_proposal"):
+            with self.assertRaisesRegex(FileNotFoundError, "wf_create_fast_input_proposal"):
                 module.main()
 
-    def test_case_prepare_wf_create_payload_reads_finalized_business_artifact(self):
-        module = load_script_module("wf/07_confirm_step_designs/scripts/prepare_wf_create_payload.py")
+    def test_case_prepare_wf_create_fast_payload_reads_finalized_business_artifact(self):
+        module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
         with isolated_workdir() as workdir:
             proposal = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/finalized")
             proposal["workflow_name"] = "finalized-workflow"
             proposal["raw_intent"] = "使用 finalized 输入"
 
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input.json", proposal)
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input.json", proposal)
 
             confirmed_result = capture_stdout_json(module.main)
-            confirmed_payload = json.loads((workdir / ".lgwf" / "wf_create_payload.json").read_text(encoding="utf-8"))
+            confirmed_payload = json.loads((workdir / ".lgwf" / "wf_create_fast_payload.json").read_text(encoding="utf-8"))
             self.assertEqual(
-                confirmed_result["lgwf_wf_convert.wf_create_payload"]["prompt_convert_payload"]["workflow_name"],
+                confirmed_result["lgwf_wf_convert.wf_create_fast_payload"]["prompt_convert_payload"]["workflow_name"],
                 "finalized-workflow",
             )
             self.assertEqual(
@@ -341,30 +341,36 @@ class ScriptFlowE2ETests(unittest.TestCase):
                 "skills/lgwf-wf-tools/workflows/finalized",
             )
             self.assertEqual(
-                confirmed_payload["wf_create_payload"]["raw_intent"],
+                confirmed_payload["wf_create_fast_payload"]["raw_intent"],
                 "使用 finalized 输入",
             )
+            self.assertEqual(confirmed_payload["downstream_workflow_id"], "wf-create-fast")
+            self.assertNotIn("wf_create_payload", confirmed_payload)
+            fast_input = json.loads(
+                (workdir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(fast_input["raw_intent"], "使用 finalized 输入")
 
-    def test_case_prepare_wf_create_payload_rejects_missing_finalized_business_artifact(self):
-        module = load_script_module("wf/07_confirm_step_designs/scripts/prepare_wf_create_payload.py")
+    def test_case_prepare_wf_create_fast_payload_rejects_missing_finalized_business_artifact(self):
+        module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
         with isolated_workdir() as workdir:
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input_proposal.json", make_full_proposal())
-            with self.assertRaisesRegex(FileNotFoundError, "wf_create_input.json"):
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input_proposal.json", make_full_proposal())
+            with self.assertRaisesRegex(FileNotFoundError, "wf_create_fast_input.json"):
                 module.main()
 
-    def test_case_prepare_wf_create_payload_confirmed_and_fallback(self):
-        module = load_script_module("wf/07_confirm_step_designs/scripts/prepare_wf_create_payload.py")
+    def test_case_prepare_wf_create_fast_payload_confirmed_input(self):
+        module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
         with isolated_workdir() as workdir:
             confirmed = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/confirmed")
             confirmed["workflow_name"] = "confirmed-workflow"
             confirmed["raw_intent"] = "使用 confirmed 输入"
 
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input.json", confirmed)
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input.json", confirmed)
 
             confirmed_result = capture_stdout_json(module.main)
-            confirmed_payload = json.loads((workdir / ".lgwf" / "wf_create_payload.json").read_text(encoding="utf-8"))
+            confirmed_payload = json.loads((workdir / ".lgwf" / "wf_create_fast_payload.json").read_text(encoding="utf-8"))
             self.assertEqual(
-                confirmed_result["lgwf_wf_convert.wf_create_payload"]["prompt_convert_payload"]["workflow_name"],
+                confirmed_result["lgwf_wf_convert.wf_create_fast_payload"]["prompt_convert_payload"]["workflow_name"],
                 "confirmed-workflow",
             )
             self.assertEqual(
@@ -372,12 +378,14 @@ class ScriptFlowE2ETests(unittest.TestCase):
                 "skills/lgwf-wf-tools/workflows/confirmed",
             )
             self.assertEqual(
-                confirmed_payload["wf_create_payload"]["raw_intent"],
+                confirmed_payload["wf_create_fast_payload"]["raw_intent"],
                 "使用 confirmed 输入",
             )
+            self.assertEqual(confirmed_payload["downstream_workflow_id"], "wf-create-fast")
+            self.assertTrue((workdir / ".lgwf" / "wf_create_fast_input_for_wf_create_fast.json").is_file())
 
-    def test_case_prepare_wf_create_payload_path_guardrails(self):
-        module = load_script_module("wf/07_confirm_step_designs/scripts/prepare_wf_create_payload.py")
+    def test_case_prepare_wf_create_fast_payload_path_guardrails(self):
+        module = load_script_module("wf/07_prepare_wf_create_fast_payload/scripts/prepare_wf_create_fast_payload.py")
         cases = [".", "/absolute/path", "C:/illegal/path", "../outside", "inside/.lgwf/state"]
         for raw_path in cases:
             with self.subTest(target_package_root=raw_path):
@@ -386,50 +394,10 @@ class ScriptFlowE2ETests(unittest.TestCase):
 
         with isolated_workdir() as workdir:
             proposal = make_full_proposal(target_package_root="../outside")
-            write_utf8_json(workdir / ".lgwf" / "wf_create_input.json", proposal)
+            write_utf8_json(workdir / ".lgwf" / "wf_create_fast_input.json", proposal)
             with self.assertRaises(ValueError):
                 module.main()
-            self.assertFalse((workdir / ".lgwf" / "wf_create_payload.json").exists())
-
-    def test_case_summarize_convert_result_writes_report(self):
-        module = load_script_module("wf/09_summarize_create_result/scripts/summarize_convert_result.py")
-        with isolated_workdir() as workdir:
-            write_utf8_json(
-                workdir / ".lgwf" / "prompt_workflow_inspection.json",
-                {
-                    "source_summary": ["发现 1 个 workflow", "识别 2 个 prompt 文件"],
-                    "risks": ["缺少真实样例验证"],
-                },
-            )
-            write_utf8_json(
-                workdir / ".lgwf" / "wf_create_payload.json",
-                {
-                    "prompt_convert_payload": {
-                        "workflow_name": "wf-convert-target",
-                        "target_package_root": "skills/lgwf-wf-tools/workflows/generated",
-                    },
-                    "wf_create_payload": {"raw_intent": "intent"},
-                },
-            )
-
-            result = capture_stdout_json(module.main)
-
-            report_path = workdir / "reports" / "convert-workflow" / "convert_result_report.md"
-            report = report_path.read_text(encoding="utf-8")
-            self.assertEqual(
-                result["lgwf_wf_convert.summary_result"]["report_path"],
-                "reports/convert-workflow/convert_result_report.md",
-            )
-            self.assertIn("# wf-convert 转换结果汇总", report)
-            self.assertIn("workflow: `wf-convert-target`", report)
-            self.assertIn("## 源工作流分析", report)
-            self.assertIn("## 已确认输入", report)
-            self.assertIn("## Payload", report)
-            self.assertIn("## 未解决风险", report)
-            self.assertIn("发现 1 个 workflow", report)
-            self.assertIn(".lgwf/wf_create_payload.json", report)
-            self.assertIn("缺少真实样例验证", report)
-
+            self.assertFalse((workdir / ".lgwf" / "wf_create_fast_payload.json").exists())
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,35 @@
+WORKFLOW business_flow_proposal;
+ENTRY prepare_business_flow_context;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 900;
+}
+
+PY prepare_business_flow_context
+  SCRIPT "scripts/prepare_business_flow_context.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create_fast.business_flow_proposal_context_result
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/business_flow_proposal_context.json";
+  };
+
+CODEX propose_business_flow
+  PROMPT "agents/propose_business_flow.md"
+  CONTEXT workspace file ".lgwf/business_flow_proposal_context.json"
+  ANALYSIS_DIRS state.lgwf_wf_create_fast.creation_context_dirs
+  ANALYSIS_FILES state.lgwf_wf_create_fast.creation_context_files
+  OUTPUT_JSON ".lgwf/business_flow_proposal.json" AS_FILE
+  TIMEOUT 900
+  RESULT state.lgwf_wf_create_fast.business_flow_proposal_result
+  CONTRACT {
+    READ state.lgwf_wf_create_fast.creation_context_dirs;
+    READ state.lgwf_wf_create_fast.creation_context_files;
+    READ workspace file ".lgwf/business_flow_proposal_context.json";
+    WRITE workspace file ".lgwf/business_flow_proposal.json";
+  };
+
+FLOW prepare_business_flow_context
+  THEN propose_business_flow;

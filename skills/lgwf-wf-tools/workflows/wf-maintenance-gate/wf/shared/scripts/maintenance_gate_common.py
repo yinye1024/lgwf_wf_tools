@@ -214,7 +214,10 @@ FAILURE_ROUTE_RULES = {
 def find_workspace_root(start: Path) -> Path:
     current = start.resolve()
     for candidate in [current, *current.parents]:
-        if (candidate / ".git").exists() or (candidate / "skills").is_dir():
+        if (candidate / ".git").exists():
+            return candidate
+    for candidate in [current, *current.parents]:
+        if (candidate / "skills" / "lgwf-wf-tools" / "registry.json").is_file():
             return candidate
     raise RuntimeError(f"无法从 {start} 推导 workspace root")
 

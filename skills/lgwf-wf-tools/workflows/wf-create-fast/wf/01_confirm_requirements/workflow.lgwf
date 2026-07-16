@@ -1,0 +1,42 @@
+WORKFLOW define_requirements;
+ENTRY raw_intent;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+STEP raw_intent
+  WORKFLOW "01_raw_intent/workflow.lgwf"
+  CONTRACT {
+    WRITE workspace file ".lgwf/raw_intent_request_proposal.json";
+    WRITE workspace file ".lgwf/raw_intent_approval.json";
+    WRITE workspace file ".lgwf/raw_intent_request.json";
+    WRITE state.lgwf_wf_create_fast.raw_intent_request;
+    WRITE state.lgwf_wf_create_fast.creation_context_dirs;
+    WRITE state.lgwf_wf_create_fast.creation_context_files;
+  };
+
+STEP requirements_proposal
+  WORKFLOW "02_requirements_proposal/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/raw_intent_request.json";
+    READ state.lgwf_wf_create_fast.creation_context_dirs;
+    READ state.lgwf_wf_create_fast.creation_context_files;
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+  };
+
+STEP requirements_review
+  WORKFLOW "03_requirements_review/workflow.lgwf"
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    READ workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+    WRITE workspace file ".lgwf/create_requirements_approval.json";
+    WRITE workspace file ".lgwf/create_requirements.json";
+    WRITE state.lgwf_wf_create_fast.create_requirements;
+  };
+
+FLOW raw_intent
+  THEN requirements_proposal
+  THEN requirements_review;

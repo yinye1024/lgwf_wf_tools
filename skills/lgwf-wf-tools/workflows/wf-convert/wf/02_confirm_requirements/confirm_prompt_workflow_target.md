@@ -23,9 +23,9 @@
 
 1. `target_dir` 指向现有 prompt workflow 或 prompt 集合目录。
 2. `entry_files` 包含源目录中最可能代表入口、说明或主 prompt 的文件。
-3. `target_workflow_name` 是后续 `wf-create` 可使用的 workflow 名称，不含路径。
+3. `target_workflow_name` 是后续 `wf-create-fast` 可使用的 workflow 名称，不含路径。
 4. `target_package_root` 是工作区相对路径，且不是运行状态目录。
-5. `constraints` 明确记录当前转换边界，尤其是“不直接生成最终 LGWF workflow”和“不自动调用 wf-create”。
+5. `constraints` 明确记录当前转换边界，尤其是“不直接生成最终 LGWF workflow”和“不自动调用 wf-create-fast”。
 
 ## 输出
 

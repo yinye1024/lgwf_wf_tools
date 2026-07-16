@@ -1,0 +1,79 @@
+WORKFLOW requirements_proposal;
+ENTRY prepare_requirements_proposal_react_feedback;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_requirements_proposal_react_feedback
+  SCRIPT "scripts/prepare_react_feedback.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create_fast.requirements_proposal_react_feedback_prepare_result
+  CONTRACT {
+    WRITE workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal_decision.json";
+  };
+
+REACT requirements_proposal_react MAX 3
+  CONTRACT {
+  }
+  REASON PY
+    SCRIPT "scripts/prepare_react_context.py"
+    TIMEOUT 30
+    RESULT state.lgwf_wf_create_fast.requirements_proposal_react_context_result
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/raw_intent_request.json";
+      READ workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+      READ workspace file ".lgwf/create_requirements_proposal_decision.json";
+      WRITE workspace file ".lgwf/create_requirements_proposal_react_context.json";
+      WRITE state.lgwf_wf_create_fast.requirements_proposal_react_context;
+    }
+  ACT CODEX
+    PROMPT "agents/propose_requirements.md"
+    CONTEXT workspace file ".lgwf/create_requirements_proposal_react_context.json"
+    ANALYSIS_DIRS state.lgwf_wf_create_fast.creation_context_dirs
+    ANALYSIS_FILES state.lgwf_wf_create_fast.creation_context_files
+    OUTPUT_JSON ".lgwf/create_requirements_proposal.json" AS_FILE
+    RESULT state.lgwf_wf_create_fast.requirements_proposal_result
+    CONTRACT {
+      READ state.lgwf_wf_create_fast.creation_context_dirs;
+      READ state.lgwf_wf_create_fast.creation_context_files;
+      READ workspace file ".lgwf/raw_intent_request.json";
+      READ workspace file ".lgwf/create_requirements_proposal_react_context.json";
+      WRITE workspace file ".lgwf/create_requirements_proposal.json";
+    }
+  OBSERVE PY
+    SCRIPT "scripts/validate_proposal.py"
+    TIMEOUT 30
+    RESULT state.lgwf_wf_create_fast.create_requirements_proposal_quality_gate
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/raw_intent_request.json";
+      READ workspace file ".lgwf/create_requirements_proposal.json";
+      WRITE workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+    }
+  DECIDE PY
+    SCRIPT "scripts/decide_react.py"
+    TIMEOUT 30
+    RESULT state.lgwf_wf_create_fast.requirements_proposal_decision_result
+    UPDATES_STATE
+    CONTRACT {
+      READ workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+      WRITE workspace file ".lgwf/create_requirements_proposal_decision.json";
+    };
+
+PY assert_requirements_proposal_quality_gate
+  SCRIPT "scripts/assert_quality_gate.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create_fast.requirements_proposal_quality_gate_assert_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal_quality_gate.json";
+    WRITE state.lgwf_wf_create_fast.requirements_proposal_quality_gate_asserted;
+  };
+
+FLOW prepare_requirements_proposal_react_feedback
+  THEN requirements_proposal_react
+  THEN assert_requirements_proposal_quality_gate;

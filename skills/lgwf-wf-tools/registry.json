@@ -10,18 +10,18 @@
       "entry_contract": "workflows/wf-fix/entry_contract.json"
     },
     {
-      "id": "wf-create",
+      "id": "wf-create-fast",
       "kind": "lgwf",
-      "description": "根据用户原始意图创建新的 LGWF workflow 初稿，按需求、业务流、步骤设计和实现初稿分阶段确认。",
-      "workflow_lgwf": "workflows/wf-create/wf/workflow.lgwf",
-      "work_dir": "workflows/wf-create/ws",
-      "agents_md": "workflows/wf-create/AGENTS.md",
-      "entry_contract": "workflows/wf-create/entry_contract.json"
+      "description": "根据用户原始意图创建 LGWF workflow：确认需求和业务流后落盘 scaffold，并 handoff 给主 agent 直接完善实现。",
+      "workflow_lgwf": "workflows/wf-create-fast/wf/workflow.lgwf",
+      "work_dir": "workflows/wf-create-fast/ws",
+      "agents_md": "workflows/wf-create-fast/AGENTS.md",
+      "entry_contract": "workflows/wf-create-fast/entry_contract.json"
     },
     {
       "id": "wf-convert",
       "kind": "lgwf",
-      "description": "分析现有 prompt workflow，产出可被 wf-create 消费的创建输入包和转换报告。",
+      "description": "分析现有 prompt workflow，产出可被创建 workflow 入口消费的输入包和转换报告。",
       "workflow_lgwf": "workflows/wf-convert/wf/workflow.lgwf",
       "work_dir": "workflows/wf-convert/ws",
       "agents_md": "workflows/wf-convert/AGENTS.md",

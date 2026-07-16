@@ -1,0 +1,75 @@
+WORKFLOW requirements_review;
+ENTRY prepare_requirements_confirmation;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 300;
+}
+
+PY prepare_requirements_confirmation
+  SCRIPT "scripts/prepare_confirmation.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create_fast.prepare_requirements_confirmation_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create_fast.requirements_confirmation_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+  };
+
+REVIEW confirm_requirements
+  PROMPT_REF "agents/confirm_requirements.md"
+  CONTEXT state.lgwf_wf_create_fast.requirements_confirmation_context
+  RESULT state.lgwf_wf_create_fast.requirements_decision_result
+  PERSIST ".lgwf/create_requirements_approval.json"
+  OPTIONS ["approve", "revise", "reject"]
+  CONTRACT {
+    WRITE workspace file ".lgwf/create_requirements_approval.json";
+    READ state.lgwf_wf_create_fast.requirements_confirmation_context;
+  };
+
+PY prepare_requirements_revision_confirmation
+  SCRIPT "scripts/apply_revision.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create_fast.requirements_revision_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create_fast.requirements_revision_result;
+    WRITE state.lgwf_wf_create_fast.create_requirements_proposal;
+    WRITE state.lgwf_wf_create_fast.requirements_confirmation_context;
+    WRITE state.lgwf_wf_create_fast.requirements_revision_context;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    READ workspace file ".lgwf/create_requirements_approval.json";
+    WRITE workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE state.lgwf_wf_create_fast.create_requirements_proposal;
+    WRITE state.lgwf_wf_create_fast.requirements_confirmation_context;
+    WRITE state.lgwf_wf_create_fast.requirements_revision_context;
+  };
+
+PY apply_confirmed_requirements
+  SCRIPT "scripts/apply_confirmed.py"
+  TIMEOUT 60
+  RESULT state.lgwf_wf_create_fast.apply_requirements_result
+  UPDATES_STATE {
+    WRITE state.lgwf_wf_create_fast.apply_requirements_result;
+    WRITE state.lgwf_wf_create_fast.create_requirements;
+  }
+  CONTRACT {
+    READ workspace file ".lgwf/create_requirements_approval.json";
+    READ workspace file ".lgwf/create_requirements_proposal.json";
+    WRITE workspace file ".lgwf/create_requirements.json";
+  };
+
+FLOW {
+  prepare_requirements_confirmation
+  THEN confirm_requirements;
+
+  confirm_requirements
+    WHEN "approve" THEN apply_confirmed_requirements
+    WHEN "revise" THEN prepare_requirements_revision_confirmation
+    WHEN "reject" THEN FAIL_ALL;
+
+  prepare_requirements_revision_confirmation
+  THEN confirm_requirements;
+}

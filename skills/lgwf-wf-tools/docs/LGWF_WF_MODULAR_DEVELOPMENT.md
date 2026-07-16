@@ -1,6 +1,6 @@
 # LGWF 工作流模块化创建指引
 
-本文把 `LGWF_MODULAR_DEVELOPMENT.md` 中的模块边界思想转译为 LGWF workflow 的创建规范。它用于指导新建、转换、修复和优化 workflow package，尤其约束 `wf-create` 的需求、业务流、步骤设计和初稿实现阶段。
+本文把 `LGWF_MODULAR_DEVELOPMENT.md` 中的模块边界思想转译为 LGWF workflow 的创建规范。它用于指导新建、转换、修复和优化 workflow package，尤其约束当前创建入口 `wf-create-fast` 的需求确认、业务流确认、scaffold 落盘和主 agent handoff 阶段。
 
 核心原则是：目录是边界，契约是接口，状态不穿透，子流程尽量自包含。
 
@@ -169,14 +169,14 @@ LGWF workflow 创建时按三层看待模块。
 
 ## 创建阶段要求
 
-使用 `wf-create` 创建 workflow 时，四类确认应逐步收敛模块边界：
+使用当前创建入口 `wf-create-fast` 创建 workflow 时，确认与落盘阶段应逐步收敛模块边界：
 
 1. 需求确认：确认 workflow package 的用户意图、目标、非目标、输入、输出和风险边界。
 2. 业务流确认：确认应拆成哪些阶段，哪些阶段需要人工确认、review、handoff 或独立验证。
-3. 步骤设计确认：确认每个阶段是子 workflow、孙级 workflow 还是复杂 step，并说明目录、自包含资源、输入输出和验证方式。
-4. 初稿实现：严格按已确认步骤设计落地，不自行发明与 scaffold plan 冲突的结构。
+3. scaffold 落盘：按已确认业务流生成并 materialize 目标 package 的最小目录、文件和状态边界。
+4. 主 agent handoff：把已确认需求、业务流和已落盘 scaffold 交给主 agent，直接完善目标 package。
 
-步骤设计必须显式说明每个阶段如何遵循本文。实现阶段如果发现步骤设计无法落地，应反馈到对应确认点或 observe 结果，不得静默改变模块边界。
+主 agent 后续实现必须显式遵守本文的目录、状态和验证边界；如果已落盘 scaffold 无法支撑需求，应在最终说明中列出保守假设和调整理由，不得静默改变模块边界。
 
 ## 验收清单
 
