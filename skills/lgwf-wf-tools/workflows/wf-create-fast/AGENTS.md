@@ -31,6 +31,7 @@ python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-id wf-creat
 - 依赖 `lgwf-wf-tools` facade 的 `registry.json` 派发。
 - 依赖 bundled `vendor/lgwf-client-assist/` 运行 LGWF。
 - 复用本 package 内 `01_confirm_requirements`、`02_confirm_business_flow` 和 `02_confirm_business_flow/03_scaffold_package` 的确认与 scaffold 规则。
+- `self-improve/` 是本 workflow 自包含的 incident、proposal、eval、trace-eval、check 和 scorecard 模块，不依赖 facade 级 self-improve 脚本。
 - 遵循 `../01-share/approval.md` 的人工确认展示规则，以及 `../01-share/module-contract.md` 的模块契约。
 
 ## 状态边界
@@ -56,15 +57,18 @@ python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-id wf-creat
 1. `define_requirements`：确认目标 workflow 的目标、输入、输出、非目标、确认点和目标 package。
 2. `design_structure`：确认业务流，并生成确定性 `scaffold_plan`。
 3. `materialize_scaffold`：按 `scaffold_plan.create_dirs/create_files` 创建目标 package 的可编辑最小初稿。
-4. `main_agent_handoff`：生成 handoff payload，并把后续实现交给主 agent。
+4. `main_agent_handoff`：生成带 `plan_then_execute` 执行契约的 handoff payload，并把后续实现交给主 agent。
 
 ## Handoff 纪律
 
 - `HANDOFF` pending action 出现后，主 agent 先使用 `handoff submit` ack，记录已接收，再继续当前创建任务。
 - ack 后主 agent 读取 `.lgwf/main_agent_authoring_handoff.json`。
-- 主 agent 必读输入只包括 handoff 中的 `confirmed_requirements`、`confirmed_business_flow` 和 `target_package`：前两个字段是 confirmed artifact 文件路径，`target_package` 是目标 package 定位和验证信息。
+- 主 agent 必读输入包括 handoff 中的 `confirmed_requirements`、`confirmed_business_flow`、`target_package` 和 `execution_contract`：前两个字段是 confirmed artifact 文件路径，`target_package` 是目标 package 定位和验证信息，`execution_contract` 规定先计划后执行。
+- 主 agent 在首次修改目标 package 前，先只读检查 confirmed artifacts 和 scaffold，再使用自身计划能力生成执行计划。
+- 执行计划至少覆盖上下文与 scaffold 检查、目标 package 实现和验证命令；实施时逐项更新状态，发生偏离时先更新计划。
 - 主 agent 只修改 handoff payload 中的 `edit_dirs`。
-- 主 agent 直接完善目标 package scaffold 文件。
+- 主 agent 按已生成的计划完善目标 package scaffold 文件。
+- 主 agent 使用 `target_package.materialization` 汇报 scaffold 创建和跳过的文件，避免把外部目标写入误报为“无文件改动”。
 - 主 agent 不生成 `step_designs.json`。
 - 主 agent 不调用 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`。
 - 主 agent 不自动启动 `wf-post-fix` 或其他下游 workflow。
@@ -73,7 +77,8 @@ python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-id wf-creat
 
 ```powershell
 python -m unittest discover skills\lgwf-wf-tools\workflows\wf-create-fast\tests
-python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py audit --workflow-lgwf skills/lgwf-wf-tools/workflows/wf-create-fast/wf/workflow.lgwf
+python skills\lgwf-wf-tools\vendor\lgwf-client-assist\scripts\lgwf.py audit skills/lgwf-wf-tools/workflows/wf-create-fast/wf/workflow.lgwf
+python skills\lgwf-wf-tools\workflows\wf-create-fast\self-improve\scripts\self_improve.py eval
 ```
 
 ## 禁止事项

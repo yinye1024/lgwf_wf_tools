@@ -130,7 +130,8 @@ class MaterializeScaffoldTests(unittest.TestCase):
             self.assertTrue(written["handoff_ready"])
             self.assertEqual(Path(result["target_package_abs"]), target.resolve())
             self.assertIn('"', result["validation_commands"][0])
-            self.assertIn(" audit --workflow-lgwf ", result["validation_commands"][0])
+            self.assertIn(" audit ", result["validation_commands"][0])
+            self.assertNotIn("--workflow-lgwf", result["validation_commands"][0])
 
     def test_rejects_unsafe_target_package_root(self) -> None:
         bad_roots = [

@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "name": "wf-create-fast-self-improve",
+  "entrypoint": "scripts/self_improve.py",
+  "local_state_root": ".local/self-improve",
+  "commands": {
+    "incident": "scripts/record_incident.py",
+    "proposal": "scripts/create_proposal.py",
+    "scorecard": "scripts/generate_scorecard.py",
+    "eval": "scripts/run_self_evals.py",
+    "trace-eval": "scripts/run_trace_eval.py",
+    "check": "scripts/check_self_improve.py"
+  },
+  "release_policy": {
+    "must_preserve": [
+      ".local"
+    ]
+  }
+}

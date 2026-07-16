@@ -42,22 +42,22 @@
       "known_blockers": []
     },
     {
-      "id": "wf-create",
-      "expected_role": "根据用户原始意图创建新的 LGWF workflow 初稿，分阶段确认需求、业务流、步骤设计和实现初稿。",
-      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-create/wf/workflow.lgwf",
-      "test_command": "python -m unittest discover workflows/wf-create/tests",
+      "id": "wf-create-fast",
+      "expected_role": "根据用户原始意图确认需求和业务流，落盘 scaffold，并通过 plan-then-execute handoff 交给主 agent 完善实现。",
+      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-create-fast/wf/workflow.lgwf",
+      "test_command": "python -m unittest discover workflows/wf-create-fast/tests",
       "semantic_requirements": [
         {
           "id": "non_goal_boundary",
           "description": "说明不负责的范围。",
           "any_contains": [
-            "不负责",
-            "不接入"
+            "不生成 `step_designs.json`",
+            "不自动启动 `wf-post-fix`"
           ]
         },
         {
           "id": "approval_boundary",
-          "description": "说明需求、业务流和步骤设计的 approval 边界。",
+          "description": "说明需求和业务流确认边界。",
           "any_contains": [
             "approval",
             "确认"
@@ -65,10 +65,10 @@
         },
         {
           "id": "output_contract",
-          "description": "说明固定产物或结果汇总。",
+          "description": "说明 handoff 和目标写入摘要产物。",
           "any_contains": [
-            "固定产物",
-            "结果汇总"
+            "main_agent_authoring_handoff.json",
+            "target_package.materialization"
           ]
         },
         {
@@ -371,7 +371,7 @@
     },
     {
       "id": "wf-convert",
-      "expected_role": "把现有 prompt workflow 转换为 wf-create 可消费的创建输入包和转换报告，并通过 RUN_WORKFLOW 启动 wf-create。",
+      "expected_role": "把现有 prompt workflow 转换为 wf-create-fast 可消费的创建输入包和转换报告，并通过 handoff 交给主 agent 启动 wf-create-fast。",
       "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-convert/wf/workflow.lgwf",
       "test_command": "python -m unittest discover workflows/wf-convert/tests",
       "semantic_requirements": [
@@ -385,10 +385,10 @@
         },
         {
           "id": "approval_boundary",
-          "description": "说明转换输入或下游 wf-create 仍有人工确认边界。",
+          "description": "说明转换输入或下游 wf-create-fast 仍有人工确认边界。",
           "any_contains": [
             "人工确认",
-            "wf-create 自身仍保留需求"
+            "wf-create-fast 自身仍保留需求"
           ]
         },
         {

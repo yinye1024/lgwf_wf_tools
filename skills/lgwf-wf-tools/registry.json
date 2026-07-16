@@ -12,7 +12,7 @@
     {
       "id": "wf-create-fast",
       "kind": "lgwf",
-      "description": "根据用户原始意图创建 LGWF workflow：确认需求和业务流后落盘 scaffold，并 handoff 给主 agent 直接完善实现。",
+      "description": "根据用户原始意图创建 LGWF workflow：确认需求和业务流后落盘 scaffold，并 handoff 给主 agent 先生成执行计划、再按计划完善实现。",
       "workflow_lgwf": "workflows/wf-create-fast/wf/workflow.lgwf",
       "work_dir": "workflows/wf-create-fast/ws",
       "agents_md": "workflows/wf-create-fast/AGENTS.md",

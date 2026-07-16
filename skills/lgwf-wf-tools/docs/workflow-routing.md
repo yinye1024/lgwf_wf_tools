@@ -17,7 +17,7 @@ python scripts/list_workflows.py
 | Workflow id | 使用时机 |
 | --- | --- |
 | `wf-fix` | 目标是运行失败、卡住、产物不对、需要自动诊断修复。 |
-| `wf-create-fast` | 目标是从原始意图创建新的 LGWF workflow，包含简单、轻量或普通创建请求；确认需求和业务流后落盘 scaffold，再交由主 agent 直接完善。 |
+| `wf-create-fast` | 目标是从原始意图创建新的 LGWF workflow，包含简单、轻量或普通创建请求；确认需求和业务流后落盘 scaffold，再交由主 agent 先生成执行计划、再按计划完善。 |
 | `wf-convert` | 目标是把现有 prompt workflow 转换为创建 workflow 入口可消费的输入包和转换报告。 |
 | `wf-prompt-fix` | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足。 |
 | `wf-prompt-upgrade` | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量。 |
@@ -59,4 +59,4 @@ python scripts\run_skill_workflow.py --workflow-id <id> --input-json-file <utf8-
 
 `wf-create-fast` 是 registry 中唯一对外可见、可启动的创建 workflow 入口。`wf-create` 不在 registry 中；不要选择、启动、继续或建议用户运行 `wf-create`，也不要通过底层 `lgwf.py run` 绕过 registry 直接启动旧 `workflows/wf-create`。
 
-`wf-create-fast` 必须运行到 `materialize_scaffold` 和 `main_agent_handoff`。它不生成 `.lgwf/step_designs.json`，不进入 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后由主 agent 读取 payload 和 source artifacts，只修改 payload 中的 `edit_dirs`，直接完善目标 package。
+`wf-create-fast` 必须运行到 `materialize_scaffold` 和 `main_agent_handoff`。它不生成 `.lgwf/step_designs.json`，不进入 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后由主 agent 读取 payload 和 source artifacts，先按 `execution_contract` 生成执行计划，再只修改 payload 中的 `edit_dirs`，按计划完善并验证目标 package。

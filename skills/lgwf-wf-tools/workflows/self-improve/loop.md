@@ -1,15 +1,17 @@
 # 自我提升闭环
 
-`lgwf-wf-tools` 的自我提升采用证据驱动闭环：
+`lgwf-wf-tools` 的自我提升采用证据驱动闭环。当前对话存在相关 workflow 运行时，必须先读取本次运行证据，再执行通用检查：
 
-1. `observe`：收集用户纠正、失败 run、approval 卡点、路由争议、最终报告缺口。
+1. `observe-current-run`：识别 `workflow_id`、`run_id`、目标目录和用户纠正，读取相关 run 的 `summary.md`、`changes.json`，并检查目标产物、handoff、materialization 摘要和验证结果。
 2. `classify`：归类为 routing、monitoring、approval、input_contract、reporting、release 或 docs。
-3. `evaluate`：把问题映射到 baseline 或新增 eval case，并运行 `scripts/run_self_evals.py`。
+3. `evaluate`：把问题映射到 baseline 或新增 eval case，再把 changed-files、self eval、workflow health、trace eval 和 scorecard 作为补充证据。
 4. `propose`：基于 incident 或 eval report 生成 proposal，说明证据、根因、拟修改文件、验证方式和风险。
 5. `approve`：用户明确批准后，才允许进入普通修改流程。
 6. `apply`：小步修改发布文件；运行期历史继续保存在 `.local/`。
 7. `verify`：运行 self eval 和对应 workflow package 自检。
 8. `record`：把结果写入 `.local/self-improve/reports/` 或 `.local/self-improve/scorecards/`。
+
+如果当前对话没有相关运行证据，通用检查才可以作为 `observe` 的主要入口。health 通过不等于本次用户纠正已经得到解释或沉淀。
 
 ## 变更触发
 

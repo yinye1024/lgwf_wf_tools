@@ -80,62 +80,58 @@
       }
     },
     {
-      "id": "route-new-workflow-creation-to-wf-create",
+      "id": "route-new-workflow-creation-to-wf-create-fast",
       "category": "routing",
       "input": {
         "user_request": "我只有一个原始想法，帮我创建一个新的 LGWF workflow 初稿",
-        "context": ["用户调用 lgwf-wf-tools", "目标是从零创建 workflow", "需要分阶段确认需求、业务流和步骤设计"]
+        "context": ["用户调用 lgwf-wf-tools", "目标是从零创建 workflow", "需要确认需求和业务流后落盘 scaffold"]
       },
       "expected": {
-        "workflow_id": "wf-create",
-        "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create/AGENTS.md"],
+        "workflow_id": "wf-create-fast",
+        "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create-fast/AGENTS.md"],
         "required_text": [
           {
             "path": "docs/workflow-routing.md",
-            "contains": "目标是从原始意图创建新的 LGWF workflow 初稿"
+            "contains": "目标是从原始意图创建新的 LGWF workflow"
           },
           {
             "path": "docs/workflow-routing.md",
-            "contains": "使用 `wf-create`"
+            "contains": "`wf-create-fast`"
           },
           {
             "path": "registry.json",
-            "contains": "\"id\": \"wf-create\""
+            "contains": "\"id\": \"wf-create-fast\""
           }
         ]
       }
     },
     {
-      "id": "route-new-workflow-creation-must-start-wf-create",
+      "id": "route-new-workflow-creation-must-start-wf-create-fast",
       "category": "routing",
       "input": {
-        "user_request": "[$lgwf-wf-tools] 用 wf-create 创建工作流，根据 doc_tmp 下的设计文档创建新的工作流并注册",
-        "context": ["用户明确点名 wf-create", "目标是创建新的 LGWF workflow", "不得由主 agent 手工替代 workflow"]
+        "user_request": "[$lgwf-wf-tools] 用 wf-create-fast 创建工作流，根据 doc_tmp 下的设计文档创建新的工作流并注册",
+        "context": ["用户明确点名 wf-create-fast", "目标是创建新的 LGWF workflow", "必须运行到 scaffold materialize 和 handoff"]
       },
       "expected": {
-        "workflow_id": "wf-create",
-        "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create/AGENTS.md"],
-        "must_not_start": ["apply_patch", "manual_scaffold", "wf-fix", "wf-post-fix"],
+        "workflow_id": "wf-create-fast",
+        "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create-fast/AGENTS.md"],
+        "must_not_start": ["manual_scaffold", "wf-create", "wf-fix", "wf-post-fix"],
         "required_text": [
           {
             "path": "AGENTS.md",
-            "contains": "命中 `wf-create` 后必须启动或继续同一个 `wf-create` run"
+            "contains": "命中 `wf-create-fast` 后必须启动或继续同一个 `wf-create-fast` run"
           },
           {
             "path": "docs/workflow-routing.md",
-            "contains": "禁止主 agent 直接手工创建目标 workflow package"
+            "contains": "`wf-create-fast` 必须运行到 `materialize_scaffold` 和 `main_agent_handoff`"
           },
           {
-            "path": "docs/workflow-routing.md",
-            "contains": "用户基于证据明确确认恢复方案"
+            "path": "workflows/wf-create-fast/AGENTS.md",
+            "contains": "`HANDOFF` pending action 出现后"
           },
           {
-            "path": "workflows/wf-create/AGENTS.md",
-            "contains": "必须启动或继续 `wf-create` run"
-          },
-          {
-            "path": "workflows/wf-create/AGENTS.md",
-            "contains": "用 `apply_patch` 脚手架替代本 workflow"
+            "path": "workflows/wf-create-fast/AGENTS.md",
+            "contains": "主 agent 在首次修改目标 package 前"
           }
         ]
       }

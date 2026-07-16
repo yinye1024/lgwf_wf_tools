@@ -809,6 +809,20 @@ class SelfImproveScriptsTest(unittest.TestCase):
             self.assertIn("不直接执行 proposal", content)
             self.assertIn("执行前必须先展示 review 计划", content)
 
+    def test_self_improve_requires_current_run_evidence_before_generic_health(self) -> None:
+        agents = (WORKFLOW_SELF_IMPROVE / "AGENTS.md").read_text(encoding="utf-8")
+        readme = (WORKFLOW_SELF_IMPROVE / "README.md").read_text(encoding="utf-8")
+        loop = (WORKFLOW_SELF_IMPROVE / "loop.md").read_text(encoding="utf-8")
+
+        for content in (agents, readme, loop):
+            self.assertIn("summary.md", content)
+            self.assertIn("changes.json", content)
+            self.assertIn("materialization", content)
+            self.assertIn("补充证据", content)
+        self.assertIn("不得先用通用 health 检查代替运行复盘", agents)
+        self.assertIn("通用 health 通过不能覆盖本次运行暴露的问题", readme)
+        self.assertIn("当前对话没有相关运行证据", loop)
+
     def test_agents_md_only_keeps_routing_scope(self) -> None:
         agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("工作流路由表", agents)
@@ -863,21 +877,23 @@ class SelfImproveScriptsTest(unittest.TestCase):
         self.assertIn("修复优化", case["input"]["user_request"])
         self.assertIn("apply_patch", case["expected"]["must_not_start"])
 
-    def test_wf_create_route_must_start_workflow_not_manual_scaffold(self) -> None:
+    def test_wf_create_fast_route_must_start_workflow_not_manual_scaffold(self) -> None:
         routing = (ROOT / "docs" / "workflow-routing.md").read_text(encoding="utf-8")
-        wf_create_agents = (ROOT / "workflows" / "wf-create" / "AGENTS.md").read_text(encoding="utf-8")
+        wf_create_agents = (ROOT / "workflows" / "wf-create-fast" / "AGENTS.md").read_text(encoding="utf-8")
         routing_cases = json.loads(
             (WORKFLOW_SELF_IMPROVE / "evals" / "baseline-routing-cases.json").read_text(encoding="utf-8")
         )
         cases_by_id = {item["id"]: item for item in routing_cases["cases"]}
-        self.assertIn("route-new-workflow-creation-must-start-wf-create", cases_by_id)
-        case = cases_by_id["route-new-workflow-creation-must-start-wf-create"]
+        self.assertIn("route-new-workflow-creation-must-start-wf-create-fast", cases_by_id)
+        case = cases_by_id["route-new-workflow-creation-must-start-wf-create-fast"]
 
-        self.assertEqual(case["expected"]["workflow_id"], "wf-create")
-        self.assertIn("apply_patch", case["expected"]["must_not_start"])
+        self.assertEqual(case["expected"]["workflow_id"], "wf-create-fast")
+        self.assertIn("wf-create", case["expected"]["must_not_start"])
         self.assertIn("manual_scaffold", case["expected"]["must_not_start"])
-        self.assertIn("禁止主 agent 直接手工创建目标 workflow package", routing)
-        self.assertIn("必须启动或继续 `wf-create` run", wf_create_agents)
+        self.assertIn("主 agent 必须启动或继续 `wf-create-fast` run", routing)
+        self.assertIn("先按 `execution_contract` 生成执行计划", routing)
+        self.assertIn("先只读检查 confirmed artifacts 和 scaffold", wf_create_agents)
+        self.assertIn("使用自身计划能力生成执行计划", wf_create_agents)
 
     def test_workflow_health_baseline_schema_exists(self) -> None:
         schema = json.loads((WORKFLOW_SELF_IMPROVE / "workflow-health" / "schema.json").read_text(encoding="utf-8"))
@@ -887,7 +903,7 @@ class SelfImproveScriptsTest(unittest.TestCase):
             {item["id"] for item in baseline["workflows"]},
             {
                 "wf-fix",
-                "wf-create",
+                "wf-create-fast",
                 "wf-convert",
                 "wf-prompt-fix",
                 "wf-prompt-upgrade",
@@ -1418,6 +1434,139 @@ class SelfImproveScriptsTest(unittest.TestCase):
             self.assertIn("## 是否需要用户 approval", content)
             self.assertIn("case-1", content)
             self.assertIn("workflows/wf-fix/AGENTS.md", content)
+
+    def test_workflow_proposal_uses_tool_workflow_registry_entry_without_fake_lgwf(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            temp_root = Path(raw_dir)
+            health_report = temp_root / "health.json"
+            registry = temp_root / "registry.json"
+            health_report.write_text(
+                json.dumps(
+                    {
+                        "workflow_results": [
+                            {
+                                "id": "self-improve",
+                                "passed": False,
+                                "issues": ["current-run protocol missing"],
+                                "workflow_root": "workflows/self-improve",
+                                "baseline": {},
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            registry.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "self-improve",
+                                "kind": "tool-workflow",
+                                "description": "自我提升治理入口",
+                                "agents_md": "workflows/self-improve/AGENTS.md",
+                                "entry": "workflows/self-improve/scripts/self_improve.py",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "create_workflow_improvement_proposal.py"),
+                    "--workflow-id",
+                    "self-improve",
+                    "--health-report",
+                    str(health_report),
+                    "--registry",
+                    str(registry),
+                    "--output-dir",
+                    str(temp_root),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            content = Path(json.loads(result.stdout)["proposal"]).read_text(encoding="utf-8")
+            self.assertIn("workflows/self-improve/AGENTS.md", content)
+            self.assertIn("workflows/self-improve/scripts/self_improve.py", content)
+            self.assertIn("python workflows/self-improve/scripts/self_improve.py --help", content)
+            self.assertNotIn("workflows/self-improve/workflow.lgwf", content)
+            self.assertNotIn("- ``", content)
+
+    def test_workflow_proposal_derives_positional_audit_from_lgwf_registry_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_dir:
+            temp_root = Path(raw_dir)
+            health_report = temp_root / "health.json"
+            registry = temp_root / "registry.json"
+            health_report.write_text(
+                json.dumps(
+                    {
+                        "workflow_results": [
+                            {
+                                "id": "wf-create-fast",
+                                "passed": False,
+                                "issues": ["audit baseline missing"],
+                                "workflow_root": "workflows/wf-create-fast",
+                                "baseline": {},
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            registry.write_text(
+                json.dumps(
+                    {
+                        "workflows": [
+                            {
+                                "id": "wf-create-fast",
+                                "kind": "lgwf",
+                                "description": "快速创建 workflow",
+                                "agents_md": "workflows/wf-create-fast/AGENTS.md",
+                                "workflow_lgwf": "workflows/wf-create-fast/wf/workflow.lgwf",
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SELF_IMPROVE / "scripts" / "create_workflow_improvement_proposal.py"),
+                    "--workflow-id",
+                    "wf-create-fast",
+                    "--health-report",
+                    str(health_report),
+                    "--registry",
+                    str(registry),
+                    "--output-dir",
+                    str(temp_root),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+
+            content = Path(json.loads(result.stdout)["proposal"]).read_text(encoding="utf-8")
+            self.assertIn("workflows/wf-create-fast/wf/workflow.lgwf", content)
+            self.assertIn("lgwf.py audit workflows/wf-create-fast/wf/workflow.lgwf", content)
+            self.assertNotIn("--workflow-lgwf", content)
+            self.assertNotIn("workflows/wf-create-fast/workflow.lgwf", content)
 
     def test_generate_scorecard_reports_recent_trends(self) -> None:
         with tempfile.TemporaryDirectory() as raw_dir:

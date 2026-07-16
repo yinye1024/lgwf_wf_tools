@@ -16,6 +16,17 @@
 - 真实运行中出现路由、approval、监控或报告问题时，主 agent 只能建议记录 incident；用户确认后再记录。
 - 发布前运行 `self_improve.py pre-release`；升级后写入 upgrade report。
 
+## 本次运行复盘顺序
+
+当前对话已经执行或纠正过相关 workflow 时，必须按以下顺序复盘：
+
+1. 确定 `workflow_id`、`run_id`、目标目录和用户纠正。
+2. 读取相关 run 的 `summary.md`、`changes.json`，再检查目标产物、handoff、materialization 摘要和验证结果。
+3. 从实际运行证据归类 incident，并在确认后生成 proposal 或 eval case。
+4. 最后运行 changed-files、self eval、workflow health、trace eval 或 scorecard，作为补充证据验证回归风险。
+
+当前对话没有相关运行证据时，才允许从通用检查开始。通用 health 通过不能覆盖本次运行暴露的问题。
+
 ## 触发矩阵
 
 | 场景 | 推荐命令 | 边界 |

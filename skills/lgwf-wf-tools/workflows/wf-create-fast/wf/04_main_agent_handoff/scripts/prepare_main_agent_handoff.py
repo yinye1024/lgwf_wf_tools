@@ -79,10 +79,14 @@ def build_handoff_payload(root: Path) -> dict[str, Any]:
     if not isinstance(validation_commands, list):
         validation_commands = [
             "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py "
-            f"audit --workflow-lgwf {quote_command_arg(target_abs_path / 'wf' / 'workflow.lgwf')}",
+            f"audit {quote_command_arg(target_abs_path / 'wf' / 'workflow.lgwf')}",
             f"python -m unittest discover {quote_command_arg(target_abs_path / 'tests')}",
         ]
     validation_command_list = [str(item) for item in validation_commands if isinstance(item, str)]
+    created_files = [str(item) for item in materialize_result.get("created_files", []) if isinstance(item, str)]
+    skipped_existing_files = [
+        str(item) for item in materialize_result.get("skipped_existing_files", []) if isinstance(item, str)
+    ]
     workflow_name = (
         str(materialize_result.get("workflow_name") or scaffold_plan.get("workflow_name") or requirements.get("workflow_name") or "")
         .strip()
@@ -90,17 +94,19 @@ def build_handoff_payload(root: Path) -> dict[str, Any]:
     package_profile = str(scaffold_plan.get("package_profile") or requirements.get("package_profile") or "").strip()
 
     return {
-        "handoff_schema_version": 4,
+        "handoff_schema_version": 5,
         "workflow_id": "wf-create-fast",
         "next_action": "main_agent_authoring",
         "agent_instruction": "handle_main_agent_authoring",
         "handoff_mode": "confirmed_artifacts_and_target_package",
+        "execution_mode": "plan_then_execute",
         "handoff_status": "ready_for_main_agent",
         "handoff_ack_required": True,
         "required_context": [
             "confirmed_requirements",
             "confirmed_business_flow",
             "target_package",
+            "execution_contract",
         ],
         "confirmed_requirements": INTERNAL_ARTIFACTS["requirements"],
         "confirmed_business_flow": INTERNAL_ARTIFACTS["business_flow"],
@@ -114,6 +120,34 @@ def build_handoff_payload(root: Path) -> dict[str, Any]:
             "tests_dir": str(target_abs_path / "tests"),
             "edit_dirs": [target_package_abs],
             "validation_commands": validation_command_list,
+            "materialization": {
+                "status": str(materialize_result.get("status", "")).strip(),
+                "created_file_count": len(created_files),
+                "created_files": created_files,
+                "skipped_existing_file_count": len(skipped_existing_files),
+                "skipped_existing_files": skipped_existing_files,
+            },
+        },
+        "execution_contract": {
+            "plan_required_before_target_edits": True,
+            "plan_mechanism": "main_agent_plan_capability",
+            "execution_order": [
+                "ack_handoff",
+                "read_confirmed_context",
+                "inspect_target_package_read_only",
+                "create_execution_plan",
+                "execute_plan_and_track_progress",
+                "run_validation_commands",
+                "report_result",
+            ],
+            "minimum_plan_steps": [
+                "inspect_confirmed_context_and_scaffold",
+                "implement_target_package",
+                "run_validation_commands",
+            ],
+            "progress_policy": (
+                "按计划逐项执行并更新状态；如需改变实施路径，先更新计划再继续。"
+            ),
         },
         "requires_user_confirmation": False,
         "auto_execute_downstream_workflow": False,

@@ -50,6 +50,7 @@
   },
   "notes": [
     "wf-create-fast 在 scaffold 落盘后发布 next_action=main_agent_authoring 的 runtime handoff，由主 agent ack 后继续 authoring。",
+    "main_agent_authoring_handoff.json 的 target_package.materialization 必须汇总实际 created_files 与 skipped_existing_files，供主 agent 计划和最终报告使用。",
     "本 workflow 不生成 step_designs.json 或 implementation_result.json。"
   ]
 }

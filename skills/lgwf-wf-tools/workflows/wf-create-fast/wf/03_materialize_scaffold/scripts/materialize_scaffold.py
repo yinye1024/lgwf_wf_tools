@@ -337,7 +337,7 @@ def render_root_agents(scaffold_plan: dict[str, Any], requirements: dict[str, An
 ## 验证
 
 ```powershell
-python skills\\lgwf-wf-tools\\vendor\\lgwf-client-assist\\scripts\\lgwf.py audit --workflow-lgwf {target_root}/wf/workflow.lgwf
+python skills\\lgwf-wf-tools\\vendor\\lgwf-client-assist\\scripts\\lgwf.py audit {target_root}/wf/workflow.lgwf
 python -m unittest discover {target_root}/tests
 ```
 
@@ -363,7 +363,7 @@ def render_root_readme(scaffold_plan: dict[str, Any], requirements: dict[str, An
 ## 验证
 
 ```powershell
-python skills\\lgwf-wf-tools\\vendor\\lgwf-client-assist\\scripts\\lgwf.py audit --workflow-lgwf {target_root}/wf/workflow.lgwf
+python skills\\lgwf-wf-tools\\vendor\\lgwf-client-assist\\scripts\\lgwf.py audit {target_root}/wf/workflow.lgwf
 python -m unittest discover {target_root}/tests
 ```
 
@@ -546,7 +546,7 @@ def materialize_scaffold(root: Path) -> dict[str, Any]:
 
     validation_commands = [
         "python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py "
-        f"audit --workflow-lgwf {quote_command_arg(target_abs / 'wf' / 'workflow.lgwf')}",
+        f"audit {quote_command_arg(target_abs / 'wf' / 'workflow.lgwf')}",
         f"python -m unittest discover {quote_command_arg(target_abs / 'tests')}",
     ]
     result = {

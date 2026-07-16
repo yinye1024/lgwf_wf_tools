@@ -9,6 +9,7 @@ from typing import Any
 
 from _paths import FACADE_ROOT, SELF_IMPROVE_ROOT
 DEFAULT_OUTPUT_DIR = FACADE_ROOT / ".local" / "self-improve" / "proposals"
+DEFAULT_REGISTRY_PATH = FACADE_ROOT / "registry.json"
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -26,6 +27,16 @@ def find_workflow_result(report: dict[str, Any], workflow_id: str) -> dict[str, 
         if isinstance(item, dict) and item.get("id") == workflow_id:
             return item
     raise ValueError(f"workflow id not found in health report: {workflow_id}")
+
+
+def find_registry_entry(registry: dict[str, Any], workflow_id: str) -> dict[str, Any]:
+    workflows = registry.get("workflows")
+    if not isinstance(workflows, list):
+        raise ValueError("registry missing workflows")
+    for item in workflows:
+        if isinstance(item, dict) and item.get("id") == workflow_id:
+            return item
+    raise ValueError(f"workflow id not found in registry: {workflow_id}")
 
 
 def read_changed_files(path: Path | None) -> list[str]:
@@ -55,17 +66,41 @@ def failed_trace_eval_checks(trace_eval_report: dict[str, Any] | None) -> list[d
     return [item for item in checks if isinstance(item, dict)]
 
 
-def candidate_files(workflow_id: str, workflow_result: dict[str, Any], changed_files: list[str]) -> list[str]:
-    root = workflow_result.get("workflow_root")
+def workflow_root(workflow_result: dict[str, Any], registry_entry: dict[str, Any]) -> str:
+    result_root = workflow_result.get("workflow_root")
+    if isinstance(result_root, str) and result_root:
+        return result_root.rstrip("/")
+    agents_md = registry_entry.get("agents_md")
+    if isinstance(agents_md, str) and agents_md:
+        return Path(agents_md).parent.as_posix()
+    return ""
+
+
+def candidate_files(
+    workflow_id: str,
+    workflow_result: dict[str, Any],
+    registry_entry: dict[str, Any],
+    changed_files: list[str],
+) -> list[str]:
+    root = workflow_root(workflow_result, registry_entry)
     candidates: list[str] = []
-    if isinstance(root, str) and root:
-        candidates.extend(
-            [
-                f"{root}/AGENTS.md",
-                f"{root}/workflow.lgwf",
-                f"{root}/tests/",
-            ]
-        )
+    agents_md = registry_entry.get("agents_md")
+    if isinstance(agents_md, str) and agents_md:
+        candidates.append(agents_md)
+    kind = registry_entry.get("kind")
+    if kind == "lgwf":
+        workflow_lgwf = registry_entry.get("workflow_lgwf")
+        if isinstance(workflow_lgwf, str) and workflow_lgwf:
+            candidates.append(workflow_lgwf)
+    elif kind == "tool-workflow":
+        entry = registry_entry.get("entry")
+        if isinstance(entry, str) and entry:
+            candidates.append(entry)
+    if root:
+        if (FACADE_ROOT / root / "README.md").is_file():
+            candidates.append(f"{root}/README.md")
+        if (FACADE_ROOT / root / "tests").is_dir():
+            candidates.append(f"{root}/tests/")
     candidates.extend(path for path in changed_files if workflow_id in path)
     seen: set[str] = set()
     unique: list[str] = []
@@ -76,6 +111,39 @@ def candidate_files(workflow_id: str, workflow_result: dict[str, Any], changed_f
     return unique
 
 
+def validation_commands(
+    workflow_id: str,
+    workflow_result: dict[str, Any],
+    registry_entry: dict[str, Any],
+) -> list[str]:
+    baseline = workflow_result.get("baseline") if isinstance(workflow_result.get("baseline"), dict) else {}
+    commands = [
+        value.strip()
+        for key in ("audit_command", "test_command")
+        if isinstance((value := baseline.get(key)), str) and value.strip()
+    ]
+    root = workflow_root(workflow_result, registry_entry)
+    kind = registry_entry.get("kind")
+    if not commands and kind == "lgwf":
+        workflow_lgwf = registry_entry.get("workflow_lgwf")
+        if isinstance(workflow_lgwf, str) and workflow_lgwf:
+            commands.append(
+                "python vendor/lgwf-client-assist/.system/lgwf/scripts/lgwf.py "
+                f"audit {workflow_lgwf}"
+            )
+    if not commands and kind == "tool-workflow":
+        entry = registry_entry.get("entry")
+        if isinstance(entry, str) and entry.endswith(".py"):
+            commands.append(f"python {entry} --help")
+    if root and (FACADE_ROOT / root / "tests").is_dir() and not any("test" in command.lower() for command in commands):
+        commands.append(f'python -m unittest discover -s {root}/tests -p "test_*.py"')
+    commands.append(
+        "python workflows/self-improve/scripts/check_workflow_health.py "
+        f"--workflow-id {workflow_id}"
+    )
+    return list(dict.fromkeys(commands))
+
+
 def render_proposal(
     workflow_id: str,
     health_report_path: Path,
@@ -84,12 +152,14 @@ def render_proposal(
     eval_report: dict[str, Any] | None,
     trace_eval_report: dict[str, Any] | None,
     changed_files: list[str],
+    registry_entry: dict[str, Any],
 ) -> str:
     issues = workflow_result.get("issues") or []
     baseline = workflow_result.get("baseline") if isinstance(workflow_result.get("baseline"), dict) else {}
     failed_cases = failed_eval_cases(eval_report)
     trace_failed_checks = failed_trace_eval_checks(trace_eval_report)
-    candidates = candidate_files(workflow_id, workflow_result, changed_files)
+    candidates = candidate_files(workflow_id, workflow_result, registry_entry, changed_files)
+    commands = validation_commands(workflow_id, workflow_result, registry_entry)
     needs_approval = bool(issues or incident or failed_cases or trace_failed_checks)
     lines = [
         f"# Workflow Improvement Proposal: {workflow_id}",
@@ -98,7 +168,7 @@ def render_proposal(
         "",
         f"- health_report: `{health_report_path}`",
         f"- workflow_passed: `{workflow_result.get('passed')}`",
-        f"- expected_role: {baseline.get('expected_role', '')}",
+        f"- expected_role: {baseline.get('expected_role') or registry_entry.get('description', '')}",
         f"- changed_files: `{len(changed_files)}`",
         "",
         "## Health Issues",
@@ -162,7 +232,8 @@ def render_proposal(
             "## 影响范围",
             "",
             f"- workflow_id: `{workflow_id}`",
-            f"- workflow_root: `{workflow_result.get('workflow_root', '')}`",
+            f"- workflow_root: `{workflow_root(workflow_result, registry_entry)}`",
+            f"- workflow_kind: `{registry_entry.get('kind', '')}`",
             "- 影响面限定在该内部 workflow 的职责、指引、测试和 proposal，不自动修改 facade 核心规则。",
             "",
             "## 推荐修改文件",
@@ -179,9 +250,11 @@ def render_proposal(
             "",
             "## 验收命令",
             "",
-            f"- `{baseline.get('audit_command', '')}`",
-            f"- `{baseline.get('test_command', '')}`",
-            "- `python workflows/self-improve/scripts/check_workflow_health.py --workflow-id " + workflow_id + "`",
+        ]
+    )
+    lines.extend(f"- `{command}`" for command in commands)
+    lines.extend(
+        [
             "",
             "## 是否需要用户 approval",
             "",
@@ -206,6 +279,7 @@ def main() -> int:
     parser.add_argument("--eval-report")
     parser.add_argument("--trace-eval-report")
     parser.add_argument("--changed-files")
+    parser.add_argument("--registry", default=str(DEFAULT_REGISTRY_PATH))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     args = parser.parse_args()
 
@@ -216,6 +290,7 @@ def main() -> int:
     trace_eval_report = read_json(Path(args.trace_eval_report)) if args.trace_eval_report else None
     changed_files = read_changed_files(Path(args.changed_files)) if args.changed_files else []
     workflow_result = find_workflow_result(health_report, args.workflow_id)
+    registry_entry = find_registry_entry(read_json(Path(args.registry)), args.workflow_id)
     output = Path(args.output_dir) / f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-workflow-{args.workflow_id}.md"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
@@ -227,6 +302,7 @@ def main() -> int:
             eval_report,
             trace_eval_report,
             changed_files,
+            registry_entry,
         ),
         encoding="utf-8",
     )

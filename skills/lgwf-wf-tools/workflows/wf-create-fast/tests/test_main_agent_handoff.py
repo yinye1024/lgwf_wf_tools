@@ -94,7 +94,7 @@ class MainAgentHandoffTests(unittest.TestCase):
                     "created_files": ["AGENTS.md", "wf/workflow.lgwf", "tests/test_structure.py"],
                     "skipped_existing_files": [],
                     "validation_commands": [
-                        f'python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py audit --workflow-lgwf "{target_abs / "wf" / "workflow.lgwf"}"',
+                        f'python skills/lgwf-wf-tools/vendor/lgwf-client-assist/scripts/lgwf.py audit "{target_abs / "wf" / "workflow.lgwf"}"',
                         f'python -m unittest discover "{target_abs / "tests"}"',
                     ],
                 },
@@ -115,14 +115,15 @@ class MainAgentHandoffTests(unittest.TestCase):
 
             payload = self.module.prepare_main_agent_handoff(work_dir)
 
-            self.assertEqual(payload["handoff_schema_version"], 4)
+            self.assertEqual(payload["handoff_schema_version"], 5)
             self.assertEqual(payload["workflow_id"], "wf-create-fast")
             self.assertEqual(payload["next_action"], "main_agent_authoring")
             self.assertEqual(payload["agent_instruction"], "handle_main_agent_authoring")
             self.assertEqual(payload["handoff_mode"], "confirmed_artifacts_and_target_package")
+            self.assertEqual(payload["execution_mode"], "plan_then_execute")
             self.assertEqual(
                 payload["required_context"],
-                ["confirmed_requirements", "confirmed_business_flow", "target_package"],
+                ["confirmed_requirements", "confirmed_business_flow", "target_package", "execution_contract"],
             )
             self.assertEqual(payload["handoff_status"], "ready_for_main_agent")
             self.assertTrue(payload["handoff_ack_required"])
@@ -134,6 +135,31 @@ class MainAgentHandoffTests(unittest.TestCase):
             self.assertEqual(payload["target_package"]["workflow_lgwf"], str(target_abs / "wf" / "workflow.lgwf"))
             self.assertEqual(payload["target_package"]["work_dir"], str(target_abs / "ws"))
             self.assertEqual(payload["target_package"]["edit_dirs"], [str(target_abs)])
+            self.assertEqual(
+                payload["target_package"]["materialization"],
+                {
+                    "status": "ok",
+                    "created_file_count": 3,
+                    "created_files": ["AGENTS.md", "wf/workflow.lgwf", "tests/test_structure.py"],
+                    "skipped_existing_file_count": 0,
+                    "skipped_existing_files": [],
+                },
+            )
+            execution_contract = payload["execution_contract"]
+            self.assertTrue(execution_contract["plan_required_before_target_edits"])
+            self.assertEqual(execution_contract["plan_mechanism"], "main_agent_plan_capability")
+            self.assertLess(
+                execution_contract["execution_order"].index("create_execution_plan"),
+                execution_contract["execution_order"].index("execute_plan_and_track_progress"),
+            )
+            self.assertEqual(
+                execution_contract["minimum_plan_steps"],
+                [
+                    "inspect_confirmed_context_and_scaffold",
+                    "implement_target_package",
+                    "run_validation_commands",
+                ],
+            )
             self.assertNotIn("target_package_root", payload)
             self.assertNotIn("target_package_abs", payload)
             self.assertNotIn("target_workflow_lgwf", payload)
@@ -200,6 +226,15 @@ class MainAgentHandoffTests(unittest.TestCase):
         self.assertIn("03_confirm_step_designs", prompt)
         self.assertIn("04_implement_steps_react", prompt)
         self.assertIn("不自动启动 `wf-post-fix`", prompt)
+
+    def test_handoff_prompt_requires_plan_before_target_edits(self) -> None:
+        prompt = (PACKAGE_ROOT / "wf" / "04_main_agent_handoff" / "handoff_main_agent_authoring.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("在首次修改目标 package 前", prompt)
+        self.assertIn("使用主 agent 的计划能力生成可见执行计划", prompt)
+        self.assertIn("按计划逐项实施并持续更新计划状态", prompt)
+        self.assertIn("不得跳过计划直接编辑目标 package", prompt)
 
     def test_stage_publishes_runtime_handoff_after_writing_artifact(self) -> None:
         workflow = (PACKAGE_ROOT / "wf" / "04_main_agent_handoff" / "workflow.lgwf").read_text(encoding="utf-8")

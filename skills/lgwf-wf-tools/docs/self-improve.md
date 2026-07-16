@@ -13,6 +13,12 @@
 - 发布包变更类 self-improve 必须人工批准：`promote-eval`、修改 `SKILL.md`、`AGENTS.md`、`registry.json`、baseline eval 或 workflow 文件。
 - self-improve 脚本只生成记录、报告和 proposal，不自动修改 `AGENTS.md`、`registry.json`、workflow 文件或 vendor 文件。
 
+## 本次运行证据优先
+
+当前对话已经执行或纠正过相关 workflow 时，先识别 `workflow_id`、`run_id`、目标目录和用户纠正，再读取相关 run 的 `summary.md`、`changes.json`，以及目标产物、handoff、materialization 摘要和验证结果。基于这些实际证据归类 incident 后，才使用 changed-files、self eval、workflow health、trace eval 或 scorecard 补充验证影响面。
+
+只有当前对话没有相关运行证据时，才从通用检查开始。通用 health 通过不能覆盖本次运行暴露的问题，也不能替代对用户纠正的解释与沉淀。
+
 ## 固定产出
 
 - `.local/self-improve/incidents/*.json`：用户确认后的真实问题记录。

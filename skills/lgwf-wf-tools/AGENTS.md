@@ -91,7 +91,7 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 
 命中 `wf-create-fast` 后必须启动或继续同一个 `wf-create-fast` run，运行到 `materialize_scaffold` 和 `main_agent_handoff`。该 workflow 的职责是在确认需求和业务流后把 scaffold plan 真实落盘为目标 package，然后通过 `HANDOFF` 把后续实现交给主 agent。
 
-`wf-create-fast` 不生成 `.lgwf/step_designs.json`，不调用 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后主 agent 只能按 payload 中的 `edit_dirs` 修改目标 package，并按 payload 中的 `validation_commands` 验证。
+`wf-create-fast` 不生成 `.lgwf/step_designs.json`，不调用 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后主 agent 必须先按 payload 中的 `execution_contract` 生成执行计划，再只修改 `edit_dirs` 中的目标 package，按计划实施并运行 `validation_commands` 验证。
 
 ## 输出要求
 

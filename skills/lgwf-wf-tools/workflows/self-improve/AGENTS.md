@@ -29,6 +29,18 @@
 - `workflow-health` 必须检查 registry 中 `kind=lgwf` 的目标级 self-improve 覆盖率，并执行 `workflow-health/baseline.json` 中每个 workflow 的 `audit_command`；audit 失败时 health 必须失败。
 - `workflow-health` 必须把存在 `workflow.lgwf` 但未注册的目录报告为 drift 候选；drift 候选不直接导致失败。
 
+## 本次运行证据优先
+
+当当前对话已经执行或纠正过相关 workflow 时，self-improve 必须先复盘本次运行，不得先用通用 health 检查代替运行复盘：
+
+1. 识别当前对话中的 `workflow_id`、`run_id`、目标目录和用户纠正。
+2. 读取每个相关 run 的 `summary.md` 与 `changes.json`；缺失时明确记录缺失项。
+3. 读取目标产物、handoff、materialization 摘要和本次验证结果，核对实际写入位置与报告内容。
+4. 基于以上证据归类 incident，并在用户确认后生成 proposal 或 eval case。
+5. `changed-files`、`eval`、`workflow-health`、`trace-eval` 和 `scorecard` 只能作为补充证据，用于验证影响面和回归风险。
+
+只有当前对话没有相关运行证据时，通用检查才可以作为主要入口。不得因为 health 通过就忽略本次用户纠正或运行产物中的问题。
+
 ## 执行入口
 
 ```powershell
