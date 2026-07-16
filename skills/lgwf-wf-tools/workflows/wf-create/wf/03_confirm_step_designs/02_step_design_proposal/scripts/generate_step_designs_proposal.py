@@ -431,6 +431,11 @@ def script_contract(path: str, stage_id: str, stage: dict[str, Any] | None, extr
                 "errors": {"type": "array", "items": {"type": "string"}},
             },
         },
+        "output_shape": {
+            "type": "object",
+            "required_fields": ["status", "stage_id", "outputs"],
+            "optional_fields": ["errors"],
+        },
         "error_handling": [
             "JSON 解析失败、路径越界或必填输入缺失时返回 status=failed，并把错误写入 errors。",
             "不得吞掉异常后生成不完整成功结果。",

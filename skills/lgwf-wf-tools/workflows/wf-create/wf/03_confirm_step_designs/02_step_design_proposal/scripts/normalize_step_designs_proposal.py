@@ -157,80 +157,16 @@ def owner_from_path(path: str, fallback_stage_id: str) -> str:
     return fallback_stage_id or "package_contracts"
 
 
-def safe_identifier(value: str, fallback: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_]+", "_", value.strip()).strip("_")
-    if not cleaned:
-        cleaned = fallback
-    if not re.match(r"^[A-Za-z_]", cleaned):
-        cleaned = f"stage_{cleaned}"
-    return cleaned
-
-
-def fallback_exact_workflow(path: str) -> str:
-    workflow_id = safe_identifier(path.removesuffix("/workflow.lgwf").replace("/", "_"), "generated_workflow")
-    return (
-        f"WORKFLOW {workflow_id};\n"
-        "ENTRY run_stage;\n\n"
-        "PY run_stage\n"
-        '  SCRIPT "scripts/run.py"\n'
-        "  CONTRACT {\n"
-        '    WRITE workspace file ".lgwf/generated_result.json";\n'
-        "  };\n\n"
-        "FLOW run_stage;\n"
-    )
-
-
 def ensure_content_contract(item: dict[str, Any], path: str, kind: str) -> bool:
     changed = False
     if kind in {"lgwf_workflow", "prompt"}:
         if item.get("content_mode") != "exact":
             item["content_mode"] = "exact"
             changed = True
-        if not text(item.get("exact_content")):
-            if kind == "lgwf_workflow":
-                item["exact_content"] = fallback_exact_workflow(path)
-            else:
-                item["exact_content"] = (
-                    "# agent prompt\n\n"
-                    "## Role\n待实现阶段 agent。\n\n"
-                    "## Inputs\n只读取 CONTRACT 声明的输入。\n\n"
-                    "## Output\n写入 CONTRACT 声明的输出。\n\n"
-                    "## Boundaries\n不得扩大读取或写入范围。\n"
-                )
-            changed = True
         return changed
 
     if item.get("content_mode") != "contract":
         item["content_mode"] = "contract"
-        changed = True
-    if kind == "python_script" and not isinstance(item.get("script_contract"), dict):
-        item["script_contract"] = {
-            "entrypoint": "main()",
-            "input_files": ["由 workflow CONTRACT 声明"],
-            "output_files": ["由 workflow CONTRACT 声明"],
-            "required_functions": ["load_json", "write_json", "run", "main"],
-            "error_handling": ["输入缺失或解析失败时返回结构化错误。"],
-        }
-        changed = True
-    if kind == "test" and not isinstance(item.get("test_contract"), dict):
-        item["test_contract"] = {
-            "test_framework": "Python unittest",
-            "scope": ["关键文件存在性、路径边界和最小 DSL 结构。"],
-            "fixtures": ["使用隔离临时目录，不依赖本机绝对路径。"],
-            "acceptance": ["测试失败信息必须指向具体缺失文件或结构问题。"],
-        }
-        changed = True
-    if kind == "markdown_doc" and not isinstance(item.get("markdown_contract"), dict):
-        item["markdown_contract"] = {
-            "sections": ["模块定位", "入口", "输入", "输出", "验证", "禁止事项"],
-        }
-        changed = True
-    if kind == "json_contract" and not isinstance(item.get("json_contract"), dict):
-        item["json_contract"] = {
-            "top_level_fields": ["status", "data", "errors"],
-            "required": ["status"],
-            "consumer": "下游 workflow 节点或测试",
-        }
         changed = True
     return changed
 
@@ -430,144 +366,8 @@ def normalize_step_design(
     return changed
 
 
-def ensure_required_file_designs(proposal: dict[str, Any], contract: dict[str, Any], fallback_stage_id: str) -> int:
-    required_files = as_string_list(contract.get("required_file_designs"))
-    file_designs = proposal.setdefault("file_designs", [])
-    if not isinstance(file_designs, list):
-        file_designs = []
-        proposal["file_designs"] = file_designs
-    existing = {
-        normalize_safe_path(item.get("path")): item
-        for item in file_designs
-        if isinstance(item, dict) and normalize_safe_path(item.get("path"))
-    }
-    added = 0
-    for path in required_files:
-        normalized = normalize_safe_path(path)
-        if not normalized or normalized in existing:
-            continue
-        item: dict[str, Any] = {"path": normalized}
-        normalize_file_design(item, fallback_stage_id)
-        file_designs.append(item)
-        existing[normalized] = item
-        added += 1
-    return added
-
-
-def ensure_required_stage_steps(proposal: dict[str, Any], contract: dict[str, Any]) -> int:
-    step_designs = proposal.setdefault("step_designs", [])
-    if not isinstance(step_designs, list):
-        step_designs = []
-        proposal["step_designs"] = step_designs
-    existing_files = {
-        normalize_safe_path(path)
-        for item in step_designs
-        if isinstance(item, dict)
-        for path in as_string_list(item.get("target_files"))
-    }
-    added = 0
-    for item in contract.get("required_stage_workflows", []):
-        if not isinstance(item, dict):
-            continue
-        workflow_ref = normalize_safe_path(item.get("workflow_ref"))
-        stage_id = text(item.get("stage_id"))
-        if not workflow_ref or workflow_ref in existing_files:
-            continue
-        stage_dir = PurePosixPath(workflow_ref).parts[1] if len(PurePosixPath(workflow_ref).parts) > 2 else stage_id
-        step = {
-            "step_slug": stage_id or stage_dir,
-            "step_name": f"设计 {stage_id or stage_dir} 阶段 workflow",
-            "stage_id": stage_id,
-            "goal": f"补齐 `{workflow_ref}` 的步骤设计覆盖。",
-            "inputs": ["已确认 business_flow", "动态 step design contract"],
-            "outputs": [workflow_ref],
-            "dependencies": ["根 workflow 编排", "scaffold plan"],
-            "implementation_suggestions": ["阶段 workflow 必须声明节点、CONTRACT 和 FLOW。"],
-            "acceptance_notes": ["阶段 workflow 必须被 target_files 覆盖，并拥有 file_design。"],
-            "out_of_scope": [f"不处理 {term}。" for term in FORBIDDEN_OUT_OF_SCOPE_TERMS],
-            "confirmation_points": ["确认阶段 workflow 的输入、输出和产物。"],
-            "target_files": [workflow_ref],
-            "target_dirs": [f"wf/{stage_dir}"],
-            "runtime_artifacts": [f".lgwf/{stage_id or stage_dir}_result.json"],
-            "source_refs": ["step_design_validation_contract.required_stage_workflows"],
-            "risk_notes": ["阶段 id 必须与已确认业务流一致。"],
-        }
-        step_designs.append(step)
-        existing_files.add(workflow_ref)
-        added += 1
-    return added
-
-
-def ensure_directory_designs_for_targets(proposal: dict[str, Any], fallback_stage_id: str) -> int:
-    directory_designs = proposal.setdefault("directory_designs", [])
-    if not isinstance(directory_designs, list):
-        directory_designs = []
-        proposal["directory_designs"] = directory_designs
-    file_paths = {
-        normalize_safe_path(item.get("path"))
-        for item in proposal.get("file_designs", [])
-        if isinstance(item, dict) and normalize_safe_path(item.get("path"))
-    }
-    target_dirs = {
-        normalize_safe_path(path)
-        for item in proposal.get("step_designs", [])
-        if isinstance(item, dict)
-        for path in as_string_list(item.get("target_dirs"))
-    }
-    existing = {
-        normalize_safe_path(item.get("path")): item
-        for item in directory_designs
-        if isinstance(item, dict) and normalize_safe_path(item.get("path"))
-    }
-    added = 0
-    for path in sorted(target_dirs):
-        if not path or path in existing:
-            continue
-        item = {"path": path}
-        normalize_directory_design(item, file_paths, fallback_stage_id)
-        directory_designs.append(item)
-        existing[path] = item
-        added += 1
-    return added
-
-
-def ensure_all_designs_referenced(proposal: dict[str, Any], fallback_stage_id: str) -> bool:
-    step_designs = [item for item in proposal.get("step_designs", []) if isinstance(item, dict)]
-    if not step_designs:
-        return False
-    owner = step_designs[0]
-    referenced_files = {
-        normalize_safe_path(path)
-        for item in step_designs
-        for path in as_string_list(item.get("target_files"))
-    }
-    referenced_dirs = {
-        normalize_safe_path(path)
-        for item in step_designs
-        for path in as_string_list(item.get("target_dirs"))
-    }
-    all_files = {
-        normalize_safe_path(item.get("path"))
-        for item in proposal.get("file_designs", [])
-        if isinstance(item, dict) and normalize_safe_path(item.get("path"))
-    }
-    all_dirs = {
-        normalize_safe_path(item.get("path"))
-        for item in proposal.get("directory_designs", [])
-        if isinstance(item, dict) and normalize_safe_path(item.get("path"))
-    }
-    missing_files = sorted(all_files - referenced_files)
-    missing_dirs = sorted(all_dirs - referenced_dirs)
-    if not missing_files and not missing_dirs:
-        return False
-    owner["target_files"] = dedupe(as_string_list(owner.get("target_files")) + missing_files)
-    owner["target_dirs"] = dedupe(as_string_list(owner.get("target_dirs")) + missing_dirs)
-    if not text(owner.get("stage_id")):
-        owner["stage_id"] = fallback_stage_id
-    return True
-
-
 def main() -> None:
+    # 这里只做机械归一化；缺失的业务设计条目必须由 structural gate 暴露并交给 repair。
     root = Path.cwd()
     lgwf_dir = root / ".lgwf"
     proposal_path = lgwf_dir / "step_designs_proposal.json"
@@ -594,36 +394,10 @@ def main() -> None:
         proposal["design_rationale"] = ["步骤设计按 schema、动态 contract、已确认 business_flow 和 scaffold plan 收敛。"]
         changes.append("filled_design_rationale")
 
-    added_required_files = ensure_required_file_designs(proposal, contract, fallback_stage_id)
-    if added_required_files:
-        changes.append(f"added_required_file_designs:{added_required_files}")
-    added_stage_steps = ensure_required_stage_steps(proposal, contract)
-    if added_stage_steps:
-        changes.append(f"added_required_stage_steps:{added_stage_steps}")
-
     step_designs = proposal.get("step_designs")
-    if not isinstance(step_designs, list) or not step_designs:
-        proposal["step_designs"] = [
-            {
-                "step_slug": fallback_stage_id,
-                "step_name": f"设计 {fallback_stage_id}",
-                "stage_id": fallback_stage_id,
-                "goal": "补齐步骤设计 proposal 的基础 step。",
-                "inputs": ["已确认 requirements"],
-                "outputs": ["步骤设计 proposal"],
-                "dependencies": ["动态 step design contract"],
-                "implementation_suggestions": ["按 schema 填写 file_designs、directory_designs 和 step_designs。"],
-                "acceptance_notes": ["proposal 必须通过结构校验。"],
-                "out_of_scope": [f"不处理 {term}。" for term in FORBIDDEN_OUT_OF_SCOPE_TERMS],
-                "confirmation_points": ["确认步骤设计覆盖范围。"],
-                "target_files": [],
-                "target_dirs": [],
-                "runtime_artifacts": [".lgwf/step_designs_proposal.json"],
-                "source_refs": ["step_design_validation_contract"],
-                "risk_notes": ["自动补齐内容仍需人工 review。"],
-            }
-        ]
-        changes.append("created_fallback_step_design")
+    if not isinstance(step_designs, list):
+        proposal["step_designs"] = []
+        changes.append("normalized_step_designs_to_list")
 
     for item in proposal.get("step_designs", []):
         if isinstance(item, dict) and normalize_step_design(item, canonical_stage_ids, aliases, workflow_to_stage):
@@ -638,8 +412,6 @@ def main() -> None:
         if isinstance(item, dict) and normalize_file_design(item, fallback_stage_id):
             changes.append(f"normalized_file:{text(item.get('path'))}")
 
-    if ensure_directory_designs_for_targets(proposal, fallback_stage_id):
-        changes.append("added_missing_directory_designs")
     file_paths = {
         normalize_safe_path(item.get("path"))
         for item in proposal.get("file_designs", [])
@@ -648,9 +420,6 @@ def main() -> None:
     for item in proposal.get("directory_designs", []):
         if isinstance(item, dict) and normalize_directory_design(item, file_paths, fallback_stage_id):
             changes.append(f"normalized_dir:{text(item.get('path'))}")
-
-    if ensure_all_designs_referenced(proposal, fallback_stage_id):
-        changes.append("referenced_unowned_designs")
 
     write_json(proposal_path, proposal)
     report = {

@@ -424,6 +424,47 @@ def run_authoring_audit(workflow_lgwf: Path, workspace_root: Path) -> dict[str, 
     }
 
 
+def audit_result_from_tool_output(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "ok": False,
+            "skipped": True,
+            "exit_code": None,
+            "stdout": "",
+            "stderr": f"缺少 TOOL audit 输出: {path.as_posix()}",
+            "tool": "lgwf_dsl_cli",
+            "command": "audit",
+            "payload": {},
+            "diagnostics": [],
+        }
+    try:
+        tool_result = read_json(path)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "skipped": True,
+            "exit_code": None,
+            "stdout": "",
+            "stderr": f"TOOL audit 输出不可解析: {type(exc).__name__}: {exc}",
+            "tool": "lgwf_dsl_cli",
+            "command": "audit",
+            "payload": {},
+            "diagnostics": [],
+        }
+    return {
+        "ok": bool(tool_result.get("passed")),
+        "skipped": False,
+        "exit_code": tool_result.get("exit_code"),
+        "stdout": str(tool_result.get("stdout", "")),
+        "stderr": str(tool_result.get("stderr", "")),
+        "tool": "lgwf_dsl_cli",
+        "command": "audit",
+        "payload": tool_result.get("payload", {}),
+        "diagnostics": tool_result.get("diagnostics", []),
+        "tool_result_file": path.as_posix(),
+    }
+
+
 def package_relative(path: Path, root: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
@@ -435,6 +476,7 @@ def collect_workflow_audits(
     target_abs: Path,
     workspace_root: Path,
     root_workflow: Path,
+    root_audit: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     wf_root = target_abs / "wf"
     candidates: list[Path] = []
@@ -447,7 +489,10 @@ def collect_workflow_audits(
 
     results: list[dict[str, Any]] = []
     for candidate in candidates:
-        audit = run_authoring_audit(candidate, workspace_root)
+        if root_audit is not None and candidate.resolve() == root_workflow.resolve():
+            audit = root_audit
+        else:
+            audit = run_authoring_audit(candidate, workspace_root)
         item = {
             "package_relative_path": package_relative(candidate, target_abs),
             "path": str(candidate),
@@ -525,12 +570,11 @@ def audit_current_implementation(work_dir: Path) -> dict[str, Any]:
     audit_result: dict[str, Any] = {"ok": False, "skipped": True, "stdout": "", "stderr": "", "exit_code": None}
     workflow_audits: list[dict[str, Any]] = []
     if workflow_lgwf.exists():
-        audit_result = run_authoring_audit(workflow_lgwf, workspace_root)
-        write_json(lgwf_dir / "implementation_lgwf_dsl_audit_result.json", audit_result)
+        audit_result = audit_result_from_tool_output(lgwf_dir / "implementation_lgwf_dsl_audit_result.json")
         checks.append({"check": "lgwf_dsl_cli audit", "path": str(workflow_lgwf), "ok": audit_result.get("ok")})
         if not audit_result.get("ok"):
             failures.append("lgwf_dsl_cli audit 未通过")
-        workflow_audits = collect_workflow_audits(target_abs, workspace_root, workflow_lgwf)
+        workflow_audits = collect_workflow_audits(target_abs, workspace_root, workflow_lgwf, audit_result)
         for item in workflow_audits:
             rel_path = str(item.get("package_relative_path", ""))
             ok = bool(item.get("ok"))

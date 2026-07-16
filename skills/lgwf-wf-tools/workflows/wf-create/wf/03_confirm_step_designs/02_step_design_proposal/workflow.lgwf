@@ -16,21 +16,31 @@ PY build_step_design_contract
     READ workspace file ".lgwf/create_requirements.json";
     READ workspace file ".lgwf/scaffold_package_result.json";
     WRITE workspace file ".lgwf/step_design_validation_contract.json";
+    WRITE workspace file ".lgwf/step_design_authoring_context.json";
     WRITE state.lgwf_wf_create.step_design_validation_contract;
+    WRITE state.lgwf_wf_create.step_design_authoring_context;
   };
 
-PY generate_step_designs
-  SCRIPT "scripts/generate_step_designs_proposal.py"
-  TIMEOUT 30
+CODEX generate_step_designs
+  PROMPT "agents/generate_step_designs.md"
+  KEEP_SESSION KEY "design_codex"
+  CONTEXT workspace file ".lgwf/step_design_authoring_context.json"
+  CONTEXT workspace file ".lgwf/step_design_validation_contract.json"
+  CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"
+  CONTEXT workspace dir ".lgwf/create_reference_context"
+  CONTEXT workflow file "resources/step_designs_proposal.schema.json"
+  CONTEXT workflow file "resources/step_designs_passing_example.json"
+  OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE
+  TIMEOUT 1200
   RESULT state.lgwf_wf_create.step_design_generate_result
-  UPDATES_STATE
   CONTRACT {
-    READ workspace file ".lgwf/business_flow.json";
-    READ workspace file ".lgwf/create_requirements.json";
-    READ workspace file ".lgwf/scaffold_package_result.json";
+    READ workspace file ".lgwf/step_design_authoring_context.json";
     READ workspace file ".lgwf/step_design_validation_contract.json";
+    READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
+    READ workspace dir ".lgwf/create_reference_context";
     READ workflow file "resources/step_designs_proposal.schema.json";
     READ workflow file "resources/step_designs_passing_example.json";
+    WRITE state.lgwf_wf_create.step_design_generate_result;
     WRITE workspace file ".lgwf/step_designs_proposal.json";
   };
 

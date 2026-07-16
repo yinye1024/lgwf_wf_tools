@@ -1,11 +1,11 @@
 # create_reference_context 索引
 
-本索引用于 `step_design_proposal` 的首轮设计和后续修复 Codex 节点按需读取参考资料。默认先阅读本文件，不要一次性读取整个 `create_reference_context` 目录。
+本索引是 `.lgwf/create_reference_context` 的步骤设计参考入口。`generate_step_designs` 会把本文件和 `.lgwf/create_reference_context/` 目录直接作为 Codex context 注入；首轮设计需要确认 DSL 语法、module contract 或模块化边界时，按本索引定位具体参考资料。
 
 ## 读取顺序
 
-1. 先阅读当前节点 prompt、已确认需求、已确认业务流和 scaffold plan。
-2. 再阅读本索引，判断当前任务需要哪些参考资料。
+1. 先阅读当前节点 prompt、已确认需求、已确认业务流、scaffold plan 和 `.lgwf/step_design_authoring_context.json`。
+2. 再阅读本索引，判断需要哪些参考资料。
 3. 只读取与当前判断直接相关的参考文件；不要把参考目录当作分析目标目录。
 
 ## 参考资料路由
@@ -20,5 +20,5 @@
 ## 使用约束
 
 - 参考资料只提供规则和约束，不是目标 workflow 的业务输入。
-- 步骤设计阶段不得重新读取入口参考资料、目标 package 目录、测试目录或实现阶段目录。
+- 步骤设计阶段不得重新读取入口参考资料、目标 package 目录、测试目录或实现阶段目录；`.lgwf/create_reference_context` 只提供 DSL/module 写作规则。
 - 如果 index 与当前节点 prompt 冲突，以当前节点 prompt 和 LGWF node contract 为准。

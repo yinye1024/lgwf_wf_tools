@@ -1,6 +1,6 @@
 # scaffold_result 契约
 
-`scaffold_package` 的输出是确定性 `scaffold_result`，用于说明目标 package 将如何被创建，供后续步骤设计和实现阶段消费。
+`scaffold_package` 的输出是确定性 `scaffold_result`，用于说明目标 package 后续将如何由实现阶段发布，供后续步骤设计和实现阶段消费；本阶段不创建或覆盖目标 package 真实文件。
 
 `scaffold_result` 必须能证明目标 package 遵循 `.lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md` 中的 workflow 模块化创建指引：workflow package、子 workflow、复杂 step、运行状态和验证入口都有明确边界。
 
@@ -23,7 +23,8 @@
     "rules": {
       "path_policy": ["只使用相对路径", "禁止绝对路径", "禁止 `..`"],
       "state_boundary": [
-        "脚手架只创建目标 package 框架",
+        "脚手架只生成目标 package 框架计划",
+        "不创建或覆盖目标 package 真实文件",
         "不向目标 package 根目录写入 `.lgwf`",
         "运行状态边界仍归 `ws/.lgwf`"
       ]

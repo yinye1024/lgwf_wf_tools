@@ -1,4 +1,4 @@
-"""生成步骤设计节点使用的动态校验契约。"""
+"""生成步骤设计节点使用的动态校验契约和 bounded authoring context。"""
 
 from __future__ import annotations
 
@@ -103,6 +103,138 @@ def find_stage_contract(by_workflow: dict[str, dict[str, Any]], stage_id: str) -
         if stage_id == text(item.get("stage_id")) or stage_id in aliases:
             return item
     return None
+
+
+def schema_constraint_summary() -> dict[str, Any]:
+    return {
+        "proposal_schema_ref": "resources/step_designs_proposal.schema.json",
+        "passing_example_ref": "resources/step_designs_passing_example.json",
+        "file_design_content_modes": {
+            "lgwf_workflow": {
+                "content_mode": "exact",
+                "required": ["exact_content"],
+                "notes": ["exact_content must contain WORKFLOW, ENTRY, CONTRACT, and FLOW."],
+            },
+            "prompt": {
+                "content_mode": "exact",
+                "required": ["exact_content"],
+                "notes": ["exact_content must contain Role, Inputs, Task, Output, and Boundaries."],
+            },
+            "python_script": {
+                "content_mode": "contract",
+                "required": ["script_contract"],
+            },
+            "markdown_doc": {
+                "content_mode": "contract",
+                "required": ["markdown_contract"],
+            },
+            "json_contract": {
+                "content_mode": "contract",
+                "required": ["json_contract"],
+            },
+            "test": {
+                "content_mode": "contract",
+                "required": ["test_contract"],
+            },
+        },
+        "forbidden_generic_content": [
+            "placeholder_result",
+            "generated_result",
+            "TODO",
+            "LGWF_PLACEHOLDER",
+            "_lgwf_placeholder",
+            "待实现",
+        ],
+        "path_policy": [
+            "target files and dirs are package-relative safe paths",
+            "target files and dirs must not point into .lgwf",
+            "runtime_artifacts may point into .lgwf",
+        ],
+    }
+
+
+def stage_summary(required_stage_workflows: list[dict[str, Any]], business_flow: dict[str, Any]) -> list[dict[str, Any]]:
+    business_by_stage = {
+        text(item.get("stage_id")): item
+        for item in dict_list(business_flow.get("stages"))
+        if text(item.get("stage_id"))
+    }
+    result: list[dict[str, Any]] = []
+    for item in required_stage_workflows:
+        stage_id = text(item.get("stage_id"))
+        business_stage = business_by_stage.get(stage_id, {})
+        result.append(
+            {
+                "stage_id": stage_id,
+                "stage_dir": text(item.get("stage_dir")),
+                "workflow_ref": text(item.get("workflow_ref")),
+                "artifact_contract_ref": text(item.get("artifact_contract_ref")),
+                "aliases": string_list(item.get("aliases")),
+                "objective": text(business_stage.get("objective")),
+                "input_sources": string_list(business_stage.get("input_sources")),
+                "outputs": string_list(business_stage.get("outputs")),
+                "depends_on": string_list(business_stage.get("depends_on")),
+                "human_approval": bool(business_stage.get("human_approval", False)),
+            }
+        )
+    return result
+
+
+def build_authoring_context(
+    requirements_payload: dict[str, Any],
+    business_flow_payload: dict[str, Any],
+    scaffold_payload: dict[str, Any],
+    contract: dict[str, Any],
+) -> dict[str, Any]:
+    confirmed_requirements = nested_dict(requirements_payload, "confirmed") or requirements_payload
+    confirmed_business_flow = nested_dict(business_flow_payload, "confirmed") or business_flow_payload
+    scaffold_plan = nested_dict(scaffold_payload, "scaffold_plan") or scaffold_payload
+    identity = nested_dict(contract, "identity")
+    stage_identity = nested_dict(contract, "stage_identity")
+    required_stage_workflows = dict_list(contract.get("required_stage_workflows"))
+
+    return {
+        "context_version": 1,
+        "purpose": "Bounded first-pass authoring context for .lgwf/step_designs_proposal.json.",
+        "identity": {
+            "workflow_id": text(identity.get("workflow_id") or confirmed_requirements.get("workflow_id")),
+            "workflow_name": text(identity.get("workflow_name") or confirmed_requirements.get("workflow_name")),
+            "target_package_root": text(
+                identity.get("target_package_root") or confirmed_requirements.get("target_package_root")
+            ),
+            "package_profile": text(identity.get("package_profile") or scaffold_plan.get("package_profile")),
+        },
+        "confirmed_requirements": confirmed_requirements,
+        "confirmed_business_flow": confirmed_business_flow,
+        "scaffold_plan": {
+            "workflow_name": text(scaffold_plan.get("workflow_name")),
+            "target_package_root": text(scaffold_plan.get("target_package_root")),
+            "package_profile": text(scaffold_plan.get("package_profile")),
+            "stage_manifest": dict_list(scaffold_plan.get("stage_manifest")),
+            "create_dirs": string_list(scaffold_plan.get("create_dirs")),
+            "create_files": string_list(scaffold_plan.get("create_files")),
+            "derived_from_business_flow": dict_list(scaffold_plan.get("derived_from_business_flow")),
+        },
+        "stage_identity": {
+            "canonical_stage_ids": string_list(stage_identity.get("canonical_stage_ids")),
+            "allowed_stage_ids": string_list(stage_identity.get("allowed_stage_ids")),
+            "stage_aliases": stage_identity.get("stage_aliases", {}),
+        },
+        "required_stage_workflows": required_stage_workflows,
+        "required_stage_summary": stage_summary(required_stage_workflows, confirmed_business_flow),
+        "required_file_designs": string_list(contract.get("required_file_designs")),
+        "scaffold_create_files": string_list(contract.get("scaffold_create_files")),
+        "shape_contract": nested_dict(contract, "shape_contract"),
+        "schema_constraints": schema_constraint_summary(),
+        "authoring_rules": [
+            "Generate the complete step_designs_proposal JSON object; do not write confirmed step designs.",
+            "Every scaffold create_file must have one file_design and be referenced by step_designs.target_files.",
+            "Every directory_design must be referenced by step_designs.target_dirs.",
+            "Workflow and prompt files require exact_content; do not leave generic placeholder text.",
+            "Script, markdown, JSON, and test files require concrete structured contracts, not full source code.",
+            "Do not read target package source, reference context directories, tests, or historical run outputs.",
+        ],
+    }
 
 
 def build_stage_contracts(
@@ -221,11 +353,15 @@ def main() -> None:
             "path_rule": "package-relative safe paths only; runtime_artifacts may point to .lgwf, target files and dirs may not",
         },
     }
-    output_path = lgwf_dir / "step_design_validation_contract.json"
-    write_json(output_path, contract)
+    authoring_context = build_authoring_context(requirements, business_flow, scaffold, contract)
+    write_json(lgwf_dir / "step_design_validation_contract.json", contract)
+    write_json(lgwf_dir / "step_design_authoring_context.json", authoring_context)
     print(
         json.dumps(
-            {"lgwf_wf_create.step_design_validation_contract": contract},
+            {
+                "lgwf_wf_create.step_design_validation_contract": contract,
+                "lgwf_wf_create.step_design_authoring_context": authoring_context,
+            },
             ensure_ascii=False,
             indent=2,
         )

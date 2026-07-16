@@ -1,10 +1,38 @@
 WORKFLOW observe_repair;
-ENTRY audit_current_implementation;
+ENTRY prepare_lgwf_dsl_audit_target;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 600;
 }
+
+PY prepare_lgwf_dsl_audit_target
+  SCRIPT "scripts/prepare_lgwf_dsl_audit_target.py"
+  TIMEOUT 30
+  RESULT state.lgwf_wf_create.prepare_lgwf_dsl_audit_target_result
+  UPDATES_STATE
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_context.json";
+    WRITE workspace dir ".lgwf/implementation_lgwf_dsl_audit_target";
+    WRITE workspace file ".lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf";
+    WRITE workspace file ".lgwf/implementation_lgwf_dsl_audit_target_manifest.json";
+  };
+
+TOOL run_lgwf_dsl_audit
+  USE lgwf_dsl_cli
+  OPTIONS {
+    "command": "audit",
+    "input": ".lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf",
+    "result_output_path": ".lgwf/implementation_lgwf_dsl_audit_result.json",
+    "include_stdout": true,
+    "fail_on_command_failure": false
+  }
+  TIMEOUT 180
+  RESULT state.lgwf_wf_create.implementation_lgwf_dsl_audit_result
+  CONTRACT {
+    READ workspace file ".lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf";
+    WRITE workspace file ".lgwf/implementation_lgwf_dsl_audit_result.json";
+  };
 
 PY audit_current_implementation
   SCRIPT "scripts/audit_current_implementation.py"
@@ -14,10 +42,12 @@ PY audit_current_implementation
   CONTRACT {
     READ workspace file ".lgwf/implementation_context.json";
     READ workspace file ".lgwf/implementation_result.json";
+    READ workspace file ".lgwf/implementation_lgwf_dsl_audit_result.json";
     READ workspace file ".lgwf/step_designs.json";
-    WRITE workspace file ".lgwf/implementation_lgwf_dsl_audit_result.json";
     WRITE workspace file ".lgwf/implementation_audit_result.json";
     WRITE workspace file ".lgwf/implementation_observe.json";
   };
 
-FLOW audit_current_implementation;
+FLOW prepare_lgwf_dsl_audit_target
+  THEN run_lgwf_dsl_audit
+  THEN audit_current_implementation;

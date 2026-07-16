@@ -20,10 +20,19 @@ SCRIPT_PATH = (
     / "scripts"
     / "audit_current_implementation.py"
 )
+DECIDE_SCRIPT_PATH = (
+    PACKAGE_ROOT
+    / "wf"
+    / "04_implement_steps_react"
+    / "02_repair_implementation_react"
+    / "04_decide_repair"
+    / "scripts"
+    / "decide_repair_implementation.py"
+)
 
 
-def load_module():
-    spec = importlib.util.spec_from_file_location("audit_current_implementation", SCRIPT_PATH)
+def load_module(script_path: Path = SCRIPT_PATH, name: str = "audit_current_implementation"):
+    spec = importlib.util.spec_from_file_location(name, script_path)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     old_dont_write_bytecode = sys.dont_write_bytecode
@@ -32,7 +41,7 @@ def load_module():
         spec.loader.exec_module(module)
     finally:
         sys.dont_write_bytecode = old_dont_write_bytecode
-        shutil.rmtree(SCRIPT_PATH.parent / "__pycache__", ignore_errors=True)
+        shutil.rmtree(script_path.parent / "__pycache__", ignore_errors=True)
     return module
 
 
@@ -44,6 +53,46 @@ def write_json(path: Path, data: object) -> None:
 class AuditCurrentImplementationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.module = load_module()
+
+    def test_decide_repair_implementation_flags_repeated_failure_signatures(self) -> None:
+        decide_module = load_module(DECIDE_SCRIPT_PATH, "decide_repair_implementation")
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(
+                lgwf_dir / "implementation_repair_decision_analysis.json",
+                {
+                    "failure_signatures": ["missing workflow contract: wf/workflow.lgwf"],
+                    "repeat_issue_signatures": [],
+                    "no_progress_risk": False,
+                },
+            )
+            write_json(
+                lgwf_dir / "implementation_audit_result.json",
+                {
+                    "passed": False,
+                    "needs_post_fix": False,
+                    "status": "failed",
+                    "failures": ["missing workflow contract: wf/workflow.lgwf"],
+                    "checks": [],
+                },
+            )
+
+            result = decide_module.decide(work_dir)
+            analysis = json.loads(
+                (lgwf_dir / "implementation_repair_decision_analysis.json").read_text(encoding="utf-8")
+            )
+
+            self.assertEqual(result["next"], "continue")
+            self.assertEqual(result["repeat_issue_signatures"], ["missing workflow contract: wf/workflow.lgwf"])
+            self.assertTrue(result["no_progress_risk"])
+            self.assertEqual(analysis["repeat_issue_signatures"], ["missing workflow contract: wf/workflow.lgwf"])
+            self.assertTrue(analysis["no_progress_risk"])
+            self.assertIn("next_reason_feedback", analysis)
+            self.assertEqual(
+                analysis["next_reason_feedback"]["priority_failure_signatures"],
+                ["missing workflow contract: wf/workflow.lgwf"],
+            )
 
     def stage_dir(self, index: int, stage: str) -> str:
         return f"{index:02d}_{stage}"
@@ -101,6 +150,17 @@ class AuditCurrentImplementationTests(unittest.TestCase):
             },
         )
         write_json(
+            lgwf_dir / "implementation_lgwf_dsl_audit_result.json",
+            {
+                "passed": True,
+                "exit_code": 0,
+                "stdout": "",
+                "stderr": "",
+                "payload": {},
+                "diagnostics": [],
+            },
+        )
+        write_json(
             lgwf_dir / "step_designs.json",
             {
                 "confirmed": {
@@ -148,6 +208,19 @@ class AuditCurrentImplementationTests(unittest.TestCase):
             "stdout": "",
             "stderr": "" if ok else "audit failed",
         }
+
+    def write_tool_audit_result(self, work_dir: Path, *, passed: bool, stderr: str = "") -> None:
+        write_json(
+            work_dir / ".lgwf" / "implementation_lgwf_dsl_audit_result.json",
+            {
+                "passed": passed,
+                "exit_code": 0 if passed else 1,
+                "stdout": "",
+                "stderr": stderr,
+                "payload": {},
+                "diagnostics": [],
+            },
+        )
 
     def test_audit_current_implementation_collects_all_workflow_audit_failures(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -500,7 +573,8 @@ class AuditCurrentImplementationTests(unittest.TestCase):
             work_dir = self.make_work_dir(root, ["prepare"])
             target_root = root / "skills" / "demo-workflow"
             self.add_stage(target_root, "01_prepare")
-            self.patch_authoring_audit(ok=False)
+            self.write_tool_audit_result(work_dir, passed=False, stderr="audit failed")
+            self.patch_authoring_audit()
 
             result = self.module.audit_current_implementation(work_dir)
 

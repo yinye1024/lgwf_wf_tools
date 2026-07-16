@@ -1,53 +1,13 @@
 WORKFLOW step_design_review;
-ENTRY prepare_step_design_confirmation;
+ENTRY apply_validated_step_designs;
 
 DEFAULTS {
   ref_root workflow ".";
   timeout_seconds 300;
 }
 
-PY prepare_step_design_confirmation
-  SCRIPT "scripts/prepare_step_design_confirmation.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.prepare_step_design_confirmation_result
-  UPDATES_STATE
-  CONTRACT {
-    READ workspace file ".lgwf/step_designs_proposal.json";
-    WRITE state.lgwf_wf_create.step_design_confirmation_context;
-  };
-
-REVIEW confirm_step_designs
-  PROMPT_REF "agents/confirm_step_designs.md"
-  CONTEXT state.lgwf_wf_create.step_design_confirmation_context
-  RESULT state.lgwf_wf_create.step_design_decision_result
-  PERSIST ".lgwf/step_design_confirmation_record.json"
-  OPTIONS ["approve", "revise", "reject"]
-  CONTRACT {
-    WRITE workspace file ".lgwf/step_design_confirmation_record.json";
-    READ state.lgwf_wf_create.step_design_confirmation_context;
-  };
-
-PY prepare_step_design_revision_confirmation
-  SCRIPT "scripts/apply_revision.py"
-  TIMEOUT 30
-  RESULT state.lgwf_wf_create.step_design_revision_result
-  UPDATES_STATE {
-    WRITE state.lgwf_wf_create.step_design_revision_result;
-    WRITE state.lgwf_wf_create.step_designs_proposal;
-    WRITE state.lgwf_wf_create.step_design_confirmation_context;
-    WRITE state.lgwf_wf_create.step_design_revision_context;
-  }
-  CONTRACT {
-    READ workspace file ".lgwf/step_designs_proposal.json";
-    READ workspace file ".lgwf/step_design_confirmation_record.json";
-    WRITE workspace file ".lgwf/step_designs_proposal.json";
-    WRITE state.lgwf_wf_create.step_designs_proposal;
-    WRITE state.lgwf_wf_create.step_design_confirmation_context;
-    WRITE state.lgwf_wf_create.step_design_revision_context;
-  };
-
-PY apply_confirmed_step_designs
-  SCRIPT "scripts/apply_confirmed_step_designs.py"
+PY apply_validated_step_designs
+  SCRIPT "scripts/apply_validated_step_designs.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_create.apply_step_designs_result
   UPDATES_STATE {
@@ -55,8 +15,8 @@ PY apply_confirmed_step_designs
     WRITE state.lgwf_wf_create.step_designs;
   }
   CONTRACT {
-    READ workspace file ".lgwf/step_design_confirmation_record.json";
     READ workspace file ".lgwf/step_designs_proposal.json";
+    READ workspace file ".lgwf/step_design_observation.json";
     WRITE workspace file ".lgwf/step_designs.json";
   };
 
@@ -70,18 +30,5 @@ PY prepare_implementation_context
     WRITE workspace file ".lgwf/implementation_context.json";
   };
 
-FLOW {
-  prepare_step_design_confirmation
-  THEN confirm_step_designs;
-
-  confirm_step_designs
-    WHEN "approve" THEN apply_confirmed_step_designs
-    WHEN "revise" THEN prepare_step_design_revision_confirmation
-    WHEN "reject" THEN FAIL_ALL;
-
-  prepare_step_design_revision_confirmation
-  THEN confirm_step_designs;
-
-  apply_confirmed_step_designs
+FLOW apply_validated_step_designs
   THEN prepare_implementation_context;
-}

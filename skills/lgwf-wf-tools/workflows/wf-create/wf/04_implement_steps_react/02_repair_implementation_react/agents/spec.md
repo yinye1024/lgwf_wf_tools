@@ -2,24 +2,25 @@
 
 ## 职责
 
-`repair_implementation_react` 只负责根据 Python audit 反馈修复 `01_implement_units` 已生成的初版 workflow package。它不负责首版设计解释，不重新拆解 `.lgwf/step_designs.json`，也不扩展已确认范围。
+`repair_implementation_react` 只负责根据 OBSERVE 聚合 audit 反馈修复 `01_implement_units` 已生成的初版 workflow package。它不负责首版设计解释，不重新拆解 `.lgwf/step_designs.json`，也不扩展已确认范围。
 
 ## 稳定输入边界
 
-- Python OBSERVE 使用 `.lgwf/step_designs.json`、`.lgwf/implementation_context.json` 和 `.lgwf/implementation_result.json` 执行确定性检查。
-- Python OBSERVE 只把已确认 step/file/directory 设计和 `package_profile` 作为结构校验事实，不把它们交给 REASON 做语义扩展。
-- `.lgwf/implementation_audit_result.json` 是 REASON 的确定性 audit 事实源。
+- OBSERVE 先通过 `TOOL run_lgwf_dsl_audit USE lgwf_dsl_cli` 对固定镜像 `.lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf` 执行根 workflow DSL audit。
+- `audit_current_implementation.py` 读取 `.lgwf/implementation_lgwf_dsl_audit_result.json`、`.lgwf/step_designs.json`、`.lgwf/implementation_context.json` 和 `.lgwf/implementation_result.json`，聚合 TOOL 结果和非 DSL 确定性检查。
+- Python 聚合检查只把已确认 step/file/directory 设计和 `package_profile` 作为结构校验事实，不把它们交给 REASON 做语义扩展。
+- `.lgwf/implementation_audit_result.json` 是 REASON 的确定性 audit 事实源；其中根 `audit` 字段来自 `lgwf_dsl_cli` TOOL，非 DSL 检查来自 Python 聚合脚本。
 - `.lgwf/implementation_observe.json` 是 REASON 的确定性 audit 反馈。
 - `.lgwf/implementation_decision.json` 和 `.lgwf/implementation_repair_decision_analysis.json` 是 REASON 的小体量路由反馈。
 - `.lgwf/implementation_repair_reason.json` 是 reason slot 写给 act slot 的唯一修复计划。
 
 ## ReAct 共同准则
 
-- REASON 只能把 `.lgwf/implementation_audit_result.json` 和 `.lgwf/implementation_observe.json` 中的 Python 检查失败转成最小 repair plan。
+- REASON 只能把 `.lgwf/implementation_audit_result.json` 和 `.lgwf/implementation_observe.json` 中的 TOOL audit 失败和非 DSL 聚合检查失败转成最小 repair plan。
 - ACT 只能修改 repair plan 指定的 package-relative files，不能重新生成全包。
-- OBSERVE 由 Python audit 执行，必须保留脚本 audit 的失败证据，不得把脚本 audit 的失败结果改写为通过。
+- OBSERVE 由 `prepare_lgwf_dsl_audit_target.py`、`TOOL run_lgwf_dsl_audit` 和 `audit_current_implementation.py` 执行，必须保留 TOOL audit 与聚合检查的失败证据，不得把失败结果改写为通过。
 - DECIDE 由 Python 脚本根据 audit/observe 结果写入 `next`。
-- 修复计划以 Python audit 暴露的失败项为边界；未进入 audit/observe 的问题留给后续人工或专门流程。
+- 修复计划以 OBSERVE 聚合 audit 暴露的失败项为边界；未进入 audit/observe 的问题留给后续人工或专门流程。
 - 修复阶段不得写 `.lgwf/step_designs.json`，不得修改已确认步骤设计，不得读取 reference、`03_confirm_step_designs` 的 prompt 或 tests 反推设计。
 - `workflow.lgwf` 只能生成在 `wf/workflow.lgwf` 或 `wf/<stage>/workflow.lgwf`；不得生成 `wf/<stage>/<substage>/workflow.lgwf`。
 - DSL 节点不得使用裸 `INPUT state.*` 绕过文件/上下文契约。

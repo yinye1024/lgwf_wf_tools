@@ -19,6 +19,11 @@ def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def list_value(data: dict[str, Any], key: str) -> list[Any]:
+    value = data.get(key)
+    return value if isinstance(value, list) else []
+
+
 def failure_signatures(source: dict[str, Any]) -> list[str]:
     signatures: list[str] = []
     raw_failures = source.get("failures", [])
@@ -47,14 +52,50 @@ def failure_signatures(source: dict[str, Any]) -> list[str]:
     return signatures[:20]
 
 
-def build_analysis(source: dict[str, Any], passed: bool) -> dict[str, Any]:
+def repeat_signatures(signatures: list[str], previous_analysis: dict[str, Any]) -> list[str]:
+    previous = {str(item).strip() for item in list_value(previous_analysis, "failure_signatures") if str(item).strip()}
+    return [signature for signature in signatures if signature in previous]
+
+
+def reason_feedback(signatures: list[str], repeated: list[str]) -> dict[str, Any]:
+    return {
+        "repair_mode": "targeted_repair",
+        "failure_signatures": signatures,
+        "repeat_issue_signatures": repeated,
+        "priority_failure_signatures": repeated if repeated else signatures,
+        "no_progress_risk": bool(repeated),
+        "act_instruction_patch": [
+            {
+                "issue_id": signature,
+                "instruction": (
+                    "该实现失败已重复出现；下一轮 REASON 必须定位到具体 package-relative 文件、"
+                    "诊断依据和最小修改动作；无法定位时输出 blocked=true。"
+                ),
+            }
+            for signature in repeated
+        ],
+    }
+
+
+def build_analysis(source: dict[str, Any], passed: bool, previous_analysis: dict[str, Any] | None = None) -> dict[str, Any]:
     signatures = failure_signatures(source)
+    repeated = [] if passed else repeat_signatures(signatures, previous_analysis or {})
+    no_progress_risk = bool(repeated and not passed)
+    reason = "authoring audit passed"
+    if not passed:
+        reason = (
+            "authoring audit failed with repeated failure signatures; reason must sharpen repair plan"
+            if no_progress_risk
+            else "authoring audit failed; continue implementation repair"
+        )
     return {
         "recommended_next": "exit" if passed else "continue",
-        "reason": "authoring audit passed" if passed else "authoring audit failed; continue implementation repair",
+        "reason": reason,
         "failure_signatures": signatures,
-        "repeat_issue_signatures": [],
-        "no_progress_risk": False,
+        "repeat_issue_signatures": repeated,
+        "no_progress_risk": no_progress_risk,
+        "next_reason_feedback": {} if passed else reason_feedback(signatures, repeated),
+        "source": "python_decide_repair_implementation",
     }
 
 
@@ -62,9 +103,10 @@ def decide(work_dir: Path) -> dict[str, Any]:
     lgwf_dir = work_dir / ".lgwf"
     audit = read_json(lgwf_dir / "implementation_audit_result.json")
     observe = read_json(lgwf_dir / "implementation_observe.json")
+    previous_analysis = read_json(lgwf_dir / "implementation_repair_decision_analysis.json")
     source = audit if audit else observe
     passed = source.get("passed") is True and not bool(source.get("needs_post_fix"))
-    analysis = build_analysis(source, passed)
+    analysis = build_analysis(source, passed, previous_analysis)
     result = {
         "next": "exit" if passed else "continue",
         "passed": passed,
@@ -73,6 +115,9 @@ def decide(work_dir: Path) -> dict[str, Any]:
         "status": source.get("status", "passed" if passed else "failed"),
         "needs_post_fix": bool(source.get("needs_post_fix")),
         "failures": source.get("failures", []),
+        "repeat_issue_signatures": analysis["repeat_issue_signatures"],
+        "no_progress_risk": analysis["no_progress_risk"],
+        "next_reason_feedback": analysis["next_reason_feedback"],
         "decision_analysis": analysis,
     }
     write_json(lgwf_dir / "implementation_repair_decision_analysis.json", analysis)

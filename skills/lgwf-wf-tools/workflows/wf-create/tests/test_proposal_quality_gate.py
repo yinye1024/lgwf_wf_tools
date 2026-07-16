@@ -143,6 +143,94 @@ def run_script(work_dir: Path, relative: str) -> subprocess.CompletedProcess[str
 
 
 class ProposalQualityGateTest(unittest.TestCase):
+    def prepare_valid_step_design_proposal(self, work_dir: Path) -> dict:
+        lgwf_dir = work_dir / ".lgwf"
+        write_json(
+            lgwf_dir / "create_requirements.json",
+            {
+                "confirmed": {
+                    "workflow_id": "demo",
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "purpose": "创建 demo workflow。",
+                }
+            },
+        )
+        write_json(
+            lgwf_dir / "business_flow.json",
+            {
+                "confirmed": {
+                    "workflow_id": "demo",
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "business_goal": "运行 demo workflow。",
+                    "stages": [
+                        {
+                            "stage_id": "prepare",
+                            "objective": "准备输入并生成结果。",
+                            "input_sources": [".lgwf/create_requirements.json"],
+                            "outputs": [".lgwf/prepare_result.json"],
+                            "key_nodes": ["run_agent", "run_script"],
+                        }
+                    ],
+                }
+            },
+        )
+        write_json(
+            lgwf_dir / "scaffold_package_result.json",
+            {
+                "scaffold_plan": {
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "package_profile": "internal_workflow_package",
+                    "stage_manifest": [
+                        {
+                            "stage_id": "prepare",
+                            "stage_dir": "01_prepare",
+                            "workflow_ref": "wf/01_prepare/workflow.lgwf",
+                        }
+                    ],
+                    "create_dirs": [
+                        "wf",
+                        "wf/01_prepare",
+                        "wf/01_prepare/agents",
+                        "wf/01_prepare/scripts",
+                        "tests",
+                        "ws",
+                    ],
+                    "create_files": [
+                        "AGENTS.md",
+                        "README.md",
+                        "entry_contract.json",
+                        "wf/workflow.lgwf",
+                        "wf/artifact_contracts.json",
+                        "wf/01_prepare/workflow.lgwf",
+                        "wf/01_prepare/agents/prompt.md",
+                        "wf/01_prepare/scripts/run.py",
+                        "tests/test_workflow_structure.py",
+                    ],
+                }
+            },
+        )
+        for relative in (
+            "03_confirm_step_designs/02_step_design_proposal/scripts/build_step_design_contract.py",
+            "03_confirm_step_designs/02_step_design_proposal/scripts/generate_step_designs_proposal.py",
+            "03_confirm_step_designs/02_step_design_proposal/scripts/normalize_step_designs_proposal.py",
+        ):
+            completed = run_script(work_dir, relative)
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            if relative.endswith("build_step_design_contract.py"):
+                self.assertTrue((lgwf_dir / "step_design_validation_contract.json").is_file())
+                authoring_context = json.loads(
+                    (lgwf_dir / "step_design_authoring_context.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(
+                    "Bounded first-pass authoring context for .lgwf/step_designs_proposal.json.",
+                    authoring_context["purpose"],
+                )
+                self.assertIn("required_stage_workflows", authoring_context)
+        return json.loads((lgwf_dir / "step_designs_proposal.json").read_text(encoding="utf-8"))
+
     def test_business_flow_gate_passes_matching_current_target(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             work_dir = Path(temp)
@@ -535,6 +623,243 @@ class ProposalQualityGateTest(unittest.TestCase):
                 json.dumps(observation["reason_feedback"], ensure_ascii=False),
             )
             self.assertNotIn("valid_parts_to_preserve", observation)
+
+    def test_step_design_validator_rejects_missing_exact_content_and_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            proposal = self.prepare_valid_step_design_proposal(work_dir)
+            for item in proposal["file_designs"]:
+                if item.get("path") == "wf/01_prepare/agents/prompt.md":
+                    item.pop("exact_content", None)
+                if item.get("path") == "wf/01_prepare/scripts/run.py":
+                    item.pop("script_contract", None)
+            write_json(lgwf_dir / "step_designs_proposal.json", proposal)
+
+            completed = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/validate_step_designs_structure.py",
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads((lgwf_dir / "step_design_structural_gate.json").read_text(encoding="utf-8"))
+            self.assertFalse(result["passed"])
+            failure_text = json.dumps([check for check in result["checks"] if not check["passed"]], ensure_ascii=False)
+            self.assertIn("必须提供 exact_content", failure_text)
+            self.assertIn("必须提供 script_contract", failure_text)
+
+    def test_step_design_validator_rejects_placeholder_and_generic_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            proposal = self.prepare_valid_step_design_proposal(work_dir)
+            for item in proposal["file_designs"]:
+                if item.get("path") == "wf/01_prepare/agents/prompt.md":
+                    item["exact_content"] = f'{item["exact_content"]}\nTODO placeholder_result\n'
+                if item.get("path") == "wf/01_prepare/scripts/run.py":
+                    item["script_contract"]["behavior"] = "待实现 generated_result"
+            write_json(lgwf_dir / "step_designs_proposal.json", proposal)
+
+            completed = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/validate_step_designs_structure.py",
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            result = json.loads((lgwf_dir / "step_design_structural_gate.json").read_text(encoding="utf-8"))
+            self.assertFalse(result["passed"])
+            failure_text = json.dumps([check for check in result["checks"] if not check["passed"]], ensure_ascii=False)
+            for term in ("TODO", "placeholder_result", "generated_result", "待实现"):
+                self.assertIn(term, failure_text)
+
+    def test_step_design_normalizer_does_not_fill_semantic_fallback_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(
+                lgwf_dir / "step_design_validation_contract.json",
+                {
+                    "identity": {
+                        "workflow_id": "demo",
+                        "workflow_name": "demo",
+                        "target_package_root": "skills/demo",
+                        "package_profile": "internal_workflow_package",
+                    },
+                    "stage_identity": {"canonical_stage_ids": ["prepare"], "stage_aliases": {}},
+                    "required_stage_workflows": [
+                        {
+                            "stage_id": "prepare",
+                            "workflow_ref": "wf/01_prepare/workflow.lgwf",
+                            "aliases": [],
+                        }
+                    ],
+                    "required_file_designs": [
+                        "wf/01_prepare/workflow.lgwf",
+                        "wf/01_prepare/agents/prompt.md",
+                        "wf/01_prepare/scripts/run.py",
+                    ],
+                },
+            )
+            write_json(
+                lgwf_dir / "step_designs_proposal.json",
+                {
+                    "workflow_id": "demo",
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "package_profile": "internal_workflow_package",
+                    "directory_designs": [],
+                    "step_designs": [],
+                    "file_designs": [
+                        {"path": "wf/01_prepare/workflow.lgwf", "kind": "lgwf_workflow"},
+                        {"path": "wf/01_prepare/agents/prompt.md", "kind": "prompt"},
+                        {"path": "wf/01_prepare/scripts/run.py", "kind": "python_script"},
+                    ],
+                },
+            )
+
+            completed = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/normalize_step_designs_proposal.py",
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            proposal = json.loads((lgwf_dir / "step_designs_proposal.json").read_text(encoding="utf-8"))
+            by_path = {item["path"]: item for item in proposal["file_designs"]}
+            self.assertEqual(by_path["wf/01_prepare/workflow.lgwf"]["content_mode"], "exact")
+            self.assertEqual(by_path["wf/01_prepare/agents/prompt.md"]["content_mode"], "exact")
+            self.assertEqual(by_path["wf/01_prepare/scripts/run.py"]["content_mode"], "contract")
+            self.assertNotIn("exact_content", by_path["wf/01_prepare/workflow.lgwf"])
+            self.assertNotIn("exact_content", by_path["wf/01_prepare/agents/prompt.md"])
+            self.assertNotIn("script_contract", by_path["wf/01_prepare/scripts/run.py"])
+
+    def test_step_design_normalizer_does_not_define_design_synthesis_helpers(self) -> None:
+        script = (
+            WF_ROOT
+            / "03_confirm_step_designs/02_step_design_proposal/scripts/normalize_step_designs_proposal.py"
+        ).read_text(encoding="utf-8")
+        for forbidden in (
+            "ensure_required_file_designs",
+            "ensure_required_stage_steps",
+            "ensure_directory_designs_for_targets",
+            "ensure_all_designs_referenced",
+            "fallback_exact_workflow",
+            "created_fallback_step_design",
+        ):
+            self.assertNotIn(forbidden, script)
+
+    def test_step_design_normalizer_leaves_required_design_gaps_for_validator(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            work_dir = Path(temp)
+            lgwf_dir = work_dir / ".lgwf"
+            write_json(
+                lgwf_dir / "create_requirements.json",
+                {"confirmed": {"workflow_id": "demo", "workflow_name": "demo", "target_package_root": "skills/demo"}},
+            )
+            write_json(
+                lgwf_dir / "business_flow.json",
+                {
+                    "confirmed": {
+                        "workflow_id": "demo",
+                        "workflow_name": "demo",
+                        "target_package_root": "skills/demo",
+                        "stages": [{"stage_id": "prepare"}],
+                    }
+                },
+            )
+            write_json(
+                lgwf_dir / "scaffold_package_result.json",
+                {
+                    "scaffold_plan": {
+                        "workflow_name": "demo",
+                        "target_package_root": "skills/demo",
+                        "stage_manifest": [
+                            {
+                                "stage_id": "prepare",
+                                "stage_dir": "01_prepare",
+                                "workflow_ref": "wf/01_prepare/workflow.lgwf",
+                            }
+                        ],
+                        "create_files": ["wf/01_prepare/workflow.lgwf"],
+                    }
+                },
+            )
+            write_json(
+                lgwf_dir / "step_design_validation_contract.json",
+                {
+                    "identity": {
+                        "workflow_id": "demo",
+                        "workflow_name": "demo",
+                        "target_package_root": "skills/demo",
+                        "package_profile": "internal_workflow_package",
+                    },
+                    "stage_identity": {"canonical_stage_ids": ["prepare"], "stage_aliases": {}},
+                    "required_stage_workflows": [
+                        {
+                            "stage_id": "prepare",
+                            "workflow_ref": "wf/01_prepare/workflow.lgwf",
+                            "aliases": [],
+                        }
+                    ],
+                    "required_file_designs": ["wf/01_prepare/workflow.lgwf"],
+                    "scaffold_create_files": ["wf/01_prepare/workflow.lgwf"],
+                },
+            )
+            write_json(
+                lgwf_dir / "step_designs_proposal.json",
+                {
+                    "workflow_id": "demo",
+                    "workflow_name": "demo",
+                    "target_package_root": "skills/demo",
+                    "package_profile": "internal_workflow_package",
+                    "source_business_flow_stages": ["prepare"],
+                    "directory_designs": [],
+                    "file_designs": [],
+                    "step_designs": [valid_step("prepare", ["README.md"], ["."])],
+                    "design_rationale": ["故意缺失 required design，验证 normalize 不兜底。"],
+                },
+            )
+
+            normalize = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/normalize_step_designs_proposal.py",
+            )
+            self.assertEqual(normalize.returncode, 0, normalize.stderr)
+            proposal = json.loads((lgwf_dir / "step_designs_proposal.json").read_text(encoding="utf-8"))
+            self.assertEqual([], proposal["file_designs"])
+            self.assertNotIn("wf/01_prepare/workflow.lgwf", proposal["step_designs"][0]["target_files"])
+
+            validate = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/validate_step_designs_structure.py",
+            )
+
+            self.assertEqual(validate.returncode, 0, validate.stderr)
+            result = json.loads((lgwf_dir / "step_design_structural_gate.json").read_text(encoding="utf-8"))
+            self.assertFalse(result["passed"])
+            failures = {check["name"] for check in result["checks"] if not check["passed"]}
+            self.assertIn("required_file_design_present_wf/01_prepare/workflow.lgwf", failures)
+            self.assertIn("required_file_design_referenced_wf/01_prepare/workflow.lgwf", failures)
+            self.assertIn("stage_workflow_target_file_present_prepare", failures)
+            observation = json.loads((lgwf_dir / "step_design_observation.json").read_text(encoding="utf-8"))
+            feedback_text = json.dumps(observation["reason_feedback"], ensure_ascii=False)
+            self.assertIn("required_file_design_present_wf/01_prepare/workflow.lgwf", feedback_text)
+            self.assertEqual("targeted_repair", observation["reason_feedback"]["repair_mode"])
+            initial_decision = json.loads((lgwf_dir / "step_designs_proposal_decision.json").read_text(encoding="utf-8"))
+            self.assertEqual("python_decide_step_designs", initial_decision["source"])
+
+            decide = run_script(
+                work_dir,
+                "03_confirm_step_designs/02_step_design_proposal/scripts/decide_step_designs.py",
+            )
+            self.assertEqual(decide.returncode, 0, decide.stderr)
+            repeated_decision = json.loads(
+                (lgwf_dir / "step_designs_proposal_decision.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(repeated_decision["no_progress_risk"])
+            self.assertIn(
+                "required_file_design_present_wf/01_prepare/workflow.lgwf",
+                repeated_decision["repeat_issue_signatures"],
+            )
 
     def test_step_design_contract_prefers_scaffold_workflows_over_business_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

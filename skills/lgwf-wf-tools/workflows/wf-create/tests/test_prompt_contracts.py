@@ -145,8 +145,12 @@ class PromptContractTest(unittest.TestCase):
         proposal_workflow = read("03_confirm_step_designs/02_step_design_proposal/workflow.lgwf")
         self.assertIn("reason_feedback", reason_prompt)
         self.assertIn("step_design_observation", reason_prompt)
+        self.assertIn("normalize_step_designs_proposal", reason_prompt)
+        self.assertIn("不会补齐缺失", reason_prompt)
         self.assertIn("repair_plan", act_prompt)
         self.assertIn("读取范围限定为 runtime 提供的 `CONTEXT`", act_prompt)
+        self.assertIn("normalize_step_designs_proposal", act_prompt)
+        self.assertIn("必须在 `.lgwf/step_designs_proposal.json` 中补齐", act_prompt)
         self.assertIn("DECIDE PY", proposal_workflow)
         self.assertNotIn("CODEX decide_step_designs", proposal_workflow)
 
@@ -195,7 +199,6 @@ class PromptContractTest(unittest.TestCase):
         review_cases = (
             ("01_confirm_requirements/03_requirements_review/workflow.lgwf", "prepare_requirements_confirmation", "confirm_requirements"),
             ("02_confirm_business_flow/02_business_flow_review/workflow.lgwf", "prepare_business_flow_confirmation", "confirm_business_flow"),
-            ("03_confirm_step_designs/03_step_design_review/workflow.lgwf", "prepare_step_design_confirmation", "confirm_step_designs"),
         )
         for relative, prepare_node, review_node in review_cases:
             workflow = read(relative)
@@ -217,6 +220,7 @@ class PromptContractTest(unittest.TestCase):
         expected_nodes = {
             "01_confirm_requirements/02_requirements_proposal/workflow.lgwf:act",
             "02_confirm_business_flow/01_business_flow_proposal/workflow.lgwf:propose_business_flow",
+            "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf:generate_step_designs",
             "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf:reason",
             "03_confirm_step_designs/02_step_design_proposal/workflow.lgwf:act",
             "04_implement_steps_react/01_implement_units/01_implement_one_unit/workflow.lgwf:implement_current_unit",
@@ -262,6 +266,7 @@ class PromptContractTest(unittest.TestCase):
             {
                 ".lgwf/create_requirements_proposal.json",
                 ".lgwf/business_flow_proposal.json",
+                ".lgwf/step_designs_proposal.json",
                 ".lgwf/step_design_repair_plan.json",
                 ".lgwf/current_implementation_unit_result.json",
                 ".lgwf/implementation_repair_reason.json",
@@ -286,7 +291,6 @@ class PromptContractTest(unittest.TestCase):
         for relative in (
             "01_confirm_requirements/03_requirements_review/agents/revise_requirements.md",
             "02_confirm_business_flow/02_business_flow_review/agents/revise_business_flow.md",
-            "03_confirm_step_designs/03_step_design_review/agents/revise_step_designs.md",
         ):
             prompt = read(relative)
             self.assertIn("## Audit Scope", prompt)
@@ -306,11 +310,6 @@ class PromptContractTest(unittest.TestCase):
                 "02_confirm_business_flow/02_business_flow_review/agents/confirm_business_flow.md",
                 "business_flow_confirmation_context.review_context_json",
                 "confirm_business_flow",
-            ),
-            (
-                "03_confirm_step_designs/03_step_design_review/agents/confirm_step_designs.md",
-                "step_design_confirmation_context.review_context_json",
-                "confirm_step_designs",
             ),
         ):
             prompt = read(relative)
@@ -334,7 +333,7 @@ class PromptContractTest(unittest.TestCase):
         )
         spec = read("04_implement_steps_react/02_repair_implementation_react/agents/spec.md")
         self.assertIn("PY prepare_implementation_context", workflow)
-        self.assertRegex(workflow, r"apply_confirmed_step_designs\s+THEN\s+prepare_implementation_context")
+        self.assertRegex(workflow, r"apply_validated_step_designs\s+THEN\s+prepare_implementation_context")
         self.assertNotIn('READ workspace file ".lgwf/implementation_context.json";', workflow)
         self.assertIn('WRITE workspace file ".lgwf/implementation_context.json";', workflow)
         self.assertIn('WORKFLOW "04_implement_steps_react/workflow.lgwf"', root_workflow)
@@ -480,8 +479,9 @@ class PromptContractTest(unittest.TestCase):
 
         self.assertIn("## ReAct 共同准则", spec)
         for required in (
-            "Python audit 反馈",
-            "Python 检查失败",
+            "OBSERVE 聚合 audit 反馈",
+            "TOOL run_lgwf_dsl_audit",
+            "非 DSL 聚合检查失败",
             "`target_package_abs`",
             "`target_package_root` 是 `workspace_root` 相对路径",
             "禁止从 `work_dir` 使用 `..`",
@@ -515,8 +515,12 @@ class PromptContractTest(unittest.TestCase):
         self.assertNotIn("resources/lgwf_dsl_authoring.md", local_prompts["act_unit"])
         self.assertIn("exact_content", local_prompts["act_unit"])
         self.assertIn("只能写 `.lgwf/implementation_repair_stage/<target_file>`", local_prompts["act_repair"])
-        self.assertIn("`target_package_root` 下 `target_files`", local_prompts["act_repair"])
-        self.assertIn("原始 Python audit 结果", role_prompts["reason_repair"])
+        self.assertIn("`.lgwf/implementation_context.json`", local_prompts["act_repair"])
+        self.assertIn("`target_package_abs/<target_file>`", local_prompts["act_repair"])
+        self.assertIn("OBSERVE 聚合 audit 结果", role_prompts["reason_repair"])
+        self.assertIn("lgwf_dsl_cli` TOOL", role_prompts["reason_repair"])
+        self.assertIn("不要直接读取原始 TOOL 产物", role_prompts["reason_repair"])
+        self.assertIn("TOOL audit 失败项", local_prompts["act_repair"])
         self.assertIn("`target_package_root` 原样写入输出", role_prompts["reason_repair"])
         self.assertIn("PY audit_current_implementation", observe_workflow)
         self.assertNotIn("CODEX observe_repair", observe_workflow)
@@ -532,6 +536,8 @@ class PromptContractTest(unittest.TestCase):
         self.assertIn("STEP repair_implementation", workflow)
         self.assertIn("REACT repair_implementation_react MAX 3", repair_workflow)
         self.assertIn("TIMEOUT 1200", act_repair_workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/implementation_context.json"', act_repair_workflow)
+        self.assertIn('READ workspace file ".lgwf/implementation_context.json";', act_repair_workflow)
         self.assertIn("PY prepare_implementation_units", act_workflow)
         self.assertNotIn("CODEX prime_implementation_codex", act_workflow)
         self.assertIn("PY merge_implementation_results", act_workflow)

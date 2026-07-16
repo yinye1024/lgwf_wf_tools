@@ -16,6 +16,7 @@ STEP reference_context
     WRITE workspace file ".lgwf/create_reference_context/module-contract/module-contract.md";
     WRITE workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
     WRITE workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    WRITE state.lgwf_wf_create.dsl_reference_context;
   };
 
 STEP step_design_proposal
@@ -26,15 +27,20 @@ STEP step_design_proposal
     READ workspace file ".lgwf/scaffold_package_result.json";
     READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
     READ workspace dir ".lgwf/create_reference_context";
+    WRITE workspace file ".lgwf/step_design_validation_contract.json";
+    WRITE workspace file ".lgwf/step_design_authoring_context.json";
     WRITE workspace file ".lgwf/step_designs_proposal.json";
+    WRITE workspace file ".lgwf/step_design_normalization_report.json";
+    WRITE workspace file ".lgwf/step_design_structural_gate.json";
     WRITE workspace file ".lgwf/step_design_observation.json";
+    WRITE workspace file ".lgwf/step_design_decision_analysis.json";
+    WRITE workspace file ".lgwf/step_designs_proposal_decision.json";
   };
 
 STEP step_design_review
   WORKFLOW "03_step_design_review/workflow.lgwf"
   CONTRACT {
     READ workspace file ".lgwf/step_designs_proposal.json";
-    WRITE workspace file ".lgwf/step_design_confirmation_record.json";
     WRITE workspace file ".lgwf/step_designs.json";
     WRITE workspace file ".lgwf/implementation_context.json";
     WRITE state.lgwf_wf_create.step_designs;

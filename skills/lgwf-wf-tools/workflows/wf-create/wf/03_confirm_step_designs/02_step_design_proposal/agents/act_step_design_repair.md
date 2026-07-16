@@ -6,6 +6,8 @@
 
 本节点只执行 REASON 给出的修复方案，不重新发散设计。
 
+`normalize_step_designs_proposal` 不会生成缺失的业务设计条目；如果 repair plan 或 observation 指出 required file、stage workflow、target 引用或 coverage 缺口，本节点必须在 `.lgwf/step_designs_proposal.json` 中补齐对应结构化设计。
+
 ## Inputs
 
 运行时按 workflow `CONTEXT` 提供：
@@ -21,7 +23,7 @@
 
 1. 读取 repair plan，逐项执行 `must_change`、`repair_steps` 和 `field_level_instructions`。
 2. 保留 `must_preserve` 指定的 workflow identity、target_package_root、阶段顺序、已通过 step/file/directory design 和路径边界。
-3. 按 `.lgwf/step_design_validation_contract.json` 检查 `required_file_designs[]` 和 `required_stage_workflows[]`：缺失项必须补齐，阶段 `stage_id` 优先使用 canonical stage id。
+3. 按 `.lgwf/step_design_validation_contract.json` 检查 `required_file_designs[]` 和 `required_stage_workflows[]`：缺失项必须在当前 proposal 中补齐，阶段 `stage_id` 优先使用 canonical stage id。
    只生成 `required_stage_workflows[].workflow_ref` 中列出的 stage workflow；不得为 `stage_aliases`、business stage id 或兼容目录额外添加 `wf/<alias>/workflow.lgwf`。
 4. 修复后直接编辑并保存完整 `.lgwf/step_designs_proposal.json`，不得只保存 patch、局部片段或说明文本。后续 `OBSERVE PY` 会直接对该文件运行结构校验。
 5. 对缺失的 `file_designs` / `directory_designs` 补齐结构说明，确保每个 `target_files[]` / `target_dirs[]` 都有对应设计，且每个 `file_designs[].path` / `directory_designs[].path` 都被对应 target 列表引用。

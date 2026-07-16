@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import hashlib
 import re
 import shutil
 import sys
@@ -16,6 +17,11 @@ ROOT_WORKFLOW = ROOT / "workflow.lgwf"
 SUMMARY_SCRIPT = ROOT / "06_summarize_create_result" / "scripts" / "summarize_create_result.py"
 STRUCTURE_VALIDATOR_SCRIPT = PACKAGE_ROOT / "tests" / "helpers" / "validate_two_layer_workflow.py"
 sys.dont_write_bytecode = True
+
+
+def stable_json_hash(payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 def read_step_design_prompts() -> str:
@@ -177,11 +183,6 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                 "prepare_business_flow_revision_confirmation",
                 "apply_confirmed_business_flow",
             ),
-            (
-                "confirm_step_designs",
-                "prepare_step_design_revision_confirmation",
-                "apply_confirmed_step_designs",
-            ),
         ):
             self.assertIn(f"REVIEW {node}", child_workflows)
             self.assertIn('OPTIONS ["approve", "revise", "reject"]', child_workflows)
@@ -195,9 +196,14 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         for persisted in (
             ".lgwf/create_requirements_approval.json",
             ".lgwf/business_flow_approval.json",
-            ".lgwf/step_design_confirmation_record.json",
         ):
             self.assertIn(f'PERSIST "{persisted}"', child_workflows)
+        step_review = (ROOT / "03_confirm_step_designs/03_step_design_review/workflow.lgwf").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("REVIEW confirm_step_designs", step_review)
+        self.assertNotIn("PERSIST", step_review)
+        self.assertIn("PY apply_validated_step_designs", step_review)
 
     def test_codex_nodes_and_prompts_define_output_json_contracts(self) -> None:
         contracts = (
@@ -259,13 +265,13 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn("EDIT_FILE", act_prompt)
         self.assertIn(".lgwf/step_designs_proposal.json", act_prompt)
         self.assertEqual(
-            2,
+            3,
             step_design_workflow.count('KEEP_SESSION KEY "design_codex"'),
         )
-        self.assertIn(
-            'PY generate_step_designs\n  SCRIPT "scripts/generate_step_designs_proposal.py"',
-            step_design_workflow,
-        )
+        self.assertIn("CODEX generate_step_designs", step_design_workflow)
+        self.assertIn('PROMPT "agents/generate_step_designs.md"', step_design_workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/step_design_authoring_context.json"', step_design_workflow)
+        self.assertIn('OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE', step_design_workflow)
         for codex_fragment in (
             'REASON CODEX\n    PROMPT "agents/reason_step_design_repair.md"\n    KEEP_SESSION KEY "design_codex"',
             'ACT CODEX\n    PROMPT "agents/act_step_design_repair.md"\n    KEEP_SESSION KEY "design_codex"',
@@ -277,7 +283,6 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             ("01_confirm_requirements/01_raw_intent/workflow.lgwf", ".lgwf/raw_intent_approval.json"),
             ("01_confirm_requirements/03_requirements_review/workflow.lgwf", ".lgwf/create_requirements_approval.json"),
             ("02_confirm_business_flow/02_business_flow_review/workflow.lgwf", ".lgwf/business_flow_approval.json"),
-            ("03_confirm_step_designs/03_step_design_review/workflow.lgwf", ".lgwf/step_design_confirmation_record.json"),
         )
         for workflow_relative, artifact in expectations:
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
@@ -385,7 +390,11 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         observe_workflow = (
             ROOT / "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/workflow.lgwf"
         ).read_text(encoding="utf-8")
+        self.assertIn("PY prepare_lgwf_dsl_audit_target", observe_workflow)
+        self.assertIn("TOOL run_lgwf_dsl_audit", observe_workflow)
+        self.assertIn("USE lgwf_dsl_cli", observe_workflow)
         self.assertIn("PY audit_current_implementation", observe_workflow)
+        self.assertIn('SCRIPT "scripts/prepare_lgwf_dsl_audit_target.py"', observe_workflow)
         self.assertIn('SCRIPT "scripts/audit_current_implementation.py"', observe_workflow)
         self.assertNotIn("CODEX observe_repair", observe_workflow)
         self.assertNotIn('PROMPT "agents/observe_repair.md"', observe_workflow)
@@ -395,8 +404,11 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn('workspace file ".lgwf/implementation_audit_result.json"', observe_workflow)
         self.assertNotIn('workspace file ".lgwf/scaffold_package_result.json"', observe_workflow)
         self.assertIn('READ workspace file ".lgwf/step_designs.json";', observe_workflow)
+        self.assertIn('READ workspace file ".lgwf/implementation_lgwf_dsl_audit_result.json";', observe_workflow)
         self.assertNotIn('OUTPUT_JSON ".lgwf/implementation_observe.json" AS_FILE', observe_workflow)
-        self.assertIn("FLOW audit_current_implementation", observe_workflow)
+        self.assertIn("FLOW prepare_lgwf_dsl_audit_target", observe_workflow)
+        self.assertIn("THEN run_lgwf_dsl_audit", observe_workflow)
+        self.assertIn("THEN audit_current_implementation", observe_workflow)
         self.assertNotIn("THEN observe_repair", observe_workflow)
         self.assertIn("UPDATES_STATE", observe_workflow)
         self.assertIn('READ workspace file ".lgwf/implementation_audit_result.json";', repair_workflow)
@@ -404,7 +416,9 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
             ROOT / "04_implement_steps_react/02_repair_implementation_react/01_reason_repair/agents/reason_repair.md"
         ).read_text(encoding="utf-8")
         self.assertIn(".lgwf/implementation_audit_result.json", reason_prompt)
-        self.assertIn("原始 Python audit 结果", reason_prompt)
+        self.assertIn("OBSERVE 聚合 audit 结果", reason_prompt)
+        self.assertIn("lgwf_dsl_cli` TOOL", reason_prompt)
+        self.assertIn("不要直接读取原始 TOOL 产物", reason_prompt)
         audit_script = (
             ROOT
             / "04_implement_steps_react/02_repair_implementation_react/03_observe_repair/scripts/audit_current_implementation.py"
@@ -418,6 +432,7 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("CODEX decide_repair", decide_workflow)
         self.assertIn("PY write_repair_decision", decide_workflow)
+        self.assertIn('READ workspace file ".lgwf/implementation_repair_decision_analysis.json";', decide_workflow)
         self.assertIn('WRITE workspace file ".lgwf/implementation_repair_decision_analysis.json";', decide_workflow)
 
     def test_scaffold_template_spec_is_bound_to_template_and_react_prompts(self) -> None:
@@ -448,8 +463,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
         step_design_workflow_text = step_workflow
-        self.assertNotIn('CONTEXT workspace dir ".lgwf/create_reference_context"', step_design_workflow_text)
-        self.assertNotIn(
+        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context"', step_design_workflow_text)
+        self.assertIn(
             'CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"',
             step_design_workflow_text,
         )
@@ -477,7 +492,11 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
         self.assertIn("workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md", reference_index)
 
         prompt = read_step_design_prompts()
-        self.assertIn("reference index", prompt)
+        self.assertIn(".lgwf/step_design_authoring_context.json", prompt)
+        self.assertIn(".lgwf/create_reference_context/step-design-reference-index.md", prompt)
+        self.assertIn("`.lgwf/create_reference_context/`", prompt)
+        self.assertNotIn("state.lgwf_wf_create.dsl_reference_context", prompt)
+        self.assertIn("已注入的 `.lgwf/create_reference_context/`", prompt)
         self.assertNotIn(".lgwf/create_reference_context/index.md", prompt)
         self.assertIn("scaffold_plan", prompt)
         self.assertIn("scaffold plan", prompt)
@@ -533,8 +552,8 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                 {"workflow_name": "demo", "stages": []},
             ),
             (
-                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
-                "step_design_confirmation_record.json",
+                "03_confirm_step_designs/03_step_design_review/scripts/apply_validated_step_designs.py",
+                "",
                 "step_designs_proposal.json",
                 "step_designs.json",
                 "apply_step_designs",
@@ -554,10 +573,16 @@ class WorkflowCreateStructuredContractTest(unittest.TestCase):
                     lgwf_dir = root / ".lgwf"
                     lgwf_dir.mkdir()
                     (lgwf_dir / proposal_name).write_text(json.dumps(proposal), encoding="utf-8")
-                    (lgwf_dir / approval_name).write_text(
-                        '{"decision": "approve", "target_package_root": "skills/demo"}',
-                        encoding="utf-8",
-                    )
+                    if approval_name:
+                        (lgwf_dir / approval_name).write_text(
+                            '{"decision": "approve", "target_package_root": "skills/demo"}',
+                            encoding="utf-8",
+                        )
+                    else:
+                        (lgwf_dir / "step_design_observation.json").write_text(
+                            json.dumps({"passed": True, "proposal_hash": stable_json_hash(proposal)}),
+                            encoding="utf-8",
+                        )
                     module.write_confirmed_artifact(root)
                     self.assertTrue((lgwf_dir / output_name).is_file())
 

@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import hashlib
 from pathlib import Path
 
 
@@ -19,6 +20,11 @@ TMP_ROOT = REPO_ROOT / ".tmp"
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def stable_json_hash(payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 class ArtifactIOContractsTest(unittest.TestCase):
@@ -109,11 +115,9 @@ class ArtifactIOContractsTest(unittest.TestCase):
     def test_prepare_confirmation_scripts_read_runtime_proposals(self) -> None:
         write_json(self.work_dir / ".lgwf" / "create_requirements_proposal.json", {"workflow_name": "git-diff-brief"})
         write_json(self.work_dir / ".lgwf" / "business_flow_proposal.json", {"stages": []})
-        write_json(self.work_dir / ".lgwf" / "step_designs_proposal.json", {"step_designs": []})
 
         requirements = self.run_script("01_confirm_requirements/03_requirements_review/scripts/prepare_confirmation.py")
         business_flow = self.run_script("02_confirm_business_flow/02_business_flow_review/scripts/prepare_confirmation.py")
-        step_designs = self.run_script("03_confirm_step_designs/03_step_design_review/scripts/prepare_step_design_confirmation.py")
 
         self.assertEqual(
             requirements["lgwf_wf_create.requirements_confirmation_context"]["approve_writes"],
@@ -122,10 +126,6 @@ class ArtifactIOContractsTest(unittest.TestCase):
         self.assertEqual(
             business_flow["lgwf_wf_create.business_flow_confirmation_context"]["approve_writes"],
             ".lgwf/business_flow.json",
-        )
-        self.assertEqual(
-            step_designs["lgwf_wf_create.step_design_confirmation_context"]["approve_writes"],
-            ".lgwf/step_designs.json",
         )
 
     def test_apply_confirmed_scripts_write_confirmed_runtime_artifacts(self) -> None:
@@ -140,9 +140,11 @@ class ArtifactIOContractsTest(unittest.TestCase):
             self.work_dir / ".lgwf" / "business_flow_proposal.json",
             {"workflow_name": "git-diff-brief", "stages": []},
         )
+        step_design_proposal = {"approved_step_slugs": ["collect-git-context"]}
+        write_json(self.work_dir / ".lgwf" / "step_designs_proposal.json", step_design_proposal)
         write_json(
-            self.work_dir / ".lgwf" / "step_designs_proposal.json",
-            {"approved_step_slugs": ["collect-git-context"]},
+            self.work_dir / ".lgwf" / "step_design_observation.json",
+            {"passed": True, "proposal_hash": stable_json_hash(step_design_proposal)},
         )
         write_json(
             self.work_dir / ".lgwf" / "create_requirements_approval.json",
@@ -152,14 +154,10 @@ class ArtifactIOContractsTest(unittest.TestCase):
             self.work_dir / ".lgwf" / "business_flow_approval.json",
             {"decision": "approve", "confirmed": {"approval": "approve"}},
         )
-        write_json(
-            self.work_dir / ".lgwf" / "step_design_confirmation_record.json",
-            {"decision": "approve", "confirmed": {"approval": "approve"}},
-        )
 
         self.run_script("01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py")
         self.run_script("02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py")
-        self.run_script("03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py")
+        self.run_script("03_confirm_step_designs/03_step_design_review/scripts/apply_validated_step_designs.py")
 
         self.assertTrue((self.work_dir / ".lgwf" / "create_requirements.json").is_file())
         self.assertTrue((self.work_dir / ".lgwf" / "business_flow.json").is_file())
@@ -188,13 +186,6 @@ class ArtifactIOContractsTest(unittest.TestCase):
                 "business_flow_proposal.json",
                 {"workflow_name": "old", "target_package_root": "skills/old"},
                 {"workflow_name": "new", "target_package_root": "skills/new", "stages": []},
-            ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/apply_revision.py",
-                "step_design_confirmation_record.json",
-                "step_designs_proposal.json",
-                {"workflow_name": "old", "target_package_root": "skills/old"},
-                {"workflow_name": "new", "target_package_root": "skills/new", "step_designs": []},
             ),
         )
         for script, approval_file, proposal_file, old_proposal, new_proposal in cases:

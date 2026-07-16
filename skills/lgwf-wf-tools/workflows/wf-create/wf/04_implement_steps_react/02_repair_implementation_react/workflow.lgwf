@@ -54,6 +54,7 @@ REACT repair_implementation_react MAX 3
     CONTRACT {
       READ workspace file ".lgwf/implementation_audit_result.json";
       READ workspace file ".lgwf/implementation_observe.json";
+      READ workspace file ".lgwf/implementation_repair_decision_analysis.json";
       WRITE workspace file ".lgwf/implementation_repair_decision_analysis.json";
       WRITE workspace file ".lgwf/implementation_decision.json";
     }

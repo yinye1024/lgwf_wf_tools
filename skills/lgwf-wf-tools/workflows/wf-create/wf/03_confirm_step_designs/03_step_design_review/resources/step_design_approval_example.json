@@ -1,9 +1,0 @@
-{
-  "decision": "revise",
-  "approved_step_slugs": [],
-  "changes": [
-    "补充 prepare-package-layout 的 outputs 字段",
-    "明确 create-workflow-entry 的 out_of_scope 边界"
-  ],
-  "comment": "示例 fixture：用于说明 confirm_step_designs 的结构，不代表当前 run 必须生成正式确认结果。"
-}

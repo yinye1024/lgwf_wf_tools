@@ -219,6 +219,58 @@
       },
       "additionalProperties": true
     },
+    ".lgwf/step_designs_proposal.json": {
+      "type": "object",
+      "required": [
+        "workflow_id",
+        "workflow_name",
+        "target_package_root",
+        "package_profile",
+        "directory_designs",
+        "file_designs",
+        "step_designs",
+        "design_rationale"
+      ],
+      "properties": {
+        "workflow_id": {
+          "type": "string"
+        },
+        "workflow_name": {
+          "type": "string"
+        },
+        "target_package_root": {
+          "type": "string"
+        },
+        "package_profile": {
+          "type": "string"
+        },
+        "directory_designs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "file_designs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "step_designs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "design_rationale": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     ".lgwf/step_design_repair_plan.json": {
       "type": "object",
       "required": [

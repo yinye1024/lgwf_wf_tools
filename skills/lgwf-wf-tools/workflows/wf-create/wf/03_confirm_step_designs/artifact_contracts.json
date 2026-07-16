@@ -1,0 +1,40 @@
+{
+  "bootstrap_inputs": [
+    ".lgwf/business_flow.json",
+    ".lgwf/create_requirements.json",
+    ".lgwf/scaffold_package_result.json"
+  ],
+  "run_managed_workspace_outputs": [
+    ".lgwf/create_reference_context",
+    ".lgwf/step_design_validation_contract.json",
+    ".lgwf/step_design_authoring_context.json",
+    ".lgwf/step_design_repair_plan.json",
+    ".lgwf/step_designs_proposal.json",
+    ".lgwf/step_design_normalization_report.json",
+    ".lgwf/step_design_structural_gate.json",
+    ".lgwf/step_design_observation.json",
+    ".lgwf/step_design_decision_analysis.json",
+    ".lgwf/step_designs_proposal_decision.json",
+    ".lgwf/step_designs.json",
+    ".lgwf/implementation_context.json"
+  ],
+  "final_outputs": [
+    ".lgwf/create_reference_context/dsl-assist/create-workflow.md",
+    ".lgwf/create_reference_context/dsl-assist/guide.md",
+    ".lgwf/create_reference_context/dsl-assist/workflow-audit-checklist.md",
+    ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md",
+    ".lgwf/create_reference_context/module-contract/module-contract.md",
+    ".lgwf/create_reference_context/step-design-reference-index.md",
+    ".lgwf/create_reference_context/implementation-reference-index.md",
+    ".lgwf/step_design_validation_contract.json",
+    ".lgwf/step_design_authoring_context.json",
+    ".lgwf/step_designs_proposal.json",
+    ".lgwf/step_design_normalization_report.json",
+    ".lgwf/step_design_structural_gate.json",
+    ".lgwf/step_design_observation.json",
+    ".lgwf/step_design_decision_analysis.json",
+    ".lgwf/step_designs_proposal_decision.json",
+    ".lgwf/step_designs.json",
+    ".lgwf/implementation_context.json"
+  ]
+}

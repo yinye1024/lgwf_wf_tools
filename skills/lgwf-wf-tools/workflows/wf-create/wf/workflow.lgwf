@@ -36,6 +36,14 @@ STEP implement_draft
     WRITE workspace file ".lgwf/create_reference_context/workflow-modular-development/LGWF_WF_MODULAR_DEVELOPMENT.md";
     WRITE workspace file ".lgwf/create_reference_context/step-design-reference-index.md";
     WRITE workspace file ".lgwf/create_reference_context/implementation-reference-index.md";
+    WRITE workspace file ".lgwf/step_design_validation_contract.json";
+    WRITE workspace file ".lgwf/step_design_authoring_context.json";
+    WRITE workspace file ".lgwf/step_designs_proposal.json";
+    WRITE workspace file ".lgwf/step_design_normalization_report.json";
+    WRITE workspace file ".lgwf/step_design_structural_gate.json";
+    WRITE workspace file ".lgwf/step_design_observation.json";
+    WRITE workspace file ".lgwf/step_design_decision_analysis.json";
+    WRITE workspace file ".lgwf/step_designs_proposal_decision.json";
     WRITE workspace file ".lgwf/implementation_context.json";
     WRITE workspace file ".lgwf/step_designs.json";
   };

@@ -50,6 +50,22 @@ OPTIONAL_LIST_PATH_FIELDS = ("target_files", "target_dirs", "runtime_artifacts")
 FORBIDDEN_DOC_PATH_FIELDS = ("doc_path", "draft_doc_path", "path")
 FORBIDDEN_OUT_OF_SCOPE_TERMS = ("lgwf-wf-prompt-fix", "lgwf-wf-tools", "自动修复", "端到端运行保证")
 FORBIDDEN_SOURCE_FIELDS = ("content", "full_source", "source_code", "code", "body")
+FORBIDDEN_GENERIC_CONTENT_TERMS = (
+    "placeholder_result",
+    "generated_result",
+    "TODO",
+    "LGWF_PLACEHOLDER",
+    "_lgwf_placeholder",
+    "待实现",
+)
+GENERIC_CONTRACT_PHRASES = (
+    "由 workflow CONTRACT 声明",
+    "由调用 workflow CONTRACT 或入口参数决定",
+    "placeholder_result",
+    "generated_result",
+    "TODO",
+    "待实现",
+)
 MAX_OBSERVATION_ISSUES = 80
 REQUIRED_DIRECTORY_FIELDS = ("path", "purpose", "owner_step", "expected_files", "forbidden", "source_refs")
 REQUIRED_FILE_FIELDS = (
@@ -81,6 +97,7 @@ REQUIRED_IMPLEMENTATION_FILE_DESIGNS = (
     "wf/artifact_contracts.json",
 )
 STAGE_WORKFLOW_PATTERN = re.compile(r"^wf/[^/]+/workflow\.lgwf$")
+WORKFLOW_REFERENCE_PATTERN = re.compile(r'\b(SCRIPT|PROMPT|PROMPT_REF|SPEC|WORKFLOW)\s+"([^"]+)"')
 
 
 def load_json_object(path: Path) -> dict[str, Any]:
@@ -221,6 +238,7 @@ def initial_decision_payload(observation: dict[str, Any], proposal_hash: str) ->
         "next_reason_feedback": analysis["next_reason_feedback"],
         "observation_file": ".lgwf/step_design_observation.json",
         "decision_analysis_file": ".lgwf/step_design_decision_analysis.json",
+        "source": "python_decide_step_designs",
         "proposal_hash": proposal_hash,
     }
     return analysis, decision
@@ -262,6 +280,33 @@ def dedupe(items: list[str]) -> list[str]:
             seen.add(item)
             result.append(item)
     return result
+
+
+def flattened_text(value: Any) -> str:
+    if isinstance(value, dict):
+        return "\n".join(flattened_text(child) for child in value.values())
+    if isinstance(value, list):
+        return "\n".join(flattened_text(child) for child in value)
+    return str(value) if value is not None else ""
+
+
+def append_forbidden_text_checks(
+    checks: list[dict[str, Any]],
+    *,
+    name_prefix: str,
+    label: str,
+    value: Any,
+    forbidden_terms: tuple[str, ...],
+) -> None:
+    text_value = flattened_text(value)
+    for term in forbidden_terms:
+        checks.append(
+            check(
+                f"{name_prefix}_does_not_contain_{term}",
+                term not in text_value,
+                f"{label} 不得包含通用占位或兜底内容 `{term}`",
+            )
+        )
 
 
 def strip_numeric_prefix(value: str) -> str:
@@ -475,6 +520,13 @@ def append_file_design_content_contract_checks(checks: list[dict[str, Any]], ind
             )
         )
         exact_text = exact_content if isinstance(exact_content, str) else ""
+        append_forbidden_text_checks(
+            checks,
+            name_prefix=f"file_designs[{index}]_{kind}_exact_content",
+            label=f"file_designs[{index}].exact_content",
+            value=exact_text,
+            forbidden_terms=FORBIDDEN_GENERIC_CONTENT_TERMS,
+        )
         if kind == "lgwf_workflow":
             for token in ("WORKFLOW", "ENTRY", "CONTRACT", "FLOW"):
                 checks.append(
@@ -485,7 +537,7 @@ def append_file_design_content_contract_checks(checks: list[dict[str, Any]], ind
                     )
                 )
         if kind == "prompt":
-            for token in ("Role", "Inputs", "Output", "Boundaries"):
+            for token in ("Role", "Inputs", "Task", "Output", "Boundaries"):
                 checks.append(
                     check(
                         f"file_designs[{index}]_exact_prompt_contains_{token}",
@@ -512,9 +564,17 @@ def append_file_design_content_contract_checks(checks: list[dict[str, Any]], ind
             )
         )
         if isinstance(contract, dict):
-            for field in ("entrypoint", "input_files", "output_files", "required_functions", "error_handling"):
+            for field in (
+                "entrypoint",
+                "input_files",
+                "output_files",
+                "required_functions",
+                "behavior",
+                "error_handling",
+                "output_shape",
+            ):
                 value = contract.get(field)
-                passed = bool(value) and (isinstance(value, str) or isinstance(value, list))
+                passed = bool(value) and (isinstance(value, str) or isinstance(value, list) or isinstance(value, dict))
                 checks.append(
                     check(
                         f"file_designs[{index}]_script_contract_{field}_present",
@@ -522,6 +582,23 @@ def append_file_design_content_contract_checks(checks: list[dict[str, Any]], ind
                         f"file_designs[{index}].script_contract.{field} 必须存在",
                     )
                 )
+            behavior = contract.get("behavior")
+            checks.append(
+                check(
+                    f"file_designs[{index}]_script_contract_behavior_specific",
+                    isinstance(behavior, list)
+                    and any(isinstance(item, str) and len(item.strip()) >= 12 for item in behavior)
+                    and not any(term in flattened_text(behavior) for term in GENERIC_CONTRACT_PHRASES),
+                    f"file_designs[{index}].script_contract.behavior 必须描述具体业务动作，不能是通用兜底",
+                )
+            )
+            append_forbidden_text_checks(
+                checks,
+                name_prefix=f"file_designs[{index}]_script_contract",
+                label=f"file_designs[{index}].script_contract",
+                value=contract,
+                forbidden_terms=FORBIDDEN_GENERIC_CONTENT_TERMS,
+            )
     if kind == "markdown_doc":
         contract = item.get("markdown_contract")
         checks.append(
@@ -591,6 +668,35 @@ def append_prompt_reference_checks(checks: list[dict[str, Any]], file_designs: d
         )
 
 
+def workflow_reference_target(workflow_path: str, raw_ref: str) -> str:
+    ref_path = normalize_safe_path(raw_ref)
+    if not ref_path:
+        return ""
+    workflow_parent = PurePosixPath(workflow_path).parent
+    if workflow_parent.as_posix() == ".":
+        return ref_path
+    return PurePosixPath(workflow_parent, ref_path).as_posix()
+
+
+def append_workflow_exact_reference_checks(checks: list[dict[str, Any]], file_designs: dict[str, dict[str, Any]]) -> None:
+    known_paths = set(file_designs)
+    for path, item in file_designs.items():
+        if item.get("kind") != "lgwf_workflow":
+            continue
+        exact_content = item.get("exact_content")
+        if not isinstance(exact_content, str):
+            continue
+        for kind, raw_ref in WORKFLOW_REFERENCE_PATTERN.findall(exact_content):
+            target = workflow_reference_target(path, raw_ref)
+            checks.append(
+                check(
+                    f"workflow_exact_reference_exists_{path}_{kind}_{target}",
+                    bool(target) and target in known_paths,
+                    f"`{path}` exact_content 的 {kind} 引用 `{raw_ref}` 必须对应 file_designs `{target}`",
+                )
+            )
+
+
 def append_file_design_checks(
     checks: list[dict[str, Any]],
     proposal: dict[str, Any],
@@ -644,6 +750,7 @@ def append_step_design_contract_checks(result: dict[str, Any], lgwf_dir: Path) -
     directory_designs = append_directory_design_checks(checks, proposal)
     file_designs = append_file_design_checks(checks, proposal)
     append_prompt_reference_checks(checks, file_designs)
+    append_workflow_exact_reference_checks(checks, file_designs)
     items = proposal.get("step_designs", [])
     if not isinstance(items, list) or not items:
         checks.append(check("step_designs_present", False, "proposal.step_designs 必须是非空数组"))

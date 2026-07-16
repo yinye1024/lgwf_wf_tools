@@ -231,8 +231,10 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         expected_files = (
             "workflow.lgwf",
             "README.md",
+            "artifact_contracts.json",
             "01_reference_context/workflow.lgwf",
             "01_reference_context/README.md",
+            "01_reference_context/artifact_contracts.json",
             "01_reference_context/scripts/prepare_dsl_reference_context.py",
             "02_step_design_proposal/workflow.lgwf",
             "02_step_design_proposal/README.md",
@@ -250,13 +252,9 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "02_step_design_proposal/scripts/assert_quality_gate.py",
             "03_step_design_review/workflow.lgwf",
             "03_step_design_review/README.md",
-            "03_step_design_review/agents/confirm_step_designs.md",
-            "03_step_design_review/agents/revise_step_designs.md",
-            "03_step_design_review/scripts/prepare_step_design_confirmation.py",
-            "03_step_design_review/scripts/prepare_step_design_revision_confirmation.py",
-            "03_step_design_review/scripts/apply_confirmed_step_designs.py",
+            "03_step_design_review/artifact_contracts.json",
+            "03_step_design_review/scripts/apply_validated_step_designs.py",
             "03_step_design_review/scripts/prepare_implementation_context.py",
-            "03_step_design_review/resources/step_design_approval_example.json",
         )
         for relative in expected_files:
             with self.subTest(relative=relative):
@@ -268,6 +266,12 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "scripts",
             "confirm_step_designs.md",
             "revise_step_designs.md",
+            "03_step_design_review/agents/confirm_step_designs.md",
+            "03_step_design_review/agents/revise_step_designs.md",
+            "03_step_design_review/scripts/prepare_step_design_confirmation.py",
+            "03_step_design_review/scripts/prepare_step_design_revision_confirmation.py",
+            "03_step_design_review/scripts/apply_confirmed_step_designs.py",
+            "03_step_design_review/resources/step_design_approval_example.json",
             "02_step_design_proposal/agents/design_steps_react.md",
             "02_step_design_proposal/scripts/prepare_react_context.py",
             "02_step_design_proposal/scripts/validate_step_designs_proposal.py",
@@ -292,7 +296,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             "step_design_proposal": (
                 "ENTRY build_step_design_contract",
                 "PY build_step_design_contract",
-                "PY generate_step_designs",
+                "CODEX generate_step_designs",
                 "PY normalize_step_designs_proposal",
                 "PY validate_step_designs_initial",
                 "PY route_step_design_repair_entry",
@@ -302,14 +306,21 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 "OBSERVE PY",
                 "DECIDE PY",
                 "PY assert_step_designs_proposal_quality_gate",
+                'PROMPT "agents/generate_step_designs.md"',
                 'PROMPT "agents/reason_step_design_repair.md"',
                 'PROMPT "agents/act_step_design_repair.md"',
+                'CONTEXT workspace file ".lgwf/step_design_authoring_context.json"',
+                'CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"',
+                'CONTEXT workspace dir ".lgwf/create_reference_context"',
+                'OUTPUT_JSON ".lgwf/step_designs_proposal.json" AS_FILE',
+                'READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";',
+                'READ workspace dir ".lgwf/create_reference_context";',
                 'READ workspace file ".lgwf/step_design_validation_contract.json";',
+                'WRITE workspace file ".lgwf/step_design_authoring_context.json";',
                 'READ workflow file "resources/step_designs_proposal.schema.json"',
                 'READ workflow file "resources/step_designs_passing_example.json"',
                 'EDIT_FILE ".lgwf/step_designs_proposal.json"',
                 'SCRIPT "scripts/build_step_design_contract.py"',
-                'SCRIPT "scripts/generate_step_designs_proposal.py"',
                 'SCRIPT "scripts/normalize_step_designs_proposal.py"',
                 'SCRIPT "scripts/validate_step_designs_structure.py"',
                 'SCRIPT "scripts/route_step_design_repair_entry.py"',
@@ -317,13 +328,12 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 'READ workspace file ".lgwf/scaffold_package_result.json";',
             ),
             "step_design_review": (
-                "PY prepare_step_design_confirmation",
-                "REVIEW confirm_step_designs",
-                "PY prepare_step_design_revision_confirmation",
-                "PY apply_confirmed_step_designs",
+                "ENTRY apply_validated_step_designs",
+                "PY apply_validated_step_designs",
                 "PY prepare_implementation_context",
-                'SCRIPT "scripts/prepare_step_design_confirmation.py"',
-                'PROMPT_REF "agents/confirm_step_designs.md"',
+                'SCRIPT "scripts/apply_validated_step_designs.py"',
+                'READ workspace file ".lgwf/step_design_observation.json";',
+                'WRITE workspace file ".lgwf/step_designs.json";',
             ),
         }
         for subflow, snippets in expectations.items():
@@ -423,13 +433,6 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 "apply_confirmed_business_flow",
                 ".lgwf/business_flow_approval.json",
             ),
-            (
-                "03_confirm_step_designs/03_step_design_review/workflow.lgwf",
-                "confirm_step_designs",
-                "prepare_step_design_revision_confirmation",
-                "apply_confirmed_step_designs",
-                ".lgwf/step_design_confirmation_record.json",
-            ),
         )
         for relative, approval, apply_revision, apply_node, persist in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
@@ -444,6 +447,13 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
             self.assertIn(f"{apply_revision}\n  THEN {approval}", text)
             self.assertIn(f'WHEN "approve" THEN {apply_node}', text)
             self.assertIn('WHEN "reject" THEN FAIL_ALL', text)
+
+        step_review = (ROOT / "03_confirm_step_designs/03_step_design_review/workflow.lgwf").read_text(encoding="utf-8")
+        self.assertNotIn("REVIEW confirm_step_designs", step_review)
+        self.assertNotIn('OPTIONS ["approve", "revise", "reject"]', step_review)
+        self.assertNotIn("PERSIST", step_review)
+        self.assertIn("PY apply_validated_step_designs", step_review)
+        self.assertIn("apply_validated_step_designs\n  THEN prepare_implementation_context", step_review)
 
     def test_raw_intent_approval_is_persisted_without_decision_routing(self) -> None:
         text = (ROOT / "01_confirm_requirements/01_raw_intent/workflow.lgwf").read_text(encoding="utf-8")
@@ -462,7 +472,6 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         cases = (
             ("01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py", "create_requirements_approval.json", "create_requirements.json"),
             ("02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py", "business_flow_approval.json", "business_flow.json"),
-            ("03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py", "step_design_confirmation_record.json", "step_designs.json"),
         )
         for relative, approval_name, output_name in cases:
             module = load_module(ROOT / relative, relative.replace("/", "_"))
@@ -494,13 +503,6 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 "business_flow.json",
                 {"workflow_name": "demo", "stages": [{"stage_id": "scaffold"}]},
             ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
-                "step_design_confirmation_record.json",
-                "step_designs_proposal.json",
-                "step_designs.json",
-                {"step_designs": [{"step_slug": "scaffold"}]},
-            ),
         )
         for relative, approval_name, proposal_name, output_name, confirmed in cases:
             module = load_module(ROOT / relative, relative.replace("/", "_revision"))
@@ -531,11 +533,6 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
                 "02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py",
                 "business_flow_approval.json",
                 "business_flow.json",
-            ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
-                "step_design_confirmation_record.json",
-                "step_designs.json",
             ),
         )
         for relative, approval_name, output_name in cases:
@@ -570,7 +567,7 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         for relative in (
             "01_confirm_requirements/03_requirements_review/scripts/apply_confirmed.py",
             "02_confirm_business_flow/02_business_flow_review/scripts/apply_confirmed.py",
-            "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
+            "03_confirm_step_designs/03_step_design_review/scripts/apply_validated_step_designs.py",
         ):
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn("from confirmation_io import", text)
@@ -589,8 +586,18 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         self.assertIn('WORKFLOW "01_reference_context/workflow.lgwf"', parent_workflow)
         self.assertIn('WORKFLOW "02_step_design_proposal/workflow.lgwf"', parent_workflow)
         self.assertIn('WORKFLOW "03_step_design_review/workflow.lgwf"', parent_workflow)
+        self.assertIn("WRITE state.lgwf_wf_create.dsl_reference_context;", parent_workflow)
+        self.assertIn('READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";', parent_workflow)
+        self.assertIn('READ workspace dir ".lgwf/create_reference_context";', parent_workflow)
         self.assertIn("PY prepare_dsl_reference_context", reference_workflow)
-        self.assertIn("PY generate_step_designs", proposal_workflow)
+        self.assertNotIn("PY prepare_step_design_authoring_context", proposal_workflow)
+        self.assertIn("CODEX generate_step_designs", proposal_workflow)
+        self.assertNotIn("CONTEXT state.lgwf_wf_create.dsl_reference_context", proposal_workflow)
+        self.assertNotIn("READ state.lgwf_wf_create.dsl_reference_context;", proposal_workflow)
+        self.assertIn('CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"', proposal_workflow)
+        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context"', proposal_workflow)
+        self.assertIn('READ workspace file ".lgwf/create_reference_context/step-design-reference-index.md";', proposal_workflow)
+        self.assertIn('READ workspace dir ".lgwf/create_reference_context";', proposal_workflow)
         self.assertIn("REACT repair_step_designs_proposal", proposal_workflow)
         self.assertIn("REASON CODEX", proposal_workflow)
         self.assertIn("ACT CODEX", proposal_workflow)
@@ -602,10 +609,19 @@ class WorkflowCreateIntegrityTest(unittest.TestCase):
         )
         contracts = json.loads((ROOT / "artifact_contracts.json").read_text(encoding="utf-8"))
         script_writes = contracts["script_writes"]["prepare_dsl_reference_context"]
+        for relative in (
+            "03_confirm_step_designs/artifact_contracts.json",
+            "03_confirm_step_designs/01_reference_context/artifact_contracts.json",
+            "03_confirm_step_designs/03_step_design_review/artifact_contracts.json",
+        ):
+            with self.subTest(artifact_contract=relative):
+                local_contract = json.loads((ROOT / relative).read_text(encoding="utf-8"))
+                self.assertIn("bootstrap_inputs", local_contract)
+                self.assertIn("final_outputs", local_contract)
 
         text = proposal_workflow
-        self.assertNotIn('CONTEXT workspace dir ".lgwf/create_reference_context"', text)
-        self.assertNotIn('CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"', text)
+        self.assertIn('CONTEXT workspace dir ".lgwf/create_reference_context"', text)
+        self.assertIn('CONTEXT workspace file ".lgwf/create_reference_context/step-design-reference-index.md"', text)
         self.assertNotIn('CONTEXT workspace file ".lgwf/create_reference_context/index.md"', text)
         self.assertNotIn('CONTEXT workspace dir ".lgwf/create_reference_context/dsl-assist"', text)
         self.assertNotIn('CONTEXT workspace dir ".lgwf/create_reference_context/module-contract"', text)

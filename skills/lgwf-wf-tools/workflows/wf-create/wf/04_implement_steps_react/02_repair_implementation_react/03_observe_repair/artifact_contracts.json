@@ -5,13 +5,21 @@
     ".lgwf/step_designs.json"
   ],
   "final_outputs": [
+    ".lgwf/implementation_lgwf_dsl_audit_target_manifest.json",
+    ".lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf",
     ".lgwf/implementation_lgwf_dsl_audit_result.json",
     ".lgwf/implementation_audit_result.json",
     ".lgwf/implementation_observe.json"
   ],
   "script_writes": {
+    "prepare_lgwf_dsl_audit_target": [
+      ".lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf",
+      ".lgwf/implementation_lgwf_dsl_audit_target_manifest.json"
+    ],
+    "run_lgwf_dsl_audit": [
+      ".lgwf/implementation_lgwf_dsl_audit_result.json"
+    ],
     "audit_current_implementation": [
-      ".lgwf/implementation_lgwf_dsl_audit_result.json",
       ".lgwf/implementation_audit_result.json",
       ".lgwf/implementation_observe.json"
     ]

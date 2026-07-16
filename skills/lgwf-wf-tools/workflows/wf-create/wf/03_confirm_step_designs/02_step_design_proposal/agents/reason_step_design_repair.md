@@ -6,6 +6,8 @@
 
 本节点不重新设计整份 workflow，也不直接改 proposal；它只把待修复问题转成 ACT 可以执行的修复计划。ACT 会按该计划通过 `EDIT_FILE ".lgwf/step_designs_proposal.json"` 直接编辑 proposal，随后 OBSERVE 重新运行结构校验。
 
+`normalize_step_designs_proposal` 只做路径、字段形状和禁止源码字段清理，不会补齐缺失的 `step_designs`、`file_designs` 或 `directory_designs` 业务设计。凡是 observation 指出的 required file、stage workflow、target 引用或 coverage 缺口，都必须在本节点转成明确的 repair plan，交由 ACT 修复。
+
 ## Inputs
 
 运行时按 workflow `CONTEXT` 提供：

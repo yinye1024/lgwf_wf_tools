@@ -13,15 +13,19 @@
     ".lgwf/business_flow_approval.json",
     ".lgwf/business_flow.json",
     ".lgwf/scaffold_package_result.json",
+    ".lgwf/step_design_validation_contract.json",
+    ".lgwf/step_design_authoring_context.json",
     ".lgwf/step_design_repair_plan.json",
     ".lgwf/step_designs_proposal.json",
+    ".lgwf/step_design_normalization_report.json",
     ".lgwf/step_design_structural_gate.json",
     ".lgwf/step_design_observation.json",
     ".lgwf/step_design_decision_analysis.json",
     ".lgwf/step_designs_proposal_decision.json",
-    ".lgwf/step_design_confirmation_record.json",
     ".lgwf/step_designs.json",
     ".lgwf/implementation_context.json",
+    ".lgwf/implementation_lgwf_dsl_audit_target",
+    ".lgwf/implementation_lgwf_dsl_audit_target_manifest.json",
     ".lgwf/implementation_lgwf_dsl_audit_result.json",
     ".lgwf/implementation_observe.json",
     ".lgwf/implementation_audit_result.json",
@@ -58,9 +62,16 @@
     ".lgwf/post_fix_handoff_input.json",
     ".lgwf/raw_intent_approval.json",
     ".lgwf/raw_intent_request_proposal.json",
+    ".lgwf/step_design_validation_contract.json",
+    ".lgwf/step_design_authoring_context.json",
+    ".lgwf/step_designs_proposal.json",
+    ".lgwf/step_design_normalization_report.json",
     ".lgwf/step_design_structural_gate.json",
     ".lgwf/step_design_observation.json",
-    ".lgwf/step_design_confirmation_record.json"
+    ".lgwf/step_design_decision_analysis.json",
+    ".lgwf/step_designs_proposal_decision.json",
+    ".lgwf/step_designs.json",
+    ".lgwf/implementation_context.json"
   ],
   "script_writes": {
     "prepare_dsl_reference_context": [
@@ -78,10 +89,20 @@
     "publish_repair_result": [
       ".lgwf/implementation_result.json"
     ],
+    "prepare_lgwf_dsl_audit_target": [
+      ".lgwf/implementation_lgwf_dsl_audit_target",
+      ".lgwf/implementation_lgwf_dsl_audit_target_manifest.json"
+    ],
+    "run_lgwf_dsl_audit": [
+      ".lgwf/implementation_lgwf_dsl_audit_result.json"
+    ],
     "audit_current_implementation": [
-      ".lgwf/implementation_lgwf_dsl_audit_result.json",
       ".lgwf/implementation_audit_result.json",
       ".lgwf/implementation_observe.json"
+    ],
+    "build_step_design_contract": [
+      ".lgwf/step_design_validation_contract.json",
+      ".lgwf/step_design_authoring_context.json"
     ],
     "decide_repair_implementation": [
       ".lgwf/implementation_repair_decision_analysis.json",

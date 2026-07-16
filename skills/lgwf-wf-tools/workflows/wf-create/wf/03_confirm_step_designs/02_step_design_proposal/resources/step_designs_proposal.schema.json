@@ -127,6 +127,27 @@
         "exact_content": { "type": "string", "minLength": 1 },
         "script_contract": {
           "type": "object",
+          "required": [
+            "entrypoint",
+            "input_files",
+            "output_files",
+            "required_functions",
+            "behavior",
+            "error_handling",
+            "output_shape"
+          ],
+          "properties": {
+            "entrypoint": { "type": "string", "minLength": 1 },
+            "input_files": { "$ref": "#/$defs/string_list" },
+            "output_files": { "$ref": "#/$defs/string_list" },
+            "required_functions": { "$ref": "#/$defs/string_list" },
+            "behavior": { "$ref": "#/$defs/string_list" },
+            "error_handling": { "$ref": "#/$defs/string_list" },
+            "output_shape": {
+              "type": ["object", "array", "string"],
+              "minLength": 1
+            }
+          },
           "additionalProperties": true
         },
         "prompt_contract": {
@@ -135,17 +156,96 @@
         },
         "markdown_contract": {
           "type": "object",
+          "required": ["sections"],
+          "properties": {
+            "sections": { "$ref": "#/$defs/string_list" }
+          },
           "additionalProperties": true
         },
         "json_contract": {
           "type": "object",
+          "required": ["top_level_fields", "required", "consumer"],
+          "properties": {
+            "top_level_fields": { "$ref": "#/$defs/string_list" },
+            "required": { "$ref": "#/$defs/string_list" },
+            "consumer": { "type": "string", "minLength": 1 }
+          },
           "additionalProperties": true
         },
         "test_contract": {
           "type": "object",
+          "required": ["test_framework", "scope", "fixtures", "acceptance"],
+          "properties": {
+            "test_framework": { "type": "string", "minLength": 1 },
+            "scope": { "$ref": "#/$defs/string_list" },
+            "fixtures": { "$ref": "#/$defs/string_list" },
+            "acceptance": { "$ref": "#/$defs/string_list" }
+          },
           "additionalProperties": true
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "lgwf_workflow" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "content_mode": { "const": "exact" } },
+            "required": ["exact_content"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "prompt" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "content_mode": { "const": "exact" } },
+            "required": ["exact_content"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "python_script" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "content_mode": { "const": "contract" } },
+            "required": ["script_contract"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "markdown_doc" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "content_mode": { "const": "contract" } },
+            "required": ["markdown_contract"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "json_contract" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "content_mode": { "const": "contract" } },
+            "required": ["json_contract"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "test" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "content_mode": { "const": "contract" } },
+            "required": ["test_contract"]
+          }
+        }
+      ]
     },
     "step_design": {
       "type": "object",

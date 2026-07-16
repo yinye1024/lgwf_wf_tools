@@ -15,8 +15,14 @@
     "publish_repair_result": [
       ".lgwf/implementation_result.json"
     ],
+    "prepare_lgwf_dsl_audit_target": [
+      ".lgwf/implementation_lgwf_dsl_audit_target/wf/workflow.lgwf",
+      ".lgwf/implementation_lgwf_dsl_audit_target_manifest.json"
+    ],
+    "run_lgwf_dsl_audit": [
+      ".lgwf/implementation_lgwf_dsl_audit_result.json"
+    ],
     "audit_current_implementation": [
-      ".lgwf/implementation_lgwf_dsl_audit_result.json",
       ".lgwf/implementation_audit_result.json",
       ".lgwf/implementation_observe.json"
     ],

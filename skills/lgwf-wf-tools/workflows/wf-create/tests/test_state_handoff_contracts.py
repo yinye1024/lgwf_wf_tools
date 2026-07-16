@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import hashlib
 import tempfile
 import unittest
 import sys
@@ -24,6 +25,11 @@ def load_module(path: Path, name: str):
     assert spec and spec.loader
     spec.loader.exec_module(module)
     return module
+
+
+def stable_json_hash(payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
 class pushd:
@@ -54,13 +60,17 @@ class StateHandoffContractTest(unittest.TestCase):
         for workflow_relative, node in (
             ("01_confirm_requirements/03_requirements_review/workflow.lgwf", "prepare_requirements_confirmation"),
             ("02_confirm_business_flow/02_business_flow_review/workflow.lgwf", "prepare_business_flow_confirmation"),
-            ("03_confirm_step_designs/03_step_design_review/workflow.lgwf", "prepare_step_design_confirmation"),
         ):
             workflow = (ROOT / workflow_relative).read_text(encoding="utf-8")
             self.assertIn(f"PY {node}", workflow)
             self.assertIn(f"RESULT state.lgwf_wf_create.{node}_result", workflow)
             self.assertIn("UPDATES_STATE", workflow)
             self.assertRegex(workflow, rf"{node}\s+THEN confirm_")
+        step_workflow = (ROOT / "03_confirm_step_designs/03_step_design_review/workflow.lgwf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("PY apply_validated_step_designs", step_workflow)
+        self.assertNotIn("REVIEW confirm_step_designs", step_workflow)
 
     def test_confirmation_context_scripts_emit_expected_state_keys(self) -> None:
         cases = (
@@ -75,12 +85,6 @@ class StateHandoffContractTest(unittest.TestCase):
                 "business_flow_proposal.json",
                 {"workflow_name": "demo", "stages": []},
                 "lgwf_wf_create.business_flow_confirmation_context",
-            ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/prepare_step_design_confirmation.py",
-                "step_designs_proposal.json",
-                {"step_designs": [{"step_slug": "demo"}]},
-                "lgwf_wf_create.step_design_confirmation_context",
             ),
         )
         for relative, proposal_name, proposal, state_key in cases:
@@ -120,13 +124,6 @@ class StateHandoffContractTest(unittest.TestCase):
                 "business_flow_approval.json",
                 {"stages": []},
                 "lgwf_wf_create.business_flow_revision_context",
-            ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/prepare_step_design_revision_confirmation.py",
-                "step_designs_proposal.json",
-                "step_design_confirmation_record.json",
-                {"step_designs": []},
-                "lgwf_wf_create.step_design_revision_context",
             ),
         )
         for relative, proposal_name, approval_name, proposal, state_key in cases:
@@ -350,10 +347,6 @@ class StateHandoffContractTest(unittest.TestCase):
         expectations = (
             ("01_confirm_requirements/02_requirements_proposal/agents/propose_requirements.md", "requirements_confirmation_context"),
             ("02_confirm_business_flow/01_business_flow_proposal/agents/propose_business_flow.md", "business_flow_confirmation_context"),
-            (
-                "03_confirm_step_designs/02_step_design_proposal/agents/generate_step_designs.md",
-                "step_design_confirmation_context",
-            ),
         )
         for relative, state_key in expectations:
             text = (ROOT / relative).read_text(encoding="utf-8")
@@ -375,13 +368,6 @@ class StateHandoffContractTest(unittest.TestCase):
                 "business_flow.json",
                 {"workflow_name": "demo", "stages": []},
             ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
-                "step_design_confirmation_record.json",
-                "step_designs_proposal.json",
-                "step_designs.json",
-                {"step_designs": []},
-            ),
         ):
             module = load_module(ROOT / relative, relative.replace("/", "_return_path"))
             with tempfile.TemporaryDirectory() as temp:
@@ -394,6 +380,24 @@ class StateHandoffContractTest(unittest.TestCase):
                 artifacts = [value for value in result.values() if isinstance(value, dict) and "artifact_path" in value]
                 self.assertTrue(artifacts)
                 self.assertEqual(artifacts[0]["artifact_path"], f".lgwf/{output_name}")
+
+        module = load_module(
+            ROOT / "03_confirm_step_designs/03_step_design_review/scripts/apply_validated_step_designs.py",
+            "apply_validated_return_path",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            lgwf_dir.mkdir()
+            proposal = {"step_designs": []}
+            (lgwf_dir / "step_designs_proposal.json").write_text(json.dumps(proposal), encoding="utf-8")
+            (lgwf_dir / "step_design_observation.json").write_text(
+                json.dumps({"passed": True, "proposal_hash": stable_json_hash(proposal)}),
+                encoding="utf-8",
+            )
+            result = module.write_confirmed_artifact(root)
+            artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
+            self.assertEqual(artifact["artifact_path"], ".lgwf/step_designs.json")
 
     def test_apply_scripts_use_proposal_when_approval_only_records_decision(self) -> None:
         for relative, approval_name, proposal_name, expected_key in (
@@ -408,12 +412,6 @@ class StateHandoffContractTest(unittest.TestCase):
                 "business_flow_approval.json",
                 "business_flow_proposal.json",
                 "stages",
-            ),
-            (
-                "03_confirm_step_designs/03_step_design_review/scripts/apply_confirmed_step_designs.py",
-                "step_design_confirmation_record.json",
-                "step_designs_proposal.json",
-                "step_designs",
             ),
         ):
             module = load_module(ROOT / relative, relative.replace("/", "_proposal_fallback"))
@@ -444,6 +442,25 @@ class StateHandoffContractTest(unittest.TestCase):
                 self.assertEqual(artifact["confirmed"][expected_key], proposal[expected_key])
                 self.assertNotIn("approval", artifact)
 
+        module = load_module(
+            ROOT / "03_confirm_step_designs/03_step_design_review/scripts/apply_validated_step_designs.py",
+            "apply_validated_proposal",
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            lgwf_dir = root / ".lgwf"
+            lgwf_dir.mkdir()
+            proposal = {"step_designs": [{"stage_id": "collect", "steps": []}]}
+            (lgwf_dir / "step_designs_proposal.json").write_text(json.dumps(proposal), encoding="utf-8")
+            (lgwf_dir / "step_design_observation.json").write_text(
+                json.dumps({"passed": True, "proposal_hash": stable_json_hash(proposal)}),
+                encoding="utf-8",
+            )
+            result = module.write_confirmed_artifact(root)
+            artifact = next(value for value in result.values() if isinstance(value, dict) and "artifact_path" in value)
+            self.assertEqual(artifact["confirmed"]["step_designs"], proposal["step_designs"])
+            self.assertEqual(artifact["decision"], "validated")
+
     def test_summary_report_path_is_relative(self) -> None:
         summary = load_module(ROOT / "06_summarize_create_result/scripts/summarize_create_result.py", "summary_report_path")
         with tempfile.TemporaryDirectory() as temp:
@@ -456,7 +473,7 @@ class StateHandoffContractTest(unittest.TestCase):
         for phrase in (
             "prepare_requirements_confirmation",
             "prepare_business_flow_confirmation",
-            "prepare_step_design_confirmation",
+            "apply_validated_step_designs",
             "revise",
             "approve`、`revise`、`reject",
             "完整 JSON",

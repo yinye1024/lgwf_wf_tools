@@ -1,0 +1,6 @@
+{
+  "_lgwf_placeholder": true,
+  "path": "entry_contract.json",
+  "workflow_name": "git-diff-brief",
+  "note": "该文件由 wf-create scaffold_package 生成，必须在实现阶段替换为真实内容。"
+}

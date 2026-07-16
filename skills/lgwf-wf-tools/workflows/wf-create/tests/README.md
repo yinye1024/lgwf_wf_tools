@@ -8,10 +8,10 @@
 - 关键文件与目录存在性。
 - workflow resource path 只使用相对路径。
 - `scaffold_package` 的路径规则：只使用相对路径，禁止绝对路径与 `..`。
-- `scaffold_package` 的状态边界：脚手架只创建目标 package 框架，不向目标 package 根目录写入 `.lgwf`，运行状态仍归 `ws/.lgwf`。
+- `scaffold_package` 的状态边界：脚手架只生成目标 package 框架计划，不创建或覆盖目标 package 真实文件，不向目标 package 根目录写入 `.lgwf`，运行状态仍归 `ws/.lgwf`。
 - REVIEW 确认节点固定使用 `approve`、`revise`、`reject` 三选项：`approve` 固化 confirmed artifact，`revise` 带完整 JSON 重入同一 REVIEW 节点，`reject` 通过 `FAIL_ALL` 终止。
 - 步骤设计阶段的文档模板、REVIEW 决策结构和实现阶段边界约定。
-- 实现阶段按 `01_implement_units` 初版 FOREACH 加 `02_repair_implementation_react` 修复 ReAct 验证；audit/observe/decision 只作为 repair 内部循环产物，不作为 summary 或 handoff 的外部输入。
+- 实现阶段按 `01_implement_units` 初版 FOREACH 加 `02_repair_implementation_react` 修复 ReAct 验证；`implementation_audit_result.json` 作为 summary 输入，observe/decision 只作为 repair 内部循环产物，不作为 summary 或 handoff 的外部输入。
 - `summarize_create_result` 的运行时结果汇总接口和报告路径。
 
 ## 建议验证命令
@@ -32,7 +32,7 @@ python -m unittest discover tests
 
 未覆盖范围：
 
-- 当前 run 只有在对应 REVIEW decision 为 `approve` 时才固化 `.lgwf/create_requirements.json`、`.lgwf/business_flow.json` 或 `.lgwf/step_designs.json`。
+- 当前 run 只有在对应 REVIEW decision 为 `approve` 时才固化 `.lgwf/create_requirements.json`、`.lgwf/business_flow.json`；`.lgwf/step_designs.json` 由步骤设计 structural gate 通过后自动固化。
 - 当前 run 不向目标 package 根目录写入 `.lgwf`。
 - 当前 run 不验证 `lgwf-wf-prompt-fix` 自动调用、生成出的目标 workflow 自动接入 facade 路由、自动修复或端到端业务成功。
 - 当前测试集不再包含旧的 E2E 或真实 Codex 正向运行入口；大规模重构期间只保留结构、脚本和契约级验证。

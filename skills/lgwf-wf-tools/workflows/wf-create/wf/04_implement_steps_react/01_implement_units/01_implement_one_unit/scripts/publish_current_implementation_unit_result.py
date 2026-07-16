@@ -132,6 +132,38 @@ def stage_files(unit_output_abs: Path) -> list[str]:
     return sorted(result)
 
 
+def exact_content_by_path(context: dict[str, Any]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    raw_designs = context.get("file_designs", [])
+    if not isinstance(raw_designs, list):
+        return result
+    for item in raw_designs:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("content_mode", "")).strip() != "exact":
+            continue
+        raw_path = str(item.get("path", "")).strip()
+        exact_content = item.get("exact_content")
+        if not raw_path or not isinstance(exact_content, str):
+            continue
+        result[normalize_output_path(raw_path)] = exact_content
+    return result
+
+
+def normalized_text(value: str) -> str:
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def assert_exact_content_matches(unit_output_abs: Path, exact_content: dict[str, str]) -> None:
+    for rel_path, expected in exact_content.items():
+        staged = unit_output_abs / rel_path
+        if not staged.is_file():
+            continue
+        actual = staged.read_text(encoding="utf-8")
+        if normalized_text(actual) != normalized_text(expected):
+            raise ValueError(f"staging exact 文件内容与 step_designs exact_content 不一致: {rel_path}")
+
+
 def publish_current_implementation_unit_result(root: Path) -> dict[str, Any]:
     lgwf_dir = root / ".lgwf"
     context = load_json(lgwf_dir / "current_implementation_unit_context.json")
@@ -166,6 +198,7 @@ def publish_current_implementation_unit_result(root: Path) -> dict[str, Any]:
     staged_file_set = set(staged_files)
     publishable_files = [path for path in output_files if path in staged_file_set]
     missing = [path for path in output_files if path not in staged_file_set]
+    assert_exact_content_matches(unit_output_abs, exact_content_by_path(context))
     published: list[dict[str, str]] = []
     for rel_path in publishable_files:
         source_path = ensure_within(unit_output_abs / rel_path, unit_output_abs, "staging_source_file")
