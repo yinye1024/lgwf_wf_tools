@@ -1,4 +1,4 @@
-# inspect act
+# Act slot：生成 inspection
 
 ## 角色
 

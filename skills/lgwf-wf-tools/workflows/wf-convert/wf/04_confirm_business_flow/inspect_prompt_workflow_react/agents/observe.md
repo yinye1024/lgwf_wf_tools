@@ -1,4 +1,4 @@
-# inspection semantic observe
+# Observe slot：inspection 语义检查（inspect_prompt_workflow_react）
 
 ## 角色
 

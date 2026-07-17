@@ -66,9 +66,14 @@
 
 `inspect_prompt_workflow_react` 和 `propose_create_input_react` 都使用阶段内部质量门子 workflow 完成 `observe`：先由 Python 执行确定性结构、枚举、引用和覆盖检查，再由 Codex 只检查语义完整性，最后由 Python 合并为唯一 canonical observe。
 
+- 两个 ReAct 分别自包含在 `wf/04_confirm_business_flow/inspect_prompt_workflow_react/` 和 `wf/04_confirm_business_flow/propose_create_input_react/`。
+- 每个 ReAct 的 prompt 固定命名为 `agents/spec.md`、`agents/reason.md`、`agents/act.md` 和 `agents/observe.md`，不得恢复阶段级前缀拼接命名。
+- 每个 ReAct 根目录的 `ob.lgwf` 只编排自己的复合 Observe，不得继续创建更深层 workflow。
+- 两个 ReAct 不得互相读取对方目录内的 prompt、脚本或 Observe 中间报告；跨边界只消费父级声明的 canonical artifact。
+
 - inspection canonical observe：`.lgwf/prompt_workflow_inspection_observe.json`
 - proposal canonical observe：`.lgwf/wf_create_fast_input_observe.json`
-- `decide_inspection.py` 和 `decide_create_input.py` 只能读取对应 canonical observe，不得读取业务产物或单个 observer 报告补充判断。
+- `inspect_prompt_workflow_react/scripts/decide.py` 和 `propose_create_input_react/scripts/decide.py` 只能读取对应 canonical observe，不得读取业务产物或单个 observer 报告补充判断。
 - canonical observe 缺失、schema 非法、阶段不匹配或结论自相矛盾时必须 fail closed，继续下一轮 ReAct。
 - inspection 的非阻塞 issue 必须进入 proposal 的 `reason`；proposal 的非阻塞 issue 必须进入 `.lgwf/wf_create_fast_input_confirmation_context.json`，供人工确认查看。
 - Python/Codex 中间报告用于诊断，不得作为父 workflow 的判定输入或对外状态契约。

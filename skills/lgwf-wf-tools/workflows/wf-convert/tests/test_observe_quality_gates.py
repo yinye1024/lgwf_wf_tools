@@ -156,7 +156,7 @@ class InspectionValidatorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.module = load_module(
-            "wf/04_confirm_business_flow/inspection_quality_gate/scripts/validate_inspection.py",
+            "wf/04_confirm_business_flow/inspect_prompt_workflow_react/scripts/validate.py",
             "validate_inspection_for_tests",
         )
 
@@ -179,7 +179,7 @@ class ProposalValidatorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.module = load_module(
-            "wf/04_confirm_business_flow/create_input_quality_gate/scripts/validate_create_input.py",
+            "wf/04_confirm_business_flow/propose_create_input_react/scripts/validate.py",
             "validate_create_input_for_tests",
         )
 

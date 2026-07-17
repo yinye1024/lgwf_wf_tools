@@ -1,4 +1,4 @@
-# propose_create_input_react
+# propose_create_input_react 规格
 
 ## 角色
 
@@ -16,7 +16,7 @@
 
 - `reason`：规划字段来源，并为上一轮 blocking issues 生成修复计划。
 - `act`：输出固定结构 proposal。
-- `observe`：调用 `create_input_quality_gate`，执行 Python 确定性检查、Codex 语义检查和 Python 合并。
+- `observe`：调用本目录的 `observe_quality_gate`，执行 Python 确定性检查、Codex 语义检查和 Python 合并。
 - `decide`：只根据 canonical Observe 的 `blocking` 决定继续或退出。
 
 ## 输出契约
@@ -44,7 +44,7 @@ proposal 顶层字段固定为：
 }
 ```
 
-具体条目结构以 `propose_act.md` 为准。
+具体条目结构以同目录 `act.md` 为准。
 
 ## 约束
 

@@ -205,7 +205,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(proposal_placeholder, {})
 
     def test_case_decide_inspection_continue_on_gap(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
+        module = load_script_module("wf/04_confirm_business_flow/inspect_prompt_workflow_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "prompt_workflow_inspection_observe.json",
@@ -217,7 +217,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "continue"})
 
     def test_case_decide_inspection_exit_on_pass(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
+        module = load_script_module("wf/04_confirm_business_flow/inspect_prompt_workflow_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "prompt_workflow_inspection_observe.json",
@@ -229,7 +229,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "exit"})
 
     def test_case_decide_create_input_continue_on_gap(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        module = load_script_module("wf/04_confirm_business_flow/propose_create_input_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
@@ -241,7 +241,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "continue"})
 
     def test_case_decide_create_input_continue_on_blocking_issue(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        module = load_script_module("wf/04_confirm_business_flow/propose_create_input_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
@@ -253,7 +253,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "continue"})
 
     def test_case_decide_create_input_exit_on_non_blocking_issue(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        module = load_script_module("wf/04_confirm_business_flow/propose_create_input_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
@@ -268,7 +268,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "exit"})
 
     def test_case_decide_create_input_allows_absolute_source_root(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        module = load_script_module("wf/04_confirm_business_flow/propose_create_input_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             proposal = make_full_proposal(target_package_root="skills/lgwf-wf-tools/workflows/generated")
             proposal["source_root"] = str((workdir / "source_prompt_workflow").resolve())
@@ -283,7 +283,7 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "exit"})
 
     def test_case_decide_create_input_exit_on_pass(self):
-        module = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        module = load_script_module("wf/04_confirm_business_flow/propose_create_input_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             write_utf8_json(
                 workdir / ".lgwf" / "wf_create_fast_input_observe.json",
@@ -295,8 +295,8 @@ class ScriptFlowE2ETests(unittest.TestCase):
             self.assertEqual(result, {"next": "exit"})
 
     def test_case_decide_fail_closed_when_observe_missing_or_invalid(self):
-        inspection_decide = load_script_module("wf/04_confirm_business_flow/scripts/decide_inspection.py")
-        proposal_decide = load_script_module("wf/04_confirm_business_flow/scripts/decide_create_input.py")
+        inspection_decide = load_script_module("wf/04_confirm_business_flow/inspect_prompt_workflow_react/scripts/decide.py")
+        proposal_decide = load_script_module("wf/04_confirm_business_flow/propose_create_input_react/scripts/decide.py")
         with isolated_workdir() as workdir:
             self.assertEqual(runtime_guard_and_capture_stdout_json(inspection_decide.main), {"next": "continue"})
             self.assertEqual(runtime_guard_and_capture_stdout_json(proposal_decide.main), {"next": "continue"})

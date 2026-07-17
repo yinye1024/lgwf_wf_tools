@@ -25,6 +25,34 @@
 
 运行状态只写入 `ws/.lgwf`。目标 package 根目录不得写入 `.lgwf`。
 
+## ReAct 目录
+
+业务流确认阶段的两个 ReAct 使用独立目录，私有 prompt、Decide 和 Observe 子流程不得交叉引用：
+
+```text
+wf/04_confirm_business_flow/
+  inspect_prompt_workflow_react/
+    agents/spec.md
+    agents/reason.md
+    agents/act.md
+    agents/observe.md
+    scripts/decide.py
+    scripts/validate.py
+    scripts/merge.py
+    ob.lgwf
+  propose_create_input_react/
+    agents/spec.md
+    agents/reason.md
+    agents/act.md
+    agents/observe.md
+    scripts/decide.py
+    scripts/validate.py
+    scripts/merge.py
+    ob.lgwf
+```
+
+`spec.md` 对应 ReAct 规格，`reason.md`、`act.md`、`observe.md` 分别对应自己的 slot；各目录的 `ob.lgwf` 只编排本 ReAct 的复合 Observe。跨 ReAct 只通过父 workflow 声明的 `.lgwf` canonical artifact 交接。
+
 ## `wf-create-fast` handoff
 
 `.lgwf/wf_create_fast_handoff.json` 是 `wf-convert` 交给 `wf-create-fast` 的完整 target file，包含 `raw_intent`、`workflow_name`、`target_package_root`、`source_business_contract`、`conversion_mapping` 和 `prompt_workflow_context`。
@@ -39,7 +67,7 @@
 2. Codex observer 只检查职责边界、业务语义、迁移意图和人工可理解性，不重复 Python 检查。
 3. Python merge 合并两个报告，生成唯一 canonical observe。
 
-两个 canonical observe 分别写入 `.lgwf/prompt_workflow_inspection_observe.json` 和 `.lgwf/wf_create_fast_input_observe.json`。`decide_inspection.py` 与 `decide_create_input.py` 只允许读取 canonical observe；文件缺失、schema 非法、阶段不匹配或结论冲突时一律 fail closed，继续下一轮 ReAct。
+两个 canonical observe 分别写入 `.lgwf/prompt_workflow_inspection_observe.json` 和 `.lgwf/wf_create_fast_input_observe.json`。`inspect_prompt_workflow_react/scripts/decide.py` 与 `propose_create_input_react/scripts/decide.py` 只允许读取 canonical observe；文件缺失、schema 非法、阶段不匹配或结论冲突时一律 fail closed，继续下一轮 ReAct。
 
 canonical observe 中每个 issue 都包含 `blocking`：
 

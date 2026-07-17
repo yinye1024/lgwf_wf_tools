@@ -1,4 +1,4 @@
-# create input semantic observe
+# Observe slot：创建输入 proposal 语义检查（propose_create_input_react）
 
 ## 角色
 

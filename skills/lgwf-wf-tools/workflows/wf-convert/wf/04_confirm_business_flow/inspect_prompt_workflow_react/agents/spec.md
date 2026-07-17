@@ -1,4 +1,4 @@
-# inspect_prompt_workflow_react
+# inspect_prompt_workflow_react 规格
 
 ## 角色
 
@@ -13,7 +13,7 @@
 
 - `reason`：根据上一轮 canonical Observe 规划证据提取和阻塞问题修复。
 - `act`：输出固定结构的 `.lgwf/prompt_workflow_inspection.json`。
-- `observe`：调用 `inspection_quality_gate`，先由 Python 做确定性检查，再由 Codex 做语义检查，最后由 Python 合并。
+- `observe`：调用本目录的 `observe_quality_gate`，先由 Python 做确定性检查，再由 Codex 做语义检查，最后由 Python 合并。
 - `decide`：只根据 canonical Observe 的 `blocking` 决定继续或退出。
 
 ## 输出契约
@@ -45,7 +45,7 @@ inspection 顶层字段固定为：
 }
 ```
 
-`detected_stages`、`prompt_contracts` 和业务规则条目必须使用 `inspect_act.md` 声明的固定字段，不接受把证据强度、消费方或降级规则藏在自由文本中。
+`detected_stages`、`prompt_contracts` 和业务规则条目必须使用同目录 `act.md` 声明的固定字段，不接受把证据强度、消费方或降级规则藏在自由文本中。
 
 ## 约束
 

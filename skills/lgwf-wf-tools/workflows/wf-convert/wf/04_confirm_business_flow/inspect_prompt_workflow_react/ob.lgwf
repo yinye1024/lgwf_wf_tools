@@ -1,4 +1,4 @@
-WORKFLOW inspection_quality_gate;
+WORKFLOW inspect_prompt_workflow_observe;
 ENTRY validate_inspection;
 
 DEFAULTS {
@@ -7,7 +7,7 @@ DEFAULTS {
 }
 
 PY validate_inspection
-  SCRIPT "scripts/validate_inspection.py"
+  SCRIPT "scripts/validate.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_convert.inspect_python_observe_result
   UPDATES_STATE
@@ -18,7 +18,7 @@ PY validate_inspection
   };
 
 CODEX semantic_observe
-  PROMPT "agents/semantic_observe.md"
+  PROMPT "agents/observe.md"
   CONTEXT workspace file ".lgwf/prompt_workflow_inspection.json"
   CONTEXT workspace file ".lgwf/prompt_workflow_inspection_observe_py.json"
   OUTPUT_JSON ".lgwf/prompt_workflow_inspection_observe_codex.json"
@@ -31,7 +31,7 @@ CODEX semantic_observe
   };
 
 PY merge_observe
-  SCRIPT "scripts/merge_observe.py"
+  SCRIPT "scripts/merge.py"
   TIMEOUT 60
   RESULT state.lgwf_wf_convert.inspect_observe_result
   UPDATES_STATE

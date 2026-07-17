@@ -1,4 +1,4 @@
-# propose act
+# Act slot：生成创建输入 proposal
 
 ## 角色
 

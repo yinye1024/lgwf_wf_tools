@@ -574,26 +574,26 @@ class WorkflowRuntimeHarness:
             ],
         }
         mapping = {
-            "wf/04_confirm_business_flow/agents/inspect_reason.md": [
+            "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/reason.md": [
                 {"call_index": 1, "payload": inspection_payload, "summary": "inspection reason"},
             ],
-            "wf/04_confirm_business_flow/agents/inspect_act.md": [
+            "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/act.md": [
                 {"call_index": 1, "payload": inspection_result, "summary": "inspection act"},
             ],
-            "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": [
+            "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/observe.md": [
                 {"call_index": 1, "payload": inspection_semantic_pass, "summary": "inspection semantic observe"},
             ],
         }
         if self.scenario["scenario_id"] == "happy_path":
             mapping.update(
                 {
-                    "wf/04_confirm_business_flow/agents/propose_reason.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/reason.md": [
                         {"call_index": 1, "payload": propose_reason_first, "summary": "proposal reason 1"},
                     ],
-                    "wf/04_confirm_business_flow/agents/propose_act.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md": [
                         {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
                     ],
-                    "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/observe.md": [
                         {
                             "call_index": 1,
                             "payload": proposal_semantic_pass,
@@ -605,15 +605,15 @@ class WorkflowRuntimeHarness:
         elif self.scenario["scenario_id"] == "observe_revise_then_pass":
             mapping.update(
                 {
-                    "wf/04_confirm_business_flow/agents/propose_reason.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/reason.md": [
                         {"call_index": 1, "payload": propose_reason_first, "summary": "proposal reason 1"},
                         {"call_index": 2, "payload": propose_reason_observe_fix, "summary": "proposal reason 2"},
                     ],
-                    "wf/04_confirm_business_flow/agents/propose_act.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md": [
                         {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
                         {"call_index": 2, "payload": proposal_with_evidence, "summary": "proposal act 2"},
                     ],
-                    "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/observe.md": [
                         {
                             "call_index": 1,
                             "payload": proposal_semantic_revise,
@@ -630,15 +630,15 @@ class WorkflowRuntimeHarness:
         else:
             mapping.update(
                 {
-                    "wf/04_confirm_business_flow/agents/propose_reason.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/reason.md": [
                         {"call_index": 1, "payload": propose_reason_first, "summary": "proposal reason 1"},
                         {"call_index": 2, "payload": propose_reason_second, "summary": "proposal reason 2"},
                     ],
-                    "wf/04_confirm_business_flow/agents/propose_act.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md": [
                         {"call_index": 1, "payload": proposal_first, "summary": "proposal act 1"},
                         {"call_index": 2, "payload": proposal_second, "summary": "proposal act 2"},
                     ],
-                    "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": [
+                    "wf/04_confirm_business_flow/propose_create_input_react/agents/observe.md": [
                         {
                             "call_index": 1,
                             "payload": proposal_semantic_pass,
@@ -1183,12 +1183,12 @@ class RuntimeFakeE2ETests(unittest.TestCase):
         self.assert_prompt_call_counts(
             call_log,
             {
-                "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
-                "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
-                "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": 1,
-                "wf/04_confirm_business_flow/agents/propose_reason.md": 1,
-                "wf/04_confirm_business_flow/agents/propose_act.md": 1,
-                "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/reason.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/act.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/observe.md": 1,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/reason.md": 1,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md": 1,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/observe.md": 1,
             },
         )
 
@@ -1270,18 +1270,18 @@ class RuntimeFakeE2ETests(unittest.TestCase):
         self.assert_prompt_call_counts(
             call_log,
             {
-                "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
-                "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
-                "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": 1,
-                "wf/04_confirm_business_flow/agents/propose_reason.md": 2,
-                "wf/04_confirm_business_flow/agents/propose_act.md": 2,
-                "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": 2,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/reason.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/act.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/observe.md": 1,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/reason.md": 2,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md": 2,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/observe.md": 2,
             },
         )
         propose_call_indexes = [
             item["call_index"]
             for item in call_log
-            if item["prompt_key"] == "wf/04_confirm_business_flow/agents/propose_act.md"
+            if item["prompt_key"] == "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md"
         ]
         self.assertEqual(propose_call_indexes, [1, 2])
 
@@ -1320,12 +1320,12 @@ class RuntimeFakeE2ETests(unittest.TestCase):
         self.assert_prompt_call_counts(
             call_log,
             {
-                "wf/04_confirm_business_flow/agents/inspect_reason.md": 1,
-                "wf/04_confirm_business_flow/agents/inspect_act.md": 1,
-                "wf/04_confirm_business_flow/inspection_quality_gate/agents/semantic_observe.md": 1,
-                "wf/04_confirm_business_flow/agents/propose_reason.md": 2,
-                "wf/04_confirm_business_flow/agents/propose_act.md": 2,
-                "wf/04_confirm_business_flow/create_input_quality_gate/agents/semantic_observe.md": 2,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/reason.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/act.md": 1,
+                "wf/04_confirm_business_flow/inspect_prompt_workflow_react/agents/observe.md": 1,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/reason.md": 2,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/act.md": 2,
+                "wf/04_confirm_business_flow/propose_create_input_react/agents/observe.md": 2,
             },
         )
         proposal = read_utf8_json(work_dir / ".lgwf" / "wf_create_fast_input_proposal.json")

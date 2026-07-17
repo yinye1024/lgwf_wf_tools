@@ -1,4 +1,4 @@
-# propose reason
+# Reason slot：规划创建输入 proposal
 
 ## 角色
 
