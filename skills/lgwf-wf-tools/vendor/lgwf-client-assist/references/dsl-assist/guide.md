@@ -44,4 +44,4 @@
 .venv\Scripts\python.exe -m compileall -q src test
 ```
 
-端到端 smoke 优先参考 `examples/workflows/shell_smoke`，通过 `scripts/lgwf.py run --workflow-json <workflow.json> --work-dir <dir>` 本地执行；不要为了 smoke test 新增 runtime 侧目录 loader。
+端到端 smoke 优先参考 `examples/workflows/tool_smoke`，通过 `scripts/lgwf.py run --workflow-lgwf <workflow.lgwf> --work-dir <dir>` 本地执行；不要为了 smoke test 新增 runtime 侧目录 loader。

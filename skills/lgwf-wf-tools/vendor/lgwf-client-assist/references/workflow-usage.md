@@ -179,7 +179,7 @@ Doctor 会报告当前 Python、bundled wheel、已安装 `lgwf` 版本、`lgwf_
 解包 skill 后运行随包 smoke workflow：
 
 ```powershell
-python <skill-dir>\scripts\lgwf.py run --workflow-json <skill-dir>\assets\examples\shell_smoke\workflow.json --work-dir <work_dir> --input-json "{}"
+python <skill-dir>\scripts\lgwf.py run --workflow-lgwf <skill-dir>\assets\examples\tool_smoke\workflow.lgwf --work-dir <work_dir> --input-json "{}"
 ```
 
 ## 保存 Final State

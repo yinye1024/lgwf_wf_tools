@@ -11,16 +11,24 @@ TOOL copy_assets
     "overwrite": true
   }
   TIMEOUT 300
-  RESULT state.copy_result;
+  RESULT state.copy_result
+  CONTRACT {
+    READ workspace dir "assets";
+    WRITE workspace dir "output/assets";
+    WRITE state.copy_result;
+  };
 ```
 
 - `USE` 必填，并且只能引用 `scripts/lgwf.py tool list` 中的公开 tool。
 - `OPTIONS` 可选，必须是标准 JSON object，key 使用双引号；默认 `{}`。
 - `TIMEOUT` 可选，沿用 workflow defaults。
 - `RESULT` 可选，默认写入 `results.{node}`。
+- `CONTRACT` 必填；声明准确的 workspace/state 读写边界，没有跨节点业务 I/O 时使用 `CONTRACT {}`。
 - 不支持 `INSTRUCTION` 或 `OPTIONS_FROM`。
 - `TOOL` 可用于顶层、`REACT` slot、`AGENT_LOOP` slot 和 `PARALLEL STEP`。
 - workflow 中的所有 tool 路径都限制在 `work_dir`，禁止绝对路径、`..` 和链接逃逸。
+
+`CONTRACT READ` 的外部输入应在 `artifact_contracts.json` 的 `external_inputs` 中声明；没有下游消费者的最终文件或 state 输出分别放入 `final_outputs` 和 `final_state_outputs`。
 
 初始公开 tool：
 

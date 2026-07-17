@@ -1,0 +1,53 @@
+WORKFLOW tool_smoke;
+ENTRY FLOW main;
+
+DEFAULTS {
+  ref_root workflow ".";
+  timeout_seconds 600;
+  result_path "results.{node}";
+}
+
+TOOL ensure_workspace
+  USE ensure_dir
+  OPTIONS {"path": ["input", "output"]}
+  CONTRACT {
+    WRITE workspace dir "input";
+    WRITE workspace dir "output";
+  };
+
+TOOL write_request
+  USE write_text_file
+  OPTIONS {
+    "path": "input/request.md",
+    "content": "请生成一句同时包含 LGWF、TOOL 和 CODEX 的中文成功说明。\n"
+  }
+  CONTRACT {
+    WRITE workspace file "input/request.md";
+  };
+
+CODEX generate_message
+  PROMPT "agents/generate_message/prompt.md"
+  CONTEXT file "input/request.md"
+  OUTPUT_FILE "output/message.md"
+  RESULT state.generate_message
+  CONTRACT {
+    READ workspace file "input/request.md";
+    WRITE workspace file "output/message.md";
+    WRITE state.generate_message;
+  };
+
+PY verify_message
+  SCRIPT "scripts/verify_message.py"
+  INPUT state.generate_message
+  RESULT state.verify_message
+  CONTRACT {
+    READ state.generate_message;
+    READ workspace file "output/message.md";
+    WRITE state.verify_message;
+  };
+
+FLOW main
+  START ensure_workspace
+  THEN write_request
+  THEN generate_message
+  THEN verify_message;
