@@ -25,6 +25,18 @@
       "description": "只读列出 registry 中可派发的 workflow。"
     },
     {
+      "command": "/lgwf-wf-tools guide",
+      "description": "通过普通对话快速了解 LGWF 和 lgwf-wf-tools。"
+    },
+    {
+      "command": "/lgwf-wf-tools learn",
+      "description": "进入 LGWF 普通对话入门引导。"
+    },
+    {
+      "command": "/lgwf-wf-tools 入门",
+      "description": "进入 LGWF 中文入门引导。"
+    },
+    {
       "command": "/lgwf-wf-tools run <path>",
       "description": "按目标路径直启 LGWF workflow。"
     },

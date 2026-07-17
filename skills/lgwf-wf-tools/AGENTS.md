@@ -65,6 +65,7 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 | 目标是生成或刷新 workflow 的端到端测试 | 选择 `e2e-test-generator`。 |
 | 目标是对给定 workflow 做全面校验、升级、优化、生成并运行 E2E 门禁 | 选择 `wf-post-fix`。 |
 | 目标是复杂任务规划、先产出计划/验收契约、用户确认后再执行 | 选择 `plan`。 |
+| 用户希望快速了解 LGWF、学习如何提问、了解 `lgwf-wf-tools` 能做什么，且尚未进入具体创建、运行或修复任务 | 选择 `lgwf-guide`。 |
 | 目标是把带 `wf/workflow.lgwf` 的 Codex skill 打包成内置 `lgwf-client-assist` runtime 的自包含 skill | 选择 `skill-packaging`。 |
 | 用户显式要求目标 workflow 直启、路径解析或已有 run 处理方式 | 选择 `target-run`。 |
 | 用户要求把 self-improve 能力加到目标 workflow、构造自包含自我提升结构、让目标 workflow 具备类似 self-improve 的自我进化能力 | 选择 `self-improve-seed`。 |

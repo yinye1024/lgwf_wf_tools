@@ -59,6 +59,12 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertNotIn("workflow_lgwf", workflows["target-run"])
         self.assertNotIn("work_dir", workflows["target-run"])
 
+        self.assertEqual("tool-workflow", workflows["lgwf-guide"]["kind"])
+        self.assertEqual("workflows/lgwf-guide/AGENTS.md", workflows["lgwf-guide"]["agents_md"])
+        self.assertEqual("docs/lgwf-guide.md", workflows["lgwf-guide"]["entry"])
+        self.assertNotIn("workflow_lgwf", workflows["lgwf-guide"])
+        self.assertNotIn("work_dir", workflows["lgwf-guide"])
+
         self.assertEqual("tool-workflow", workflows["self-improve-seed"]["kind"])
         self.assertEqual("workflows/self-improve-seed/AGENTS.md", workflows["self-improve-seed"]["agents_md"])
         self.assertEqual("workflows/self-improve-seed/scripts/seed_self_improve.py", workflows["self-improve-seed"]["entry"])
@@ -72,7 +78,7 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertNotIn("entry", workflows["skill-packaging"])
 
         for workflow_id, workflow in workflows.items():
-            if workflow_id in {"self-improve", "target-run", "self-improve-seed"}:
+            if workflow_id in {"self-improve", "target-run", "lgwf-guide", "self-improve-seed"}:
                 continue
             self.assertEqual("lgwf", workflow["kind"], workflow_id)
 

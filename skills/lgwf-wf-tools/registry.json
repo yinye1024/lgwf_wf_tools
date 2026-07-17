@@ -82,6 +82,14 @@
       "entry_contract": "workflows/plan/entry_contract.json"
     },
     {
+      "id": "lgwf-guide",
+      "kind": "tool-workflow",
+      "description": "通过普通对话引导用户提问，快速了解 LGWF 和 lgwf-wf-tools；不启动 LGWF runtime。",
+      "agents_md": "workflows/lgwf-guide/AGENTS.md",
+      "entry": "docs/lgwf-guide.md",
+      "entry_contract": "workflows/lgwf-guide/entry_contract.json"
+    },
+    {
       "id": "self-improve",
       "kind": "tool-workflow",
       "description": "对 lgwf-wf-tools 进行自我评估、问题沉淀、proposal 生成和发布前检查。",

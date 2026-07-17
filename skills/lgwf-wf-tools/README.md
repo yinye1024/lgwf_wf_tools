@@ -1,6 +1,6 @@
 # lgwf-wf-tools
 
-`lgwf-wf-tools` 是 facade 型 Codex skill，负责 LGWF workflow 的统一入口、路由、运行、审批展示、诊断、创建、修复、转换、测试生成和自我优化。
+`lgwf-wf-tools` 是 facade 型 Codex skill，负责 LGWF workflow 的统一入口、入门引导、路由、运行、审批展示、诊断、创建、修复、转换、测试生成和自我优化。
 
 ## 模块类型
 
@@ -15,11 +15,12 @@
 /lgwf-wf-tools init
 /lgwf-wf-tools doctor
 /lgwf-wf-tools list
+/lgwf-wf-tools guide
 /lgwf-wf-tools run <path>
 /lgwf-wf-tools self-improve
 ```
 
-自然语言的 workflow 创建、修复、转换、测试生成和优化请求会先进入 `AGENTS.md`，再由 `registry.json` 路由到内部 workflow。
+`/lgwf-wf-tools guide`、`learn` 和 `入门` 通过普通对话引导用户了解 LGWF 和本工具，不启动 LGWF runtime。自然语言的入门、workflow 创建、修复、转换、测试生成和优化请求会先进入 `AGENTS.md`，再由 `registry.json` 路由到内部 workflow。
 
 ## 依赖
 

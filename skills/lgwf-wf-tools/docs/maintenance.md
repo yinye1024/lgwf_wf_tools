@@ -4,14 +4,15 @@
 
 ## 显式命令
 
-- `/lgwf-wf-tools`：执行入口预检；如果 doctor 通过，继续理解用户目标；如果 doctor 失败且存在 `assets/lgwf-client-assist.zip`，自动运行 init 后再次 doctor；如果仍失败，停止并报告。
+- `/lgwf-wf-tools`：执行入口预检；如果 doctor 通过且用户没有给出具体任务，读取 [lgwf-guide.md](lgwf-guide.md) 并路由到 `lgwf-guide`；如果用户已经给出具体任务，回到根 `AGENTS.md` 按意图路由。如果 doctor 失败且存在 `assets/lgwf-client-assist.zip`，自动运行 init 后再次 doctor；如果仍失败，停止并报告。
 - `/lgwf-wf-tools help` 或 `/lgwf-wf-tools 帮助`：只展示帮助，不修改文件，不派发内部 workflow，不启动 LGWF run，不运行会写 `.local/` 的 self-improve 命令；帮助内容必须包含“可用指令”。
 - `/lgwf-wf-tools init`：运行 `python scripts/init_lgwf_wf_tools.py`，同步临时 zip 到 vendor，安装 vendor 内 bundled LGWF wheel，同时检查 Codex 是否已通过 link 方式安装 `lgwf-wf-tools` 并指向当前 skill 根目录；未安装、普通目录安装或 link 指向错误时会自动调整，输出初始化报告；不派发内部 workflow。
 - `/lgwf-wf-tools doctor`：只运行 `python scripts/doctor_lgwf_wf_tools.py`，输出只读健康检查报告；不修改发布包文件，不派发内部 workflow。需要完整审计时运行 `python scripts/doctor_lgwf_wf_tools.py --deep`。
 - `doctor --deep` 会把完整诊断结果写入 `.local/doctor/runs/<timestamp>/`，并刷新 `.local/doctor/latest.json` 和 `.local/doctor/latest.md`。其中 `doctor.md` 汇总失败项和每个 workflow audit diagnostic，`workflow-audits/<workflow-id>.json` 保存完整 audit JSON，供后续修复流程直接读取。
 - `/lgwf-wf-tools list`：只运行 `python scripts/list_workflows.py`，只读列出 `registry.json` 中可派发的内部 workflow；不派发内部 workflow。
+- `/lgwf-wf-tools guide`、`/lgwf-wf-tools learn` 或 `/lgwf-wf-tools 入门`：路由到 `lgwf-guide`，通过普通对话引导用户提问；不启动 LGWF runtime，不创建运行状态，不修改文件。
 
-目标 workflow 直启命令见 [target-run.md](target-run.md)。给目标 workflow 播种自包含 self-improve 结构见 [self-improve-seed.md](self-improve-seed.md)。self-improve 场景见 [self-improve.md](self-improve.md)。
+LGWF 入门引导见 [lgwf-guide.md](lgwf-guide.md)。目标 workflow 直启命令见 [target-run.md](target-run.md)。给目标 workflow 播种自包含 self-improve 结构见 [self-improve-seed.md](self-improve-seed.md)。self-improve 场景见 [self-improve.md](self-improve.md)。
 把带 `wf/workflow.lgwf` 的 Codex skill 打包成自包含 skill 时，路由到 `skill-packaging`，并读取 `workflows/skill-packaging/AGENTS.md`。
 
 ## 脚本级代理入口

@@ -1,0 +1,40 @@
+{
+  "id": "lgwf-guide",
+  "kind": "tool-workflow",
+  "version": 1,
+  "entry": "docs/lgwf-guide.md",
+  "input_mode": "tool_args",
+  "input_schema": {
+    "type": "object",
+    "required": [],
+    "properties": {
+      "topic": {"type": "string"},
+      "question": {"type": "string"},
+      "depth": {"type": "string", "enum": ["quick", "example", "detailed"]}
+    },
+    "example": {
+      "topic": "overview",
+      "question": "LGWF 解决什么问题？",
+      "depth": "quick"
+    }
+  },
+  "input_file_policy": "Not applicable. The guide uses the current conversation and does not launch LGWF with JSON input.",
+  "auto_human_policy": "not_applicable",
+  "target_scope": {
+    "fields": ["topic", "question", "depth"],
+    "read_scope": "Read only the current conversation and repository references required to answer the selected topic.",
+    "write_scope": "none"
+  },
+  "state_boundary": {
+    "runtime_state": "none",
+    "target_writes": "none"
+  },
+  "outputs": {
+    "summary": "in-conversation guidance",
+    "questions": "ordered questions for the selected learning topic",
+    "next_action": "one optional existing facade route",
+    "handoff": "",
+    "reports": []
+  },
+  "resume_policy": "Stateless. Continue from the current conversation or invoke the guide again."
+}
