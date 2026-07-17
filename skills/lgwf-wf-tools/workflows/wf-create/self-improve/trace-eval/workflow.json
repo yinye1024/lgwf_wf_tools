@@ -1,7 +1,0 @@
-{
-  "nodes": [],
-  "edges": [],
-  "routes": [],
-  "entry_point": null,
-  "note": "Template marker only. run_trace_eval.py compiles the target workflow.lgwf at runtime."
-}

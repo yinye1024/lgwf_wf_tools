@@ -16,19 +16,17 @@ python scripts/list_workflows.py
 
 | Workflow id | 使用时机 |
 | --- | --- |
-| `wf-fix` | 目标是运行失败、卡住、产物不对、需要自动诊断修复。 |
+| `wf-fix` | 目标是运行失败、卡住、产物不对、DSL / audit 失败或需要自动诊断修复。 |
 | `wf-create-fast` | 目标是从原始意图创建新的 LGWF workflow，包含简单、轻量或普通创建请求；确认需求和业务流后落盘 scaffold，再交由主 agent 先生成执行计划、再按计划完善。 |
 | `wf-convert` | 目标是把现有 prompt workflow 转换为创建 workflow 入口可消费的输入包和转换报告。 |
 | `wf-prompt-fix` | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足。 |
 | `wf-prompt-upgrade` | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量。 |
-| `wf-audit-fix` | 目标是修复 LGWF authoring audit 静态诊断，包括缺失 `CONTRACT`、读写消费链、DSL 语法或编译问题。 |
 | `e2e-test-generator` | 目标是生成或刷新 workflow 的端到端测试。 |
-| `plan` | 目标是复杂任务规划、先产出计划/验收契约、用户确认后再按 ReAct 闭环执行。 |
 
 ## 证据修正
 
 - 用户说“修复 workflow”，但证据只指向 prompt 基础规范且不需要真实运行目标 workflow：使用 `wf-prompt-fix`。
-- 用户说“修复 workflow audit”或只要求修复 DSL / audit 静态问题，且明确不需要运行目标 workflow：使用内部 `wf-audit-fix`。
+- 用户说“修复 workflow audit”或要求修复 DSL / audit 问题：使用 `wf-fix`；如果只需要只读诊断，直接运行 LGWF audit 并报告结果。
 - 用户说“优化 prompt”，但目标 workflow 已经有明确运行失败证据：使用 `wf-fix`。
 - 用户说“生成测试”，但目标 `workflow.lgwf` 不能解析或基础契约明显缺失：报告前置阻塞，并建议转入 `wf-fix` 或 `wf-prompt-fix`。
 - 目标目录还没有可解析的 `workflow.lgwf`，且用户目标是创建新的 LGWF workflow：使用 `wf-create-fast`。
@@ -57,6 +55,8 @@ python scripts\run_skill_workflow.py --workflow-id <id> --input-json-file <utf8-
 
 命中 `wf-create-fast` 后，主 agent 必须启动或继续 `wf-create-fast` run，并按 `workflows/wf-create-fast/AGENTS.md` 处理 approval、resume、monitor 和 handoff。
 
-`wf-create-fast` 是 registry 中唯一对外可见、可启动的创建 workflow 入口。`wf-create` 不在 registry 中；不要选择、启动、继续或建议用户运行 `wf-create`，也不要通过底层 `lgwf.py run` 绕过 registry 直接启动旧 `workflows/wf-create`。
+`wf-create-fast` 是 registry 中唯一对外可见、可启动的创建 workflow 入口。旧 `wf-create` 已删除且不在 registry 中；不要选择、启动、继续或建议用户运行该旧 id。
 
-`wf-create-fast` 必须运行到 `materialize_scaffold` 和 `main_agent_handoff`。它不生成 `.lgwf/step_designs.json`，不进入 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后由主 agent 读取 payload 和 source artifacts，先按 `execution_contract` 生成执行计划，再只修改 payload 中的 `edit_dirs`，按计划完善并验证目标 package。
+`wf-create-fast` 必须运行到 `materialize_scaffold` 和 `main_agent_handoff`。它不生成 `.lgwf/step_designs.json`，也不自动启动其他下游 workflow。HANDOFF 后由主 agent 读取 payload 和 source artifacts，先按 `execution_contract` 生成执行计划，再只修改 payload 中的 `edit_dirs`，按计划完善并验证目标 package。
+
+复杂任务的计划与验收拆分由主 agent 使用自身计划能力完成，不再派发独立 `plan` workflow。综合质量治理按证据依次选择 `wf-prompt-fix`、`wf-prompt-upgrade`、`e2e-test-generator` 或 `wf-fix`，不再依赖聚合式后处理 workflow。

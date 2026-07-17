@@ -126,7 +126,7 @@ class RunSkillWorkflowTests(unittest.TestCase):
     def test_workflow_id_rejects_auto_human_when_contract_forbids_it(self) -> None:
         stderr = io.StringIO()
         with mock.patch.object(run_skill_workflow.subprocess, "run") as run_mock, mock.patch.object(sys, "stderr", stderr):
-            exit_code = run_skill_workflow.main(["--workflow-id", "plan", "--input-json", '{"react_task_request":{"objective":"x"}}', "--auto-human"])
+            exit_code = run_skill_workflow.main(["--workflow-id", "wf-fix", "--auto-human"])
 
         self.assertEqual(exit_code, 2)
         self.assertIn("forbids --auto-human", stderr.getvalue())

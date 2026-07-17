@@ -80,4 +80,4 @@
 - 不得把阶段私有 prompt 或资源放到全局目录来绕过子 workflow 自包含边界。
 - 不得把 `.lgwf`、`.tmp`、`__pycache__` 写入源码树。
 - 不得生成或消费 `.lgwf/step_designs.json`。
-- 不得自动启动 `wf-post-fix` 或其他下游 workflow。
+- 不得自动启动其他下游 workflow。

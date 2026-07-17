@@ -46,10 +46,10 @@
 
 ```json
 {
-  "workflow_lgwf": "D:/repo/skills/lgwf-wf-tools/workflows/plan/wf/workflow.lgwf",
-  "workflow_root": "D:/repo/skills/lgwf-wf-tools/workflows/plan",
+  "workflow_lgwf": "D:/repo/skills/lgwf-wf-tools/workflows/wf-fix/wf/workflow.lgwf",
+  "workflow_root": "D:/repo/skills/lgwf-wf-tools/workflows/wf-fix",
   "test_output_dir": "tests",
-  "test_name_prefix": "lgwf_plan",
+  "test_name_prefix": "lgwf_wf_fix",
   "test_types": ["runtime_fake", "wf_fix_positive"]
 }
 ```

@@ -65,7 +65,7 @@
 2. 如何判断问题属于环境、DSL、prompt、runtime 还是业务逻辑？
 3. workflow 卡在 `waiting_human` 或人工确认时应该检查什么？
 4. 修复后应该 `resume` 还是 `rerun`？
-5. `wf-fix`、`wf-audit-fix` 和 `wf-post-fix` 的职责有什么区别？
+5. `wf-fix`、`wf-prompt-fix` 和 `wf-prompt-upgrade` 的职责有什么区别？
 
 ### 使用 lgwf-wf-tools
 
@@ -98,6 +98,7 @@
 - 运行指定 workflow：`target-run`。
 - 创建新 workflow：`wf-create-fast`。
 - 诊断并修复运行问题：`wf-fix`。
-- 修复静态 DSL audit 问题：`wf-audit-fix`。
-- 全面校验和升级现有 workflow：`wf-post-fix`。
+- 修复运行、DSL 或 audit 问题：`wf-fix`。
+- 修复或升级 prompt：分别使用 `wf-prompt-fix`、`wf-prompt-upgrade`。
+- 生成端到端测试：`e2e-test-generator`。
 - 查看、复盘和改进 facade：`self-improve`。

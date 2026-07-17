@@ -16,13 +16,13 @@ KEYWORDS = {
 }
 
 WORKFLOW_HINTS = {
-    "create": ["wf-create"],
+    "create": ["wf-create-fast"],
     "fix": ["wf-fix"],
-    "convert": ["wf-create", "wf-prompt-upgrade"],
-    "optimize": ["wf-prompt-upgrade", "wf-prompt-fix", "plan"],
-    "test": ["e2e-test-generator", "plan"],
+    "convert": ["wf-convert"],
+    "optimize": ["wf-prompt-upgrade", "wf-prompt-fix"],
+    "test": ["e2e-test-generator"],
     "prompt": ["wf-prompt-fix", "wf-prompt-upgrade"],
-    "governance": ["plan", "e2e-test-generator"],
+    "governance": ["self-improve", "e2e-test-generator"],
 }
 
 

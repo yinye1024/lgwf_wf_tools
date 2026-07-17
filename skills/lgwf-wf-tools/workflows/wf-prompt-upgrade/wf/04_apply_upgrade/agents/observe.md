@@ -27,7 +27,7 @@
 # VCS Evidence Rules
 
 - 对已被 Git 跟踪的目标文件，优先使用 `git diff --name-only`、`git status --short` 或等价证据检查是否存在计划外修改。
-- 在 `wf-post-fix` 等父级编排中，目标 package 可能在进入本 `prompt_upgrade` 阶段前已经存在合法 dirty 文件，例如上一阶段 `prompt_fix` 的产物或用户已有改动。此时不得把 Git 当前 dirty 列表中所有非 `apply_plan.files_to_modify` 文件都直接判为本阶段越界。
+- 在父级编排或连续维护任务中，目标 package 可能在进入本 `prompt_upgrade` 阶段前已经存在合法 dirty 文件，例如上一阶段 `prompt_fix` 的产物或用户已有改动。此时不得把 Git 当前 dirty 列表中所有非 `apply_plan.files_to_modify` 文件都直接判为本阶段越界。
 - 只有存在明确证据表明本轮 `ACT` 修改、重写或要求修改了未列入 `apply_plan.files_to_modify` 的目标文件时，才把该文件写入 `unexpected_changes[]` 并作为阻塞 issue。明确证据可以来自 ACT 响应摘要、当前 apply 计划、当前 Codex track 的 file_change 记录，或本轮执行期间新增的可追溯写入记录。
 - 如果只能证明目标 package 当前有计划外 dirty 文件，但不能证明这些文件是本轮 `ACT` 产生的，应把它们记录到 `vcs_warnings[]`，说明“目标 package 存在进入本阶段前可能已有的 dirty 文件，本轮仅按批准项内容验收”，不得因此将 `passed` 置为 `false`。
 - 对新建 workflow package 或新建 skill，如果 Git 显示目标 package 未跟踪：

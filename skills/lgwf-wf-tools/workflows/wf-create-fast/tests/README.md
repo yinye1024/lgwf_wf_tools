@@ -6,4 +6,4 @@
 - scaffold materialize 的路径和覆盖规则。
 - main-agent handoff payload。
 
-不复制 `wf-create` 的步骤设计、implementation units、post-fix handoff 测试。
+不包含已删除旧创建链路的步骤设计、implementation units 或聚合后处理测试。

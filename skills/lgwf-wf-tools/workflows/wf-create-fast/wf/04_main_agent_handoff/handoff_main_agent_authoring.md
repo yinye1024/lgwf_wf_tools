@@ -15,8 +15,8 @@
 - 只修改 `target_package.edit_dirs` 中的目标 package。
 - 基于已确认需求、业务流和目标 package 按计划完善目标 workflow package。
 - 不生成 `.lgwf/step_designs.json`。
-- 不调用 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`。
-- 不自动启动 `wf-post-fix` 或其他下游 workflow。
+- 不回退到已删除的旧创建链路。
+- 不自动启动其他下游 workflow。
 - 完成后运行 `target_package.validation_commands`。
 
-不得跳过计划直接编辑目标 package。如果需求不足，请把保守假设写入执行计划并在最终说明里列出，不要回退到标准 `wf-create` 链路。
+不得跳过计划直接编辑目标 package。如果需求不足，请把保守假设写入执行计划并在最终说明里列出，不要回退到已删除的旧创建链路。

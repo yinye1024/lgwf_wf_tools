@@ -1,7 +1,0 @@
-{
-  "version": 1,
-  "case_id": "runtime_trace_contract",
-  "description": "验证目标 workflow 能生成 trace.json 和 eval-suite.json，并完成最小 runtime smoke contract。",
-  "tags": ["self-improve", "trace", "runtime-contract"],
-  "kind": "runtime_contract"
-}

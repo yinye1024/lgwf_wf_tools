@@ -29,7 +29,7 @@
 - runtime `HANDOFF` 只用于通知主 agent 接手，不启动下游 workflow。
 - 主 agent 必须使用 `handoff submit` ack，不能手工改 `.lgwf/handoff/*.pending.json`。
 - 主 agent 在首次编辑目标 package 前必须生成执行计划；实施中按计划更新状态，发生偏离时先更新计划。
-- 不自动启动 `wf-post-fix`。
+- 不自动启动其他下游 workflow。
 - 不自动运行目标 workflow。
 - 不生成 `step_designs.json`。
 

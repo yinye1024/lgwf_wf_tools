@@ -155,7 +155,7 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
             isolated_script = (
                 facade
                 / "workflows"
-                / "wf-post-fix"
+                / "parent-orchestrator"
                 / "ws"
                 / ".lgwf"
                 / "isolations"
@@ -418,4 +418,3 @@ class PromptUpgradeScriptsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -52,7 +52,7 @@
           "description": "说明不负责的范围。",
           "any_contains": [
             "不生成 `step_designs.json`",
-            "不自动启动 `wf-post-fix`"
+            "不自动启动其他下游 workflow"
           ]
         },
         {
@@ -165,47 +165,6 @@
       "known_blockers": []
     },
     {
-      "id": "wf-audit-fix",
-      "expected_role": "对已授权的 LGWF workflow 执行 authoring audit 静态修复，按 diagnostics 最小改动并复检汇总。",
-      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-audit-fix/wf/workflow.lgwf",
-      "test_command": "python -m unittest discover workflows/wf-audit-fix/tests",
-      "semantic_requirements": [
-        {
-          "id": "non_goal_boundary",
-          "description": "说明只做 audit 静态修复，不运行业务 workflow。",
-          "any_contains": [
-            "不运行业务 workflow",
-            "不得读取或修改未进入 manifest 的文件"
-          ]
-        },
-        {
-          "id": "approval_boundary",
-          "description": "说明目标范围必须人工确认。",
-          "any_contains": [
-            "02_confirm_scope",
-            "人工确认"
-          ]
-        },
-        {
-          "id": "output_contract",
-          "description": "说明固定输出或总结报告。",
-          "any_contains": [
-            ".lgwf/result_summary.json",
-            "reports/wf-audit-fix/report.md"
-          ]
-        },
-        {
-          "id": "facade_route_back",
-          "description": "说明由 facade registry 派发。",
-          "any_contains": [
-            "facade",
-            "registry"
-          ]
-        }
-      ],
-      "known_blockers": []
-    },
-    {
       "id": "e2e-test-generator",
       "expected_role": "为已有目标 workflow 生成脚本级、runtime fake 和真实 Codex 正向三类 E2E 测试，不修目标 workflow。",
       "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/e2e-test-generator/workflow.lgwf",
@@ -246,40 +205,41 @@
       "known_blockers": []
     },
     {
-      "id": "plan",
-      "expected_role": "把复杂任务拆成可确认的计划契约、验收契约，并在用户确认后按 ReAct 闭环执行。",
-      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/plan/wf/workflow.lgwf",
-      "test_command": "python -m unittest discover workflows/plan/tests",
+      "id": "lgwf-guide",
+      "expected_role": "通过普通对话帮助用户快速理解 LGWF 和 lgwf-wf-tools，不启动 LGWF runtime。",
+      "audit_command": "python scripts/validate_registry.py",
+      "test_command": "python -m unittest discover tests -p \"test_lgwf_guide.py\"",
       "semantic_requirements": [
         {
-          "id": "non_goal_boundary",
-          "description": "说明不适用或不负责的范围。",
+          "id": "tool_workflow_boundary",
+          "description": "说明不是 LGWF runtime workflow。",
           "any_contains": [
-            "不适用场景",
-            "不负责"
+            "tool_workflow",
+            "不是 LGWF runtime workflow"
           ]
         },
         {
-          "id": "approval_boundary",
-          "description": "说明用户确认和 approval 边界。",
+          "id": "trigger_boundary",
+          "description": "说明显式命令、默认入口和自然语言触发边界。",
           "any_contains": [
-            "Approval",
-            "approve"
+            "自然语言触发",
+            "/lgwf-wf-tools guide"
           ]
         },
         {
           "id": "output_contract",
-          "description": "说明固定产物。",
+          "description": "说明只输出对话引导且不生成文件产物。",
           "any_contains": [
-            "固定产物"
+            "不生成文件产物",
+            "不创建 `.lgwf/`"
           ]
         },
         {
           "id": "facade_route_back",
-          "description": "说明由 facade 派发或回到 facade 路由。",
+          "description": "说明具体任务回到 facade 根路由。",
           "any_contains": [
-            "facade",
-            "路由"
+            "回到 facade 根 `AGENTS.md`",
+            "回到根 `AGENTS.md` 路由"
           ]
         }
       ],
@@ -397,47 +357,6 @@
           "any_contains": [
             "固定产物",
             ".lgwf/wf_create_input.json"
-          ]
-        },
-        {
-          "id": "facade_route_back",
-          "description": "说明由 facade/registry 派发。",
-          "any_contains": [
-            "facade",
-            "registry"
-          ]
-        }
-      ],
-      "known_blockers": []
-    },
-    {
-      "id": "wf-post-fix",
-      "expected_role": "对已有 LGWF workflow 做综合后处理，按阶段编排 prompt 修复、prompt 升级、E2E 生成和可选测试执行。",
-      "audit_command": "python vendor/lgwf-client-assist/scripts/lgwf.py audit workflows/wf-post-fix/wf/workflow.lgwf",
-      "test_command": "python -m unittest discover workflows/wf-post-fix/tests",
-      "semantic_requirements": [
-        {
-          "id": "non_goal_boundary",
-          "description": "说明只编排已有 workflow，不替代下游职责。",
-          "any_contains": [
-            "只编排已有 workflow",
-            "不替代"
-          ]
-        },
-        {
-          "id": "approval_boundary",
-          "description": "说明阶段和子 workflow approval 不能被绕过。",
-          "any_contains": [
-            "子 workflow 自己的 approval 永远不能被 `auto` 绕过",
-            "请求 `run | skip | auto | stop` 决策"
-          ]
-        },
-        {
-          "id": "output_contract",
-          "description": "说明固定输出。",
-          "any_contains": [
-            "固定输出",
-            ".lgwf/post_fix_summary.json"
           ]
         },
         {

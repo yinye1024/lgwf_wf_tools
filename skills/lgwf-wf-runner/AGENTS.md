@@ -40,7 +40,7 @@
 
 ```powershell
 python C:\Users\Administrator\.codex\skills\.system\skill-creator\scripts\quick_validate.py skills\lgwf-wf-runner
-python skills\lgwf-wf-runner\scripts\resolve_work_dir.py --workflow-id wf-create --target-slug smoke --create
+python skills\lgwf-wf-runner\scripts\resolve_work_dir.py --workflow-id wf-create-fast --target-slug smoke --create
 python skills\lgwf-wf-runner\scripts\list_sessions.py
 ```
 

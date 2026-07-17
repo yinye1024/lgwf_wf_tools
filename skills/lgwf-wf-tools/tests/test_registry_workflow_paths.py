@@ -153,9 +153,9 @@ class RegistryWorkflowPathsTest(unittest.TestCase):
         self.assertEqual("forbidden", by_id["wf-fix"]["auto_human_policy"])
         self.assertEqual([], by_id["wf-fix"]["required_fields"])
 
-        self.assertEqual("input_json_required", by_id["wf-post-fix"]["input_mode"])
-        self.assertEqual("conditional", by_id["wf-post-fix"]["auto_human_policy"])
-        self.assertIn("post_fix_target", by_id["wf-post-fix"]["required_fields"])
+        self.assertEqual("input_json_required", by_id["wf-prompt-fix"]["input_mode"])
+        self.assertEqual("conditional", by_id["wf-prompt-fix"]["auto_human_policy"])
+        self.assertIn("prompt_fix_target", by_id["wf-prompt-fix"]["required_fields"])
 
         self.assertEqual("input_json_required", by_id["e2e-test-generator"]["input_mode"])
         self.assertEqual("conditional", by_id["e2e-test-generator"]["auto_human_policy"])

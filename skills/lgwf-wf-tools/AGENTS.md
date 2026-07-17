@@ -56,15 +56,12 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 
 | 用户场景 | 选择 workflow |
 | --- | --- |
-| 目标是运行失败、卡住、产物不对、需要自动诊断修复 | 选择 `wf-fix`。 |
+| 目标是运行失败、卡住、产物不对、DSL / audit 失败或需要自动诊断修复 | 选择 `wf-fix`。 |
 | 目标是从原始意图创建新的 LGWF workflow，包含简单、轻量或普通创建请求 | 选择 `wf-create-fast`。 |
 | 目标是把现有 prompt workflow 转换为创建 workflow 入口可消费的输入包和转换报告 | 选择 `wf-convert`。 |
 | 目标是 prompt 文件缺失、引用不清、输入输出契约不完整、上下文约束不足 | 选择 `wf-prompt-fix`。 |
 | 目标是 prompt 质量升级、角色职责重塑、评估标准、失败模式、上下游协作质量 | 选择 `wf-prompt-upgrade`。 |
-| 目标是修复 LGWF authoring audit 静态诊断，包括缺失 `CONTRACT`、读写消费链、DSL 语法或编译问题 | 选择 `wf-audit-fix`。 |
 | 目标是生成或刷新 workflow 的端到端测试 | 选择 `e2e-test-generator`。 |
-| 目标是对给定 workflow 做全面校验、升级、优化、生成并运行 E2E 门禁 | 选择 `wf-post-fix`。 |
-| 目标是复杂任务规划、先产出计划/验收契约、用户确认后再执行 | 选择 `plan`。 |
 | 用户希望快速了解 LGWF、学习如何提问、了解 `lgwf-wf-tools` 能做什么，且尚未进入具体创建、运行或修复任务 | 选择 `lgwf-guide`。 |
 | 目标是把带 `wf/workflow.lgwf` 的 Codex skill 打包成内置 `lgwf-client-assist` runtime 的自包含 skill | 选择 `skill-packaging`。 |
 | 用户显式要求目标 workflow 直启、路径解析或已有 run 处理方式 | 选择 `target-run`。 |
@@ -88,11 +85,11 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 
 用户意图命中 `wf-create-fast` 但目标不明确、缺少 `raw_intent`，或只表达“帮我创建 workflow”这类泛化请求时，不直接启动 workflow。主 agent 必须先按 [docs/workflow-inputs.md](docs/workflow-inputs.md) 的“wf-create-fast 启动前输入模板”提示用户补充目标，或让用户提供初步计划、需求说明、验收说明等计划文档路径。用户给出计划文档路径时，主 agent 可以读取并整理为 `raw_intent`，同时把该路径放入 `request.target_file` 或 `request.target_files`，再展示整理后的启动输入给用户确认。
 
-`wf-create` 不在 registry 中，对外不可见、不可用。不要选择、启动、继续或建议用户运行 `wf-create`；也不要通过底层 `lgwf.py run` 绕过 registry 直接启动旧 `workflows/wf-create`。
+旧 `wf-create` 已删除且不在 registry 中，对外不可见、不可用。不要选择、启动、继续或建议用户运行该旧 id。
 
 命中 `wf-create-fast` 后必须启动或继续同一个 `wf-create-fast` run，运行到 `materialize_scaffold` 和 `main_agent_handoff`。该 workflow 的职责是在确认需求和业务流后把 scaffold plan 真实落盘为目标 package，然后通过 `HANDOFF` 把后续实现交给主 agent。
 
-`wf-create-fast` 不生成 `.lgwf/step_designs.json`，不调用 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`，也不自动启动 `wf-post-fix`。HANDOFF 后主 agent 必须先按 payload 中的 `execution_contract` 生成执行计划，再只修改 `edit_dirs` 中的目标 package，按计划实施并运行 `validation_commands` 验证。
+`wf-create-fast` 不生成 `.lgwf/step_designs.json`，也不自动启动其他下游 workflow。HANDOFF 后主 agent 必须先按 payload 中的 `execution_contract` 生成执行计划，再只修改 `edit_dirs` 中的目标 package，按计划实施并运行 `validation_commands` 验证。
 
 ## 输出要求
 
@@ -106,5 +103,5 @@ python -m unittest discover skills\lgwf-wf-tools\tests
 - 不要把内部 workflow 注册为独立 Codex skill。
 - 不要绕过 `workflows/01-share/approval.md` 的人工确认展示模板。
 - 不要在 registry 中保留不存在的 workflow entry。
-- 静态 audit 修复请求应路由到 registry 内部 `wf-audit-fix`，不要手工直接改目标 DSL。
+- 静态 audit 或 DSL 修复请求应路由到 `wf-fix`；只读检查可以直接运行 LGWF audit，不要引用已删除的 workflow id。
 - 不要修改 `vendor/` 下的任何文件；该目录是初始化或发布流程覆盖的内置 `lgwf-client-assist` 依赖，只能在用户明确要求刷新 vendor 或执行正式发布同步时变更。

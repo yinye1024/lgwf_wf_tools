@@ -225,7 +225,7 @@ class MainAgentHandoffTests(unittest.TestCase):
         self.assertIn("step_designs.json", prompt)
         self.assertIn("03_confirm_step_designs", prompt)
         self.assertIn("04_implement_steps_react", prompt)
-        self.assertIn("不自动启动 `wf-post-fix`", prompt)
+        self.assertIn("不自动启动其他下游 workflow", prompt)
 
     def test_handoff_prompt_requires_plan_before_target_edits(self) -> None:
         prompt = (PACKAGE_ROOT / "wf" / "04_main_agent_handoff" / "handoff_main_agent_authoring.md").read_text(

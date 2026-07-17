@@ -34,7 +34,7 @@
 - `wf/06_summarize_packaging_result/workflow.lgwf` 保持轻量，主要负责汇总输入、调用总结脚本并暴露下一步建议。
 - `summarize_packaging_result.py` 以结构化 JSON 为主输入，输出报告摘要、验证状态、remaining risks 和人工后续建议。
 - 根 `README.md`、`AGENTS.md`、`entry_contract.json` 与 `wf/artifact_contracts.json` 的说明应与总结结果保持一致，明确 `wf/workflow.lgwf` 是唯一入口，`ws/` 是唯一工作目录。
-- 后续动作只写成建议或 handoff payload，不要在本阶段自动触发 `wf-post-fix`、`lgwf-wf-tools` 或其他治理链路。
+- 后续动作只写成建议或 handoff payload，不要在本阶段自动触发 `lgwf-wf-tools` 或其他治理链路。
 
 ## acceptance_notes
 - 结果报告必须包含失败时的人工处理建议；当前草案将其视为必要项。

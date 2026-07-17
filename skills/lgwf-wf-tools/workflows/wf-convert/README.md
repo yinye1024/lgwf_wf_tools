@@ -18,7 +18,7 @@
 - 不在 `wf-convert` 内直接完成最终目标 LGWF workflow 实现；最终实现由 `wf-create-fast` 的 handoff 交给主 agent。
 - 不在 `wf-convert` 内直接启动 `wf-create-fast`，也不生成转换报告或业务一致性报告；`wf-convert` 只负责把已确认的转换输入 handoff 给主 agent。
 - 不跳过 `wf-create-fast` 的需求、业务流、scaffold 和 handoff 边界。
-- 不自动调用标准创建实现链路、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-fix` 或 `wf-post-fix`。
+- 不自动调用创建实现链路、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-fix` 或其他下游 workflow。
 - 不保证源 workflow 业务 happy path 成功。
 
 ## 运行状态

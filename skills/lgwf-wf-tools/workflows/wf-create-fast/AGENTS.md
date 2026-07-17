@@ -8,7 +8,7 @@
 - 目标：从用户原始意图创建 LGWF workflow 初稿。
 - 边界：本 workflow 只负责确认需求、确认业务流、落盘 scaffold，并通过 `HANDOFF` 交给主 agent 继续完善目标 package。
 - 对外入口：本 workflow 是 registry 中唯一可见、可启动的创建 workflow 入口。旧 `wf-create` 不在 registry 中，不应被选择、启动或继续。
-- 与旧 `wf-create` 的区别：本 workflow 不生成 `step_designs.json`，不执行 `03_confirm_step_designs`，不执行 `04_implement_steps_react`，不自动运行 `wf-post-fix`。
+- 与旧 `wf-create` 的区别：本 workflow 不生成 `step_designs.json`，并在 scaffold 落盘后交给主 agent 完善；不自动运行其他下游 workflow。
 
 ## 入口
 
@@ -70,8 +70,8 @@ python skills\lgwf-wf-tools\scripts\run_skill_workflow.py --workflow-id wf-creat
 - 主 agent 按已生成的计划完善目标 package scaffold 文件。
 - 主 agent 使用 `target_package.materialization` 汇报 scaffold 创建和跳过的文件，避免把外部目标写入误报为“无文件改动”。
 - 主 agent 不生成 `step_designs.json`。
-- 主 agent 不调用 `wf-create` 的 `03_confirm_step_designs` 或 `04_implement_steps_react`。
-- 主 agent 不自动启动 `wf-post-fix` 或其他下游 workflow。
+- 主 agent 不回退到已删除的旧创建链路。
+- 主 agent 不自动启动其他下游 workflow。
 
 ## 验证
 
@@ -87,4 +87,4 @@ python skills\lgwf-wf-tools\workflows\wf-create-fast\self-improve\scripts\self_i
 - 不得把运行状态写入目标 package。
 - 不得覆盖目标 package 中已有非空文件；已有非空文件只能记录到 `skipped_existing_files`。
 - 不得在本 workflow 内生成或消费 `.lgwf/step_designs.json`。
-- 不得自动执行目标 workflow、`wf-post-fix` 或其他下游治理链路。
+- 不得自动执行目标 workflow 或其他下游治理链路。

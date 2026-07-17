@@ -10,8 +10,8 @@
 ## 入口
 
 ```powershell
-python skills/lgwf-wf-runner/scripts/resolve_work_dir.py --workflow-id wf-create --target-slug smoke --create
-python skills/lgwf-wf-runner/scripts/launch_workflow.py --workflow-id wf-create --target-slug smoke --input-json-file D:/tmp/input.json
+python skills/lgwf-wf-runner/scripts/resolve_work_dir.py --workflow-id wf-create-fast --target-slug smoke --create
+python skills/lgwf-wf-runner/scripts/launch_workflow.py --workflow-id wf-create-fast --target-slug smoke --input-json-file D:/tmp/input.json
 python skills/lgwf-wf-runner/scripts/status_session.py --facade-session-id <id>
 python skills/lgwf-wf-runner/scripts/list_sessions.py
 ```

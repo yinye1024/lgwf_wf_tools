@@ -115,7 +115,7 @@
       "expected": {
         "workflow_id": "wf-create-fast",
         "must_read": ["AGENTS.md", "registry.json", "workflows/wf-create-fast/AGENTS.md"],
-        "must_not_start": ["manual_scaffold", "wf-create", "wf-fix", "wf-post-fix"],
+        "must_not_start": ["manual_scaffold", "wf-create", "wf-fix"],
         "required_text": [
           {
             "path": "AGENTS.md",
@@ -132,32 +132,6 @@
           {
             "path": "workflows/wf-create-fast/AGENTS.md",
             "contains": "主 agent 在首次修改目标 package 前"
-          }
-        ]
-      }
-    },
-    {
-      "id": "route-workflow-authoring-preflight-lists-workflows",
-      "category": "routing",
-      "input": {
-        "user_request": "现在我有一个新建的工作流 lgwf-wf-create，帮我把这个工作流完善起来",
-        "context": ["用户调用 lgwf-wf-tools", "目标是复杂 workflow package 完善", "需要选择内部 workflow"]
-      },
-      "expected": {
-        "workflow_id": "plan",
-        "must_read": ["AGENTS.md", "registry.json", "workflows/plan/AGENTS.md"],
-        "required_text": [
-          {
-            "path": "AGENTS.md",
-            "contains": "工作流路由表"
-          },
-          {
-            "path": "AGENTS.md",
-            "contains": "选择 `plan`"
-          },
-          {
-            "path": "AGENTS.md",
-            "contains": "workflows/01-share/"
           }
         ]
       }
@@ -206,7 +180,7 @@
       },
       "expected": {
         "must_read": ["AGENTS.md", "registry.json"],
-        "must_not_start": ["wf-fix", "wf-prompt-fix", "wf-prompt-upgrade", "e2e-test-generator", "plan", "apply_patch"],
+        "must_not_start": ["wf-fix", "wf-prompt-fix", "wf-prompt-upgrade", "e2e-test-generator", "apply_patch"],
         "required_text": [
           {
             "path": "docs/proposal-gate.md",

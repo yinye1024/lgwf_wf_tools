@@ -76,11 +76,11 @@ DSL 是 runtime 和主 agent 之间的协作协议：它把用户意图、runtim
 | 初始化本机 `lgwf-wf-tools` 环境 | `/lgwf-wf-tools init` |
 | 查看帮助、诊断环境、列出 workflow | `/lgwf-wf-tools help`、`/lgwf-wf-tools doctor`、`/lgwf-wf-tools list` |
 | 运行已有 LGWF workflow | `/lgwf-wf-tools run <path>` |
-| 创建新的 LGWF workflow | 通过 `/lgwf-wf-tools` 路由到 `wf-create` |
+| 创建新的 LGWF workflow | 通过 `/lgwf-wf-tools` 路由到 `wf-create-fast` |
 | 修复目标 workflow | 通过 `/lgwf-wf-tools` 路由到 `wf-fix` |
 | 转换已有 prompt workflow | 通过 `/lgwf-wf-tools` 路由到 `wf-convert` |
 | 生成 E2E 测试 | 通过 `/lgwf-wf-tools` 路由到 `e2e-test-generator` |
-| 做 prompt 修复、升级和后续验收 | 通过 `/lgwf-wf-tools` 路由到 `wf-post-fix` |
+| 做 prompt 修复、升级和后续验收 | 依次按需路由到 `wf-prompt-fix`、`wf-prompt-upgrade` 或 `e2e-test-generator` |
 | 做自我优化、沉淀 case、生成 proposal | `/lgwf-wf-tools self-improve` |
 
 ## 标准两层结构

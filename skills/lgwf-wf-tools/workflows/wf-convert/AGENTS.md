@@ -13,7 +13,7 @@
 
 `wf-convert` 面向 prompt workflow 转换场景：读取现有 prompt workflow 目录，分析 prompt、agent、resource 和说明文件，产出可交给 `wf-create-fast` 的完整 handoff target file、源业务契约和转换映射。
 
-`wf-convert` 不在自身流程内完成最终目标 LGWF workflow 实现，也不直接启动下游创建 workflow。转换输入通过人工确认后，它生成 `wf-create-fast` 的输入并 HANDOFF 给主 agent；主 agent 负责启动 `wf-create-fast`。`wf-convert` 不自动调用标准创建实现链路、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-fix` 或 `wf-post-fix`。
+`wf-convert` 不在自身流程内完成最终目标 LGWF workflow 实现，也不直接启动下游创建 workflow。转换输入通过人工确认后，它生成 `wf-create-fast` 的输入并 HANDOFF 给主 agent；主 agent 负责启动 `wf-create-fast`。`wf-convert` 不自动调用创建实现链路、`wf-prompt-fix`、`wf-prompt-upgrade`、`wf-fix` 或其他下游 workflow。
 
 `wf-convert` 通过 `prepare_wf_create_fast_payload` 生成下游 handoff target file `.lgwf/wf_create_fast_handoff.json` 和启动输入 `.lgwf/wf_create_fast_launch_input.json`。target file 包含创建目标、业务契约、转换映射和 prompt workflow 上下文。`HANDOFF handoff_to_wf_create_fast` 交给主 agent 后，主 agent 先提交 handoff ack，再按 payload 中的 `input_json_file` 启动 `wf-create-fast`。
 

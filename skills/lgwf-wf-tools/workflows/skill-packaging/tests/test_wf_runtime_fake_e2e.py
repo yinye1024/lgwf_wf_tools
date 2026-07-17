@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW_LGWF = 'D:/allen/github/lgwf_wf_tools/skills/lgwf-wf-tools/workflows/wf-post-fix/ws/.lgwf/isolations/run_workflow/e2e_generate/workspace/workflows/skill-packaging/wf/workflow.lgwf'
+WORKFLOW_LGWF = 'D:/allen/github/lgwf_wf_tools/skills/lgwf-wf-tools/workflows/skill-packaging/wf/workflow.lgwf'
 RUN_COMMAND_TEMPLATE = "lgwf.py run --workflow-lgwf {workflow_lgwf} --work-dir {work_dir} --prompt-file {prompt_file}"
 STATUS_COMMAND_TEMPLATE = "lgwf.py status --pid {pid}"
 APPROVAL_COMMANDS = ["lgwf.py approval get --pid {pid}", "lgwf.py approval submit --pid {pid} --decision approve"]

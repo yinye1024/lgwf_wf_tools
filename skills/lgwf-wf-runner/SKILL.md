@@ -20,14 +20,14 @@ description: Use when Codex needs to launch, inspect, or continue an LGWF workfl
 1. 解析隔离工作目录：
 
 ```powershell
-python skills/lgwf-wf-runner/scripts/resolve_work_dir.py --workflow-id wf-create --target-slug lgwf-wf-thinking --create
+python skills/lgwf-wf-runner/scripts/resolve_work_dir.py --workflow-id wf-create-fast --target-slug lgwf-wf-thinking --create
 ```
 
 2. 启动 workflow：
 
 ```powershell
 $inputPath = "D:/tmp/lgwf-input.json"
-python skills/lgwf-wf-runner/scripts/launch_workflow.py --workflow-id wf-create --target-slug lgwf-wf-thinking --input-json-file $inputPath
+python skills/lgwf-wf-runner/scripts/launch_workflow.py --workflow-id wf-create-fast --target-slug lgwf-wf-thinking --input-json-file $inputPath
 ```
 
 `launch_workflow.py` 同时兼容 `--input-json` 和 `--input-json-file`，两者不能同时提供。使用 `--input-json-file` 时，脚本会把该参数继续透传给底层 `lgwf.py run`，避免在 PowerShell 参数层损坏中文、引号或嵌套 JSON。

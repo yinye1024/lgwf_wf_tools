@@ -907,10 +907,8 @@ class SelfImproveScriptsTest(unittest.TestCase):
                 "wf-convert",
                 "wf-prompt-fix",
                 "wf-prompt-upgrade",
-                "wf-audit-fix",
                 "e2e-test-generator",
-                "wf-post-fix",
-                "plan",
+                "lgwf-guide",
                 "self-improve",
                 "target-run",
                 "self-improve-seed",
@@ -1182,7 +1180,7 @@ class SelfImproveScriptsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw_dir:
             fixture = Path(raw_dir)
             registered = fixture / "workflows" / "registered"
-            unregistered = fixture / "workflows" / "wf-audit-fix"
+            unregistered = fixture / "workflows" / "unregistered-sample"
             (registered / "tests").mkdir(parents=True)
             (registered / "self-improve" / "scripts").mkdir(parents=True)
             (unregistered / "wf").mkdir(parents=True)
@@ -1264,9 +1262,9 @@ class SelfImproveScriptsTest(unittest.TestCase):
             self.assertEqual(
                 [
                     {
-                        "id": "wf-audit-fix",
-                        "workflow_lgwf": "workflows/wf-audit-fix/wf/workflow.lgwf",
-                        "agents_md": "workflows/wf-audit-fix/AGENTS.md",
+                        "id": "unregistered-sample",
+                        "workflow_lgwf": "workflows/unregistered-sample/wf/workflow.lgwf",
+                        "agents_md": "workflows/unregistered-sample/AGENTS.md",
                     }
                 ],
                 report["unregistered_workflow_candidates"],
