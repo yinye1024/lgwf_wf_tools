@@ -55,16 +55,27 @@ Codex 默认模型由随包文件控制：
 
 ```json
 {
-  "version": 1,
+  "version": 2,
+  "default_model_alias": "model-wolf",
+  "supported_models": ["gpt-5.5"],
+  "model_aliases": {
+    "model-tiger": {"model": "gpt-5.5", "model_reasoning_effort": "high", "service_tier": "default"},
+    "model-wolf": {"model": "gpt-5.5", "model_reasoning_effort": "medium", "service_tier": "default"},
+    "model-rabbit": {"model": "gpt-5.5", "model_reasoning_effort": "low", "service_tier": "default"}
+  },
   "model": "gpt-5.5",
-  "model_reasoning_effort": "xhigh",
+  "model_reasoning_effort": "medium",
   "service_tier": "default"
 }
 ```
 
 `model_reasoning_effort` 可用值为 `low`、`medium`、`high`、`xhigh`。`service_tier` 可用值为 `default` 或 `priority`；`priority` 对应 Codex app 中的 Fast 速度档。
 
-优先级为：workflow 节点显式 `MODEL` / runtime `config.model` > `<work_dir>\.lgwf\codex\config.json` > `<skill-dir>\assets\codex-defaults.json` > client 代码兜底默认值。`lgwf-wf-tools` 需要调整打包后的全局 Codex 默认模型、速度或推理强度时，改随包 `assets\codex-defaults.json` 并重新同步/打包 `lgwf-client-assist.zip`。
+`supported_models` 是真实模型白名单。全局三档 alias、workflow alias override、work-dir 模型、带引号的节点模型以及 `args --model` 最终解析出的模型都必须出现在该列表中；否则 LGWF 直接报错且不会启动 Codex。正式 facade 会在 `audit/compile/run` 前加载同一份配置，因此 workflow 源码中可见的不支持模型会在编译期失败；work-dir、CLI 参数或直接 runtime JSON 等编译器不可见入口仍由 client 在启动前兜底校验。
+
+`MODEL model-tiger|model-wolf|model-rabbit` 选择固定 alias，`MODEL "..."` 直接指定真实模型。显式 alias 按全局同名配置 → 当前 workflow override 合并并忽略 work-dir 通用配置；未写 `MODEL` 时按全局默认 alias → work-dir 逐字段配置 → workflow override 合并。旧 `DEFAULTS codex_model "..."` 和带引号的节点模型继续采用真实模型兼容逻辑，但同样受 `supported_models` 约束。`lgwf-wf-tools` 需要调整打包后的全局三档映射时，修改 source asset 后重新打包 `lgwf-client-assist.zip`，再通过正式 init 流程同步 vendor，不能直接修改 vendor 文件。
+
+每次启动 Codex 时，workflow 进程日志会出现一条 `event="codex_launch"` JSON，直接显示最终 alias、真实模型、reasoning effort、service tier 和各字段来源。相同信息也会写入该次 `.lgwf/codex/<track>/metadata.json` 的 `codex_model`，以及 execution result 的 `metadata.codex_model`，可用于核对配置是否真正生效。
 
 ## Codex Keep Session
 

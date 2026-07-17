@@ -1,10 +1,31 @@
 {
-  "_comment": "LGWF Codex 默认配置。JSON 不支持 // 注释，所以用 _comment 字段说明。",
-  "version": 1,
-  "_model_options": "任意当前 Codex CLI 支持的模型名；LGWF 只要求非空且不含空格。",
+  "_comment": "LGWF Codex 默认配置。model-tiger / model-wolf / model-rabbit 是固定 alias；顶层三项镜像默认 wolf，供旧 client 兼容读取。",
+  "version": 2,
+  "default_model_alias": "model-wolf",
+  "supported_models": [
+    "gpt-5.5"
+  ],
+  "model_aliases": {
+    "model-tiger": {
+      "model": "gpt-5.5",
+      "model_reasoning_effort": "high",
+      "service_tier": "default"
+    },
+    "model-wolf": {
+      "model": "gpt-5.5",
+      "model_reasoning_effort": "medium",
+      "service_tier": "default"
+    },
+    "model-rabbit": {
+      "model": "gpt-5.5",
+      "model_reasoning_effort": "low",
+      "service_tier": "default"
+    }
+  },
+  "_model_options": "真实模型必须出现在 supported_models 中；不支持的模型会在启动 Codex 前直接报错。",
   "model": "gpt-5.5",
   "_model_reasoning_effort_options": "low | medium | high | xhigh",
-  "model_reasoning_effort": "xhigh",
+  "model_reasoning_effort": "medium",
   "_service_tier_options": "default | priority；priority 对应更快速度档",
   "service_tier": "default"
 }
