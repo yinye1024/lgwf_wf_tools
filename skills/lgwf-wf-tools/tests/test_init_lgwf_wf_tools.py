@@ -22,8 +22,8 @@ class InitLgwfWfToolsTest(unittest.TestCase):
         self.assertFalse(result["skipped"], result)
         self.assertTrue(result["wheel"], result)
         self.assertTrue(result["wheel_sha256"], result)
-        self.assertEqual("0.1.2", result["bundled_version"])
-        self.assertEqual("0.1.2", result["installed_version"])
+        self.assertEqual("1.0.0", result["bundled_version"])
+        self.assertEqual("1.0.0", result["installed_version"])
 
     def test_ensure_codex_skill_installation_creates_missing_link_to_self(self) -> None:
         with tempfile.TemporaryDirectory() as raw_temp:

@@ -30,12 +30,17 @@ TOOL copy_assets
 
 `CONTRACT READ` 的外部输入应在 `artifact_contracts.json` 的 `external_inputs` 中声明；没有下游消费者的最终文件或 state 输出分别放入 `final_outputs` 和 `final_state_outputs`。
 
-初始公开 tool：
+公开 tool：
 
 - `ensure_dir`
 - `write_text_file`
 - `file_replace`
 - `copy_file`
 - `copy_directory`
+- `lgwf_dsl_cli`
+- `sandbox_prepare`
+- `sandbox_diff`
+- `sandbox_promote`
+- `sandbox_archive`
 
 新增 tool 时扩展机器可读 tool catalog、共享 operation 和测试，不修改 `TOOL` parser、lowering 或 `exec.run_tool`。

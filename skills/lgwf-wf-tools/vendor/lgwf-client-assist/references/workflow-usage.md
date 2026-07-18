@@ -223,10 +223,11 @@ python <skill-dir>\scripts\lgwf.py runs get-eval-suite --work-dir <work_dir> --r
 ```powershell
 python <skill-dir>\scripts\lgwf.py tool list
 python <skill-dir>\scripts\lgwf.py tool describe copy_file
+python <skill-dir>\scripts\lgwf.py tool schema lgwf_dsl_cli
 python <skill-dir>\scripts\lgwf.py tool run copy_file --options-json '{"source":"a.bin","destination":"b.bin"}'
 ```
 
-公开 tools 为 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`。前三者要求 `--work-dir`；复制 CLI 可使用绝对路径或基于当前目录的相对路径。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
+公开 tools 为 `ensure_dir`、`write_text_file`、`file_replace`、`copy_file`、`copy_directory`、`lgwf_dsl_cli` 和四个 `sandbox_*` 工具。workspace 模式工具要求 `--work-dir`；复制 CLI 可使用绝对路径或基于当前目录的相对路径。`lgwf_dsl_cli` 支持 `compile`、`explain`、`lint`、`audit`、`schema`，输入和结果路径限制在 workspace 内。workflow `TOOL` 和兼容 builtin 中的路径始终限制在 workspace 内。
 
 ## Codex Token Status
 

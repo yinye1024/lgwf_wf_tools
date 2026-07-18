@@ -9,7 +9,10 @@ from pathlib import Path
 
 
 FACADE_ROOT = Path(__file__).resolve().parents[1]
-WHEEL = FACADE_ROOT / "vendor" / "lgwf-client-assist" / "assets" / "lgwf-0.1.2-py3-none-any.whl"
+WHEELS = sorted((FACADE_ROOT / "vendor" / "lgwf-client-assist" / "assets").glob("lgwf-*.whl"))
+if len(WHEELS) != 1:
+    raise RuntimeError(f"expected exactly one bundled LGWF wheel, found {len(WHEELS)}")
+WHEEL = WHEELS[0]
 
 
 class CodexHandoffPromptBoundaryTests(unittest.TestCase):

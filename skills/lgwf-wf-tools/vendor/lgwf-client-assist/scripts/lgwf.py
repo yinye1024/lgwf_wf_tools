@@ -36,6 +36,7 @@ _REVIEW_COMMANDS = {
 }
 _HANDOFF_COMMANDS = {
     "submit": "submit-main-agent-handoff",
+    "continue": "submit-main-agent-handoff-continue",
 }
 _HUMAN_AUTO_COMMANDS = {
     "get": "get-human-gate-policy",

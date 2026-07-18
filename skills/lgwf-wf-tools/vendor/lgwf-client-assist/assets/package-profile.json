@@ -1,5 +1,5 @@
 {
-    "profile":  "dev",
-    "install_policy":  "always",
-    "packaged_at":  "2026-07-17T08:14:29.5980978Z"
+    "profile":  "prd",
+    "install_policy":  "version_mismatch",
+    "packaged_at":  "2026-07-18T02:18:53.5136181Z"
 }

@@ -131,7 +131,8 @@ def contract_has(entries: list[str], expected: str) -> bool:
 class WorkflowNodeContractTests(unittest.TestCase):
     def test_source_scan_excludes_runtime_and_test_workflow_copies(self) -> None:
         files = source_lgwf_files()
-        self.assertGreaterEqual(len(files), 60)
+        # 清理未使用 workflow 后源文件数量已下降；保留合理下限以发现扫描范围意外失效。
+        self.assertGreaterEqual(len(files), 40)
         for path in files:
             relative = path.relative_to(WORKFLOWS_ROOT).parts
             self.assertFalse(any(part in EXCLUDED_SOURCE_PARTS for part in relative), path.as_posix())
